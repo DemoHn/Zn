@@ -18,6 +18,16 @@ func (e *Error) GetCode() uint16 {
 	return e.code
 }
 
+// NewError model - only set code - usually for tests
+func NewError(code uint16) *Error {
+	return &Error{
+		code:   code,
+		text:   "",
+		cursor: nil,
+		info:   nil,
+	}
+}
+
 // Cursor denotes the indicator where the error occurs
 type Cursor struct {
 	file   string
