@@ -1,6 +1,8 @@
 package lex
 
 import (
+	"io/ioutil"
+	"os"
 	"unicode/utf8"
 
 	"github.com/DemoHn/Zn/error"
@@ -43,6 +45,22 @@ func (s *Source) AddSourceInput(rawData []byte) *error.Error {
 
 	s.Inputs = append(s.Inputs, input)
 	return nil
+}
+
+// ReadTextFromFile - read code text from file
+func (s *Source) ReadTextFromFile(absPath string) ([]byte, *error.Error) {
+	// stat if file exists
+	if _, err := os.Stat(absPath); os.IsNotExist(err) {
+		return []byte{}, error.FileNotFound(absPath)
+	}
+
+	// open file
+	data, err := ioutil.ReadFile(absPath)
+	if err != nil {
+		return []byte{}, error.FileOpenError(absPath, err)
+	}
+
+	return data, nil
 }
 
 // init global source object
