@@ -28,7 +28,7 @@ func FileNotFound(filePath string) *Error {
 // FileOpenError -
 func FileOpenError(filePath string, oriError error) *Error {
 	err := inputError.NewError(0x03, Error{
-		text:   fmt.Sprintf("未找到文件：%s", filePath),
+		text:   fmt.Sprintf("无法打开文件：%s！", filePath),
 		cursor: nil,
 		info: struct {
 			path string

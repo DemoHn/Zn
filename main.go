@@ -3,9 +3,6 @@ package main
 import "fmt"
 
 func main() {
-	fmt.Println("F")
-}
-
-func writeData() {
-	fmt.Println("G")
+	g := '’'
+	fmt.Printf("character %s is: %x ", string(g), g)
 }
