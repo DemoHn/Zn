@@ -51,9 +51,6 @@ const (
 	// RightParen -
 	RightParen SingleOp = 0xFF09 // ）
 
-	// TypeMark - declare variable (or type) is non-nullable
-	TypeMark SingleOp = 0xFF01 // ！
-
 	// VarRemark - the middle dot
 	VarRemark SingleOp = 0x00B7 //
 	// more marks...

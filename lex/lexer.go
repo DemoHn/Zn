@@ -1,6 +1,10 @@
 package lex
 
-import "unicode/utf8"
+import (
+	"unicode/utf8"
+
+	"github.com/DemoHn/Zn/error"
+)
 
 // Lexer is a structure that provides a set of tools to help tokenizing the code.
 type Lexer struct {
@@ -25,7 +29,7 @@ func NewLexer(code []rune) *Lexer {
 
 // End - if the lexer cursor has come to the end
 func (l *Lexer) End() bool {
-	return l.end()
+	return (l.current >= len(l.code))
 }
 
 // Current - get current rune string
@@ -58,7 +62,7 @@ func (l *Lexer) GetIndex() int {
 	return l.current
 }
 
-// private functions
-func (l *Lexer) end() bool {
-	return (l.current >= len(l.code))
+// Tokenize - the main logic that transforms codes into tokens
+func (l *Lexer) Tokenize() *error.Error {
+	return nil
 }
