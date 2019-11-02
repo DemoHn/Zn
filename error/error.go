@@ -57,8 +57,12 @@ var (
 	// this error class handles all errors before transforming file inputs
 	// to utf-8 encoding text
 	inputError errorClass
+	// 0x11 - lexError
+	// this error class displays all errors occur during lexing stage.
+	lexError errorClass
 )
 
 func init() {
 	inputError = errorClass{0x10}
+	lexError = errorClass{0x11}
 }

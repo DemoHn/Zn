@@ -6,16 +6,20 @@ import (
 	"github.com/DemoHn/Zn/error"
 )
 
-// Lexer is a structure that provides a set of tools to help tokenizing the code.
+// TokenType - an alias of number to declare the type of tokens
+type TokenType uint16
+
+// Lexer is a structure that pe provides a set of tools to help tokenizing the code.
 type Lexer struct {
 	Tokens  []Token
 	current int
 	code    []rune // source code
 }
 
-// Token - an universal and abstract type as the smallest unit of code syntax
+// Token - general token model
 type Token interface {
-	String(detailed bool) string
+	String(detailed bool) string //
+	Position() (int, int)
 }
 
 // NewLexer - new lexer
@@ -32,24 +36,22 @@ func (l *Lexer) End() bool {
 	return (l.current >= len(l.code))
 }
 
-// Current - get current rune string
-func (l *Lexer) Current() rune {
-	return l.code[l.current]
-}
-
 // Next - return current rune, and move forward the cursor for 1 character.
 func (l *Lexer) Next() rune {
+	if l.End() {
+		return utf8.RuneError
+	}
 	data := l.code[l.current]
 	l.current++
 	return data
 }
 
-// Peek - get the character of the next cursor, while the cursor doesn't move.
+// Peek - get the character of the cursor
 func (l *Lexer) Peek() rune {
-	if l.current+1 < len(l.code) {
-		return l.code[l.current+1]
+	if l.End() {
+		return utf8.RuneError
 	}
-	return utf8.RuneError
+	return l.code[l.current]
 }
 
 // AppendToken - append one token to tokens
