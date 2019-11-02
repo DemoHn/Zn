@@ -1,6 +1,7 @@
 package lex
 
 import (
+	"fmt"
 	"unicode/utf8"
 
 	"github.com/DemoHn/Zn/error"
@@ -62,6 +63,20 @@ func (l *Lexer) AppendToken(token Token) {
 // GetIndex - get cursor value of lexer
 func (l *Lexer) GetIndex() int {
 	return l.current
+}
+
+// DisplayTokens - display tokens, usually used for debugging
+func (l *Lexer) DisplayTokens() string {
+	result := ""
+	for idx, tk := range l.Tokens {
+		if idx == 0 {
+			result = tk.String(true)
+		} else {
+			result = fmt.Sprintf("%s %s", result, tk.String(true))
+		}
+	}
+
+	return result
 }
 
 // Tokenize - the main logic that transforms codes into tokens

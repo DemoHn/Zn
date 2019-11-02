@@ -123,13 +123,13 @@ func ConstructMarkerToken(l *lex.Lexer, ch rune, idx int) (lex.Token, *error.Err
 		if l.Next() == EmMark {
 			return MarkerToken{EmType, idx, idx + 1}, nil
 		}
-		return MarkerToken{0, 0, 0}, error.InvalidSingleEm(idx)
+		return MarkerToken{EmptyType, 0, 0}, error.InvalidSingleEm(idx)
 	case EllipsisMark:
 		if l.Next() == EllipsisMark {
 			return MarkerToken{EllipsisType, idx, idx + 1}, nil
 		}
-		return MarkerToken{0, 0, 0}, error.InvalidSingleEllipsis(idx)
+		return MarkerToken{EmptyType, 0, 0}, error.InvalidSingleEllipsis(idx)
 	}
 	// others ignore them
-	return MarkerToken{0, 0, 0}, nil
+	return MarkerToken{EmptyType, 0, 0}, nil
 }
