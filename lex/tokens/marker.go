@@ -43,6 +43,7 @@ func (mk MarkerToken) String(detailed bool) string {
 		HashType:       "Hash<#>",
 		EmType:         "Em<—>",
 		EllipsisType:   "Ellipsis<…>",
+		EmptyType:      "NIL",
 	}
 
 	raw := aliasNameMap[mk.Type]
