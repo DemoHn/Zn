@@ -62,6 +62,17 @@ var (
 	lexError errorClass
 )
 
+// NewErrorSLOT - a tmp placeholder for adding errors quickly while the
+// details has not been thought carefully.
+// 简单来说就是临时错误的坑
+func NewErrorSLOT(text string) *Error {
+	return &Error{
+		code:   0xFFFE,
+		text:   text,
+		cursor: nil,
+		info:   nil,
+	}
+}
 func init() {
 	inputError = errorClass{0x10}
 	lexError = errorClass{0x11}

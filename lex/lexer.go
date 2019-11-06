@@ -96,7 +96,43 @@ func (l *Lexer) IsWhiteSpace(ch rune) bool {
 func (l *Lexer) Tokenize() *error.Error {
 	ch := l.Next()
 	for ch != EOF {
+		// parse indents
+		l.lineScanner.NewLine(l.GetIndex() - 1)
+		switch ch {
+		case tokens.SP, tokens.TAB:
+			curr := ch
+			count := 0
+			tokenType := TAB
+			for {
+				ch = l.Next()
+				if ch != curr {
+					if curr == tokens.SP {
+						tokenType = SPACE
+					}
+					l.lineScanner.PushIndent(uint8(count), tokenType)
+					break
+				}
+				count++
+			}
+		case tokens.CR, tokens.LF:
+			// for CRLF <windows type>
+			if ch == tokens.CR && l.Peek() == tokens.LF {
+				l.lineScanner.EndLine(l.GetIndex() - 1)
+				l.Next()
+			}
+			// for LFCR <no such type currently>
+			if ch == tokens.LF && l.Peek() == tokens.CR {
+				l.lineScanner.EndLine(l.GetIndex() - 1)
+				l.Next()
+			}
 
+			// for LF or CR only
+			// LF: <linux>, CR:<old mac>
+			l.lineScanner.EndLine(l.GetIndex() - 1)
+		default:
+			// no other action, just move the cursor
+			l.Next()
+		}
 	}
 	return nil
 }

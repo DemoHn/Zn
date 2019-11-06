@@ -62,18 +62,18 @@ func (ls *LineScanner) NewLine(idx int) {
 // 2. when IndentType = SPACE, the count is not 4 * N chars
 func (ls *LineScanner) PushIndent(count uint8, t IndentType) *error.Error {
 	if t == SPACE && count%4 != 0 {
-		// TODO: add error
-		return error.InvalidIndent(0)
+		return error.NewErrorSLOT("SPACE count should be 4 times!")
 	}
 
 	if ls.indentType == UNKNOWN {
 		ls.indentType = t
-	}
-	if ls.indentType != t {
-		// TODO: add error
-		return error.InvalidIndent(0)
+	} else {
+		if ls.indentType != t {
+			return error.NewErrorSLOT("前后indent char 不同！")
+		}
 	}
 
+	// when indentType = TAB, count = indents
 	indents := count
 	if ls.indentType == SPACE {
 		indents = count / 4
@@ -86,6 +86,18 @@ func (ls *LineScanner) PushIndent(count uint8, t IndentType) *error.Error {
 
 // EndLine - when meet CRLF, that means the line is going to end
 // It's time to push cache into line info
-func (ls *LineScanner) EndLine() {
+func (ls *LineScanner) EndLine(endIndex int) {
+	ls.lineCache.EndIndex = endIndex
+	// handle non-empty line
+	if endIndex > ls.lineCache.StartIndex {
+		ls.lineCache.EmptyLine = false
+	}
 
+	ls.lines = append(ls.lines, *ls.lineCache)
+	// clear cache
+	ls.clearCache()
+}
+
+func (ls *LineScanner) clearCache() {
+	ls.lineCache = nil
 }

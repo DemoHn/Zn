@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"strings"
 )
 
 // T -
@@ -17,7 +18,7 @@ func main() {
 	//}
 
 	tt := []T{
-		T{"VarDeclare", "令"},
+		T{"VarDeclare", "	"},
 		T{"LogicIsI", "为"},
 		T{"LogicIsII", "是"},
 		T{"ValueAssign", "设为"},
@@ -56,9 +57,9 @@ func main() {
 			codes = append(codes, fmt.Sprintf("0x%X", ch))
 		}
 
-		//code := strings.Join(codes, ", ")
-		//fmt.Printf("%s = []rune{%s} // %s\n", t.Name, code, t.Code)
+		code := strings.Join(codes, ", ")
+		fmt.Printf("%s = []rune{%s} // %s\n", t.Name, code, t.Code)
 
-		fmt.Printf("%sType: \"%s<%s>\",\n", t.Name, t.Name, t.Code)
+		//fmt.Printf("%sType: \"%s<%s>\",\n", t.Name, t.Name, t.Code)
 	}
 }
