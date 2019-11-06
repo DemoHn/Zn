@@ -23,3 +23,14 @@ func InvalidSingleEllipsis(idx int) *Error {
 
 	return &err
 }
+
+// InvalidIndent -
+func InvalidIndent(idx int) *Error {
+	err := lexError.NewError(0x03, Error{
+		text:   "Indent Error",
+		cursor: nil,
+		info:   idx,
+	})
+
+	return &err
+}

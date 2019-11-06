@@ -31,8 +31,8 @@ func NewError(code uint16) *Error {
 // Cursor denotes the indicator where the error occurs
 type Cursor struct {
 	file   string
-	line   int32
-	column int32
+	line   int
+	column int
 }
 
 // ErrorClass defines the prefix of error code

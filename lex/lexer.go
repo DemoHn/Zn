@@ -2,61 +2,55 @@ package lex
 
 import (
 	"fmt"
-	"unicode/utf8"
 
 	"github.com/DemoHn/Zn/error"
+	"github.com/DemoHn/Zn/lex/tokens"
 )
 
-// TokenType - an alias of number to declare the type of tokens
-type TokenType uint16
+// EOF - mark as end of file, should only exists at the end of sequence
+const EOF rune = 0
 
 // Lexer is a structure that pe provides a set of tools to help tokenizing the code.
 type Lexer struct {
-	Tokens  []Token
-	current int
-	code    []rune // source code
-}
-
-// Token - general token model
-type Token interface {
-	String(detailed bool) string //
-	Position() (int, int)
+	Tokens      []*tokens.Token
+	lineScanner *LineScanner
+	current     int
+	code        []rune // source code
 }
 
 // NewLexer - new lexer
 func NewLexer(code []rune) *Lexer {
 	return &Lexer{
-		Tokens:  []Token{},
-		current: 0,
-		code:    code,
+		Tokens:      []*tokens.Token{},
+		lineScanner: NewLineScanner(),
+		current:     0,
+		code:        append(code, EOF),
 	}
-}
-
-// End - if the lexer cursor has come to the end
-func (l *Lexer) End() bool {
-	return (l.current >= len(l.code))
 }
 
 // Next - return current rune, and move forward the cursor for 1 character.
 func (l *Lexer) Next() rune {
-	if l.End() {
-		return utf8.RuneError
-	}
 	data := l.code[l.current]
+	if data == EOF {
+		return EOF
+	}
+
 	l.current++
 	return data
 }
 
 // Peek - get the character of the cursor
 func (l *Lexer) Peek() rune {
-	if l.End() {
-		return utf8.RuneError
+	data := l.code[l.current]
+	if data == EOF {
+		return EOF
 	}
-	return l.code[l.current]
+
+	return data
 }
 
 // AppendToken - append one token to tokens
-func (l *Lexer) AppendToken(token Token) {
+func (l *Lexer) AppendToken(token *tokens.Token) {
 	l.Tokens = append(l.Tokens, token)
 }
 
@@ -79,7 +73,30 @@ func (l *Lexer) DisplayTokens() string {
 	return result
 }
 
+// IsWhiteSpace - if a character belongs to white space (including tabs, full-width spaces, etc.)
+// see 'the draft' for details
+func (l *Lexer) IsWhiteSpace(ch rune) bool {
+	spaceList := []rune{
+		0x0009, 0x000B, 0x000C, 0x0020, 0x00A0,
+		0x2000, 0x2001, 0x2002, 0x2003, 0x2004,
+		0x2005, 0x2006, 0x2007, 0x2008, 0x2009,
+		0x200A, 0x200B, 0x202F, 0x205F, 0x3000,
+	}
+
+	for _, s := range spaceList {
+		if ch == s {
+			return true
+		}
+	}
+
+	return false
+}
+
 // Tokenize - the main logic that transforms codes into tokens
 func (l *Lexer) Tokenize() *error.Error {
+	ch := l.Next()
+	for ch != EOF {
+
+	}
 	return nil
 }
