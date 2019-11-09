@@ -12,39 +12,43 @@ const EOF rune = 0
 
 // Lexer is a structure that pe provides a set of tools to help tokenizing the code.
 type Lexer struct {
-	Tokens      []*tokens.Token
-	lineScanner *LineScanner
-	current     int
-	code        []rune // source code
+	Tokens     []*tokens.Token
+	lineScan   *LineScanner
+	currentPos int
+	readPos    int
+	code       []rune // source code
 }
 
 // NewLexer - new lexer
 func NewLexer(code []rune) *Lexer {
 	return &Lexer{
-		Tokens:      []*tokens.Token{},
-		lineScanner: NewLineScanner(),
-		current:     0,
-		code:        append(code, EOF),
+		Tokens:     []*tokens.Token{},
+		lineScan:   NewLineScanner(),
+		currentPos: 0,
+		readPos:    0,
+		code:       append(code, EOF),
 	}
 }
 
 // Next - return current rune, and move forward the cursor for 1 character.
 func (l *Lexer) Next() rune {
-	data := l.code[l.current]
-	if data == EOF {
+	if l.readPos >= len(l.code) {
 		return EOF
 	}
 
-	l.current++
+	data := l.code[l.readPos]
+
+	l.currentPos = l.readPos
+	l.readPos++
 	return data
 }
 
 // Peek - get the character of the cursor
 func (l *Lexer) Peek() rune {
-	data := l.code[l.current]
-	if data == EOF {
+	if l.readPos >= len(l.code) {
 		return EOF
 	}
+	data := l.code[l.readPos]
 
 	return data
 }
@@ -54,9 +58,9 @@ func (l *Lexer) AppendToken(token *tokens.Token) {
 	l.Tokens = append(l.Tokens, token)
 }
 
-// GetIndex - get cursor value of lexer
-func (l *Lexer) GetIndex() int {
-	return l.current
+// CurrentPos - get cursor value of lexer
+func (l *Lexer) CurrentPos() int {
+	return l.currentPos
 }
 
 // DisplayTokens - display tokens, usually used for debugging
@@ -94,45 +98,70 @@ func (l *Lexer) IsWhiteSpace(ch rune) bool {
 
 // Tokenize - the main logic that transforms codes into tokens
 func (l *Lexer) Tokenize() *error.Error {
-	ch := l.Next()
+	var ch rune
+	// read first char
+	ch = l.Next()
+
+	l.lineScan.NewLine(l.CurrentPos())
 	for ch != EOF {
-		// parse indents
-		l.lineScanner.NewLine(l.GetIndex() - 1)
 		switch ch {
-		case tokens.SP, tokens.TAB:
-			curr := ch
-			count := 0
-			tokenType := TAB
-			for {
-				ch = l.Next()
-				if ch != curr {
-					if curr == tokens.SP {
-						tokenType = SPACE
-					}
-					l.lineScanner.PushIndent(uint8(count), tokenType)
-					break
-				}
-				count++
+		case tokens.SPACE, tokens.TAB:
+			if err := l.parseIndents(ch); err != nil {
+				return err
 			}
 		case tokens.CR, tokens.LF:
-			// for CRLF <windows type>
-			if ch == tokens.CR && l.Peek() == tokens.LF {
-				l.lineScanner.EndLine(l.GetIndex() - 1)
-				l.Next()
-			}
-			// for LFCR <no such type currently>
-			if ch == tokens.LF && l.Peek() == tokens.CR {
-				l.lineScanner.EndLine(l.GetIndex() - 1)
-				l.Next()
-			}
-
-			// for LF or CR only
-			// LF: <linux>, CR:<old mac>
-			l.lineScanner.EndLine(l.GetIndex() - 1)
+			l.parseCRLF(ch)
 		default:
-			// no other action, just move the cursor
-			l.Next()
+			l.parseContent(ch)
 		}
+		ch = l.Peek()
 	}
+
+	// submit end line
+	l.lineScan.EndLine(l.CurrentPos())
 	return nil
+}
+
+func (l *Lexer) parseIndents(ch rune) *error.Error {
+	count := 0
+	for l.Peek() == ch {
+		count++
+		l.Next()
+	}
+
+	// determine indentType
+	indentType := IdetUnknown
+	switch ch {
+	case tokens.TAB:
+		indentType = IdetTab
+	case tokens.SPACE:
+		indentType = IdetSpace
+	}
+
+	return l.lineScan.SetIndent(count, indentType)
+}
+
+func (l *Lexer) parseCRLF(ch rune) {
+	// It's clear that the line has been ended, whether it's CR or LF
+	l.lineScan.EndLine(l.CurrentPos())
+	l.Next()
+
+	// for CRLF <windows type> or LFCR
+	if (ch == tokens.CR && l.Peek() == tokens.LF) ||
+		(ch == tokens.LF && l.Peek() == tokens.CR) {
+
+		// skip one char since we have judge two chars
+		l.Next()
+		l.lineScan.NewLine(l.CurrentPos() + 1)
+		return
+	}
+	// for LF or CR only
+	// LF: <linux>, CR:<old mac>
+	l.lineScan.NewLine(l.CurrentPos() + 1)
+}
+
+func (l *Lexer) parseContent(ch rune) {
+	for l.Peek() != tokens.CR && l.Peek() != tokens.LF && l.Peek() != EOF {
+		l.Next()
+	}
 }

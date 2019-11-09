@@ -2,9 +2,6 @@ package tokens
 
 import (
 	"fmt"
-
-	"github.com/DemoHn/Zn/error"
-	"github.com/DemoHn/Zn/lex"
 )
 
 // declare marks
@@ -101,6 +98,7 @@ func FilterMarker(ch rune) bool {
 // ConstructMarkerToken - consturct token from current character
 // ch: current char
 // idx: the index of current char
+/**
 func ConstructMarkerToken(l *lex.Lexer, ch rune, idx int) (lex.Token, *error.Error) {
 	switch ch {
 	case Comma:
@@ -134,3 +132,4 @@ func ConstructMarkerToken(l *lex.Lexer, ch rune, idx int) (lex.Token, *error.Err
 	// others ignore them
 	return MarkerToken{EmptyType, 0, 0}, nil
 }
+*/

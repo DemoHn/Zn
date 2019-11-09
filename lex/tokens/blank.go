@@ -4,10 +4,10 @@ import "fmt"
 
 // declare chars
 const (
-	SP  rune = 0x0020 // <SP>
-	TAB rune = 0x0009 // <TAB>
-	CR  rune = 0x000D // \r
-	LF  rune = 0x000A // \n
+	SPACE rune = 0x0020 // <SP>
+	TAB   rune = 0x0009 // <TAB>
+	CR    rune = 0x000D // \r
+	LF    rune = 0x000A // \n
 )
 
 // EOFToken is an artifical sign added manually to the end of tokens

@@ -1,12 +1,6 @@
 package tokens
 
-import (
-	"testing"
-
-	"github.com/DemoHn/Zn/error"
-	"github.com/DemoHn/Zn/lex"
-)
-
+/**
 func TestSource_ConstructMarkerToken(t *testing.T) {
 
 	tests := []struct {
@@ -67,15 +61,14 @@ func TestSource_ConstructMarkerToken(t *testing.T) {
 			token:       "",
 		},
 	}
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			code := []rune(tt.code)
 			l := lex.NewLexer(code)
 
 			var lastError *error.Error
-			for !l.End() {
-				idx := l.GetIndex()
+			for l.Peek() != lex.EOF {
+				idx := l.CurrentPos()
 				ch := l.Next()
 				token, err := ConstructMarkerToken(l, ch, idx)
 				if err != nil {
@@ -101,3 +94,4 @@ func TestSource_ConstructMarkerToken(t *testing.T) {
 		})
 	}
 }
+*/
