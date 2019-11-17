@@ -14,10 +14,14 @@ type Position struct {
 type Token struct {
 	Type    TokenType
 	Literal []rune
-	Start   Position
-	End     Position
 }
 
 func (tk *Token) String(detailed bool) string {
 	return ""
 }
+
+// token types
+const (
+	None TokenType = 1
+	EOF  TokenType = 0
+)

@@ -11,7 +11,7 @@ import (
 type LineScanner struct {
 	indentType IndentType
 	lines      []LineInfo
-	lineCache  *LineInfo
+	rowPos     int
 }
 
 // LineInfo - stores the (absolute) start & end index of this line
@@ -19,19 +19,23 @@ type LineScanner struct {
 type LineInfo struct {
 	// the indent (at the beginning) of this line
 	// all lines should have indents to differentiate scopes.
-	Indents int
+	IndentNum int
 	// the first character (exclude indents) of this line
 	// notice when emptyLine = true, the value will be -1
-	StartIndex int
+	Start int
 	// the last character (exclude CRLF or LF) of this line
 	// notice when emptyLine = true, the value will be -1
-	EndIndex int
+	End int
 	// if the line contains no effective characters
 	EmptyLine bool
+	scanState
 }
 
 // IndentType - only TAB or SPACE (U+0020) are supported
 type IndentType uint8
+
+// scanState - internal line scan state
+type scanState uint8
 
 // define IndentTypes
 const (
@@ -40,22 +44,27 @@ const (
 	IdetSpace   IndentType = 32
 )
 
+// define scanStates
+const (
+	scanInit   scanState = 0
+	scanIndent scanState = 1
+	scanEnd    scanState = 2
+)
+
 // NewLineScanner -
 func NewLineScanner() *LineScanner {
 	return &LineScanner{
 		indentType: IdetUnknown,
-		lines:      []LineInfo{},
-		lineCache:  nil,
-	}
-}
-
-// NewLine - init and stash new LineInfo to lineCache
-func (ls *LineScanner) NewLine(idx int) {
-	ls.lineCache = &LineInfo{
-		Indents:    0,
-		StartIndex: idx,
-		EndIndex:   idx,
-		EmptyLine:  true,
+		rowPos:     0,
+		lines: []LineInfo{
+			{
+				IndentNum: 0,
+				Start:     0,
+				End:       0,
+				EmptyLine: true,
+				scanState: scanInit,
+			},
+		},
 	}
 }
 
@@ -65,7 +74,7 @@ func (ls *LineScanner) NewLine(idx int) {
 // possible errors:
 // 1. inconsist indentType
 // 2. when IndentType = SPACE, the count is not 4 * N chars
-func (ls *LineScanner) SetIndent(count int, t IndentType) *error.Error {
+func (ls *LineScanner) SetIndent(count int, t IndentType, start int) *error.Error {
 	if t == IdetSpace && count%4 != 0 {
 		return error.NewErrorSLOT("SPACE count should be 4 times!")
 	}
@@ -84,28 +93,35 @@ func (ls *LineScanner) SetIndent(count int, t IndentType) *error.Error {
 		indents = count / 4
 	}
 
-	ls.lineCache.Indents = indents
-	ls.lineCache.StartIndex = ls.lineCache.StartIndex + int(count)
+	// set current info
+	info := ls.lines[ls.rowPos]
+	info.Start = start
+	info.IndentNum = indents
+	info.scanState = scanIndent
 	return nil
 }
 
-// EndLine - when meet CRLF, that means the line is going to end
-// It's time to push cache into line info
-func (ls *LineScanner) EndLine(endIndex int) {
-	// for some reason (e.g. empty code), ls.lineCache maybe nil
-	// therefore we won't submit data to lineInfo
-	if ls.lineCache == nil {
-		return
-	}
+// PushLine - when meet CRLF/LF/CR/LFCR, that means the line is going to end
+// so update the current one and create new one
+func (ls *LineScanner) PushLine(endIndex int) {
+	info := ls.lines[ls.rowPos]
 
-	ls.lineCache.EndIndex = endIndex
+	info.End = endIndex
+	info.scanState = scanEnd
 	// handle non-empty line
-	if endIndex > ls.lineCache.StartIndex {
-		ls.lineCache.EmptyLine = false
+	if endIndex > info.Start {
+		info.EmptyLine = false
 	}
 
-	ls.lines = append(ls.lines, *(ls.lineCache))
-	ls.clearCache()
+	// add new template
+	ls.lines = append(ls.lines, LineInfo{
+		IndentNum: 0,
+		Start:     0,
+		End:       0,
+		EmptyLine: true,
+		scanState: scanInit,
+	})
+	ls.rowPos++
 }
 
 // String shows all lines info for testing.
@@ -130,21 +146,17 @@ func (ls *LineScanner) String() string {
 	}
 
 	for _, line := range ls.lines {
-		if line.EmptyLine {
-			ss = append(ss, "Empty<0>")
-		} else {
-			ss = append(ss, fmt.Sprintf(
-				"%s<%d>[%d,%d]",
-				indentChar, line.Indents,
-				line.StartIndex, line.EndIndex,
-			))
+		if line.scanState == scanEnd {
+			if line.EmptyLine {
+				ss = append(ss, "Empty<0>")
+			} else {
+				ss = append(ss, fmt.Sprintf(
+					"%s<%d>[%d,%d]",
+					indentChar, line.IndentNum,
+					line.Start, line.End,
+				))
+			}
 		}
 	}
-
 	return strings.Join(ss, " ")
-}
-
-//// private function
-func (ls *LineScanner) clearCache() {
-	ls.lineCache = nil
 }
