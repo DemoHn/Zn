@@ -2,19 +2,35 @@ package lex
 
 import (
 	"github.com/DemoHn/Zn/error"
-	"github.com/DemoHn/Zn/lex/tokens"
+	"github.com/DemoHn/Zn/util"
 )
-
-// EOF - mark as end of file, should only exists at the end of sequence
-const EOF rune = 0
 
 // Lexer is a structure that pe provides a set of tools to help tokenizing the code.
 type Lexer struct {
 	lines      *LineScanner
 	currentPos int
 	readPos    int
+	lexScope   lexScope
+	quoteStack *util.RuneStack
+	chBuffer   []rune
 	code       []rune // source code
 }
+
+// lexScope - lexer parsing scope
+// lexScope indicates the next step for lexer to recognize.
+// For example, if shiftLevel = LvQuoteVAR, all strings (including numbers & keywords) should be
+// recognized as normal variable name
+type lexScope uint8
+
+// define lexScopes
+const (
+	LvNormalVAR         lexScope = 40
+	LvKeyword           lexScope = 38
+	LvQuoteVAR          lexScope = 36
+	LvQuoteSTRING       lexScope = 34
+	LvSingleLineComment lexScope = 32
+	LvMultiLineComment  lexScope = 31
+)
 
 // NewLexer - new lexer
 func NewLexer(code []rune) *Lexer {
@@ -22,6 +38,9 @@ func NewLexer(code []rune) *Lexer {
 		lines:      NewLineScanner(),
 		currentPos: 0,
 		readPos:    0,
+		lexScope:   LvNormalVAR,
+		quoteStack: util.NewRuneStack(32),
+		chBuffer:   []rune{},
 		code:       append(code, EOF),
 	}
 }
@@ -74,46 +93,62 @@ func (l *Lexer) current() int {
 	return l.currentPos
 }
 
-// isWhiteSpace - if a character belongs to white space (including tabs, full-width spaces, etc.)
-// see 'the draft' for details
-func (l *Lexer) isWhiteSpace(ch rune) bool {
-	spaceList := []rune{
-		0x0009, 0x000B, 0x000C, 0x0020, 0x00A0,
-		0x2000, 0x2001, 0x2002, 0x2003, 0x2004,
-		0x2005, 0x2006, 0x2007, 0x2008, 0x2009,
-		0x200A, 0x200B, 0x202F, 0x205F, 0x3000,
-	}
+// rebase - rebase cursor
+func (l *Lexer) rebase(cursor int) {
+	l.currentPos = cursor
+	l.readPos = cursor + 1
+}
 
-	for _, s := range spaceList {
-		if ch == s {
-			return true
-		}
-	}
+func (l *Lexer) clearBuffer() {
+	l.chBuffer = []rune{}
+}
 
-	return false
+func (l *Lexer) pushBuffer(ch rune) {
+	l.chBuffer = append(l.chBuffer, ch)
 }
 
 // NextToken - parse and generate the next token (including comments)
-func (l *Lexer) NextToken() (*tokens.Token, *error.Error) {
-	ch := l.next()
-
-	// for EOF, done quickly
-	if ch == EOF {
-		return &tokens.Token{
-			Type:    tokens.EOF,
-			Literal: []rune{},
-		}, nil
-	}
-
-	switch ch {
-	case SP, TAB:
-		if err := l.parseIndents(ch); err != nil {
-			return nil, err
+func (l *Lexer) NextToken() (*Token, *error.Error) {
+	var ch rune
+	for {
+		ch = l.peek()
+		switch ch {
+		case EOF:
+			return TokenEOF(), nil
+		case SP, TAB:
+			// if indent has been scanned, it should be regarded as whitespaces
+			// (it's totally ignored)
+			if !l.lines.HasScanIndent() {
+				if err := l.parseIndents(ch); err != nil {
+					return nil, err
+				}
+			}
+		case CR, LF:
+			l.parseCRLF(ch)
+		// meet with 注, it may be possibly a lead character of a comment block
+		// notice: it would also be a normal identifer (if 注[number]：) does not satisfy.
+		case GlyphZHU:
+			cursor := l.current()
+			isComment, isMultiLine := l.validateComment(ch)
+			if isComment {
+				if isMultiLine {
+					l.lexScope = LvMultiLineComment
+				} else {
+					l.lexScope = LvSingleLineComment
+				}
+			} else {
+				l.rebase(cursor)
+				// handle the char to next to prevent dead lock
+				l.pushBuffer(ch)
+				l.next()
+			}
+		// left quotes
+		case LeftQuoteI, LeftQuoteII, LeftQuoteIII, LeftQuoteIV, LeftQuoteV:
+			l.lexScope = LvQuoteSTRING
+			l.parseString(ch)
 		}
-	case CR, LF:
-		l.parseCRLF(ch)
-	default:
-		l.parseContent(ch)
+
+		l.next()
 	}
 
 	return nil, nil
@@ -132,7 +167,7 @@ func (l *Lexer) parseIndents(ch rune) *error.Error {
 	switch ch {
 	case TAB:
 		indentType = IdetTab
-	case SPACE:
+	case SP:
 		indentType = IdetSpace
 	}
 
@@ -157,8 +192,45 @@ func (l *Lexer) parseCRLF(ch rune) {
 	l.lines.PushLine(l.current())
 }
 
-func (l *Lexer) parseContent(ch rune) {
-	for l.peek() != CR && l.peek() != LF && l.peek() != EOF {
+// validate if the coming block is a comment block
+// valid comment block are listed below:
+// (single-line)
+// 1. 注：
+// 2. 注123456：
+//
+// (multi-line)
+//
+// 3. 注：“
+// 4. 注123456：“
+//
+// @returns (isValid, isMultiLine)
+func (l *Lexer) validateComment(ch rune) (bool, bool) {
+	// read next char
+	l.next()
+	// if next char is a number or whitespace, skip it
+	for isNumber(l.peek()) || isWhiteSpace(l.peek()) {
 		l.next()
 	}
+	// match pattern 1, 2
+	if l.peek() == Colon {
+		l.next()
+		// “ or 「
+		lquotes := []rune{LeftQuoteV, LeftQuoteII}
+		// match pattern 3, 4
+		if util.Contains(l.peek2(), lquotes) {
+			l.next()
+			return true, true
+		}
+
+		return true, false
+	}
+	return false, false
+}
+
+func (l *Lexer) parseComment() {
+
+}
+
+func (l *Lexer) parseString(ch rune) {
+
 }

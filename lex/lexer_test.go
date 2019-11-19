@@ -1,9 +1,6 @@
 package lex
 
-import (
-	"testing"
-)
-
+/**
 // test indents
 func TestLex_Tokenize(t *testing.T) {
 	tests := []struct {
@@ -102,3 +99,4 @@ func TestLex_Tokenize(t *testing.T) {
 		})
 	}
 }
+*/

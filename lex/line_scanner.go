@@ -98,6 +98,8 @@ func (ls *LineScanner) SetIndent(count int, t IndentType, start int) *error.Erro
 	info.Start = start
 	info.IndentNum = indents
 	info.scanState = scanIndent
+	// write back data
+	ls.lines[ls.rowPos] = info
 	return nil
 }
 
@@ -112,6 +114,8 @@ func (ls *LineScanner) PushLine(endIndex int) {
 	if endIndex > info.Start {
 		info.EmptyLine = false
 	}
+	// write back to data
+	ls.lines[ls.rowPos] = info
 
 	// add new template
 	ls.lines = append(ls.lines, LineInfo{
@@ -122,6 +126,15 @@ func (ls *LineScanner) PushLine(endIndex int) {
 		scanState: scanInit,
 	})
 	ls.rowPos++
+}
+
+// HasScanIndent - determines if indents has been scanned properly
+// If so, further SPs and TABs would be regarded as normal whitespaces and will
+// be neglacted as usual.
+func (ls *LineScanner) HasScanIndent() bool {
+	state := ls.lines[ls.rowPos].scanState
+
+	return state == scanIndent
 }
 
 // String shows all lines info for testing.

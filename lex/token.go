@@ -11,8 +11,21 @@ type Token struct {
 
 // token types
 const (
-	TkEOF TokenType = 0
+	TypeEOF TokenType = 0
 )
+
+//// 0. EOF
+
+// EOF - mark as end of file, should only exists at the end of sequence
+const EOF rune = 0
+
+// TokenEOF - new EOF token
+func TokenEOF() *Token {
+	return &Token{
+		Type:    TypeEOF,
+		Literal: []rune{},
+	}
+}
 
 //// 1. keywords
 // TokenTypePrefix: 0x10
@@ -190,3 +203,17 @@ const (
 	RightParen    rune = 0xFF09 // ）
 	VarRemark     rune = 0x00B7 // ·
 )
+
+// LeftQuotes -
+var LeftQuotes = []rune{
+	LeftQuoteI,
+	LeftQuoteII,
+	LeftQuoteIII,
+	LeftQuoteIV,
+	LeftQuoteV,
+}
+
+//// 5. numbers
+func isNumber(ch rune) bool {
+	return (ch >= '0' && ch <= '9')
+}
