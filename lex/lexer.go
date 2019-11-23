@@ -109,6 +109,17 @@ func (l *Lexer) pushBuffer(ch rune) {
 	l.chBuffer = append(l.chBuffer, ch)
 }
 
+// pushBufferRange - push buffer for a range
+// @returns bool - if push success
+func (l *Lexer) pushBufferRange(start int, end int) bool {
+	if end >= len(l.code) || start > end {
+		return false
+	}
+
+	l.chBuffer = append(l.chBuffer, l.code[start:end+1]...)
+	return true
+}
+
 // NextToken - parse and generate the next token (including comments)
 func (l *Lexer) NextToken() (*Token, *error.Error) {
 	var ch = l.peek()
@@ -126,6 +137,7 @@ func (l *Lexer) NextToken() (*Token, *error.Error) {
 		}
 	case CR, LF:
 		l.parseCRLF(ch)
+		l.parseIndents(l.peek())
 	// meet with 注, it may be possibly a lead character of a comment block
 	// notice: it would also be a normal identifer (if 注[number]：) does not satisfy.
 	case GlyphZHU:
@@ -177,6 +189,7 @@ func (l *Lexer) parseIndents(ch rune) *error.Error {
 }
 
 func (l *Lexer) parseCRLF(ch rune) {
+	cursor := l.current()
 	// It's clear that the line has been ended, whether it's CR or LF
 	l.next()
 
@@ -186,12 +199,12 @@ func (l *Lexer) parseCRLF(ch rune) {
 
 		// skip one char since we have judge two chars
 		l.next()
-		l.lines.PushLine(l.current() + 1)
+		l.lines.PushLine(cursor)
 		return
 	}
 	// for LF or CR only
 	// LF: <linux>, CR:<old mac>
-	l.lines.PushLine(l.current())
+	l.lines.PushLine(cursor)
 }
 
 // validate if the coming block is a comment block
@@ -217,7 +230,7 @@ func (l *Lexer) validateComment(ch rune) (bool, bool) {
 	if l.peek() == Colon {
 		l.next()
 		// “ or 「
-		lquotes := []rune{LeftQuoteV, LeftQuoteII}
+		lquotes := []rune{LeftQuoteIV, LeftQuoteII}
 		// match pattern 3, 4
 		if util.Contains(l.peek(), lquotes) {
 			return true, true
@@ -238,8 +251,12 @@ func (l *Lexer) parseComment(ch rune, isMultiLine bool) *Token {
 	for ch != EOF {
 		// CR, LF
 		if util.Contains(ch, []rune{CR, LF}) {
+			c1 := l.current()
 			// parse CR,LF first
 			l.parseCRLF(ch)
+			l.pushBufferRange(c1+1, l.current())
+			// manually set no indents
+			l.lines.SetIndent(0, IdetUnknown, l.current())
 			if !isMultiLine {
 				return NewCommentToken(l.chBuffer, isMultiLine)
 			}

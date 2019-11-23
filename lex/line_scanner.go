@@ -79,7 +79,7 @@ func (ls *LineScanner) SetIndent(count int, t IndentType, start int) *error.Erro
 		return error.NewErrorSLOT("SPACE count should be 4 times!")
 	}
 
-	if ls.indentType == IdetUnknown {
+	if ls.indentType == IdetUnknown && t != IdetUnknown {
 		ls.indentType = t
 	} else {
 		if ls.indentType != t {
