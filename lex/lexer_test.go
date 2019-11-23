@@ -27,6 +27,19 @@ func TestNextToken_CommentsONLY(t *testing.T) {
 			},
 			lineInfo: "Unknown<0>[0,21]",
 		},
+		{
+			name: "singleLine comment with newline",
+			input: "注：注：注：nach nach\r\n注：又是一个注",
+			expectError: false,
+			token: Token{
+				Type: TokenComment,
+				Literal: []rune("注：注：nach nach"),
+				Info: map[string]bool{
+					"isMultiLine": false,
+				},
+			},
+			lineInfo: "Unknown<0>[0,14]",
+		}
 	}
 
 	for _, tt := range cases {
