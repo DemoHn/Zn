@@ -145,6 +145,19 @@ func TestNextToken_CommentsONLY(t *testing.T) {
 			},
 			lineInfo: "Unknown<0>[0,4] Unknown<0>[6,12] Unknown<0>[13,15]",
 		},
+		{
+			name:        "mutlLine comment with quote stack",
+			input:       "注：“一一「2233」《某本书》注：“”二二\n     ”",
+			expectError: false,
+			token: Token{
+				Type:    TokenComment,
+				Literal: []rune("“一一「2233」《某本书》注：“”二二\n     ”"),
+				Info: map[string]bool{
+					"isMultiLine": true,
+				},
+			},
+			lineInfo: "Unknown<0>[0,21]",
+		},
 	}
 
 	for _, tt := range cases {

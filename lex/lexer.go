@@ -260,29 +260,28 @@ func (l *Lexer) parseComment(ch rune, isMultiLine bool) *Token {
 			if !isMultiLine {
 				return NewCommentToken(l.chBuffer, isMultiLine)
 			}
-		} else {
-			// normal string
-			l.pushBuffer(ch)
-			// for mutli-line comment, calculate quotes is necessary.
-			if isMultiLine {
-				// push left quotes
-				if util.Contains(ch, LeftQuotes) {
-					if !l.quoteStack.Push(ch) {
-						l.lexError = error.NewErrorSLOT("quote stack if full")
-						return nil
+		}
+		// normal string
+		l.pushBuffer(l.peek())
+		// for mutli-line comment, calculate quotes is necessary.
+		if isMultiLine {
+			// push left quotes
+			if util.Contains(ch, LeftQuotes) {
+				if !l.quoteStack.Push(ch) {
+					l.lexError = error.NewErrorSLOT("quote stack if full")
+					return nil
+				}
+				// pop right quotes if possible
+			} else if util.Contains(ch, RightQuotes) {
+				currentL, hasValue := l.quoteStack.Current()
+				if hasValue {
+					if QuoteMatchMap[currentL] == ch {
+						l.quoteStack.Pop()
 					}
-					// pop right quotes if possible
-				} else if util.Contains(ch, RightQuotes) {
-					currentL, hasValue := l.quoteStack.Current()
-					if hasValue {
-						if QuoteMatchMap[currentL] == ch {
-							l.quoteStack.Pop()
-						}
-						// stop quoting
-						if l.quoteStack.IsEmpty() {
-							l.next()
-							return NewCommentToken(l.chBuffer, isMultiLine)
-						}
+					// stop quoting
+					if l.quoteStack.IsEmpty() {
+						l.next()
+						return NewCommentToken(l.chBuffer, isMultiLine)
 					}
 				}
 			}
