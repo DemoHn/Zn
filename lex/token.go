@@ -1,5 +1,7 @@
 package lex
 
+import "github.com/DemoHn/Zn/util"
+
 // TokenType - general token type
 type TokenType int
 
@@ -7,9 +9,11 @@ type TokenType int
 type Token struct {
 	Type    TokenType
 	Literal []rune
+	Info    interface{}
 }
 
-// token types
+// token types -
+// for special type Tokens, its range varies from 0 - 9
 const (
 	TypeEOF TokenType = 0
 )
@@ -24,6 +28,7 @@ func TokenEOF() *Token {
 	return &Token{
 		Type:    TypeEOF,
 		Literal: []rune{},
+		Info:    nil,
 	}
 }
 
@@ -113,20 +118,13 @@ const (
 
 // KeywordLeads - all glyphs that would be possible of the first character of one keyword.
 var KeywordLeads = []rune{
-	GlyphLING, GlyphWEI,
-	GlyphSHI, GlyphSHE,
-	GlyphRU, GlyphYI,
-	GlyphFAN, GlyphBU,
-	GlyphDA, GlyphXIAO,
-	GlyphYIi, GlyphER,
-	GlyphDE, GlyphZE,
-	GlyphFOU, GlyphMEI,
-	GlyphCHENG, GlyphZUO,
-	GlyphDING, GlyphLEI,
-	GlyphQI, GlyphCI,
-	GlyphZHU, GlyphHE,
-	GlyphZAI, GlyphZHONG,
-	GlyphHUO, GlyphQIE,
+	GlyphLING, GlyphWEI, GlyphSHI, GlyphSHE,
+	GlyphRU, GlyphYI, GlyphFAN, GlyphBU,
+	GlyphDA, GlyphXIAO, GlyphYIi, GlyphER,
+	GlyphDE, GlyphZE, GlyphFOU, GlyphMEI,
+	GlyphCHENG, GlyphZUO, GlyphDING, GlyphLEI,
+	GlyphQI, GlyphCI, GlyphZHU, GlyphHE,
+	GlyphZAI, GlyphZHONG, GlyphHUO, GlyphQIE,
 	GlyphZHI, GlyphDEo,
 }
 
@@ -139,6 +137,23 @@ func isKeywordLead(ch rune) bool {
 	}
 
 	return false
+}
+
+// for keyword token types, its range varies from 10 - 50
+const (
+	TokenComment TokenType = 10
+)
+
+// NewCommentToken -
+func NewCommentToken(buf []rune, isMultiLine bool) *Token {
+	cpBuf := util.Copy(buf)
+	return &Token{
+		Type:    TokenComment,
+		Literal: cpBuf,
+		Info: map[string]bool{
+			"isMultiLine": isMultiLine,
+		},
+	}
 }
 
 //// 2. markers
@@ -211,6 +226,24 @@ var LeftQuotes = []rune{
 	LeftQuoteIII,
 	LeftQuoteIV,
 	LeftQuoteV,
+}
+
+// RightQuotes -
+var RightQuotes = []rune{
+	RightQuoteI,
+	RightQuoteII,
+	RightQuoteIII,
+	RightQuoteIV,
+	RightQuoteV,
+}
+
+// QuoteMatchMap -
+var QuoteMatchMap = map[rune]rune{
+	LeftQuoteI:   RightQuoteI,
+	LeftQuoteII:  RightQuoteII,
+	LeftQuoteIII: RightQuoteIII,
+	LeftQuoteIV:  RightQuoteIV,
+	LeftQuoteV:   RightQuoteV,
 }
 
 //// 5. numbers

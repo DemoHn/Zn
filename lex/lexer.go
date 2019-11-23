@@ -12,6 +12,7 @@ type Lexer struct {
 	readPos    int
 	lexScope   lexScope
 	quoteStack *util.RuneStack
+	lexError   *error.Error // if a lexError occurs, mark it
 	chBuffer   []rune
 	code       []rune // source code
 }
@@ -40,6 +41,7 @@ func NewLexer(code []rune) *Lexer {
 		readPos:    0,
 		lexScope:   LvNormalVAR,
 		quoteStack: util.NewRuneStack(32),
+		lexError:   nil,
 		chBuffer:   []rune{},
 		code:       append(code, EOF),
 	}
@@ -109,49 +111,50 @@ func (l *Lexer) pushBuffer(ch rune) {
 
 // NextToken - parse and generate the next token (including comments)
 func (l *Lexer) NextToken() (*Token, *error.Error) {
-	var ch rune
-	for {
-		ch = l.peek()
-		switch ch {
-		case EOF:
-			return TokenEOF(), nil
-		case SP, TAB:
-			// if indent has been scanned, it should be regarded as whitespaces
-			// (it's totally ignored)
-			if !l.lines.HasScanIndent() {
-				if err := l.parseIndents(ch); err != nil {
-					return nil, err
-				}
-			}
-		case CR, LF:
-			l.parseCRLF(ch)
-		// meet with 注, it may be possibly a lead character of a comment block
-		// notice: it would also be a normal identifer (if 注[number]：) does not satisfy.
-		case GlyphZHU:
+	var ch = l.peek()
+	var token *Token
+
+	switch ch {
+	case EOF:
+		l.lines.PushLine(l.current())
+		return TokenEOF(), nil
+	case SP, TAB:
+		// if indent has been scanned, it should be regarded as whitespaces
+		// (it's totally ignored)
+		if !l.lines.HasScanIndent() {
+			l.parseIndents(ch)
+		}
+	case CR, LF:
+		l.parseCRLF(ch)
+	// meet with 注, it may be possibly a lead character of a comment block
+	// notice: it would also be a normal identifer (if 注[number]：) does not satisfy.
+	case GlyphZHU:
+		if l.lexScope == LvNormalVAR {
 			cursor := l.current()
 			isComment, isMultiLine := l.validateComment(ch)
 			if isComment {
-				if isMultiLine {
-					l.lexScope = LvMultiLineComment
-				} else {
-					l.lexScope = LvSingleLineComment
-				}
+				token = l.parseComment(l.peek(), isMultiLine)
 			} else {
 				l.rebase(cursor)
 				// handle the char to next to prevent dead lock
 				l.pushBuffer(ch)
 				l.next()
 			}
-		// left quotes
-		case LeftQuoteI, LeftQuoteII, LeftQuoteIII, LeftQuoteIV, LeftQuoteV:
-			l.lexScope = LvQuoteSTRING
-			l.parseString(ch)
 		}
+	// left quotes
+	case LeftQuoteI, LeftQuoteII, LeftQuoteIII, LeftQuoteIV, LeftQuoteV:
+		l.lexScope = LvQuoteSTRING
+		l.parseString(ch)
+	// right quotes
+	case RightQuoteI, RightQuoteII, RightQuoteIII, RightQuoteIV, RightQuoteV:
 
-		l.next()
 	}
 
-	return nil, nil
+	if l.lexError != nil {
+		return nil, l.lexError
+	}
+	return token, nil
+
 }
 
 //// parsing logics
@@ -161,7 +164,6 @@ func (l *Lexer) parseIndents(ch rune) *error.Error {
 		count++
 		l.next()
 	}
-
 	// determine indentType
 	indentType := IdetUnknown
 	switch ch {
@@ -217,8 +219,7 @@ func (l *Lexer) validateComment(ch rune) (bool, bool) {
 		// “ or 「
 		lquotes := []rune{LeftQuoteV, LeftQuoteII}
 		// match pattern 3, 4
-		if util.Contains(l.peek2(), lquotes) {
-			l.next()
+		if util.Contains(l.peek(), lquotes) {
 			return true, true
 		}
 
@@ -227,8 +228,59 @@ func (l *Lexer) validateComment(ch rune) (bool, bool) {
 	return false, false
 }
 
-func (l *Lexer) parseComment() {
+// parseComment until its end
+func (l *Lexer) parseComment(ch rune, isMultiLine bool) *Token {
+	// tear-down operations before return
+	defer func() {
+		l.clearBuffer()
+	}()
 
+	for ch != EOF {
+		// CR, LF
+		if util.Contains(ch, []rune{CR, LF}) {
+			// parse CR,LF first
+			l.parseCRLF(ch)
+			if !isMultiLine {
+				return NewCommentToken(l.chBuffer, isMultiLine)
+			}
+		} else {
+			// normal string
+			l.pushBuffer(ch)
+			// for mutli-line comment, calculate quotes is necessary.
+			if isMultiLine {
+				// push left quotes
+				if util.Contains(ch, LeftQuotes) {
+					if !l.quoteStack.Push(ch) {
+						l.lexError = error.NewErrorSLOT("quote stack if full")
+						return nil
+					}
+					// pop right quotes if possible
+				} else if util.Contains(ch, RightQuotes) {
+					currentL, hasValue := l.quoteStack.Current()
+					if hasValue {
+						if QuoteMatchMap[currentL] == ch {
+							l.quoteStack.Pop()
+						}
+						// stop quoting
+						if l.quoteStack.IsEmpty() {
+							l.next()
+							return NewCommentToken(l.chBuffer, isMultiLine)
+						}
+					}
+				}
+			}
+		}
+
+		l.next()
+		ch = l.peek()
+	}
+
+	// meeting with EOF
+	// whenever it's a multi-line or single-line comment block,
+	// whenever the multi-line comment block (if so) has been enclosed or not,
+	// return the token directly.
+	l.lines.PushLine(l.current())
+	return NewCommentToken(l.chBuffer, isMultiLine)
 }
 
 func (l *Lexer) parseString(ch rune) {

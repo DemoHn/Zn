@@ -1,5 +1,60 @@
 package lex
 
+import (
+	"reflect"
+	"testing"
+)
+
+// mainly for testing parseCommentHead()
+func TestNextToken_CommentsONLY(t *testing.T) {
+	cases := []struct {
+		name        string
+		input       string
+		expectError bool
+		token       Token
+		lineInfo    string
+	}{
+		{
+			name:        "singleLine comment",
+			input:       "注：这是一个长 长 的单行注释comment",
+			expectError: false,
+			token: Token{
+				Type:    TokenComment,
+				Literal: []rune("这是一个长 长 的单行注释comment"),
+				Info: map[string]bool{
+					"isMultiLine": false,
+				},
+			},
+			lineInfo: "Unknown<0>[0,21]",
+		},
+	}
+
+	for _, tt := range cases {
+		lex := NewLexer([]rune(tt.input))
+		t.Run(tt.name, func(t *testing.T) {
+			tk, err := lex.NextToken()
+			// validate error
+			if tt.expectError == false {
+				if err != nil {
+					t.Errorf("NextToken() failed! expected no error, but got error")
+					t.Error(err)
+				} else if tt.lineInfo != lex.lines.String() {
+					t.Errorf("NextToken() lineInfo expect `%s`, actual `%s`", tt.lineInfo, lex.lines.String())
+				}
+			} else {
+				if err == nil {
+					t.Errorf("NextToken() failed! expected error, but got no error")
+				}
+			}
+
+			if !reflect.DeepEqual(*tk, tt.token) {
+				t.Errorf("NextToken() return Token failed! expect: %v, got: %v", tt.token, *tk)
+			}
+		})
+	}
+}
+
+//// helpers
 /**
 // test indents
 func TestLex_Tokenize(t *testing.T) {
