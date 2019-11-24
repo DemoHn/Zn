@@ -9,7 +9,7 @@ import (
 type Lexer struct {
 	lines      *LineScanner
 	currentPos int
-	readPos    int
+	peekPos    int
 	lexScope   lexScope
 	quoteStack *util.RuneStack
 	lexError   *error.Error // if a lexError occurs, mark it
@@ -38,7 +38,7 @@ func NewLexer(code []rune) *Lexer {
 	return &Lexer{
 		lines:      NewLineScanner(),
 		currentPos: 0,
-		readPos:    0,
+		peekPos:    0,
 		lexScope:   LvNormalVAR,
 		quoteStack: util.NewRuneStack(32),
 		lexError:   nil,
@@ -49,43 +49,43 @@ func NewLexer(code []rune) *Lexer {
 
 // next - return current rune, and move forward the cursor for 1 character.
 func (l *Lexer) next() rune {
-	if l.readPos >= len(l.code) {
+	if l.peekPos >= len(l.code) {
 		return EOF
 	}
 
-	data := l.code[l.readPos]
+	data := l.code[l.peekPos]
 
-	l.currentPos = l.readPos
-	l.readPos++
+	l.currentPos = l.peekPos
+	l.peekPos++
 	return data
 }
 
 // peek - get the character of the cursor
 func (l *Lexer) peek() rune {
-	if l.readPos >= len(l.code) {
+	if l.peekPos >= len(l.code) {
 		return EOF
 	}
-	data := l.code[l.readPos]
+	data := l.code[l.peekPos]
 
 	return data
 }
 
 // peek2 - get the next next character without moving the cursor
 func (l *Lexer) peek2() rune {
-	if l.readPos >= len(l.code)-1 {
+	if l.peekPos >= len(l.code)-1 {
 		return EOF
 	}
-	data := l.code[l.readPos+1]
+	data := l.code[l.peekPos+1]
 
 	return data
 }
 
 // peek3 - get the next next next character without moving the cursor
 func (l *Lexer) peek3() rune {
-	if l.readPos >= len(l.code)-2 {
+	if l.peekPos >= len(l.code)-2 {
 		return EOF
 	}
-	data := l.code[l.readPos+2]
+	data := l.code[l.peekPos+2]
 
 	return data
 }
@@ -98,7 +98,7 @@ func (l *Lexer) current() int {
 // rebase - rebase cursor
 func (l *Lexer) rebase(cursor int) {
 	l.currentPos = cursor
-	l.readPos = cursor + 1
+	l.peekPos = cursor + 1
 }
 
 func (l *Lexer) clearBuffer() {
@@ -122,7 +122,7 @@ func (l *Lexer) pushBufferRange(start int, end int) bool {
 
 // NextToken - parse and generate the next token (including comments)
 func (l *Lexer) NextToken() (*Token, *error.Error) {
-	var ch = l.peek()
+	var ch = l.next()
 	var token *Token
 
 	switch ch {
@@ -145,7 +145,7 @@ func (l *Lexer) NextToken() (*Token, *error.Error) {
 			cursor := l.current()
 			isComment, isMultiLine := l.validateComment(ch)
 			if isComment {
-				token = l.parseComment(l.peek(), isMultiLine)
+				token = l.parseComment(l.code[l.currentPos], isMultiLine)
 			} else {
 				l.rebase(cursor)
 				// handle the char to next to prevent dead lock
@@ -155,8 +155,9 @@ func (l *Lexer) NextToken() (*Token, *error.Error) {
 		}
 	// left quotes
 	case LeftQuoteI, LeftQuoteII, LeftQuoteIII, LeftQuoteIV, LeftQuoteV:
-		l.lexScope = LvQuoteSTRING
-		l.parseString(ch)
+		token = l.parseString(ch)
+	case MiddleDot:
+
 	// right quotes
 	case RightQuoteI, RightQuoteII, RightQuoteIII, RightQuoteIV, RightQuoteV:
 
@@ -166,7 +167,6 @@ func (l *Lexer) NextToken() (*Token, *error.Error) {
 		return nil, l.lexError
 	}
 	return token, nil
-
 }
 
 //// parsing logics
@@ -190,21 +190,18 @@ func (l *Lexer) parseIndents(ch rune) *error.Error {
 
 func (l *Lexer) parseCRLF(ch rune) {
 	cursor := l.current()
-	// It's clear that the line has been ended, whether it's CR or LF
-	l.next()
-
 	// for CRLF <windows type> or LFCR
 	if (ch == CR && l.peek() == LF) ||
 		(ch == LF && l.peek() == CR) {
 
 		// skip one char since we have judge two chars
 		l.next()
-		l.lines.PushLine(cursor)
+		l.lines.PushLine(cursor - 1)
 		return
 	}
 	// for LF or CR only
 	// LF: <linux>, CR:<old mac>
-	l.lines.PushLine(cursor)
+	l.lines.PushLine(cursor - 1)
 }
 
 // validate if the coming block is a comment block
@@ -220,85 +217,147 @@ func (l *Lexer) parseCRLF(ch rune) {
 //
 // @returns (isValid, isMultiLine)
 func (l *Lexer) validateComment(ch rune) (bool, bool) {
-	// read next char
-	l.next()
-	// if next char is a number or whitespace, skip it
-	for isNumber(l.peek()) || isWhiteSpace(l.peek()) {
-		l.next()
-	}
-	// match pattern 1, 2
-	if l.peek() == Colon {
-		l.next()
-		// “ or 「
-		lquotes := []rune{LeftQuoteIV, LeftQuoteII}
-		// match pattern 3, 4
-		if util.Contains(l.peek(), lquotes) {
-			return true, true
+	// “ or 「
+	lquotes := []rune{LeftQuoteIV, LeftQuoteII}
+	for {
+		ch = l.next()
+		// match pattern 1, 2
+		if ch == Colon {
+			// match pattern 3, 4
+			if util.Contains(l.peek(), lquotes) {
+				l.next()
+				return true, true
+			}
+			return true, false
 		}
-
-		return true, false
+		if isNumber(ch) || isWhiteSpace(ch) {
+			continue
+		}
+		return false, false
 	}
-	return false, false
 }
 
 // parseComment until its end
 func (l *Lexer) parseComment(ch rune, isMultiLine bool) *Token {
-	// tear-down operations before return
-	defer func() {
-		l.clearBuffer()
-	}()
-
-	for ch != EOF {
-		// CR, LF
-		if util.Contains(ch, []rune{CR, LF}) {
+	// setup
+	l.clearBuffer()
+	if isMultiLine {
+		if !l.quoteStack.Push(ch) {
+			l.lexError = error.NewErrorSLOT("push stack is full")
+			return nil
+		}
+	}
+	// iterate
+	for {
+		ch = l.next()
+		switch ch {
+		case EOF:
+			l.lines.PushLine(l.current() - 1)
+			return NewCommentToken(l.chBuffer, isMultiLine)
+		case CR, LF:
 			c1 := l.current()
 			// parse CR,LF first
 			l.parseCRLF(ch)
-			l.pushBufferRange(c1+1, l.current())
-			// manually set no indents
-			l.lines.SetIndent(0, IdetUnknown, l.current())
 			if !isMultiLine {
 				return NewCommentToken(l.chBuffer, isMultiLine)
 			}
-		}
-		// normal string
-		l.pushBuffer(l.peek())
-		// for mutli-line comment, calculate quotes is necessary.
-		if isMultiLine {
-			// push left quotes
-			if util.Contains(ch, LeftQuotes) {
-				if !l.quoteStack.Push(ch) {
-					l.lexError = error.NewErrorSLOT("quote stack if full")
-					return nil
+			// for multi-line comment blocks, CRLF is also included
+			l.pushBufferRange(c1, l.current())
+			// manually set no indents
+			l.lines.SetIndent(0, IdetUnknown, l.current()+1)
+		default:
+			// for mutli-line comment, calculate quotes is necessary.
+			if isMultiLine {
+				// push left quotes
+				if util.Contains(ch, LeftQuotes) {
+					if !l.quoteStack.Push(ch) {
+						l.lexError = error.NewErrorSLOT("quote stack if full")
+						return nil
+					}
 				}
 				// pop right quotes if possible
-			} else if util.Contains(ch, RightQuotes) {
-				currentL, hasValue := l.quoteStack.Current()
-				if hasValue {
-					if QuoteMatchMap[currentL] == ch {
-						l.quoteStack.Pop()
-					}
-					// stop quoting
-					if l.quoteStack.IsEmpty() {
-						l.next()
-						return NewCommentToken(l.chBuffer, isMultiLine)
+				if util.Contains(ch, RightQuotes) {
+					currentL, hasValue := l.quoteStack.Current()
+					if hasValue {
+						if QuoteMatchMap[currentL] == ch {
+							l.quoteStack.Pop()
+						}
+						// stop quoting
+						if l.quoteStack.IsEmpty() {
+							l.next()
+							return NewCommentToken(l.chBuffer, isMultiLine)
+						}
 					}
 				}
 			}
+			l.pushBuffer(ch)
 		}
-
-		l.next()
-		ch = l.peek()
 	}
-
-	// meeting with EOF
-	// whenever it's a multi-line or single-line comment block,
-	// whenever the multi-line comment block (if so) has been enclosed or not,
-	// return the token directly.
-	l.lines.PushLine(l.current())
-	return NewCommentToken(l.chBuffer, isMultiLine)
 }
 
-func (l *Lexer) parseString(ch rune) {
+// parseString -
+func (l *Lexer) parseString(ch rune) *Token {
+	// start up
+	l.lexScope = LvQuoteSTRING
+	l.clearBuffer()
+	l.quoteStack.Push(ch)
+	l.next()
 
+	// parse string
+	for {
+		pch := l.peek()
+		switch pch {
+		// push quotes
+		case LeftQuoteI, LeftQuoteII, LeftQuoteIII, LeftQuoteIV, LeftQuoteV:
+			l.pushBuffer(pch)
+			if !l.quoteStack.Push(pch) {
+				l.lexError = error.NewErrorSLOT("quote stack is full")
+				return nil
+			}
+		// pop quotes if match
+		case RightQuoteI, RightQuoteII, RightQuoteIII, RightQuoteIV, RightQuoteV:
+			currentL, hasValue := l.quoteStack.Current()
+			if hasValue {
+				if QuoteMatchMap[currentL] == pch {
+					l.quoteStack.Pop()
+				}
+				// stop quoting
+				if l.quoteStack.IsEmpty() {
+					l.next()
+					return NewStringToken(l.chBuffer, ch)
+				}
+			}
+			l.pushBuffer(pch)
+		case CR, LF:
+			c1 := l.current()
+			l.parseCRLF(pch)
+			// push buffer & mark new line
+			l.pushBufferRange(c1+1, l.current())
+			l.lines.SetIndent(0, IdetUnknown, l.current()+1)
+		case EOF:
+			// after meeting with EOF
+			l.lines.PushLine(l.current())
+			return NewStringToken(l.chBuffer, ch)
+		default:
+			l.pushBuffer(pch)
+		}
+		l.next()
+	}
+}
+
+// parseVarRemark -
+func (l *Lexer) parseVarRemark(ch rune) *Token {
+	// set up
+	l.lexScope = LvQuoteVAR
+	l.clearBuffer()
+	l.next()
+	// iterate
+	for {
+		pch := l.peek()
+		switch pch {
+		case EOF:
+		case MiddleDot:
+		}
+		l.next()
+	}
 }

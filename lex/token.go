@@ -216,8 +216,22 @@ const (
 	RightBracket  rune = 0x3011 // 】
 	LeftParen     rune = 0xFF08 // （
 	RightParen    rune = 0xFF09 // ）
-	VarRemark     rune = 0x00B7 // ·
+	MiddleDot     rune = 0x00B7 // ·
 )
+
+// for quote token types, its range varies from 90 - 100
+const (
+	TokenString TokenType = 90
+)
+
+// NewStringToken -
+func NewStringToken(buf []rune, quoteType rune) *Token {
+	return &Token{
+		Type:    TokenString,
+		Literal: util.Copy(buf),
+		Info:    quoteType,
+	}
+}
 
 // LeftQuotes -
 var LeftQuotes = []rune{
@@ -249,4 +263,34 @@ var QuoteMatchMap = map[rune]rune{
 //// 5. numbers
 func isNumber(ch rune) bool {
 	return (ch >= '0' && ch <= '9')
+}
+
+//// 6. identifiers
+// @params: ch - input char
+// @params: isFirst - is the first char of identifier
+func isIdentifierChar(ch rune, isFirst bool) bool {
+	// CJK unified ideograph
+	if ch >= 0x4E00 && ch <= 0x0FEF {
+		return true
+	}
+	// 〇
+	if ch == 0x3007 {
+		return true
+	}
+	// A-Z
+	if ch >= 'A' && ch <= 'Z' {
+		return true
+	}
+	if ch >= 'a' && ch <= 'z' {
+		return true
+	}
+	if !isFirst {
+		if ch >= '0' && ch <= '9' {
+			return true
+		}
+		if util.Contains(ch, []rune{'*', '+', '-', '/', '_'}) {
+			return true
+		}
+	}
+	return false
 }

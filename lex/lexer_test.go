@@ -72,7 +72,7 @@ func TestNextToken_CommentsONLY(t *testing.T) {
 			expectError: false,
 			token: Token{
 				Type:    TokenComment,
-				Literal: []rune("注：注：nach nach\r\n"),
+				Literal: []rune("注：注：nach nach"),
 				Info: map[string]bool{
 					"isMultiLine": false,
 				},
@@ -86,7 +86,7 @@ func TestNextToken_CommentsONLY(t *testing.T) {
 			expectError: false,
 			token: Token{
 				Type:    TokenComment,
-				Literal: []rune("“假设这是一个注”"),
+				Literal: []rune("假设这是一个注"),
 				Info: map[string]bool{
 					"isMultiLine": true,
 				},
@@ -99,7 +99,7 @@ func TestNextToken_CommentsONLY(t *testing.T) {
 			expectError: false,
 			token: Token{
 				Type:    TokenComment,
-				Literal: []rune("“假设这又是一个注”"),
+				Literal: []rune("假设这又是一个注"),
 				Info: map[string]bool{
 					"isMultiLine": true,
 				},
@@ -112,7 +112,7 @@ func TestNextToken_CommentsONLY(t *testing.T) {
 			expectError: false,
 			token: Token{
 				Type:    TokenComment,
-				Literal: []rune("“假设这又是一个注”"),
+				Literal: []rune("假设这又是一个注"),
 				Info: map[string]bool{
 					"isMultiLine": true,
 				},
@@ -125,7 +125,7 @@ func TestNextToken_CommentsONLY(t *testing.T) {
 			expectError: false,
 			token: Token{
 				Type:    TokenComment,
-				Literal: []rune("“”"),
+				Literal: []rune(""),
 				Info: map[string]bool{
 					"isMultiLine": true,
 				},
@@ -138,12 +138,12 @@ func TestNextToken_CommentsONLY(t *testing.T) {
 			expectError: false,
 			token: Token{
 				Type:    TokenComment,
-				Literal: []rune("“一一\r\n    二二\n三三\n四四”"),
+				Literal: []rune("一一\r\n    二二\n三三\n四四"),
 				Info: map[string]bool{
 					"isMultiLine": true,
 				},
 			},
-			lineInfo: "Unknown<0>[0,4] Unknown<0>[6,12] Unknown<0>[13,15]",
+			lineInfo: "Unknown<0>[0,4] Unknown<0>[7,12] Unknown<0>[14,15]",
 		},
 		{
 			name:        "mutlLine comment with quote stack",
@@ -151,12 +151,38 @@ func TestNextToken_CommentsONLY(t *testing.T) {
 			expectError: false,
 			token: Token{
 				Type:    TokenComment,
-				Literal: []rune("“一一「2233」《某本书》注：“”二二\n     ”"),
+				Literal: []rune("一一「2233」《某本书》注：“”二二\n     "),
 				Info: map[string]bool{
 					"isMultiLine": true,
 				},
 			},
 			lineInfo: "Unknown<0>[0,21]",
+		},
+		{
+			name:        "mutlLine comment with straight quote",
+			input:       "注：「PK」",
+			expectError: false,
+			token: Token{
+				Type:    TokenComment,
+				Literal: []rune("PK"),
+				Info: map[string]bool{
+					"isMultiLine": true,
+				},
+			},
+			lineInfo: "",
+		},
+		{
+			name:        "mutlLine comment unfinished quote",
+			input:       "注：「PKG“”",
+			expectError: false,
+			token: Token{
+				Type:    TokenComment,
+				Literal: []rune("PKG“”"),
+				Info: map[string]bool{
+					"isMultiLine": true,
+				},
+			},
+			lineInfo: "Unknown<0>[0,7]",
 		},
 	}
 
