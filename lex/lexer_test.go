@@ -225,6 +225,17 @@ func TestNextToken_StringONLY(t *testing.T) {
 			},
 			lineInfo: "",
 		},
+		{
+			name:        "multiple-line string",
+			input:       "『233\n456\r\n7  』",
+			expectError: false,
+			token: Token{
+				Type:    TokenString,
+				Literal: []rune("233\n456\r\n7  "),
+				Info:    '『',
+			},
+			lineInfo: "",
+		},
 	}
 
 	assertNextToken(cases, t)
