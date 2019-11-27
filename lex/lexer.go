@@ -277,16 +277,14 @@ func (l *Lexer) parseComment(ch rune, isMultiLine bool) *Token {
 				}
 				// pop right quotes if possible
 				if util.Contains(ch, RightQuotes) {
-					currentL, hasValue := l.quoteStack.Current()
-					if hasValue {
-						if QuoteMatchMap[currentL] == ch {
-							l.quoteStack.Pop()
-						}
-						// stop quoting
-						if l.quoteStack.IsEmpty() {
-							l.next()
-							return NewCommentToken(l.chBuffer, isMultiLine)
-						}
+					currentL, _ := l.quoteStack.Current()
+					if QuoteMatchMap[currentL] == ch {
+						l.quoteStack.Pop()
+					}
+					// stop quoting
+					if l.quoteStack.IsEmpty() {
+						l.next()
+						return NewCommentToken(l.chBuffer, isMultiLine)
 					}
 				}
 			}
@@ -301,50 +299,47 @@ func (l *Lexer) parseString(ch rune) *Token {
 	l.lexScope = LvQuoteSTRING
 	l.clearBuffer()
 	l.quoteStack.Push(ch)
-	l.next()
-
-	// parse string
+	firstChar := ch
+	// iterate
 	for {
-		pch := l.peek()
-		switch pch {
+		ch := l.next()
+		switch ch {
+		case EOF:
+			// after meeting with EOF
+			l.lines.PushLine(l.current() - 1)
+			return NewStringToken(l.chBuffer, firstChar)
 		// push quotes
 		case LeftQuoteI, LeftQuoteII, LeftQuoteIII, LeftQuoteIV, LeftQuoteV:
-			l.pushBuffer(pch)
-			if !l.quoteStack.Push(pch) {
+			l.pushBuffer(ch)
+			if !l.quoteStack.Push(ch) {
 				l.lexError = error.NewErrorSLOT("quote stack is full")
 				return nil
 			}
 		// pop quotes if match
 		case RightQuoteI, RightQuoteII, RightQuoteIII, RightQuoteIV, RightQuoteV:
-			currentL, hasValue := l.quoteStack.Current()
-			if hasValue {
-				if QuoteMatchMap[currentL] == pch {
-					l.quoteStack.Pop()
-				}
-				// stop quoting
-				if l.quoteStack.IsEmpty() {
-					l.next()
-					return NewStringToken(l.chBuffer, ch)
-				}
+			currentL, _ := l.quoteStack.Current()
+			if QuoteMatchMap[currentL] == ch {
+				l.quoteStack.Pop()
 			}
-			l.pushBuffer(pch)
+			// stop quoting
+			if l.quoteStack.IsEmpty() {
+				l.next()
+				return NewStringToken(l.chBuffer, firstChar)
+			}
+			l.pushBuffer(ch)
 		case CR, LF:
 			c1 := l.current()
-			l.parseCRLF(pch)
+			l.parseCRLF(ch)
 			// push buffer & mark new line
-			l.pushBufferRange(c1+1, l.current())
+			l.pushBufferRange(c1, l.current())
 			l.lines.SetIndent(0, IdetUnknown, l.current()+1)
-		case EOF:
-			// after meeting with EOF
-			l.lines.PushLine(l.current())
-			return NewStringToken(l.chBuffer, ch)
 		default:
-			l.pushBuffer(pch)
+			l.pushBuffer(ch)
 		}
-		l.next()
 	}
 }
 
+/**
 // parseVarRemark -
 func (l *Lexer) parseVarRemark(ch rune) *Token {
 	// set up
@@ -361,3 +356,4 @@ func (l *Lexer) parseVarRemark(ch rune) *Token {
 		l.next()
 	}
 }
+*/

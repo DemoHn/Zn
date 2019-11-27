@@ -5,15 +5,17 @@ import (
 	"testing"
 )
 
+type nextTokenCase struct {
+	name        string
+	input       string
+	expectError bool
+	token       Token
+	lineInfo    string
+}
+
 // mainly for testing parseCommentHead()
 func TestNextToken_CommentsONLY(t *testing.T) {
-	cases := []struct {
-		name        string
-		input       string
-		expectError bool
-		token       Token
-		lineInfo    string
-	}{
+	cases := []nextTokenCase{
 		{
 			name:        "singleLine comment",
 			input:       "注：这是一个长 长 的单行注释comment",
@@ -185,7 +187,50 @@ func TestNextToken_CommentsONLY(t *testing.T) {
 			lineInfo: "Unknown<0>[0,7]",
 		},
 	}
+	assertNextToken(cases, t)
+}
 
+func TestNextToken_StringONLY(t *testing.T) {
+	cases := []nextTokenCase{
+		{
+			name:        "normal quote string",
+			input:       "“LSK” 多出来的",
+			expectError: false,
+			token: Token{
+				Type:    TokenString,
+				Literal: []rune("LSK"),
+				Info:    '“',
+			},
+			lineInfo: "",
+		},
+		{
+			name:        "normal quote string (with whitespaces)",
+			input:       "“这 是 一 个 字 符 串”",
+			expectError: false,
+			token: Token{
+				Type:    TokenString,
+				Literal: []rune("这 是 一 个 字 符 串"),
+				Info:    '“',
+			},
+			lineInfo: "",
+		},
+		{
+			name:        "normal quote string (with multiple quotes)",
+			input:       "“「233」 ‘456’ 《〈who〉》『『is』』”",
+			expectError: false,
+			token: Token{
+				Type:    TokenString,
+				Literal: []rune("「233」 ‘456’ 《〈who〉》『『is』』"),
+				Info:    '“',
+			},
+			lineInfo: "",
+		},
+	}
+
+	assertNextToken(cases, t)
+}
+
+func assertNextToken(cases []nextTokenCase, t *testing.T) {
 	for _, tt := range cases {
 		lex := NewLexer([]rune(tt.input))
 		t.Run(tt.name, func(t *testing.T) {
