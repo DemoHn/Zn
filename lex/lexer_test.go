@@ -309,12 +309,12 @@ func TestNextTOken_VarQuoteONLY(t *testing.T) {
 			lineInfo:    "",
 		},
 		{
-			name: "invalid quote - CR, LFs are not allowed inside quotes",
-			input: "·变量\r\n又是变量名·",
+			name:        "invalid quote - CR, LFs are not allowed inside quotes",
+			input:       "·变量\r\n又是变量名·",
 			expectError: true,
-			token: Token{},
-			lineInfo: "",
-		}
+			token:       Token{},
+			lineInfo:    "",
+		},
 	}
 	assertNextToken(cases, t)
 }

@@ -334,8 +334,9 @@ func (l *Lexer) parseVarQuote(ch rune) (*Token, *error.Error) {
 					return nil, error.NewErrorSLOT("invalid syntax: 变量名太长")
 				}
 				isFirst = false
+			} else {
+				return nil, error.NewErrorSLOT("invalid syntax: invalid var")
 			}
-			return nil, error.NewErrorSLOT("invalid syntax: invalid var")
 		}
 	}
 }
