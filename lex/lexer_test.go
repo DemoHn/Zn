@@ -21,7 +21,7 @@ func TestNextToken_CommentsONLY(t *testing.T) {
 			input:       "注：这是一个长 长 的单行注释comment",
 			expectError: false,
 			token: Token{
-				Type:    TokenComment,
+				Type:    typeComment,
 				Literal: []rune("这是一个长 长 的单行注释comment"),
 				Info: map[string]bool{
 					"isMultiLine": false,
@@ -34,7 +34,7 @@ func TestNextToken_CommentsONLY(t *testing.T) {
 			input:       "注：",
 			expectError: false,
 			token: Token{
-				Type:    TokenComment,
+				Type:    typeComment,
 				Literal: []rune(""),
 				Info: map[string]bool{
 					"isMultiLine": false,
@@ -47,7 +47,7 @@ func TestNextToken_CommentsONLY(t *testing.T) {
 			input:       "注： “",
 			expectError: false,
 			token: Token{
-				Type:    TokenComment,
+				Type:    typeComment,
 				Literal: []rune(" “"),
 				Info: map[string]bool{
 					"isMultiLine": false,
@@ -60,7 +60,7 @@ func TestNextToken_CommentsONLY(t *testing.T) {
 			input:       "注 1024 2048 ：",
 			expectError: false,
 			token: Token{
-				Type:    TokenComment,
+				Type:    typeComment,
 				Literal: []rune(""),
 				Info: map[string]bool{
 					"isMultiLine": false,
@@ -73,7 +73,7 @@ func TestNextToken_CommentsONLY(t *testing.T) {
 			input:       "注：注：注：nach nach\r\n注：又是一个注",
 			expectError: false,
 			token: Token{
-				Type:    TokenComment,
+				Type:    typeComment,
 				Literal: []rune("注：注：nach nach"),
 				Info: map[string]bool{
 					"isMultiLine": false,
@@ -87,7 +87,7 @@ func TestNextToken_CommentsONLY(t *testing.T) {
 			input:       "注：“假设这是一个注” 后面假设又是一些数",
 			expectError: false,
 			token: Token{
-				Type:    TokenComment,
+				Type:    typeComment,
 				Literal: []rune("假设这是一个注"),
 				Info: map[string]bool{
 					"isMultiLine": true,
@@ -100,7 +100,7 @@ func TestNextToken_CommentsONLY(t *testing.T) {
 			input:       "注：“假设这又是一个注”",
 			expectError: false,
 			token: Token{
-				Type:    TokenComment,
+				Type:    typeComment,
 				Literal: []rune("假设这又是一个注"),
 				Info: map[string]bool{
 					"isMultiLine": true,
@@ -113,7 +113,7 @@ func TestNextToken_CommentsONLY(t *testing.T) {
 			input:       "注 1234 5678 ：“假设这又是一个注”",
 			expectError: false,
 			token: Token{
-				Type:    TokenComment,
+				Type:    typeComment,
 				Literal: []rune("假设这又是一个注"),
 				Info: map[string]bool{
 					"isMultiLine": true,
@@ -126,7 +126,7 @@ func TestNextToken_CommentsONLY(t *testing.T) {
 			input:       "注：“”",
 			expectError: false,
 			token: Token{
-				Type:    TokenComment,
+				Type:    typeComment,
 				Literal: []rune(""),
 				Info: map[string]bool{
 					"isMultiLine": true,
@@ -139,7 +139,7 @@ func TestNextToken_CommentsONLY(t *testing.T) {
 			input:       "注：“一一\r\n    二二\n三三\n四四”",
 			expectError: false,
 			token: Token{
-				Type:    TokenComment,
+				Type:    typeComment,
 				Literal: []rune("一一\r\n    二二\n三三\n四四"),
 				Info: map[string]bool{
 					"isMultiLine": true,
@@ -152,7 +152,7 @@ func TestNextToken_CommentsONLY(t *testing.T) {
 			input:       "注：“一一「2233」《某本书》注：“”二二\n     ”",
 			expectError: false,
 			token: Token{
-				Type:    TokenComment,
+				Type:    typeComment,
 				Literal: []rune("一一「2233」《某本书》注：“”二二\n     "),
 				Info: map[string]bool{
 					"isMultiLine": true,
@@ -165,7 +165,7 @@ func TestNextToken_CommentsONLY(t *testing.T) {
 			input:       "注：「PK」",
 			expectError: false,
 			token: Token{
-				Type:    TokenComment,
+				Type:    typeComment,
 				Literal: []rune("PK"),
 				Info: map[string]bool{
 					"isMultiLine": true,
@@ -178,7 +178,7 @@ func TestNextToken_CommentsONLY(t *testing.T) {
 			input:       "注：「PKG“”",
 			expectError: false,
 			token: Token{
-				Type:    TokenComment,
+				Type:    typeComment,
 				Literal: []rune("PKG“”"),
 				Info: map[string]bool{
 					"isMultiLine": true,
@@ -197,7 +197,7 @@ func TestNextToken_StringONLY(t *testing.T) {
 			input:       "“LSK” 多出来的",
 			expectError: false,
 			token: Token{
-				Type:    TokenString,
+				Type:    typeString,
 				Literal: []rune("LSK"),
 				Info:    '“',
 			},
@@ -208,7 +208,7 @@ func TestNextToken_StringONLY(t *testing.T) {
 			input:       "“这 是 一 个 字 符 串”",
 			expectError: false,
 			token: Token{
-				Type:    TokenString,
+				Type:    typeString,
 				Literal: []rune("这 是 一 个 字 符 串"),
 				Info:    '“',
 			},
@@ -219,7 +219,7 @@ func TestNextToken_StringONLY(t *testing.T) {
 			input:       "“「233」 ‘456’ 《〈who〉》『『is』』”",
 			expectError: false,
 			token: Token{
-				Type:    TokenString,
+				Type:    typeString,
 				Literal: []rune("「233」 ‘456’ 《〈who〉》『『is』』"),
 				Info:    '“',
 			},
@@ -230,7 +230,7 @@ func TestNextToken_StringONLY(t *testing.T) {
 			input:       "『233\n    456\r\n7  』",
 			expectError: false,
 			token: Token{
-				Type:    TokenString,
+				Type:    typeString,
 				Literal: []rune("233\n    456\r\n7  "),
 				Info:    '『',
 			},
@@ -248,7 +248,7 @@ func TestNextTOken_VarQuoteONLY(t *testing.T) {
 			input:       "·正常之变量·",
 			expectError: false,
 			token: Token{
-				Type:    TokenVarQuote,
+				Type:    typeVarQuote,
 				Literal: []rune("正常之变量"),
 				Info:    nil,
 			},
@@ -259,7 +259,7 @@ func TestNextTOken_VarQuoteONLY(t *testing.T) {
 			input:       "· 正常 之 变量  ·",
 			expectError: false,
 			token: Token{
-				Type:    TokenVarQuote,
+				Type:    typeVarQuote,
 				Literal: []rune("正常之变量"),
 				Info:    nil,
 			},
@@ -270,7 +270,7 @@ func TestNextTOken_VarQuoteONLY(t *testing.T) {
 			input:       "· 知/其/不- 可/而*为+ _abcd_之1235 AJ·",
 			expectError: false,
 			token: Token{
-				Type:    TokenVarQuote,
+				Type:    typeVarQuote,
 				Literal: []rune("知/其/不-可/而*为+_abcd_之1235AJ"),
 				Info:    nil,
 			},
@@ -281,7 +281,7 @@ func TestNextTOken_VarQuoteONLY(t *testing.T) {
 			input:       "·_korea_char102·",
 			expectError: false,
 			token: Token{
-				Type:    TokenVarQuote,
+				Type:    typeVarQuote,
 				Literal: []rune("_korea_char102"),
 				Info:    nil,
 			},

@@ -71,9 +71,13 @@ func (l *Lexer) peek3() rune {
 	return data
 }
 
-// current - get cursor value of lexer
-func (l *Lexer) current() int {
-	return l.currentPos
+// current - get current char value
+func (l *Lexer) current() rune {
+	if l.peekPos >= len(l.code) {
+		return EOF
+	}
+
+	return l.code[l.currentPos]
 }
 
 // rebase - rebase cursor
@@ -107,8 +111,8 @@ func (l *Lexer) NextToken() (*Token, *error.Error) {
 
 	switch ch {
 	case EOF:
-		l.lines.PushLine(l.current())
-		return TokenEOF(), nil
+		l.lines.PushLine(l.currentPos)
+		return NewTokenEOF(), nil
 	case SP, TAB:
 		// if indent has been scanned, it should be regarded as whitespaces
 		// (it's totally ignored)
@@ -121,10 +125,10 @@ func (l *Lexer) NextToken() (*Token, *error.Error) {
 	// meet with 注, it may be possibly a lead character of a comment block
 	// notice: it would also be a normal identifer (if 注[number]：) does not satisfy.
 	case GlyphZHU:
-		cursor := l.current()
+		cursor := l.currentPos
 		isComment, isMultiLine := l.validateComment(ch)
 		if isComment {
-			return l.parseComment(l.code[l.currentPos], isMultiLine)
+			return l.parseComment(l.current(), isMultiLine)
 		}
 
 		l.rebase(cursor)
@@ -156,11 +160,11 @@ func (l *Lexer) parseIndents(ch rune) *error.Error {
 		indentType = IdetSpace
 	}
 
-	return l.lines.SetIndent(count, indentType, l.current()+1)
+	return l.lines.SetIndent(count, indentType, l.currentPos+1)
 }
 
 func (l *Lexer) parseCRLF(ch rune) {
-	cursor := l.current()
+	cursor := l.currentPos
 	// for CRLF <windows type> or LFCR
 	if (ch == CR && l.peek() == LF) ||
 		(ch == LF && l.peek() == CR) {
@@ -222,19 +226,19 @@ func (l *Lexer) parseComment(ch rune, isMultiLine bool) (*Token, *error.Error) {
 		ch = l.next()
 		switch ch {
 		case EOF:
-			l.lines.PushLine(l.current() - 1)
+			l.lines.PushLine(l.currentPos - 1)
 			return NewCommentToken(l.chBuffer, isMultiLine), nil
 		case CR, LF:
-			c1 := l.current()
+			c1 := l.currentPos
 			// parse CR,LF first
 			l.parseCRLF(ch)
 			if !isMultiLine {
 				return NewCommentToken(l.chBuffer, isMultiLine), nil
 			}
 			// for multi-line comment blocks, CRLF is also included
-			l.pushBufferRange(c1, l.current())
+			l.pushBufferRange(c1, l.currentPos)
 			// manually set no indents
-			l.lines.SetIndent(0, IdetUnknown, l.current()+1)
+			l.lines.SetIndent(0, IdetUnknown, l.currentPos+1)
 		default:
 			// for mutli-line comment, calculate quotes is necessary.
 			if isMultiLine {
@@ -274,7 +278,7 @@ func (l *Lexer) parseString(ch rune) (*Token, *error.Error) {
 		switch ch {
 		case EOF:
 			// after meeting with EOF
-			l.lines.PushLine(l.current() - 1)
+			l.lines.PushLine(l.currentPos - 1)
 			return NewStringToken(l.chBuffer, firstChar), nil
 		// push quotes
 		case LeftQuoteI, LeftQuoteII, LeftQuoteIII, LeftQuoteIV, LeftQuoteV:
@@ -295,11 +299,11 @@ func (l *Lexer) parseString(ch rune) (*Token, *error.Error) {
 			}
 			l.pushBuffer(ch)
 		case CR, LF:
-			c1 := l.current()
+			c1 := l.currentPos
 			l.parseCRLF(ch)
 			// push buffer & mark new line
-			l.pushBufferRange(c1, l.current())
-			l.lines.SetIndent(0, IdetUnknown, l.current()+1)
+			l.pushBufferRange(c1, l.currentPos)
+			l.lines.SetIndent(0, IdetUnknown, l.currentPos+1)
 		default:
 			l.pushBuffer(ch)
 		}
@@ -318,7 +322,7 @@ func (l *Lexer) parseVarQuote(ch rune) (*Token, *error.Error) {
 		// of an identifier
 		switch ch {
 		case EOF:
-			l.lines.PushLine(l.current() - 1)
+			l.lines.PushLine(l.currentPos - 1)
 			return NewVarQuoteToken(l.chBuffer), nil
 		case MiddleDot:
 			return NewVarQuoteToken(l.chBuffer), nil

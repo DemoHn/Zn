@@ -12,25 +12,10 @@ type Token struct {
 	Info    interface{}
 }
 
-// token types -
-// for special type Tokens, its range varies from 0 - 9
-const (
-	TypeEOF TokenType = 0
-)
-
 //// 0. EOF
 
 // EOF - mark as end of file, should only exists at the end of sequence
 const EOF rune = 0
-
-// TokenEOF - new EOF token
-func TokenEOF() *Token {
-	return &Token{
-		Type:    TypeEOF,
-		Literal: []rune{},
-		Info:    nil,
-	}
-}
 
 //// 1. keywords
 // TokenTypePrefix: 0x10
@@ -139,23 +124,6 @@ func isKeywordLead(ch rune) bool {
 	return false
 }
 
-// for keyword token types, its range varies from 10 - 50
-const (
-	TokenComment TokenType = 10
-)
-
-// NewCommentToken -
-func NewCommentToken(buf []rune, isMultiLine bool) *Token {
-	cpBuf := util.Copy(buf)
-	return &Token{
-		Type:    TokenComment,
-		Literal: cpBuf,
-		Info: map[string]bool{
-			"isMultiLine": isMultiLine,
-		},
-	}
-}
-
 //// 2. markers
 // declare marks
 const (
@@ -219,30 +187,6 @@ const (
 	MiddleDot     rune = 0x00B7 // ·
 )
 
-// for quote token types, its range varies from 90 - 100
-const (
-	TokenString   TokenType = 90
-	TokenVarQuote TokenType = 91
-)
-
-// NewStringToken -
-func NewStringToken(buf []rune, quoteType rune) *Token {
-	return &Token{
-		Type:    TokenString,
-		Literal: util.Copy(buf),
-		Info:    quoteType,
-	}
-}
-
-// NewVarQuoteToken -
-func NewVarQuoteToken(buf []rune) *Token {
-	return &Token{
-		Type:    TokenVarQuote,
-		Literal: util.Copy(buf),
-		Info:    nil,
-	}
-}
-
 // LeftQuotes -
 var LeftQuotes = []rune{
 	LeftQuoteI,
@@ -305,4 +249,54 @@ func isIdentifierChar(ch rune, isFirst bool) bool {
 		}
 	}
 	return false
+}
+
+//// token consts and constructors
+// token types -
+// for special type Tokens, its range varies from 0 - 9
+const (
+	typeEOF      TokenType = 0
+	typeComment  TokenType = 10
+	typeString   TokenType = 90
+	typeVarQuote TokenType = 91
+	typeNumber   TokenType = 100
+)
+
+// NewTokenEOF - new EOF token
+func NewTokenEOF() *Token {
+	return &Token{
+		Type:    typeEOF,
+		Literal: []rune{},
+		Info:    nil,
+	}
+}
+
+// NewStringToken -
+func NewStringToken(buf []rune, quoteType rune) *Token {
+	return &Token{
+		Type:    typeString,
+		Literal: util.Copy(buf),
+		Info:    quoteType,
+	}
+}
+
+// NewVarQuoteToken -
+func NewVarQuoteToken(buf []rune) *Token {
+	return &Token{
+		Type:    typeVarQuote,
+		Literal: util.Copy(buf),
+		Info:    nil,
+	}
+}
+
+// NewCommentToken -
+func NewCommentToken(buf []rune, isMultiLine bool) *Token {
+	cpBuf := util.Copy(buf)
+	return &Token{
+		Type:    typeComment,
+		Literal: cpBuf,
+		Info: map[string]bool{
+			"isMultiLine": isMultiLine,
+		},
+	}
 }
