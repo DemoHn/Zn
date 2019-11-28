@@ -10,28 +10,11 @@ type Lexer struct {
 	lines      *LineScanner
 	currentPos int
 	peekPos    int
-	lexScope   lexScope
 	quoteStack *util.RuneStack
 	lexError   *error.Error // if a lexError occurs, mark it
 	chBuffer   []rune
 	code       []rune // source code
 }
-
-// lexScope - lexer parsing scope
-// lexScope indicates the next step for lexer to recognize.
-// For example, if shiftLevel = LvQuoteVAR, all strings (including numbers & keywords) should be
-// recognized as normal variable name
-type lexScope uint8
-
-// define lexScopes
-const (
-	LvNormalVAR         lexScope = 40
-	LvKeyword           lexScope = 38
-	LvQuoteVAR          lexScope = 36
-	LvQuoteSTRING       lexScope = 34
-	LvSingleLineComment lexScope = 32
-	LvMultiLineComment  lexScope = 31
-)
 
 // NewLexer - new lexer
 func NewLexer(code []rune) *Lexer {
@@ -39,9 +22,7 @@ func NewLexer(code []rune) *Lexer {
 		lines:      NewLineScanner(),
 		currentPos: 0,
 		peekPos:    0,
-		lexScope:   LvNormalVAR,
 		quoteStack: util.NewRuneStack(32),
-		lexError:   nil,
 		chBuffer:   []rune{},
 		code:       append(code, EOF),
 	}
@@ -123,7 +104,6 @@ func (l *Lexer) pushBufferRange(start int, end int) bool {
 // NextToken - parse and generate the next token (including comments)
 func (l *Lexer) NextToken() (*Token, *error.Error) {
 	var ch = l.next()
-	var token *Token
 
 	switch ch {
 	case EOF:
@@ -141,32 +121,23 @@ func (l *Lexer) NextToken() (*Token, *error.Error) {
 	// meet with 注, it may be possibly a lead character of a comment block
 	// notice: it would also be a normal identifer (if 注[number]：) does not satisfy.
 	case GlyphZHU:
-		if l.lexScope == LvNormalVAR {
-			cursor := l.current()
-			isComment, isMultiLine := l.validateComment(ch)
-			if isComment {
-				token = l.parseComment(l.code[l.currentPos], isMultiLine)
-			} else {
-				l.rebase(cursor)
-				// handle the char to next to prevent dead lock
-				l.pushBuffer(ch)
-				l.next()
-			}
+		cursor := l.current()
+		isComment, isMultiLine := l.validateComment(ch)
+		if isComment {
+			return l.parseComment(l.code[l.currentPos], isMultiLine)
 		}
+
+		l.rebase(cursor)
+		// handle the char to next to prevent dead lock
+		l.pushBuffer(ch)
+		l.next()
 	// left quotes
 	case LeftQuoteI, LeftQuoteII, LeftQuoteIII, LeftQuoteIV, LeftQuoteV:
-		token = l.parseString(ch)
+		return l.parseString(ch)
 	case MiddleDot:
-
-	// right quotes
-	case RightQuoteI, RightQuoteII, RightQuoteIII, RightQuoteIV, RightQuoteV:
-
+		return l.parseVarQuote(ch)
 	}
-
-	if l.lexError != nil {
-		return nil, l.lexError
-	}
-	return token, nil
+	return nil, nil
 }
 
 //// parsing logics
@@ -238,13 +209,12 @@ func (l *Lexer) validateComment(ch rune) (bool, bool) {
 }
 
 // parseComment until its end
-func (l *Lexer) parseComment(ch rune, isMultiLine bool) *Token {
+func (l *Lexer) parseComment(ch rune, isMultiLine bool) (*Token, *error.Error) {
 	// setup
 	l.clearBuffer()
 	if isMultiLine {
 		if !l.quoteStack.Push(ch) {
-			l.lexError = error.NewErrorSLOT("push stack is full")
-			return nil
+			return nil, error.NewErrorSLOT("push stack is full")
 		}
 	}
 	// iterate
@@ -253,13 +223,13 @@ func (l *Lexer) parseComment(ch rune, isMultiLine bool) *Token {
 		switch ch {
 		case EOF:
 			l.lines.PushLine(l.current() - 1)
-			return NewCommentToken(l.chBuffer, isMultiLine)
+			return NewCommentToken(l.chBuffer, isMultiLine), nil
 		case CR, LF:
 			c1 := l.current()
 			// parse CR,LF first
 			l.parseCRLF(ch)
 			if !isMultiLine {
-				return NewCommentToken(l.chBuffer, isMultiLine)
+				return NewCommentToken(l.chBuffer, isMultiLine), nil
 			}
 			// for multi-line comment blocks, CRLF is also included
 			l.pushBufferRange(c1, l.current())
@@ -271,8 +241,7 @@ func (l *Lexer) parseComment(ch rune, isMultiLine bool) *Token {
 				// push left quotes
 				if util.Contains(ch, LeftQuotes) {
 					if !l.quoteStack.Push(ch) {
-						l.lexError = error.NewErrorSLOT("quote stack if full")
-						return nil
+						return nil, error.NewErrorSLOT("quote stack if full")
 					}
 				}
 				// pop right quotes if possible
@@ -284,7 +253,7 @@ func (l *Lexer) parseComment(ch rune, isMultiLine bool) *Token {
 					// stop quoting
 					if l.quoteStack.IsEmpty() {
 						l.next()
-						return NewCommentToken(l.chBuffer, isMultiLine)
+						return NewCommentToken(l.chBuffer, isMultiLine), nil
 					}
 				}
 			}
@@ -294,9 +263,8 @@ func (l *Lexer) parseComment(ch rune, isMultiLine bool) *Token {
 }
 
 // parseString -
-func (l *Lexer) parseString(ch rune) *Token {
+func (l *Lexer) parseString(ch rune) (*Token, *error.Error) {
 	// start up
-	l.lexScope = LvQuoteSTRING
 	l.clearBuffer()
 	l.quoteStack.Push(ch)
 	firstChar := ch
@@ -307,13 +275,12 @@ func (l *Lexer) parseString(ch rune) *Token {
 		case EOF:
 			// after meeting with EOF
 			l.lines.PushLine(l.current() - 1)
-			return NewStringToken(l.chBuffer, firstChar)
+			return NewStringToken(l.chBuffer, firstChar), nil
 		// push quotes
 		case LeftQuoteI, LeftQuoteII, LeftQuoteIII, LeftQuoteIV, LeftQuoteV:
 			l.pushBuffer(ch)
 			if !l.quoteStack.Push(ch) {
-				l.lexError = error.NewErrorSLOT("quote stack is full")
-				return nil
+				return nil, error.NewErrorSLOT("quote stack is full")
 			}
 		// pop quotes if match
 		case RightQuoteI, RightQuoteII, RightQuoteIII, RightQuoteIV, RightQuoteV:
@@ -324,7 +291,7 @@ func (l *Lexer) parseString(ch rune) *Token {
 			// stop quoting
 			if l.quoteStack.IsEmpty() {
 				l.next()
-				return NewStringToken(l.chBuffer, firstChar)
+				return NewStringToken(l.chBuffer, firstChar), nil
 			}
 			l.pushBuffer(ch)
 		case CR, LF:
@@ -339,21 +306,36 @@ func (l *Lexer) parseString(ch rune) *Token {
 	}
 }
 
-/**
-// parseVarRemark -
-func (l *Lexer) parseVarRemark(ch rune) *Token {
-	// set up
-	l.lexScope = LvQuoteVAR
+func (l *Lexer) parseVarQuote(ch rune) (*Token, *error.Error) {
+	// setup
 	l.clearBuffer()
-	l.next()
+	isFirst := true
 	// iterate
+	count := 0
 	for {
-		pch := l.peek()
-		switch pch {
+		ch = l.next()
+		// we should ensure the following chars to satisfy the condition
+		// of an identifier
+		switch ch {
 		case EOF:
+			l.lines.PushLine(l.current() - 1)
+			return NewVarQuoteToken(l.chBuffer), nil
 		case MiddleDot:
+			return NewVarQuoteToken(l.chBuffer), nil
+		default:
+			// ignore white-spaces!
+			if isWhiteSpace(ch) {
+				continue
+			}
+			if isIdentifierChar(ch, isFirst) {
+				l.pushBuffer(ch)
+				count++
+				if count > maxIdentifierLength {
+					return nil, error.NewErrorSLOT("invalid syntax: 变量名太长")
+				}
+				isFirst = false
+			}
+			return nil, error.NewErrorSLOT("invalid syntax: invalid var")
 		}
-		l.next()
 	}
 }
-*/

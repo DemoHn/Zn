@@ -221,7 +221,8 @@ const (
 
 // for quote token types, its range varies from 90 - 100
 const (
-	TokenString TokenType = 90
+	TokenString   TokenType = 90
+	TokenVarQuote TokenType = 91
 )
 
 // NewStringToken -
@@ -230,6 +231,15 @@ func NewStringToken(buf []rune, quoteType rune) *Token {
 		Type:    TokenString,
 		Literal: util.Copy(buf),
 		Info:    quoteType,
+	}
+}
+
+// NewVarQuoteToken -
+func NewVarQuoteToken(buf []rune) *Token {
+	return &Token{
+		Type:    TokenVarQuote,
+		Literal: util.Copy(buf),
+		Info:    nil,
 	}
 }
 
@@ -266,15 +276,17 @@ func isNumber(ch rune) bool {
 }
 
 //// 6. identifiers
+const maxIdentifierLength = 32
+
 // @params: ch - input char
 // @params: isFirst - is the first char of identifier
 func isIdentifierChar(ch rune, isFirst bool) bool {
 	// CJK unified ideograph
-	if ch >= 0x4E00 && ch <= 0x0FEF {
+	if ch >= 0x4E00 && ch <= 0x9FFF {
 		return true
 	}
-	// 〇
-	if ch == 0x3007 {
+	// 〇, _
+	if ch == 0x3007 || ch == '_' {
 		return true
 	}
 	// A-Z
@@ -288,7 +300,7 @@ func isIdentifierChar(ch rune, isFirst bool) bool {
 		if ch >= '0' && ch <= '9' {
 			return true
 		}
-		if util.Contains(ch, []rune{'*', '+', '-', '/', '_'}) {
+		if util.Contains(ch, []rune{'*', '+', '-', '/'}) {
 			return true
 		}
 	}

@@ -227,17 +227,95 @@ func TestNextToken_StringONLY(t *testing.T) {
 		},
 		{
 			name:        "multiple-line string",
-			input:       "『233\n456\r\n7  』",
+			input:       "『233\n    456\r\n7  』",
 			expectError: false,
 			token: Token{
 				Type:    TokenString,
-				Literal: []rune("233\n456\r\n7  "),
+				Literal: []rune("233\n    456\r\n7  "),
 				Info:    '『',
 			},
-			lineInfo: "",
+			lineInfo: "Unknown<0>[0,3] Unknown<0>[5,11]",
 		},
 	}
 
+	assertNextToken(cases, t)
+}
+
+func TestNextTOken_VarQuoteONLY(t *testing.T) {
+	cases := []nextTokenCase{
+		{
+			name:        "normal variable quote",
+			input:       "·正常之变量·",
+			expectError: false,
+			token: Token{
+				Type:    TokenVarQuote,
+				Literal: []rune("正常之变量"),
+				Info:    nil,
+			},
+			lineInfo: "",
+		},
+		{
+			name:        "normal variable quote (with spaces)",
+			input:       "· 正常 之 变量  ·",
+			expectError: false,
+			token: Token{
+				Type:    TokenVarQuote,
+				Literal: []rune("正常之变量"),
+				Info:    nil,
+			},
+			lineInfo: "",
+		},
+		{
+			name:        "normal variable quote (with slashs)",
+			input:       "· 知/其/不- 可/而*为+ _abcd_之1235 AJ·",
+			expectError: false,
+			token: Token{
+				Type:    TokenVarQuote,
+				Literal: []rune("知/其/不-可/而*为+_abcd_之1235AJ"),
+				Info:    nil,
+			},
+			lineInfo: "",
+		},
+		{
+			name:        "normal variable quote - english variable",
+			input:       "·_korea_char102·",
+			expectError: false,
+			token: Token{
+				Type:    TokenVarQuote,
+				Literal: []rune("_korea_char102"),
+				Info:    nil,
+			},
+			lineInfo: "",
+		},
+		{
+			name:        "invalid quote - number at first",
+			input:       "·123ABC·",
+			expectError: true,
+			token:       Token{},
+			lineInfo:    "",
+		},
+		{
+			name:        "invalid quote - invalid punctuation",
+			input:       "·正（大）光明·",
+			expectError: true,
+			token:       Token{},
+			lineInfo:    "",
+		},
+		{
+			name:        "invalid quote - char buffer overflow",
+			input:       "·这是一个很长变量这是一个很长变量这是一个很长变量这是一个很长变量这是一个很长变量·",
+			expectError: true,
+			token:       Token{},
+			lineInfo:    "",
+		},
+		{
+			name: "invalid quote - CR, LFs are not allowed inside quotes",
+			input: "·变量\r\n又是变量名·",
+			expectError: true,
+			token: Token{},
+			lineInfo: "",
+		}
+	}
 	assertNextToken(cases, t)
 }
 
@@ -253,15 +331,13 @@ func assertNextToken(cases []nextTokenCase, t *testing.T) {
 					t.Error(err)
 				} else if tt.lineInfo != lex.lines.String() {
 					t.Errorf("NextToken() lineInfo expect `%s`, actual `%s`", tt.lineInfo, lex.lines.String())
+				} else if !reflect.DeepEqual(*tk, tt.token) {
+					t.Errorf("NextToken() return Token failed! expect: %v, got: %v", tt.token, *tk)
 				}
 			} else {
 				if err == nil {
 					t.Errorf("NextToken() failed! expected error, but got no error")
 				}
-			}
-
-			if !reflect.DeepEqual(*tk, tt.token) {
-				t.Errorf("NextToken() return Token failed! expect: %v, got: %v", tt.token, *tk)
 			}
 		})
 	}
