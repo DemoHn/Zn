@@ -241,7 +241,7 @@ func TestNextToken_StringONLY(t *testing.T) {
 	assertNextToken(cases, t)
 }
 
-func TestNextTOken_VarQuoteONLY(t *testing.T) {
+func TestNextToken_VarQuoteONLY(t *testing.T) {
 	cases := []nextTokenCase{
 		{
 			name:        "normal variable quote",
@@ -316,6 +316,101 @@ func TestNextTOken_VarQuoteONLY(t *testing.T) {
 			lineInfo:    "",
 		},
 	}
+	assertNextToken(cases, t)
+}
+
+func TestNextToken_NumberONLY(t *testing.T) {
+	cases := []nextTokenCase{
+		{
+			name:        "normal number (all digits)",
+			input:       "123456七",
+			expectError: false,
+			token: Token{
+				Type:    typeNumber,
+				Literal: []rune("123456"),
+				Info:    nil,
+			},
+			lineInfo: "",
+		},
+		{
+			name:        "normal number (start to end)",
+			input:       "123456",
+			expectError: false,
+			token: Token{
+				Type:    typeNumber,
+				Literal: []rune("123456"),
+				Info:    nil,
+			},
+			lineInfo: "Unknown<0>[0,5]",
+		},
+		{
+			name:        "normal number (with dot and minus)",
+			input:       "-123.456km",
+			expectError: false,
+			token: Token{
+				Type:    typeNumber,
+				Literal: []rune("-123.456"),
+				Info:    nil,
+			},
+			lineInfo: "",
+		},
+		{
+			name:        "normal number (with plus at beginning)",
+			input:       "+00000.456km",
+			expectError: false,
+			token: Token{
+				Type:    typeNumber,
+				Literal: []rune("+00000.456"),
+				Info:    nil,
+			},
+			lineInfo: "",
+		},
+		{
+			name:        "normal number (with plus)",
+			input:       "+000003 Rs",
+			expectError: false,
+			token: Token{
+				Type:    typeNumber,
+				Literal: []rune("+000003"),
+				Info:    nil,
+			},
+			lineInfo: "",
+		},
+		{
+			name:        "normal number (with E+)",
+			input:       "+000003E+05 Rs",
+			expectError: false,
+			token: Token{
+				Type:    typeNumber,
+				Literal: []rune("+000003E+05"),
+				Info:    nil,
+			},
+			lineInfo: "",
+		},
+		{
+			name:        "normal number (with e-)",
+			input:       "+000003e-25 Rs",
+			expectError: false,
+			token: Token{
+				Type:    typeNumber,
+				Literal: []rune("+000003e-25"),
+				Info:    nil,
+			},
+			lineInfo: "",
+		},
+		{
+			name:        "normal number (decimal with e+)",
+			input:       "-003.0452e+25 Rs",
+			expectError: false,
+			token: Token{
+				Type:    typeNumber,
+				Literal: []rune("-003.0452e+25"),
+				Info:    nil,
+			},
+			lineInfo: "",
+		},
+	}
+
 	assertNextToken(cases, t)
 }
 

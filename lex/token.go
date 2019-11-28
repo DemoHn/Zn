@@ -291,12 +291,20 @@ func NewVarQuoteToken(buf []rune) *Token {
 
 // NewCommentToken -
 func NewCommentToken(buf []rune, isMultiLine bool) *Token {
-	cpBuf := util.Copy(buf)
 	return &Token{
 		Type:    typeComment,
-		Literal: cpBuf,
+		Literal: util.Copy(buf),
 		Info: map[string]bool{
 			"isMultiLine": isMultiLine,
 		},
+	}
+}
+
+// NewNumberToken -
+func NewNumberToken(buf []rune) *Token {
+	return &Token{
+		Type:    typeNumber,
+		Literal: util.Copy(buf),
+		Info:    nil,
 	}
 }

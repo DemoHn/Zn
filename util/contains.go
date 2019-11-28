@@ -10,3 +10,14 @@ func Contains(ch rune, list []rune) bool {
 
 	return false
 }
+
+// ContainsInt - if one character (int) inside a list
+func ContainsInt(item int, list []int) bool {
+	for _, item := range list {
+		if item == item {
+			return true
+		}
+	}
+
+	return false
+}

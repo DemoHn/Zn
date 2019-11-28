@@ -140,6 +140,11 @@ func (l *Lexer) NextToken() (*Token, *error.Error) {
 		return l.parseString(ch)
 	case MiddleDot:
 		return l.parseVarQuote(ch)
+	default:
+		// parse number
+		if isNumber(ch) || ch == '+' || ch == '-' {
+			return l.parseNumber(ch)
+		}
 	}
 	return nil, nil
 }
@@ -343,4 +348,86 @@ func (l *Lexer) parseVarQuote(ch rune) (*Token, *error.Error) {
 			}
 		}
 	}
+}
+
+// regex: ^[-+]?[0-9]*\.?[0-9]+(E[-+]?[0-9]+)?$
+func (l *Lexer) parseNumber(ch rune) (*Token, *error.Error) {
+	// setup
+	l.clearBuffer()
+	// hand-written regex parser
+	// ref: https://cyberzhg.github.io/toolbox/min_dfa?regex=KG18cCk/TisuP04rKChlfEUpKG18cCk/TispPw==
+	// or the documentation has declared that.
+	var state = 1
+	var endStates = []int{5, 6, 8}
+
+	// first divert the states
+	switch ch {
+	case '-', '+':
+		l.pushBuffer(ch)
+		state = 3
+	default: // digits
+		l.pushBuffer(ch)
+		state = 2
+	}
+	for {
+		ch = l.next()
+		switch ch {
+		case EOF:
+			goto end
+		case 'e', 'E':
+			switch state {
+			case 5, 6:
+				state = 7
+			default:
+				goto end
+			}
+		case '.':
+			switch state {
+			case 2, 5:
+				state = 4
+			default:
+				goto end
+			}
+		case '-', '+':
+			switch state {
+			case 7:
+				state = 9
+			default:
+				goto end
+			}
+		default:
+			if isNumber(ch) {
+				switch state {
+				case 3:
+					state = 2
+				case 2:
+					state = 5
+				case 5:
+					state = 5
+				case 4:
+					state = 6
+				case 6:
+					state = 6
+				case 7:
+					state = 8
+				case 8:
+					state = 8
+				case 9:
+					state = 8
+				}
+			} else {
+				goto end
+			}
+		}
+		l.pushBuffer(ch)
+	}
+
+end:
+	if util.ContainsInt(state, endStates) {
+		if ch == EOF {
+			l.lines.PushLine(l.currentPos - 1)
+		}
+		return NewNumberToken(l.chBuffer), nil
+	}
+	return nil, error.NewErrorSLOT("invalid number")
 }
