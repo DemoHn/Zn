@@ -420,6 +420,35 @@ func TestNextToken_NumberONLY(t *testing.T) {
 			},
 			lineInfo: "",
 		},
+		// test fail cases
+		{
+			name:        "operater only",
+			input:       "---",
+			expectError: true,
+			token:       Token{},
+			lineInfo:    "",
+		},
+		{
+			name:        "operater only #2",
+			input:       "-++",
+			expectError: true,
+			token:       Token{},
+			lineInfo:    "",
+		},
+		{
+			name:        "multiple dots",
+			input:       "3..2",
+			expectError: true,
+			token:       Token{},
+			lineInfo:    "",
+		},
+		{
+			name:        "E first",
+			input:       "-E+3",
+			expectError: true,
+			token:       Token{},
+			lineInfo:    "",
+		},
 	}
 
 	assertNextToken(cases, t)

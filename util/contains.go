@@ -12,9 +12,9 @@ func Contains(ch rune, list []rune) bool {
 }
 
 // ContainsInt - if one character (int) inside a list
-func ContainsInt(item int, list []int) bool {
+func ContainsInt(input int, list []int) bool {
 	for _, item := range list {
-		if item == item {
+		if item == input {
 			return true
 		}
 	}
