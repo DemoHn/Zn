@@ -113,17 +113,6 @@ var KeywordLeads = []rune{
 	GlyphZHI, GlyphDEo,
 }
 
-// helpers
-func isKeywordLead(ch rune) bool {
-	for _, keyword := range KeywordLeads {
-		if ch == keyword {
-			return true
-		}
-	}
-
-	return false
-}
-
 //// 2. markers
 // declare marks
 const (
@@ -135,9 +124,21 @@ const (
 	BangMark       rune = 0xFF01 // ！
 	AnnotationMark rune = 0x0040 // @
 	HashMark       rune = 0x0023 // #
-	EmMark         rune = 0x2014 // —
 	EllipsisMark   rune = 0x2026 // …
+	LeftBracket    rune = 0x3010 // 【
+	RightBracket   rune = 0x3011 // 】
+	LeftParen      rune = 0xFF08 // （
+	RightParen     rune = 0xFF09 // ）
+	Equal          rune = 0x003D // =
+	DoubleArrow    rune = 0x27FA // ⟺
 )
+
+// MarkLeads -
+var MarkLeads = []rune{
+	Comma, Colon, Semicolon, QuestionMark, RefMark, BangMark,
+	AnnotationMark, HashMark, EllipsisMark, LeftBracket,
+	RightBracket, LeftParen, RightParen, Equal, DoubleArrow,
+}
 
 //// 3. spaces
 const (
@@ -180,11 +181,6 @@ const (
 	RightQuoteIV  rune = 0x201D // ”
 	LeftQuoteV    rune = 0x2018 // ‘
 	RightQuoteV   rune = 0x2019 // ’
-	LeftBracket   rune = 0x3010 // 【
-	RightBracket  rune = 0x3011 // 】
-	LeftParen     rune = 0xFF08 // （
-	RightParen    rune = 0xFF09 // ）
-	MiddleDot     rune = 0x00B7 // ·
 )
 
 // LeftQuotes -
@@ -214,12 +210,17 @@ var QuoteMatchMap = map[rune]rune{
 	LeftQuoteV:   RightQuoteV,
 }
 
-//// 5. numbers
+//// 5. var quote
+const (
+	MiddleDot rune = 0x00B7 // ·
+)
+
+//// 6. numbers
 func isNumber(ch rune) bool {
 	return (ch >= '0' && ch <= '9')
 }
 
-//// 6. identifiers
+//// 7. identifiers
 const maxIdentifierLength = 32
 
 // @params: ch - input char
@@ -255,11 +256,24 @@ func isIdentifierChar(ch rune, isFirst bool) bool {
 // token types -
 // for special type Tokens, its range varies from 0 - 9
 const (
-	typeEOF      TokenType = 0
-	typeComment  TokenType = 10
-	typeString   TokenType = 90
-	typeVarQuote TokenType = 91
-	typeNumber   TokenType = 100
+	typeEOF         TokenType = 0
+	typeComment     TokenType = 10
+	typeCommaSep    TokenType = 11
+	typeStmtSep     TokenType = 12
+	typeFuncCall    TokenType = 13
+	typeFuncDeclare TokenType = 14
+	typeObjRef      TokenType = 15
+	typeMustT       TokenType = 16
+	typeAnnoT       TokenType = 17
+	typeMapHash     TokenType = 18
+	typeMoreParam   TokenType = 19
+	typeArrayQuoteL TokenType = 20
+	typeArrayQutoeR TokenType = 21
+	typeStmtQuoteL  TokenType = 22
+	typeStmtQuoteR  TokenType = 23
+	typeString      TokenType = 90
+	typeVarQuote    TokenType = 91
+	typeNumber      TokenType = 100
 )
 
 // NewTokenEOF - new EOF token
@@ -304,6 +318,15 @@ func NewCommentToken(buf []rune, isMultiLine bool) *Token {
 func NewNumberToken(buf []rune) *Token {
 	return &Token{
 		Type:    typeNumber,
+		Literal: util.Copy(buf),
+		Info:    nil,
+	}
+}
+
+// NewMarkToken -
+func NewMarkToken(buf []rune, t TokenType) *Token {
+	return &Token{
+		Type:    t,
 		Literal: util.Copy(buf),
 		Info:    nil,
 	}

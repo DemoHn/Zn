@@ -387,6 +387,9 @@ func (l *Lexer) parseNumber(ch rune) (*Token, *error.Error) {
 			default:
 				goto end
 			}
+		case '_':
+			ch = l.next()
+			continue
 		default:
 			if isNumber(ch) {
 				switch state {
@@ -399,10 +402,6 @@ func (l *Lexer) parseNumber(ch rune) (*Token, *error.Error) {
 				case 7, 8, 9:
 					state = 8
 				}
-				// ignore _ and whitespaces
-			} else if isWhiteSpace(ch) || ch == '_' {
-				ch = l.next()
-				continue
 			} else {
 				goto end
 			}
@@ -419,4 +418,9 @@ end:
 		return NewNumberToken(l.chBuffer), nil
 	}
 	return nil, error.NewErrorSLOT("invalid number")
+}
+
+// parseMarkers -
+func (l *Lexer) parseMarkers(ch rune) (*Token, *error.Error) {
+
 }
