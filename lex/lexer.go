@@ -360,14 +360,19 @@ func (l *Lexer) parseNumber(ch rune) (*Token, *error.Error) {
 	var state = 1
 	var endStates = []int{5, 6, 8}
 
-	// first divert the states
+	// first state calculation
 	switch ch {
 	case '-', '+':
 		l.pushBuffer(ch)
 		state = 3
 	default: // digits
-		l.pushBuffer(ch)
-		state = 2
+		if isNumber(ch) {
+			l.pushBuffer(ch)
+			state = 2
+		}
+		if !isWhiteSpace(ch) {
+			goto end
+		}
 	}
 	for {
 		ch = l.next()
@@ -415,6 +420,9 @@ func (l *Lexer) parseNumber(ch rune) (*Token, *error.Error) {
 				case 9:
 					state = 8
 				}
+				// ignore _ and whitespaces
+			} else if isWhiteSpace(ch) || ch == '_' {
+				continue
 			} else {
 				goto end
 			}

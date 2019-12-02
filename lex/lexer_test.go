@@ -409,6 +409,17 @@ func TestNextToken_NumberONLY(t *testing.T) {
 			},
 			lineInfo: "",
 		},
+		{
+			name:        "normal number (ignore whitespaces and underscore)",
+			input:       "-12_300_500 800 900 RSU",
+			expectError: false,
+			token: Token{
+				Type:    typeNumber,
+				Literal: []rune("-12300500800900"),
+				Info:    nil,
+			},
+			lineInfo: "",
+		},
 	}
 
 	assertNextToken(cases, t)
