@@ -108,7 +108,7 @@ var KeywordLeads = []rune{
 	GlyphDA, GlyphXIAO, GlyphYIi, GlyphER,
 	GlyphDE, GlyphZE, GlyphFOU, GlyphMEI,
 	GlyphCHENG, GlyphZUO, GlyphDING, GlyphLEI,
-	GlyphQI, GlyphCI, GlyphZHU, GlyphHE,
+	GlyphQI, GlyphCI, GlyphHE,
 	GlyphZAI, GlyphZHONG, GlyphHUO, GlyphQIE,
 	GlyphZHI, GlyphDEo,
 }
@@ -256,25 +256,50 @@ func isIdentifierChar(ch rune, isFirst bool) bool {
 // token types -
 // for special type Tokens, its range varies from 0 - 9
 const (
-	typeEOF         TokenType = 0
-	typeComment     TokenType = 10
-	typeCommaSep    TokenType = 11
-	typeStmtSep     TokenType = 12
-	typeFuncCall    TokenType = 13
-	typeFuncDeclare TokenType = 14
-	typeObjRef      TokenType = 15
-	typeMustT       TokenType = 16
-	typeAnnoT       TokenType = 17
-	typeMapHash     TokenType = 18
-	typeMoreParam   TokenType = 19
-	typeArrayQuoteL TokenType = 20
-	typeArrayQutoeR TokenType = 21
-	typeStmtQuoteL  TokenType = 22
-	typeStmtQuoteR  TokenType = 23
-	typeString      TokenType = 90
-	typeVarQuote    TokenType = 91
-	typeNumber      TokenType = 100
+	typeEOF          TokenType = 0
+	typeComment      TokenType = 10
+	typeCommaSep     TokenType = 11
+	typeStmtSep      TokenType = 12
+	typeFuncCall     TokenType = 13
+	typeFuncDeclare  TokenType = 14
+	typeObjRef       TokenType = 15
+	typeMustT        TokenType = 16
+	typeAnnoT        TokenType = 17
+	typeMapHash      TokenType = 18
+	typeMoreParam    TokenType = 19
+	typeArrayQuoteL  TokenType = 20
+	typeArrayQuoteR  TokenType = 21
+	typeStmtQuoteL   TokenType = 22
+	typeStmtQuoteR   TokenType = 23
+	typeMapData      TokenType = 24
+	typeDeclareW     TokenType = 40 // 令
+	typeLogicYesW    TokenType = 41 // 为
+	typeLogicYesIIW  TokenType = 42 // 是
+	typeAssignW      TokenType = 43 // 设为
+	typeCondW        TokenType = 44 // 如果
+	typeFuncW        TokenType = 45 // 如何
+	typeStaticFuncW  TokenType = 46 // 何为
+	typeParamAssignW TokenType = 47 // 已知
+	typeReturnW      TokenType = 48 // 返回
+	typeLogicNotW    TokenType = 49 // 不为
+	typeLogicNotIIW  TokenType = 50 // 不是
+	typeLogicNotEqW  TokenType = 51 // 不等于
+	// more keywords...
+	typeString   TokenType = 90
+	typeVarQuote TokenType = 91
+	typeNumber   TokenType = 100
 )
+
+// KeywordTypeMap -
+var KeywordTypeMap = map[TokenType][]rune{
+	typeDeclareW:    []rune{GlyphLING},
+	typeLogicYesW:   []rune{GlyphWEI},
+	typeLogicYesIIW: []rune{GlyphSHI},
+	typeAssignW:     []rune{GlyphSHE, GlyphWEI},
+	typeCondW:       []rune{GlyphRU, GlyphGUO},
+	typeFuncW:       []rune{GlyphRU, GlyphHE},
+	typeStaticFuncW: []rune{GlyphHE, GlyphWEI},
+}
 
 // NewTokenEOF - new EOF token
 func NewTokenEOF() *Token {
@@ -328,6 +353,19 @@ func NewMarkToken(buf []rune, t TokenType) *Token {
 	return &Token{
 		Type:    t,
 		Literal: util.Copy(buf),
+		Info:    nil,
+	}
+}
+
+// NewKeywordToken -
+func NewKeywordToken(t TokenType) *Token {
+	var l = []rune{}
+	if item, ok := KeywordTypeMap[t]; ok {
+		l = item
+	}
+	return &Token{
+		Type:    t,
+		Literal: l,
 		Info:    nil,
 	}
 }

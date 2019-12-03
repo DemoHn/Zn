@@ -145,6 +145,12 @@ func (l *Lexer) NextToken() (*Token, *error.Error) {
 		if isNumber(ch) || ch == '+' || ch == '-' {
 			return l.parseNumber(ch)
 		}
+		if util.Contains(ch, MarkLeads) {
+			return l.parseMarkers(ch)
+		}
+		if util.Contains(ch, KeywordLeads) {
+			return l.parseKeyword(ch)
+		}
 	}
 	return nil, nil
 }
@@ -422,5 +428,74 @@ end:
 
 // parseMarkers -
 func (l *Lexer) parseMarkers(ch rune) (*Token, *error.Error) {
+	// setup
+	l.clearBuffer()
+	l.pushBuffer(ch)
 
+	// switch
+	switch ch {
+	case Comma:
+		return NewMarkToken(l.chBuffer, typeCommaSep), nil
+	case Colon:
+		return NewMarkToken(l.chBuffer, typeFuncCall), nil
+	case Semicolon:
+		return NewMarkToken(l.chBuffer, typeStmtSep), nil
+	case QuestionMark:
+		return NewMarkToken(l.chBuffer, typeFuncDeclare), nil
+	case RefMark:
+		return NewMarkToken(l.chBuffer, typeObjRef), nil
+	case BangMark:
+		return NewMarkToken(l.chBuffer, typeMustT), nil
+	case AnnotationMark:
+		return NewMarkToken(l.chBuffer, typeAnnoT), nil
+	case HashMark:
+		return NewMarkToken(l.chBuffer, typeMapHash), nil
+	case EllipsisMark:
+		if l.peek() == EllipsisMark {
+			l.pushBuffer(l.next())
+			return NewMarkToken(l.chBuffer, typeMoreParam), nil
+		}
+		return nil, error.NewErrorSLOT("invalid ellipsis")
+	case LeftBracket:
+		return NewMarkToken(l.chBuffer, typeArrayQuoteL), nil
+	case RightBracket:
+		return NewMarkToken(l.chBuffer, typeArrayQuoteR), nil
+	case LeftParen:
+		return NewMarkToken(l.chBuffer, typeStmtQuoteL), nil
+	case RightParen:
+		return NewMarkToken(l.chBuffer, typeStmtQuoteR), nil
+	case Equal:
+		if l.peek() == Equal {
+			l.pushBuffer(l.next())
+			return NewMarkToken(l.chBuffer, typeMapData), nil
+		}
+		return nil, error.NewErrorSLOT("invalid single euqal")
+	case DoubleArrow:
+		return NewMarkToken(l.chBuffer, typeMapData), nil
+	}
+
+	return nil, error.NewErrorSLOT("invalid marker")
+}
+
+// parseKeyword -
+// @param bool matchKeyword
+// @param *Token token
+//
+// when matchKeyword = true, a keyword token will be generated
+// matchKeyword = false, regard it as normal identifer
+// and return directly.
+func (l *Lexer) parseKeyword(ch rune) (bool, *Token) {
+	// setup
+	// NOTICE: we won't clear buffer here since when matchKeyword
+	// fails, it's still a part of normal identifers!
+	l.pushBuffer(ch)
+
+	// manual matching one or consecutive keywords
+	switch ch {
+	case GlyphLING:
+		return true, NewKeywordToken(typeDeclareW)
+	case GlyphWEI:
+		return true, NewKeywordToken(typeLogicYesW)
+	}
+	return false, nil
 }
