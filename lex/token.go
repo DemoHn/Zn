@@ -45,7 +45,7 @@ const (
 	GlyphHUI rune = 0x56DE
 	// GlyphBU - 不 - 不为，不是，不等于，不大于，不小于
 	GlyphBU rune = 0x4E0D
-	// GlyphDENG - 等 - 不等于
+	// GlyphDENG - 等 - 等于，不等于
 	GlyphDENG rune = 0x7B49
 	// GlyphYU - 于 - 不等于，大于，不大于，小于，不小于
 	GlyphYU rune = 0x4E8E
@@ -104,7 +104,7 @@ const (
 // KeywordLeads - all glyphs that would be possible of the first character of one keyword.
 var KeywordLeads = []rune{
 	GlyphLING, GlyphWEI, GlyphSHI, GlyphSHE,
-	GlyphRU, GlyphYI, GlyphFAN, GlyphBU,
+	GlyphRU, GlyphYI, GlyphFAN, GlyphBU, GlyphDENG,
 	GlyphDA, GlyphXIAO, GlyphYIi, GlyphER,
 	GlyphDE, GlyphFOU, GlyphMEI,
 	GlyphCHENG, GlyphZUO, GlyphDING, GlyphLEI,
@@ -306,10 +306,11 @@ const (
 	typeObjDotW       TokenType = 71 // 之
 	typeObjDotIIW     TokenType = 72 // 的
 	typeObjConstructW TokenType = 73 // 是为
-	// more keywords...
-	typeString   TokenType = 90
-	typeVarQuote TokenType = 91
-	typeNumber   TokenType = 100
+	typeLogicEqualW   TokenType = 74 // 等于
+	typeString        TokenType = 90
+	typeVarQuote      TokenType = 91
+	typeNumber        TokenType = 100
+	typeIdentifier    TokenType = 101
 )
 
 // KeywordTypeMap -
@@ -348,7 +349,7 @@ var KeywordTypeMap = map[TokenType][]rune{
 	typeObjDotW:       []rune{GlyphZHI},
 	typeObjDotIIW:     []rune{GlyphDEo},
 	typeObjConstructW: []rune{GlyphSHI, GlyphWEI},
-	// continued...
+	typeLogicEqualW:   []rune{GlyphDENG, GlyphYU},
 }
 
 // NewTokenEOF - new EOF token
@@ -416,6 +417,15 @@ func NewKeywordToken(t TokenType) *Token {
 	return &Token{
 		Type:    t,
 		Literal: l,
+		Info:    nil,
+	}
+}
+
+// NewIdentifierToken -
+func NewIdentifierToken(buf []rune) *Token {
+	return &Token{
+		Type:    typeIdentifier,
+		Literal: util.Copy(buf),
 		Info:    nil,
 	}
 }

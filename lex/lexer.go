@@ -108,7 +108,6 @@ func (l *Lexer) pushBufferRange(start int, end int) bool {
 // NextToken - parse and generate the next token (including comments)
 func (l *Lexer) NextToken() (*Token, *error.Error) {
 	var ch = l.next()
-
 	switch ch {
 	case EOF:
 		l.lines.PushLine(l.currentPos)
@@ -132,9 +131,7 @@ func (l *Lexer) NextToken() (*Token, *error.Error) {
 		}
 
 		l.rebase(cursor)
-		// handle the char to next to prevent dead lock
-		l.pushBuffer(ch)
-		l.next()
+		// goto normal identifier
 	// left quotes
 	case LeftQuoteI, LeftQuoteII, LeftQuoteIII, LeftQuoteIV, LeftQuoteV:
 		return l.parseString(ch)
@@ -148,11 +145,12 @@ func (l *Lexer) NextToken() (*Token, *error.Error) {
 		if util.Contains(ch, MarkLeads) {
 			return l.parseMarkers(ch)
 		}
-		if util.Contains(ch, KeywordLeads) {
-			return l.parseKeyword(ch)
+		// suppose it's a keyword
+		if isKeyword, tk := l.parseKeyword(ch); isKeyword {
+			return tk, nil
 		}
 	}
-	return nil, nil
+	return l.parseIdentifier(ch)
 }
 
 //// parsing logics
@@ -324,7 +322,6 @@ func (l *Lexer) parseString(ch rune) (*Token, *error.Error) {
 func (l *Lexer) parseVarQuote(ch rune) (*Token, *error.Error) {
 	// setup
 	l.clearBuffer()
-	isFirst := true
 	// iterate
 	count := 0
 	for {
@@ -342,13 +339,12 @@ func (l *Lexer) parseVarQuote(ch rune) (*Token, *error.Error) {
 			if isWhiteSpace(ch) {
 				continue
 			}
-			if isIdentifierChar(ch, isFirst) {
+			if isIdentifierChar(ch, count == 0) {
 				l.pushBuffer(ch)
 				count++
 				if count > maxIdentifierLength {
 					return nil, error.NewErrorSLOT("invalid syntax: 变量名太长")
 				}
-				isFirst = false
 			} else {
 				return nil, error.NewErrorSLOT("invalid syntax: invalid var")
 			}
@@ -452,7 +448,7 @@ func (l *Lexer) parseMarkers(ch rune) (*Token, *error.Error) {
 		return NewMarkToken(l.chBuffer, typeMapHash), nil
 	case EllipsisMark:
 		if l.peek() == EllipsisMark {
-			l.pushBuffer(l.next())
+			wordLen = 2
 			return NewMarkToken(l.chBuffer, typeMoreParam), nil
 		}
 		return nil, error.NewErrorSLOT("invalid ellipsis")
@@ -466,7 +462,7 @@ func (l *Lexer) parseMarkers(ch rune) (*Token, *error.Error) {
 		return NewMarkToken(l.chBuffer, typeStmtQuoteR), nil
 	case Equal:
 		if l.peek() == Equal {
-			l.pushBuffer(l.next())
+			wordLen = 2
 			return NewMarkToken(l.chBuffer, typeMapData), nil
 		}
 		return nil, error.NewErrorSLOT("invalid single euqal")
@@ -478,24 +474,249 @@ func (l *Lexer) parseMarkers(ch rune) (*Token, *error.Error) {
 }
 
 // parseKeyword -
-// @param bool matchKeyword
-// @param *Token token
+// @return bool matchKeyword
+// @return *Token token
 //
 // when matchKeyword = true, a keyword token will be generated
 // matchKeyword = false, regard it as normal identifer
 // and return directly.
 func (l *Lexer) parseKeyword(ch rune) (bool, *Token) {
-	// setup
-	// NOTICE: we won't clear buffer here since when matchKeyword
-	// fails, it's still a part of normal identifers!
-	l.pushBuffer(ch)
+	var tk *Token
+	var wordLen = 1
 
 	// manual matching one or consecutive keywords
 	switch ch {
 	case GlyphLING:
-		return true, NewKeywordToken(typeDeclareW)
+		tk = NewKeywordToken(typeDeclareW)
 	case GlyphWEI:
-		return true, NewKeywordToken(typeLogicYesW)
+		tk = NewKeywordToken(typeLogicYesW)
+	case GlyphSHI:
+		if l.peek() == GlyphWEI {
+			wordLen = 2
+			tk = NewKeywordToken(typeObjConstructW)
+		} else {
+			tk = NewKeywordToken(typeLogicYesIIW)
+		}
+	case GlyphSHE:
+		if l.peek() == GlyphWEI {
+			wordLen = 2
+			tk = NewKeywordToken(typeAssignW)
+		} else {
+			return false, nil
+		}
+	case GlyphRU:
+		switch l.peek() {
+		case GlyphGUO:
+			wordLen = 2
+			tk = NewKeywordToken(typeCondW)
+		case GlyphHE:
+			wordLen = 2
+			tk = NewKeywordToken(typeFuncW)
+		default:
+			return false, nil
+		}
+	case GlyphHE:
+		if l.peek() == GlyphWEI {
+			wordLen = 2
+			tk = NewKeywordToken(typeStaticFuncW)
+		} else {
+			return false, nil
+		}
+	case GlyphYI:
+		if l.peek() == GlyphZHIy {
+			wordLen = 2
+			tk = NewKeywordToken(typeParamAssignW)
+		} else {
+			return false, nil
+		}
+	case GlyphFAN:
+		if l.peek() == GlyphHUI {
+			wordLen = 2
+			tk = NewKeywordToken(typeReturnW)
+		} else {
+			return false, nil
+		}
+	case GlyphBU:
+		switch l.peek() {
+		case GlyphWEI:
+			wordLen = 2
+			tk = NewKeywordToken(typeLogicNotW)
+		case GlyphSHI:
+			wordLen = 2
+			tk = NewKeywordToken(typeLogicNotIIW)
+		case GlyphDENG:
+			if l.peek2() == GlyphYU {
+				wordLen = 3
+				tk = NewKeywordToken(typeLogicNotEqW)
+			} else {
+				return false, nil
+			}
+		case GlyphDA:
+			if l.peek2() == GlyphYU {
+				wordLen = 3
+				tk = NewKeywordToken(typeLogicLteW)
+			} else {
+				return false, nil
+			}
+		case GlyphXIAO:
+			if l.peek2() == GlyphYU {
+				wordLen = 3
+				tk = NewKeywordToken(typeLogicGteW)
+			} else {
+				return false, nil
+			}
+		}
+	case GlyphDENG:
+		if l.peek() == GlyphYU {
+			wordLen = 2
+			tk = NewKeywordToken(typeLogicEqualW)
+		} else {
+			return false, nil
+		}
+	case GlyphDA:
+		if l.peek() == GlyphYU {
+			wordLen = 2
+			tk = NewKeywordToken(typeLogicGtW)
+		} else {
+			return false, nil
+		}
+	case GlyphXIAO:
+		if l.peek() == GlyphYU {
+			wordLen = 2
+			tk = NewKeywordToken(typeLogicLtW)
+		} else {
+			return false, nil
+		}
+	case GlyphYIi:
+		tk = NewKeywordToken(typeVarOneW)
+	case GlyphER:
+		tk = NewKeywordToken(typeVarTwoW)
+	case GlyphDE:
+		tk = NewKeywordToken(typeFuncYieldW)
+	case GlyphFOU:
+		if l.peek() == GlyphZE {
+			wordLen = 2
+			tk = NewKeywordToken(typeCondElseW)
+		} else {
+			return false, nil
+		}
+	case GlyphMEI:
+		if l.peek() == GlyphDANG {
+			wordLen = 2
+			tk = NewKeywordToken(typeWhileLoopW)
+		} else {
+			return false, nil
+		}
+	case GlyphCHENG:
+		if l.peek() == GlyphWEI {
+			wordLen = 2
+			tk = NewKeywordToken(typeObjNewW)
+		} else {
+			return false, nil
+		}
+	case GlyphZUO:
+		if l.peek() == GlyphWEI {
+			wordLen = 2
+			tk = NewKeywordToken(typeVarAliasW)
+		} else {
+			return false, nil
+		}
+	case GlyphDING:
+		if l.peek() == GlyphYIy {
+			wordLen = 2
+			tk = NewKeywordToken(typeObjDefineW)
+		} else {
+			return false, nil
+		}
+	case GlyphLEI:
+		if l.peek() == GlyphBI {
+			wordLen = 2
+			tk = NewKeywordToken(typeObjTraitW)
+		} else {
+			return false, nil
+		}
+	case GlyphQI:
+		tk = NewKeywordToken(typeObjThisW)
+	case GlyphCI:
+		tk = NewKeywordToken(typeObjSelfW)
+	case GlyphZAI:
+		tk = NewKeywordToken(typeFuncCallOneW)
+	case GlyphZHONG:
+		tk = NewKeywordToken(typeFuncCallTwoW)
+	case GlyphHUO:
+		tk = NewKeywordToken(typeLogicOrW)
+	case GlyphQIE:
+		tk = NewKeywordToken(typeLogicAndW)
+	case GlyphZHI:
+		tk = NewKeywordToken(typeObjDotW)
+	case GlyphDEo:
+		tk = NewKeywordToken(typeObjDotIIW)
+	}
+
+	if tk != nil {
+		switch wordLen {
+		case 1:
+			l.pushBuffer(ch)
+		case 2:
+			l.pushBuffer(ch)
+			l.pushBuffer(l.next())
+		case 3:
+			l.pushBuffer(ch)
+			l.pushBuffer(l.next())
+			l.pushBuffer(l.next())
+		}
+
+		return true, tk
 	}
 	return false, nil
+}
+
+// parseIdentifier
+func (l *Lexer) parseIdentifier(ch rune) (*Token, *error.Error) {
+	// setup
+	l.clearBuffer()
+	var count = 0
+	var terminators = append([]rune{
+		CR, LF, LeftQuoteI, LeftQuoteII, LeftQuoteIII,
+		LeftQuoteIV, LeftQuoteV, MiddleDot,
+	}, MarkLeads...)
+	if !isIdentifierChar(ch, true) {
+		return nil, error.NewErrorSLOT("invalid identifier")
+	}
+
+	l.pushBuffer(ch)
+	count++
+
+	// iterate
+	for {
+		ch = l.next()
+		cursor := l.currentPos
+
+		if ch == EOF {
+			return NewIdentifierToken(l.chBuffer), nil
+		}
+		if isWhiteSpace(ch) {
+			continue
+		}
+		if isKeyword, _ := l.parseKeyword(ch); !isKeyword {
+			l.rebase(cursor)
+			l.pushBuffer(ch)
+			continue
+		} else {
+			l.rebase(cursor)
+			return NewIdentifierToken(l.chBuffer), nil
+		}
+
+		if isIdentifierChar(ch, false) {
+			l.pushBuffer(ch)
+			continue
+		}
+		// other leads
+		if util.Contains(ch, terminators) {
+			l.rebase(cursor)
+			return NewIdentifierToken(l.chBuffer), nil
+		}
+
+		return nil, error.NewErrorSLOT("invalid char")
+	}
 }
