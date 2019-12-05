@@ -1,6 +1,7 @@
 package lex
 
 import (
+	"fmt"
 	"reflect"
 	"testing"
 )
@@ -451,6 +452,148 @@ func TestNextToken_NumberONLY(t *testing.T) {
 		},
 	}
 
+	assertNextToken(cases, t)
+}
+
+func TestNextToken_MarkerONLY(t *testing.T) {
+	// 01. generate TRUE cases
+	var markerMap = map[string]TokenType{
+		"，":  typeCommaSep,
+		"：":  typeFuncCall,
+		"；":  typeStmtSep,
+		"？":  typeFuncDeclare,
+		"&":  typeObjRef,
+		"！":  typeMustT,
+		"@":  typeAnnoT,
+		"#":  typeMapHash,
+		"……": typeMoreParam,
+		"【":  typeArrayQuoteL,
+		"】":  typeArrayQuoteR,
+		"（":  typeStmtQuoteL,
+		"）":  typeStmtQuoteR,
+		"==": typeMapData,
+		"⟺":  typeMapData,
+	}
+
+	var cases = make([]nextTokenCase, 0)
+	for k, v := range markerMap {
+		cases = append(cases, nextTokenCase{
+			name:        fmt.Sprintf("generate token %s", k),
+			input:       fmt.Sprintf("%s EE", k),
+			expectError: false,
+			token: Token{
+				Type:    v,
+				Literal: []rune(k),
+				Info:    nil,
+			},
+		})
+	}
+
+	assertNextToken(cases, t)
+}
+
+func TestNextToken_IdentifierONLY(t *testing.T) {
+	cases := []nextTokenCase{
+		{
+			name:        "normal identifier",
+			input:       "反",
+			expectError: false,
+			token: Token{
+				Type:    typeIdentifier,
+				Literal: []rune("反"),
+			},
+		},
+		{
+			name:        "normal identifier #2",
+			input:       "正定县",
+			expectError: false,
+			token: Token{
+				Type:    typeIdentifier,
+				Literal: []rune("正定县"),
+			},
+		},
+		{
+			name:        "normal identifier #3 with spaces",
+			input:       "正  定  县",
+			expectError: false,
+			token: Token{
+				Type:    typeIdentifier,
+				Literal: []rune("正定县"),
+			},
+		},
+		{
+			name:        "normal identifier with number followed",
+			input:       "正定县2345",
+			expectError: false,
+			token: Token{
+				Type:    typeIdentifier,
+				Literal: []rune("正定县2345"),
+			},
+		},
+		{
+			name:        "normal identifier with + - * /",
+			input:       "正定/+_县/2345",
+			expectError: false,
+			token: Token{
+				Type:    typeIdentifier,
+				Literal: []rune("正定/+_县/2345"),
+			},
+		},
+		{
+			name:        "normal identifier (quote as terminator)",
+			input:       "正定县「」",
+			expectError: false,
+			token: Token{
+				Type:    typeIdentifier,
+				Literal: []rune("正定县"),
+			},
+		},
+		{
+			name:        "normal identifier (var quote as terminator)",
+			input:       "正定县·如果·",
+			expectError: false,
+			token: Token{
+				Type:    typeIdentifier,
+				Literal: []rune("正定县"),
+			},
+		},
+		{
+			name:        "normal identifier (marker) as terminator)",
+			input:       "正定县（河北）",
+			expectError: false,
+			token: Token{
+				Type:    typeIdentifier,
+				Literal: []rune("正定县"),
+			},
+		},
+		{
+			name:        "normal identifier (keyword as terminator)",
+			input:       "正定县作为大县",
+			expectError: false,
+			token: Token{
+				Type:    typeIdentifier,
+				Literal: []rune("正定县"),
+			},
+		},
+		{
+			name:        "normal identifier (following keyword lead but not keyword formed)",
+			input:       "正定县如大县",
+			expectError: false,
+			token: Token{
+				Type:    typeIdentifier,
+				Literal: []rune("正定县如大县"),
+			},
+		},
+		{
+			name:        "normal identifier (like keyword)",
+			input:       "如不果返回",
+			expectError: false,
+			token: Token{
+				Type:    typeIdentifier,
+				Literal: []rune("如不果"),
+			},
+		},
+	}
 	assertNextToken(cases, t)
 }
 

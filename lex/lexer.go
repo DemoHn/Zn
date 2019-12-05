@@ -146,7 +146,7 @@ func (l *Lexer) NextToken() (*Token, *error.Error) {
 			return l.parseMarkers(ch)
 		}
 		// suppose it's a keyword
-		if isKeyword, tk := l.parseKeyword(ch); isKeyword {
+		if isKeyword, tk := l.parseKeyword(ch, true); isKeyword {
 			return tk, nil
 		}
 	}
@@ -448,7 +448,7 @@ func (l *Lexer) parseMarkers(ch rune) (*Token, *error.Error) {
 		return NewMarkToken(l.chBuffer, typeMapHash), nil
 	case EllipsisMark:
 		if l.peek() == EllipsisMark {
-			wordLen = 2
+			l.pushBuffer(l.next())
 			return NewMarkToken(l.chBuffer, typeMoreParam), nil
 		}
 		return nil, error.NewErrorSLOT("invalid ellipsis")
@@ -462,7 +462,7 @@ func (l *Lexer) parseMarkers(ch rune) (*Token, *error.Error) {
 		return NewMarkToken(l.chBuffer, typeStmtQuoteR), nil
 	case Equal:
 		if l.peek() == Equal {
-			wordLen = 2
+			l.pushBuffer(l.next())
 			return NewMarkToken(l.chBuffer, typeMapData), nil
 		}
 		return nil, error.NewErrorSLOT("invalid single euqal")
@@ -480,7 +480,7 @@ func (l *Lexer) parseMarkers(ch rune) (*Token, *error.Error) {
 // when matchKeyword = true, a keyword token will be generated
 // matchKeyword = false, regard it as normal identifer
 // and return directly.
-func (l *Lexer) parseKeyword(ch rune) (bool, *Token) {
+func (l *Lexer) parseKeyword(ch rune, moveForward bool) (bool, *Token) {
 	var tk *Token
 	var wordLen = 1
 
@@ -654,16 +654,18 @@ func (l *Lexer) parseKeyword(ch rune) (bool, *Token) {
 	}
 
 	if tk != nil {
-		switch wordLen {
-		case 1:
-			l.pushBuffer(ch)
-		case 2:
-			l.pushBuffer(ch)
-			l.pushBuffer(l.next())
-		case 3:
-			l.pushBuffer(ch)
-			l.pushBuffer(l.next())
-			l.pushBuffer(l.next())
+		if moveForward {
+			switch wordLen {
+			case 1:
+				l.pushBuffer(ch)
+			case 2:
+				l.pushBuffer(ch)
+				l.pushBuffer(l.next())
+			case 3:
+				l.pushBuffer(ch)
+				l.pushBuffer(l.next())
+				l.pushBuffer(l.next())
+			}
 		}
 
 		return true, tk
@@ -677,44 +679,43 @@ func (l *Lexer) parseIdentifier(ch rune) (*Token, *error.Error) {
 	l.clearBuffer()
 	var count = 0
 	var terminators = append([]rune{
-		CR, LF, LeftQuoteI, LeftQuoteII, LeftQuoteIII,
+		EOF, CR, LF, LeftQuoteI, LeftQuoteII, LeftQuoteIII,
 		LeftQuoteIV, LeftQuoteV, MiddleDot,
 	}, MarkLeads...)
 	if !isIdentifierChar(ch, true) {
 		return nil, error.NewErrorSLOT("invalid identifier")
 	}
-
+	// push first char
 	l.pushBuffer(ch)
 	count++
 
 	// iterate
 	for {
+		prev := l.currentPos
 		ch = l.next()
-		cursor := l.currentPos
 
-		if ch == EOF {
-			return NewIdentifierToken(l.chBuffer), nil
-		}
 		if isWhiteSpace(ch) {
 			continue
 		}
-		if isKeyword, _ := l.parseKeyword(ch); !isKeyword {
-			l.rebase(cursor)
-			l.pushBuffer(ch)
-			continue
-		} else {
-			l.rebase(cursor)
+		// if the following chars are a keyword,
+		// then terminate the identifier parsing process.
+		if isKeyword, _ := l.parseKeyword(ch, false); isKeyword {
+			l.rebase(prev)
+			return NewIdentifierToken(l.chBuffer), nil
+		}
+		// other char as terminator
+		if util.Contains(ch, terminators) {
+			l.rebase(prev)
 			return NewIdentifierToken(l.chBuffer), nil
 		}
 
 		if isIdentifierChar(ch, false) {
+			if count >= maxIdentifierLength {
+				return nil, error.NewErrorSLOT("exceed length")
+			}
 			l.pushBuffer(ch)
+			count++
 			continue
-		}
-		// other leads
-		if util.Contains(ch, terminators) {
-			l.rebase(cursor)
-			return NewIdentifierToken(l.chBuffer), nil
 		}
 
 		return nil, error.NewErrorSLOT("invalid char")
