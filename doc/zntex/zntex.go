@@ -42,11 +42,14 @@ func (zt *ZnTex) Parse() error {
 		peekPos:    0,
 		quoteStack: NewRuneStack(64),
 		chBuffer:   []rune{},
-		input:      []rune{},
+		input:      zt.input,
 	}
 
 	for {
-		tk := parser.NextToken()
+		tk, err := parser.NextToken()
+		if err != nil {
+			return err
+		}
 		if tk == nil {
 			break
 		}

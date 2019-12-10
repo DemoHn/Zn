@@ -47,6 +47,11 @@ func (rs *RuneStack) Current() (rune, bool) {
 	return rs.stack[rs.count-1], true
 }
 
+// Num - get num
+func (rs *RuneStack) Num() int {
+	return rs.count
+}
+
 // IsEmpty - is empty
 func (rs *RuneStack) IsEmpty() bool {
 	return rs.count == 0
@@ -66,4 +71,15 @@ func Copy(source []rune) []rune {
 	}
 
 	return newRune
+}
+
+// Contains - if one character (rune) inside a list
+func Contains(ch rune, list []rune) bool {
+	for _, item := range list {
+		if item == ch {
+			return true
+		}
+	}
+
+	return false
 }
