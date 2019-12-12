@@ -11,15 +11,22 @@ type Parser struct {
 	input      []rune
 }
 
-// common consts
+// common char
 const (
 	EOF = 0
 	LF  = 10
 )
 
+const (
+	typeComment = 1
+	typeText    = 2
+	typeEnviron = 3
+	typeCommand = 4
+)
+
 // Token defines an abstract type of token
 type Token interface {
-	literal() []rune
+	getType() int
 }
 
 // TextToken is the normal text
@@ -27,8 +34,8 @@ type TextToken struct {
 	Text []rune
 }
 
-func (t *TextToken) literal() []rune {
-	return t.Text
+func (t *TextToken) getType() int {
+	return typeText
 }
 
 // CommentToken parse a one-line token
@@ -36,8 +43,8 @@ type CommentToken struct {
 	Text []rune
 }
 
-func (t *CommentToken) literal() []rune {
-	return t.Text
+func (t *CommentToken) getType() int {
+	return typeComment
 }
 
 // CommandToken defines a general type of command (including its options and arguments)
@@ -48,8 +55,8 @@ type CommandToken struct {
 	Args    []string
 }
 
-func (t *CommandToken) literal() []rune {
-	return t.Literal
+func (t *CommandToken) getType() int {
+	return typeCommand
 }
 
 // EnvironToken defines an envrionment
@@ -61,8 +68,8 @@ type EnvironToken struct {
 	Args    []string
 }
 
-func (t *EnvironToken) literal() []rune {
-	return t.Literal
+func (t *EnvironToken) getType() int {
+	return typeEnviron
 }
 
 //// public methods

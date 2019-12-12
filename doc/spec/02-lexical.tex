@@ -1,0 +1,94 @@
+\documentclass{spec}
+
+\chapter[Lexical Structure]{词法结构}
+
+\paragraph{
+  世上的编程语言，大抵采用纯文本的形式以存储代码。使用文本的优势不言自明：使用一般的文本编辑器即可阅读及编辑，
+  同时亦方便托管到代码平台上进行维护，（LabView就是一个反例，其程序需要用专门的软件来查阅）\en{Zn}语言自然也不例外。
+}
+
+\paragraph{
+  接下来的内容将会介绍\en{Zn}语言的词法结构。「词法结构」\enq{Lexical Structure}主要讲述的是如何用一些基本词素拼成一段\en{Zn}语言代码：
+  所谓「连词成句」，大抵上就是这个意思。\en{Zn}语言主要由「标识符」\sectionrefq{Identifier}，「关键字」\sectionrefq{Keyword}，
+  「立即数」\sectionrefq{Number}，「文本」\sectionrefq{String}，「注释」\sectionrefq{Comment}，「换行及缩进」\sectionrefq{CRLF}等基本词素构成。
+  这些词素的详细定义会在接下来的几个章节里给出。
+}
+
+\paragraph{
+  中文编码曾经让无数程序员焦头烂额。有鉴于此，\en{Zn}语言统一要求\bold{所有程序文件须使用\enc{Unicode}字符集，以及使用\enc{UTF-8}编码}。
+  \sectionrefq{Unicode}一节会详细介绍个中原因及具体细节。
+}
+
+\section[Unicode]{Unicode}
+
+\paragraph{
+  曾几何时，计算机上的中文编码并没有一个统一的标准：GB2312，GBK，GB18030，Big5等各自不同的编码标准使得「乱码」问题非常常见：
+}
+
+\subsection[UTF-8]{UTF-8}
+Unicode 基本用法。毕竟在\en{Zn}语言中，只支持UTF-8编码。
+
+\section[CRLF]{换行符}
+
+\begin{BNF}
+\nonterm{换行符} ::=
+  \expr{\term{CR}}
+  \expr{\term{LF}}
+  \expr{\term{CR} \term{\LF}}
+  \expr{\term{LF} \term{\CR}}
+\end{BNF}
+
+# 听说需要用EBNF定义换行符？（BNF的排版语法目测要自己设计一波？）
+
+\section[WhiteSpaces]{空白符}
+
+\begin{BNF}
+\nonterm{空白符} ::= 
+  \expr[or]{
+    \term{\unicodechar{0009}}
+    \term{\unicodechar{000B}}
+    \term{\unicodechar{000C}}
+    \term{\unicodechar{0020}}
+    \term{\unicodechar{00A0}}
+    \term{\unicodechar{2000}}
+    \term{\unicodechar{2001}}
+    \term{\unicodechar{2002}}
+    \term{\unicodechar{2003}}
+    \term{\unicodechar{2004}}
+    \term{\unicodechar{2005}}
+    \term{\unicodechar{2006}}
+    \term{\unicodechar{2007}}
+    \term{\unicodechar{2008}}
+    \term{\unicodechar{2009}}
+    \term{\unicodechar{200A}}
+    \term{\unicodechar{200B}}
+    \term{\unicodechar{202F}}
+    \term{\unicodechar{205F}}
+    \term{\unicodechar{3000}}
+  }
+
+大约显示成：
+```
+⟨空白符⟩ ::=
+    U+0009 | U+000B | U+000C | U+0020 ...
+```
+\end{BNF}
+
+
+\section[Indent]{缩进}
+
+\section[Punctuation]{分隔符}
+
+\section[Identifier]{标识符}
+
+\section[Keyword]{关键字}
+
+\section[QuoteIdentifier]{显式标识符}
+
+\section[Number]{立即数}
+
+\section[String]{文本}
+
+\section[Comment]{注释}
+
+
