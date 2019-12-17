@@ -10,13 +10,13 @@ func TestParse(t *testing.T) {
 	data := []byte(
 		`\begin{tag}{xx}{yy}{zz} Hello, Hello  t   
 \command{DemoHn}{from}{mingchuanlu}
-\command2[okr, okd, _oks]{diu,diu}{der,,
+\commandX[okr, okd, _oks]{diu,diu}{der,,
 , der}
 		
 
     YYYY
-\end{tag}{DD}    
-`)
+\end{tag}{DD}
+\Zn\BRs新`)
 
 	tt.ReadInput(data)
 	err := tt.Parse()

@@ -135,6 +135,11 @@ func (p *Parser) peek2() rune {
 	return data
 }
 
+func (p *Parser) back(chs int) {
+	p.peekPos = p.peekPos - chs
+	p.currentPos = p.currentPos - chs
+}
+
 func (p *Parser) clearBuffer() {
 	p.chBuffer = []rune{}
 }
@@ -160,6 +165,9 @@ func (p *Parser) parseCommand(ch rune) (Token, error) {
 	// B. ENVIRONS
 	// \begin{tagName}[opt1,opt2]{arg1}{arg2}
 	// <--1-><-- 4 --><--- 2 ---><---- 3 --->
+	//
+	// C. COMMANDS (with charcters only)
+	// \commandName
 	var state = 1
 	// iterate
 	for {
@@ -264,12 +272,22 @@ func (p *Parser) parseCommand(ch rune) (Token, error) {
 				p.pushBuffer(ch)
 			}
 		default:
-			if ch == EOF {
-				return nil, fmt.Errorf("invalid end")
-			}
-			// options不接受空格
+			// options需要忽略空格
 			if state == 2 && Contains(ch, []rune{' ', '\t', '\r', '\n'}) {
 				continue
+			}
+			// 其他情况下
+			if state == 1 {
+				if isChar(ch) {
+					p.pushBuffer(ch)
+					continue
+				} else {
+					p.back(1)
+					goto end
+				}
+			}
+			if ch == EOF {
+				return nil, fmt.Errorf("invalid end")
 			}
 			p.pushBuffer(ch)
 		}
@@ -366,4 +384,9 @@ func (p *Parser) skipBlanks(ch rune) {
 		}
 		ch = p.next()
 	}
+}
+
+// helpers
+func isChar(ch rune) bool {
+	return ((ch >= 'A') && (ch <= 'Z')) || ((ch >= 'a') && (ch <= 'z'))
 }
