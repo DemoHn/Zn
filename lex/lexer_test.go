@@ -492,7 +492,7 @@ func TestNextToken_MarkerONLY(t *testing.T) {
 	assertNextToken(cases, t)
 }
 
-func TestNextToken_IdentifierONLY(t *testing.T) {
+func TestNextToken_IdentifierONLY_SUCCESS(t *testing.T) {
 	cases := []nextTokenCase{
 		{
 			name:        "normal identifier",

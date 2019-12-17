@@ -11,7 +11,6 @@ type Lexer struct {
 	currentPos int
 	peekPos    int
 	quoteStack *util.RuneStack
-	lexError   *error.Error // if a lexError occurs, mark it
 	chBuffer   []rune
 	code       []rune // source code
 }
