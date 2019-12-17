@@ -8,8 +8,8 @@
 }
 
 \paragraph{
-  词法结构\enq{Lexical Structure}主要讲述的是如何用一些基本词素拼成一段\Zn{}语言代码：
-  所谓「连词成句」，大抵上就是这个意思。\Zn{}语言主要由「标识符」\sectionrefq{Identifier}，「关键字」\sectionrefq{Keyword}，
+  词法结构\enq{Lexical Structure}主要讲述的是如何用一些基本词素拼成一段\Zn 语言代码：
+  所谓「连词成句」，大抵上就是这个意思。\Zn 语言主要由「标识符」\sectionrefq{Identifier}，「关键字」\sectionrefq{Keyword}，
   「立即数」\sectionrefq{Number}，「文本」\sectionrefq{String}，「注释」\sectionrefq{Comment}，
   「空格」、「换行」及「缩进」\sectionrefq{CRLF}等基本词素构成。
   这些词素的详细定义会在接下来的几个章节里给出。
@@ -29,7 +29,7 @@
 }
 
 \paragraph{
-  有鉴于此，\Zn{}语言要求所有的程序都需要使用\en{UTF-8}编码。使用\en{GB2312}，\en{GBK}，\en{Big5}等中文编码保存文件是无法被
+  有鉴于此，\Zn 语言要求所有的程序都需要使用\en{UTF-8}编码。使用\en{GB2312}，\en{GBK}，\en{Big5}等中文编码保存文件是无法被
   解析的。事实上，大多数中文「乱码」问题都是来自于源文件采用Windows默认的GBK编码而解析文件时采用UTF-8编码导致的，所以这个规定希望
   从根源上解决乱码的问题。
 }
@@ -42,33 +42,34 @@
 \section[CRLF]{换行符}
 
 \paragraph{
-  换行符在\Zn{}语言中表示下一行的开始。和大多数语言一样，\en{Windows}风格的\enc{\bs{}r\bs{}n}和\en{Linux}风格的
-  \enc{\bs{}n}都会被视作一个有效的换行符。换行符的详细定义如下所示：（\CR{}表示\enc{\bs{}r}, \unicodechar{000D}；\LF{}表示\enc{\bs{}n}, \unicodechar{000A}；）
+  换行符在\Zn 语言中表示下一行的开始。和大多数语言一样，\en{Windows}风格的\enc{\bs r\bs n}和\en{Linux}风格的
+  \enc{\bs n}都会被视作一个有效的换行符。换行符的详细定义如下所示：（\CR表示\enc{\bs r}, \unicodechar{000D}；\LF{}表示\enc{\bs n}, \unicodechar{000A}；）
 }
 
 \begin{BNF}
-\nonterm{换行符} ::=
-  \expr{\term{\CR{}}}
-  \expr{\term{\LF{}}}
-  \expr{\term{\CR{}} \term{\LF{}}}
-  \expr{\term{\LF{}} \term{\CR{}}}
+<换行符> ::=
+    | `\CR'
+    | `\LF' 
+    | `\CR' `\LF'
+    | `\LF' `\CR'
 \end{BNF}
 
+
 \paragraph{
-  \Zn{}语言并不要求每一行的最大长度，不过为了阅读方便起见，这里建议每一行的最大长度不要超过60个中文字。（算上缩进的话）
+  \Zn 语言并不要求每一行的最大长度，不过为了阅读方便起见，这里建议每一行的最大长度不要超过60个中文字。（算上缩进的话）
 }
 
 \section[WhiteSpaces]{空白符}
 
 \paragraph{
-  在\Zn{}语言中，空白符一般有两个用处：表示缩进及分隔字符。和\en{Python}语言类似，\Zn{}语言采用缩进以表示代码的层次。
-  只有\SP{}（\unicodechar{0020}, 西文空格）及\TAB{}（\unicodechar{0009}, \enc{\bs{}t}）方可成为缩进用字符。
+  在\Zn 语言中，空白符一般有两个用处：表示缩进及分隔字符。和\en{Python}语言类似，\Zn 语言采用缩进以表示代码的层次。
+  只有\SP（\unicodechar{0020}, 西文空格）及\TAB（\unicodechar{0009}, \enc{\bs{}t}）方可成为缩进用字符。
   缩进的具体定义会在\sectionrefq{IndentChar}一节中详细介绍。
 }
 
 \paragraph{
   当空白符作为分隔字符之用时，其使用范围比大多数编程语言要广很多。这和中文本身的语法特性有关：中文一般不会使用空白符
-  来分词，这使得一个句子里面就算一个空白符都没有也不影响阅读。于是\Zn{}语言借鉴了此特性，不依赖空白符分隔关键词及标识符，而是
+  来分词，这使得一个句子里面就算一个空白符都没有也不影响阅读。于是\Zn 语言借鉴了此特性，不依赖空白符分隔关键词及标识符，而是
   纯粹将空白符作为方便代码阅读之用。一般来说，以下情况皆可加入空白符而无任何影响：
 }
 
@@ -84,47 +85,44 @@
 \begin{items}
   \item{多字符的关键字。如：\code{不等于} 这三个字作为关键字必须要连在一起，不能分开。}
   \item{多字符的分隔符。如：\code{==} 作为映射符号，两个等号之间不能加空白符。}
-  \item{行首。在行首加入\SP{} 或者 \TAB{} 等「缩进空白符」会被当作缩进本身；而加入其他空白符则会报解析失败。}
+  \item{行首。在行首加入\SP 或者\TAB 等「缩进空白符」会被当作缩进本身；而加入其他空白符则会报解析失败。}
 \end{items}
 
-\paragraph{以下分别给出「空白符」及「缩进空白符」的具体定义：}
+\paragraph{以下分别给出「空白符」及「缩进空白符」之具体定义：}
 
 \begin{BNF}
-\nonterm{缩进空白符} ::=
-  \expr[or]{
-    \term{\SP{}}
-    \term{\TAB{}}    
-  }
+<缩进空白符> ::=
+    | `\SP'
+    | `\TAB'
 
-\nonterm{空白符} ::= 
-  \expr[or]{
-    \nonterm{缩进空白符}
-    \term{\unicodechar{000B}}
-    \term{\unicodechar{000C}}
-    \term{\unicodechar{00A0}}
-    \term{\unicodechar{2000}}
-    \term{\unicodechar{2001}}
-    \term{\unicodechar{2002}}
-    \term{\unicodechar{2003}}
-    \term{\unicodechar{2004}}
-    \term{\unicodechar{2005}}
-    \term{\unicodechar{2006}}
-    \term{\unicodechar{2007}}
-    \term{\unicodechar{2008}}
-    \term{\unicodechar{2009}}
-    \term{\unicodechar{200A}}
-    \term{\unicodechar{200B}}
-    \term{\unicodechar{202F}}
-    \term{\unicodechar{205F}}
-    \term{\unicodechar{3000}}
+<空白符> ::= 
+    | <缩进空白符>
+    | `\unicodechar{000B}'
+    | `\unicodechar{000C}'
+    | `\unicodechar{00A0}'
+    | `\unicodechar{2000}'
+    | `\unicodechar{2001}'
+    | `\unicodechar{2002}'
+    | `\unicodechar{2003}'
+    | `\unicodechar{2004}'
+    | `\unicodechar{2005}'
+    | `\unicodechar{2006}'
+    | `\unicodechar{2007}'
+    | `\unicodechar{2008}'
+    | `\unicodechar{2009}'
+    | `\unicodechar{200A}'
+    | `\unicodechar{200B}'
+    | `\unicodechar{202F}'
+    | `\unicodechar{205F}'
+    | `\unicodechar{3000}'
   }
 
 \end{BNF}
-\paragraph{一般建议直接用\SP{}作为空白符使用，这样方便输入以及其他人的维护。}
+\paragraph{一般建议直接用\SP作为空白符使用，这样方便输入以及其他人的维护。}
 
 \section[IndentChar]{缩进}
 
-\paragraph{如前所述，\Zn{}语言使用缩进作为标识代码层次的标识。缩进并不是一个或多个固定}
+\paragraph{如前所述，\Zn 语言使用缩进作为标识代码层次的标识。缩进并不是一个或多个固定}
 
 \section[Punctuation]{分隔符}
 
