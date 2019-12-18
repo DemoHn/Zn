@@ -413,9 +413,8 @@ func (l *Lexer) parseNumber(ch rune) (*Token, *error.Error) {
 
 end:
 	if util.ContainsInt(state, endStates) {
-		if ch == EOF {
-			l.lines.PushLine(l.currentPos - 1)
-		}
+		// back to last available char
+		l.rebase(l.currentPos - 1)
 		return NewNumberToken(l.chBuffer), nil
 	}
 	return nil, error.NewErrorSLOT("invalid number")
@@ -701,6 +700,14 @@ func (l *Lexer) parseIdentifier(ch rune) (*Token, *error.Error) {
 		if isKeyword, _ := l.parseKeyword(ch, false); isKeyword {
 			l.rebase(prev)
 			return NewIdentifierToken(l.chBuffer), nil
+		}
+		// parse 注
+		if ch == GlyphZHU {
+			if validComment, _ := l.validateComment(ch); validComment {
+				l.rebase(prev)
+				return NewIdentifierToken(l.chBuffer), nil
+			}
+			l.rebase(prev + 1)
 		}
 		// other char as terminator
 		if util.Contains(ch, terminators) {

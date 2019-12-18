@@ -342,7 +342,7 @@ func TestNextToken_NumberONLY(t *testing.T) {
 				Literal: []rune("123456"),
 				Info:    nil,
 			},
-			lineInfo: "Unknown<0>[0,5]",
+			lineInfo: "",
 		},
 		{
 			name:        "normal number (with dot and minus)",
