@@ -106,6 +106,7 @@ func (l *Lexer) pushBufferRange(start int, end int) bool {
 
 // NextToken - parse and generate the next token (including comments)
 func (l *Lexer) NextToken() (*Token, *error.Error) {
+head:
 	var ch = l.next()
 	switch ch {
 	case EOF:
@@ -116,10 +117,14 @@ func (l *Lexer) NextToken() (*Token, *error.Error) {
 		// (it's totally ignored)
 		if !l.lines.HasScanIndent() {
 			l.parseIndents(ch)
+		} else {
+			l.consumeWhiteSpace(ch)
 		}
+		goto head
 	case CR, LF:
 		l.parseCRLF(ch)
 		l.parseIndents(l.peek())
+		goto head
 	// meet with 注, it may be possibly a lead character of a comment block
 	// notice: it would also be a normal identifer (if 注[number]：) does not satisfy.
 	case GlyphZHU:
@@ -137,6 +142,11 @@ func (l *Lexer) NextToken() (*Token, *error.Error) {
 	case MiddleDot:
 		return l.parseVarQuote(ch)
 	default:
+		// skip whitespaces
+		if isWhiteSpace(ch) {
+			l.consumeWhiteSpace(ch)
+			goto head
+		}
 		// parse number
 		if isNumber(ch) || ch == '+' || ch == '-' {
 			return l.parseNumber(ch)
@@ -167,7 +177,6 @@ func (l *Lexer) parseIndents(ch rune) *error.Error {
 	case SP:
 		indentType = IdetSpace
 	}
-
 	return l.lines.SetIndent(count, indentType, l.currentPos+1)
 }
 
@@ -264,7 +273,6 @@ func (l *Lexer) parseComment(ch rune, isMultiLine bool) (*Token, *error.Error) {
 					}
 					// stop quoting
 					if l.quoteStack.IsEmpty() {
-						l.next()
 						return NewCommentToken(l.chBuffer, isMultiLine), nil
 					}
 				}
@@ -302,7 +310,6 @@ func (l *Lexer) parseString(ch rune) (*Token, *error.Error) {
 			}
 			// stop quoting
 			if l.quoteStack.IsEmpty() {
-				l.next()
 				return NewStringToken(l.chBuffer, firstChar), nil
 			}
 			l.pushBuffer(ch)
@@ -359,7 +366,7 @@ func (l *Lexer) parseNumber(ch rune) (*Token, *error.Error) {
 	// ref: https://cyberzhg.github.io/toolbox/min_dfa?regex=KG18cCk/TisuP04rKChlfEUpKG18cCk/TispPw==
 	// or the documentation has declared that.
 	var state = 1
-	var endStates = []int{5, 6, 8}
+	var endStates = []int{2, 4, 6}
 
 	for {
 		switch ch {
@@ -367,14 +374,14 @@ func (l *Lexer) parseNumber(ch rune) (*Token, *error.Error) {
 			goto end
 		case 'e', 'E':
 			switch state {
-			case 5, 6:
-				state = 7
+			case 2, 4:
+				state = 5
 			default:
 				goto end
 			}
 		case '.':
 			switch state {
-			case 2, 5:
+			case 2:
 				state = 4
 			default:
 				goto end
@@ -383,8 +390,8 @@ func (l *Lexer) parseNumber(ch rune) (*Token, *error.Error) {
 			switch state {
 			case 1:
 				state = 3
-			case 7:
-				state = 9
+			case 5:
+				state = 7
 			default:
 				goto end
 			}
@@ -394,14 +401,10 @@ func (l *Lexer) parseNumber(ch rune) (*Token, *error.Error) {
 		default:
 			if isNumber(ch) {
 				switch state {
-				case 1, 3:
+				case 1, 2, 3:
 					state = 2
-				case 2, 5:
-					state = 5
-				case 4, 6:
+				case 5, 6, 7:
 					state = 6
-				case 7, 8, 9:
-					state = 8
 				}
 			} else {
 				goto end
@@ -671,6 +674,13 @@ func (l *Lexer) parseKeyword(ch rune, moveForward bool) (bool, *Token) {
 	return false, nil
 }
 
+// consume (and skip) whitespaces
+func (l *Lexer) consumeWhiteSpace(ch rune) {
+	for isWhiteSpace(l.peek()) {
+		l.next()
+	}
+}
+
 // parseIdentifier
 func (l *Lexer) parseIdentifier(ch rune) (*Token, *error.Error) {
 	// setup
@@ -680,6 +690,7 @@ func (l *Lexer) parseIdentifier(ch rune) (*Token, *error.Error) {
 		EOF, CR, LF, LeftQuoteI, LeftQuoteII, LeftQuoteIII,
 		LeftQuoteIV, LeftQuoteV, MiddleDot,
 	}, MarkLeads...)
+
 	if !isIdentifierChar(ch, true) {
 		return nil, error.NewErrorSLOT("invalid identifier")
 	}
@@ -723,7 +734,6 @@ func (l *Lexer) parseIdentifier(ch rune) (*Token, *error.Error) {
 			count++
 			continue
 		}
-
 		return nil, error.NewErrorSLOT("invalid char")
 	}
 }

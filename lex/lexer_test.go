@@ -321,6 +321,8 @@ func TestNextToken_VarQuoteONLY(t *testing.T) {
 }
 
 func TestNextToken_NumberONLY(t *testing.T) {
+	// NOTE 1:
+	// nums such as 2..3 will be regarded as `2.`(2.0) and `.3`(0.3) combination
 	cases := []nextTokenCase{
 		{
 			name:        "normal number (all digits)",
@@ -432,13 +434,6 @@ func TestNextToken_NumberONLY(t *testing.T) {
 		{
 			name:        "operater only #2",
 			input:       "-++",
-			expectError: true,
-			token:       Token{},
-			lineInfo:    "",
-		},
-		{
-			name:        "multiple dots",
-			input:       "3..2",
 			expectError: true,
 			token:       Token{},
 			lineInfo:    "",

@@ -56,6 +56,48 @@ func TestNextToken_MixedText(t *testing.T) {
 			expectError: false,
 			tokens:      `$101[变量1] $41[为] $100[12.45E+3]`,
 		},
+		{
+			name:        "comment 2 lines, one string",
+			input:       "注：“可是都 \n  不为空”“是为”《淮南子》",
+			expectError: false,
+			tokens:      "$10[可是都 \n  不为空] $90[是为] $90[淮南子]",
+		},
+		{
+			name:        "nest multiple strings",
+			input:       "·显然在其中·“不为空”‘为\n\n空’「「「随意“嵌套”」233」456」",
+			expectError: false,
+			tokens:      "$91[显然在其中] $90[不为空] $90[为\n\n空] $90[「「随意“嵌套”」233」456]",
+		},
+		{
+			name:        "incomplete var quote at end",
+			input:       "如何·显然在其中",
+			expectError: false,
+			tokens:      "$45[如何] $91[显然在其中]",
+		},
+		{
+			name:        "consecutive keywords",
+			input:       "在其中",
+			expectError: false,
+			tokens:      "$67[在] $65[其] $68[中]",
+		},
+		{
+			name:        "consecutive keywords #2",
+			input:       "不在其中",
+			expectError: false,
+			tokens:      "$101[不] $67[在] $65[其] $68[中]",
+		},
+		{
+			name:        "multi line string with var quote inside",
+			input:       "“搞\n个\n    大新闻”《·焦点在哪里·》\n\t注：“又是一年\n    春来到”",
+			expectError: false,
+			tokens:      "$90[搞\n个\n    大新闻] $90[·焦点在哪里·] $10[又是一年\n    春来到]",
+		},
+		{
+			name:        "markers with spaces",
+			input:       "\n    （  ） ， A/B  #  25",
+			expectError: false,
+			tokens:      "$22[（] $23[）] $11[，] $101[A/B] $18[#] $100[25]",
+		},
 	}
 
 	assertTokens(cases, t)

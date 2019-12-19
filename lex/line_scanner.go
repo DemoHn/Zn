@@ -133,7 +133,6 @@ func (ls *LineScanner) PushLine(endIndex int) {
 // be neglacted as usual.
 func (ls *LineScanner) HasScanIndent() bool {
 	state := ls.lines[ls.rowPos].scanState
-
 	return state == scanIndent
 }
 
