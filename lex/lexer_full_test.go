@@ -116,7 +116,7 @@ func assertTokens(cases []tokensCase, t *testing.T) {
 					tErr = err
 					break
 				}
-				if tk.Type == typeEOF {
+				if tk.Type == TypeEOF {
 					break
 				}
 				tokens = append(tokens, tk)

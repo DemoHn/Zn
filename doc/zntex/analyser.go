@@ -7,9 +7,9 @@ type Node interface {
 
 // declare some types
 const (
-	typeTextNode    = 20
-	typeEnvironNode = 21
-	typeCommandNode = 22
+	TypeTextNode    = 20
+	TypeEnvironNode = 21
+	TypeCommandNode = 22
 )
 
 // TextNode - 文本节点
@@ -18,7 +18,7 @@ type TextNode struct {
 }
 
 func (t *TextNode) getType() int {
-	return typeTextNode
+	return TypeTextNode
 }
 
 func (t *TextNode) getText() string {
@@ -34,7 +34,7 @@ type EnvironNode struct {
 }
 
 func (t *EnvironNode) getType() int {
-	return typeEnvironNode
+	return TypeEnvironNode
 }
 
 // CommandNode - 命令节点
@@ -45,7 +45,7 @@ type CommandNode struct {
 }
 
 func (t *CommandNode) getType() int {
-	return typeCommandNode
+	return TypeCommandNode
 }
 
 // Analyse - 分析得到其AST

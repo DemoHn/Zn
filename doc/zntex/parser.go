@@ -18,10 +18,10 @@ const (
 )
 
 const (
-	typeComment = 1
-	typeText    = 2
-	typeEnviron = 3
-	typeCommand = 4
+	TypeComment = 1
+	TypeText    = 2
+	TypeEnviron = 3
+	TypeCommand = 4
 )
 
 // Token defines an abstract type of token
@@ -35,7 +35,7 @@ type TextToken struct {
 }
 
 func (t *TextToken) getType() int {
-	return typeText
+	return TypeText
 }
 
 // CommentToken parse a one-line token
@@ -44,7 +44,7 @@ type CommentToken struct {
 }
 
 func (t *CommentToken) getType() int {
-	return typeComment
+	return TypeComment
 }
 
 // CommandToken defines a general type of command (including its options and arguments)
@@ -56,7 +56,7 @@ type CommandToken struct {
 }
 
 func (t *CommandToken) getType() int {
-	return typeCommand
+	return TypeCommand
 }
 
 // EnvironToken defines an envrionment
@@ -69,7 +69,7 @@ type EnvironToken struct {
 }
 
 func (t *EnvironToken) getType() int {
-	return typeEnviron
+	return TypeEnviron
 }
 
 //// public methods
