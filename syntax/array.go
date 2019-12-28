@@ -14,6 +14,8 @@ func (ae *ArrayExpr) getType() nodeType {
 	return TypeArrayExpr
 }
 
+func (ae *ArrayExpr) expressionNode() {}
+
 // ParseArrayExpr - yield ArrayExpr node
 // CFG:
 // ArrayExpr -> 【 ItemList 】

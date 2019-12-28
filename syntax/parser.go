@@ -47,8 +47,10 @@ func (in *IdentifierNode) getType() nodeType {
 const (
 	TypeProgram    nodeType = 0
 	TypeVarAssign  nodeType = 1 // 令...为...
-	TypeIdentifier nodeType = 2
 	TypeArrayExpr  nodeType = 3 // 【1，2，3，4】
+	TypeIdentifier nodeType = 5
+	TypeNumber     nodeType = 6
+	TypeString     nodeType = 7
 )
 
 // Parser - parse all nodes
