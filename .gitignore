@@ -1,5 +1,5 @@
 .vscode/
 _build/
 draft/
-./Zn.exe
-./Zn
+Zn.exe
+Zn
