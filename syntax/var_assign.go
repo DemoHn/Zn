@@ -42,7 +42,12 @@ func (p *Parser) ParseVarAssign() (*VarAssignNode, *error.Error) {
 	if err := p.consume(lex.TypeLogicYesW); err != nil {
 		return nil, err
 	}
-	// #3. TODO: parse expression
+	// #3. parse expression
+	expr, err := p.ParseExpression()
+	if err != nil {
+		return nil, err
+	}
+	vNode.AssignExpr = expr
 	return vNode, nil
 }
 
@@ -52,10 +57,7 @@ func parseIdentifierList(p *Parser, vNode *VarAssignNode) *error.Error {
 		return err
 	}
 	// #1. parse identifier tail
-	if err := parseIdentifierTail(p, vNode); err != nil {
-		return err
-	}
-	return nil
+	return parseIdentifierTail(p, vNode)
 }
 
 func parseIdentifierTail(p *Parser, vNode *VarAssignNode) *error.Error {
