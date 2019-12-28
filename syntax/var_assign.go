@@ -5,13 +5,13 @@ import (
 	"github.com/DemoHn/Zn/lex"
 )
 
-// VarAssignNode - var assignment statement
-type VarAssignNode struct {
-	Variables  []*IdentifierNode
+// VarAssignStmt - var assignment statement
+type VarAssignStmt struct {
+	Variables  []*ID
 	AssignExpr Expression
 }
 
-func (vn *VarAssignNode) getType() nodeType {
+func (vn *VarAssignStmt) getType() nodeType {
 	return TypeVarAssign
 }
 
@@ -24,14 +24,14 @@ func (vn *VarAssignNode) getType() nodeType {
 //        I' -> ，I I'
 //           ->
 //
-func (p *Parser) ParseVarAssign() (*VarAssignNode, *error.Error) {
+func (p *Parser) ParseVarAssign() (*VarAssignStmt, *error.Error) {
 	// #0. consume LING keyword
 	if err := p.consume(lex.TypeDeclareW); err != nil {
 		return nil, err
 	}
 
-	vNode := &VarAssignNode{
-		Variables:  make([]*IdentifierNode, 0),
+	vNode := &VarAssignStmt{
+		Variables:  make([]*ID, 0),
 		AssignExpr: nil,
 	}
 	// #1. consume identifier list
@@ -42,25 +42,23 @@ func (p *Parser) ParseVarAssign() (*VarAssignNode, *error.Error) {
 	if err := p.consume(lex.TypeLogicYesW); err != nil {
 		return nil, err
 	}
-	// #3. parse expression
-	expr, err := p.ParseExpression()
-	if err != nil {
-		return nil, err
-	}
-	vNode.AssignExpr = expr
+	// #3. TODO: parse expression
 	return vNode, nil
 }
 
-func parseIdentifierList(p *Parser, vNode *VarAssignNode) *error.Error {
+func parseIdentifierList(p *Parser, vNode *VarAssignStmt) *error.Error {
 	// #0. consume Identifier
 	if err := p.consumeFunc(cbIdentifier(vNode), lex.TypeVarQuote, lex.TypeIdentifier); err != nil {
 		return err
 	}
 	// #1. parse identifier tail
-	return parseIdentifierTail(p, vNode)
+	if err := parseIdentifierTail(p, vNode); err != nil {
+		return err
+	}
+	return nil
 }
 
-func parseIdentifierTail(p *Parser, vNode *VarAssignNode) *error.Error {
+func parseIdentifierTail(p *Parser, vNode *VarAssignStmt) *error.Error {
 	// skip all parsing
 	if p.current().Type != lex.TypeCommaSep {
 		return nil
@@ -78,10 +76,10 @@ func parseIdentifierTail(p *Parser, vNode *VarAssignNode) *error.Error {
 }
 
 // callback -
-func cbIdentifier(vNode *VarAssignNode) func(tk *lex.Token) {
+func cbIdentifier(vNode *VarAssignStmt) func(tk *lex.Token) {
 	return func(tk *lex.Token) {
 		// append variables
-		vNode.Variables = append(vNode.Variables, &IdentifierNode{
+		vNode.Variables = append(vNode.Variables, &ID{
 			literal: string(tk.Literal),
 		})
 	}

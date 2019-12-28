@@ -33,16 +33,6 @@ func (p *ProgramNode) getType() nodeType {
 	return TypeProgram
 }
 
-// IdentifierNode - parse as normal identifier
-// (including varQuote or normal quote)
-type IdentifierNode struct {
-	literal string
-}
-
-func (in *IdentifierNode) getType() nodeType {
-	return TypeIdentifier
-}
-
 // declare node types
 const (
 	TypeProgram    nodeType = 0
