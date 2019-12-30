@@ -55,14 +55,17 @@ func (p *Parser) ParseExpression() (Expression, *error.Error) {
 		tk = &ID{
 			literal: string(p.current().Literal),
 		}
+		p.next()
 	case lex.TypeNumber:
 		tk = &Number{
 			literal: string(p.current().Literal),
 		}
+		p.next()
 	case lex.TypeString:
 		tk = &String{
 			literal: string(p.current().Literal),
 		}
+		p.next()
 	case lex.TypeArrayQuoteL:
 		token, err := p.ParseArrayExpr()
 		if err != nil {

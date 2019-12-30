@@ -7,7 +7,7 @@ func TestRandomly(t *testing.T) {
 
 	parser := NewParser(l)
 
-	n, e := parser.ParseVarAssign()
+	n, e := parser.ParseVarDeclare()
 
 	if e != nil {
 		t.Error(e)

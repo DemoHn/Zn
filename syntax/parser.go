@@ -36,7 +36,8 @@ func (p *ProgramNode) getType() nodeType {
 // declare node types
 const (
 	TypeProgram    nodeType = 0
-	TypeVarAssign  nodeType = 1 // 令...为...
+	TypeVarDeclare nodeType = 1 // 令...为...
+	TypeVarAssign  nodeType = 2 // ...设为... | XXX，得YYY
 	TypeArrayExpr  nodeType = 3 // 【1，2，3，4】
 	TypeIdentifier nodeType = 5
 	TypeNumber     nodeType = 6
@@ -48,6 +49,7 @@ type Parser struct {
 	lexer        *lex.Lexer
 	currentToken *lex.Token
 	peekToken    *lex.Token
+	peek2Token   *lex.Token
 }
 
 // NewParser -
@@ -56,6 +58,7 @@ func NewParser(l *lex.Lexer) *Parser {
 		lexer: l,
 	}
 	// read current and peek token
+	p.next()
 	p.next()
 	p.next()
 	return p
@@ -68,7 +71,8 @@ func (p *Parser) next() *error.Error {
 	}
 
 	p.currentToken = p.peekToken
-	p.peekToken = tk
+	p.peekToken = p.peek2Token
+	p.peek2Token = tk
 	return nil
 }
 
@@ -78,6 +82,10 @@ func (p *Parser) current() *lex.Token {
 
 func (p *Parser) peek() *lex.Token {
 	return p.peekToken
+}
+
+func (p *Parser) peek2() *lex.Token {
+	return p.peek2Token
 }
 
 // consume one token (without callback), will return error if the incoming token (p.currentToken)
