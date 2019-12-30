@@ -1,6 +1,9 @@
 package syntax
 
-import "github.com/DemoHn/Zn/error"
+import (
+	"github.com/DemoHn/Zn/error"
+	"github.com/DemoHn/Zn/lex"
+)
 
 // VarAssignStmt - variable assignment statement
 // assign <TargetExpr> from <AssignExpr>
@@ -31,11 +34,43 @@ func (va *VarAssignStmt) statementNode() {}
 func (p *Parser) ParseVarAssignStmt() (*VarAssignStmt, *error.Error) {
 	// #0. parse first expression
 	// either ExprT (case 1) or ExprA (case 2)
-	/**firstExpr, err := p.ParseExpression()
+	firstExpr, err := p.ParseExpression()
 	if err != nil {
 		return nil, err
 	}
-	*/
-	// TODO: add more cases
-	return nil, nil
+
+	// #1. parse the middle one
+	var order int // type (1)
+	t1 := p.current().Type
+	if t1 == lex.TypeAssignW {
+		order = 1
+		p.next()
+	} else if t1 == lex.TypeCommaSep {
+		if p.peek().Type == lex.TypeFuncYieldW {
+			order = 2
+			p.next()
+			p.next()
+		} else {
+			return nil, error.NewErrorSLOT("parsing comma wrongly (should not exist here)")
+		}
+	}
+
+	// #2. parse the second expression
+	secondExpr, err := p.ParseExpression()
+	if err != nil {
+		return nil, err
+	}
+
+	if order == 1 {
+		return &VarAssignStmt{
+			TargetExpr: firstExpr,
+			AssignExpr: secondExpr,
+		}, nil
+	} else if order == 2 {
+		return &VarAssignStmt{
+			TargetExpr: secondExpr,
+			AssignExpr: firstExpr,
+		}, nil
+	}
+	return nil, error.NewErrorSLOT("unknown error (should not exists here)")
 }
