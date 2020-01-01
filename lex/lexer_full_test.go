@@ -76,15 +76,15 @@ func TestNextToken_MixedText(t *testing.T) {
 		},
 		{
 			name:        "consecutive keywords",
-			input:       "在其中",
+			input:       "以其为",
 			expectError: false,
-			tokens:      "$67[在] $65[其] $68[中]",
+			tokens:      "$56[以] $65[其] $41[为]",
 		},
 		{
 			name:        "consecutive keywords #2",
-			input:       "不在其中",
+			input:       "不以其为",
 			expectError: false,
-			tokens:      "$101[不] $67[在] $65[其] $68[中]",
+			tokens:      "$101[不] $56[以] $65[其] $41[为]",
 		},
 		{
 			name:        "multi line string with var quote inside",

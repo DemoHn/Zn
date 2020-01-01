@@ -55,10 +55,10 @@ const (
 	GlyphXIAO rune = 0x5C0F
 	// GlyphYIi - 以 - 以
 	GlyphYIi rune = 0x4EE5
-	// GlyphER - 而 - 而
-	GlyphER rune = 0x800C
-	// GlyphDE - 得 - 得
+	// GlyphDE - 得 - 得到
 	GlyphDE rune = 0x5F97
+	// GlyphDAO - 到 - 得到
+	GlyphDAO rune = 0x5230
 	// GlyphGUO - 果 - 如果
 	GlyphGUO rune = 0x679C
 	// GlyphZE - 则 - 否则
@@ -87,10 +87,8 @@ const (
 	GlyphCI rune = 0x6B64
 	// GlyphZHU - 注 - 注
 	GlyphZHU rune = 0x6CE8
-	// GlyphZAI - 在 - 在
-	GlyphZAI rune = 0x5728
-	// GlyphZHONG - 中 - 中
-	GlyphZHONG rune = 0x4E2D
+	// GlyphDUI - 对 - 对于
+	GlyphDUI rune = 0x5BF9
 	// GlyphHUO - 或 - 或
 	GlyphHUO rune = 0x6216
 	// GlyphQIE - 且 - 且
@@ -105,12 +103,11 @@ const (
 var KeywordLeads = []rune{
 	GlyphLING, GlyphWEI, GlyphSHI, GlyphSHE,
 	GlyphRU, GlyphYI, GlyphFAN, GlyphBU, GlyphDENG,
-	GlyphDA, GlyphXIAO, GlyphYIi, GlyphER,
+	GlyphDA, GlyphXIAO, GlyphYIi,
 	GlyphDE, GlyphFOU, GlyphMEI,
 	GlyphCHENG, GlyphZUO, GlyphDING, GlyphLEI,
-	GlyphQI, GlyphCI, GlyphHE,
-	GlyphZAI, GlyphZHONG, GlyphHUO, GlyphQIE,
-	GlyphZHI, GlyphDEo,
+	GlyphQI, GlyphCI, GlyphHE, GlyphHUO, GlyphQIE,
+	GlyphDUI, GlyphZHI, GlyphDEo,
 }
 
 //// 2. markers
@@ -256,41 +253,41 @@ func isIdentifierChar(ch rune, isFirst bool) bool {
 // token types -
 // for special type Tokens, its range varies from 0 - 9
 const (
-	TypeEOF           TokenType = 0
-	TypeComment       TokenType = 10
-	TypeCommaSep      TokenType = 11
-	TypeStmtSep       TokenType = 12
-	TypeFuncCall      TokenType = 13
-	TypeFuncDeclare   TokenType = 14
-	TypeObjRef        TokenType = 15
-	TypeMustT         TokenType = 16
-	TypeAnnoT         TokenType = 17
-	TypeMapHash       TokenType = 18
-	TypeMoreParam     TokenType = 19
-	TypeArrayQuoteL   TokenType = 20
-	TypeArrayQuoteR   TokenType = 21
-	TypeStmtQuoteL    TokenType = 22
-	TypeStmtQuoteR    TokenType = 23
-	TypeMapData       TokenType = 24
-	TypeDeclareW      TokenType = 40 // 令
-	TypeLogicYesW     TokenType = 41 // 为
-	TypeLogicYesIIW   TokenType = 42 // 是
-	TypeAssignW       TokenType = 43 // 设为
-	TypeCondW         TokenType = 44 // 如果
-	TypeFuncW         TokenType = 45 // 如何
-	TypeStaticFuncW   TokenType = 46 // 何为
-	TypeParamAssignW  TokenType = 47 // 已知
-	TypeReturnW       TokenType = 48 // 返回
-	TypeLogicNotW     TokenType = 49 // 不为
-	TypeLogicNotIIW   TokenType = 50 // 不是
-	TypeLogicNotEqW   TokenType = 51 // 不等于
-	TypeLogicLteW     TokenType = 52 // 不大于
-	TypeLogicGteW     TokenType = 53 // 不小于
-	TypeLogicLtW      TokenType = 54 // 小于
-	TypeLogicGtW      TokenType = 55 // 大于
-	TypeVarOneW       TokenType = 56 // 以
-	TypeVarTwoW       TokenType = 57 // 而
-	TypeFuncYieldW    TokenType = 58 // 得
+	TypeEOF          TokenType = 0
+	TypeComment      TokenType = 10
+	TypeCommaSep     TokenType = 11
+	TypeStmtSep      TokenType = 12
+	TypeFuncCall     TokenType = 13
+	TypeFuncDeclare  TokenType = 14
+	TypeObjRef       TokenType = 15
+	TypeMustT        TokenType = 16
+	TypeAnnoT        TokenType = 17
+	TypeMapHash      TokenType = 18
+	TypeMoreParam    TokenType = 19
+	TypeArrayQuoteL  TokenType = 20
+	TypeArrayQuoteR  TokenType = 21
+	TypeStmtQuoteL   TokenType = 22
+	TypeStmtQuoteR   TokenType = 23
+	TypeMapData      TokenType = 24
+	TypeDeclareW     TokenType = 40 // 令
+	TypeLogicYesW    TokenType = 41 // 为
+	TypeLogicYesIIW  TokenType = 42 // 是
+	TypeAssignW      TokenType = 43 // 设为
+	TypeCondW        TokenType = 44 // 如果
+	TypeFuncW        TokenType = 45 // 如何
+	TypeStaticFuncW  TokenType = 46 // 何为
+	TypeParamAssignW TokenType = 47 // 已知
+	TypeReturnW      TokenType = 48 // 返回
+	TypeLogicNotW    TokenType = 49 // 不为
+	TypeLogicNotIIW  TokenType = 50 // 不是
+	TypeLogicNotEqW  TokenType = 51 // 不等于
+	TypeLogicLteW    TokenType = 52 // 不大于
+	TypeLogicGteW    TokenType = 53 // 不小于
+	TypeLogicLtW     TokenType = 54 // 小于
+	TypeLogicGtW     TokenType = 55 // 大于
+	TypeVarOneW      TokenType = 56 // 以
+	//
+	TypeFuncYieldW    TokenType = 58 // 得到
 	TypeCondElseW     TokenType = 59 // 否则
 	TypeWhileLoopW    TokenType = 60 // 每当
 	TypeObjNewW       TokenType = 61 // 成为
@@ -299,8 +296,7 @@ const (
 	TypeObjTraitW     TokenType = 64 // 类比
 	TypeObjThisW      TokenType = 65 // 其
 	TypeObjSelfW      TokenType = 66 // 此
-	TypeFuncCallOneW  TokenType = 67 // 在
-	TypeFuncCallTwoW  TokenType = 68 // 中
+	TypeFuncCallOneW  TokenType = 67 // 对于
 	TypeLogicOrW      TokenType = 69 // 或
 	TypeLogicAndW     TokenType = 70 // 且
 	TypeObjDotW       TokenType = 71 // 之
@@ -332,8 +328,7 @@ var KeywordTypeMap = map[TokenType][]rune{
 	TypeLogicLtW:      []rune{GlyphXIAO, GlyphYU},
 	TypeLogicGtW:      []rune{GlyphDA, GlyphYU},
 	TypeVarOneW:       []rune{GlyphYIi},
-	TypeVarTwoW:       []rune{GlyphER},
-	TypeFuncYieldW:    []rune{GlyphDE},
+	TypeFuncYieldW:    []rune{GlyphDE, GlyphDAO},
 	TypeCondElseW:     []rune{GlyphFOU, GlyphZE},
 	TypeWhileLoopW:    []rune{GlyphMEI, GlyphDANG},
 	TypeObjNewW:       []rune{GlyphCHENG, GlyphWEI},
@@ -342,8 +337,7 @@ var KeywordTypeMap = map[TokenType][]rune{
 	TypeObjTraitW:     []rune{GlyphLEI, GlyphBI},
 	TypeObjThisW:      []rune{GlyphQI},
 	TypeObjSelfW:      []rune{GlyphCI},
-	TypeFuncCallOneW:  []rune{GlyphZAI},
-	TypeFuncCallTwoW:  []rune{GlyphZHONG},
+	TypeFuncCallOneW:  []rune{GlyphDUI, GlyphYU},
 	TypeLogicOrW:      []rune{GlyphHUO},
 	TypeLogicAndW:     []rune{GlyphQIE},
 	TypeObjDotW:       []rune{GlyphZHI},
