@@ -1,8 +1,6 @@
 package lex
 
 import (
-	"fmt"
-	"strings"
 	"testing"
 )
 
@@ -130,12 +128,7 @@ func assertTokens(cases []tokensCase, t *testing.T) {
 				}
 
 				// conform all tokens to string
-				var tokenStrs = []string{}
-				for _, ptk := range tokens {
-					tokenStrs = append(tokenStrs, fmt.Sprintf("$%d[%s]", ptk.Type, string(ptk.Literal)))
-				}
-
-				var actualStr = strings.Join(tokenStrs, " ")
+				var actualStr = StringifyAllTokens(tokens)
 				if actualStr != tt.tokens {
 					t.Errorf("tokens not same! \nexpect->\n%s\ngot->\n%s", tt.tokens, actualStr)
 				}
@@ -145,7 +138,6 @@ func assertTokens(cases []tokensCase, t *testing.T) {
 					t.Errorf("NextToken() failed! expected error, but got no error")
 				}
 			}
-
 		})
 	}
 }
