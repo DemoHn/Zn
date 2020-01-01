@@ -52,10 +52,10 @@ func (t *CommandNode) getType() int {
 func Analyse(tokens []Token) []Node {
 	var ast = make([]Node, 0)
 
-	for _, token := range tokens {
+	/**for _, token := range tokens {
 		switch v := token.(type) {
-			case *CommandNode
+		//case *CommandNode
 		}
-	}
+	}*/
 	return ast
 }

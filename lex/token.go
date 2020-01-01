@@ -9,7 +9,6 @@ type TokenType int
 type Token struct {
 	Type    TokenType
 	Literal []rune
-	Info    interface{}
 }
 
 //// 0. EOF
@@ -351,7 +350,6 @@ func NewTokenEOF() *Token {
 	return &Token{
 		Type:    TypeEOF,
 		Literal: []rune{},
-		Info:    nil,
 	}
 }
 
@@ -360,7 +358,6 @@ func NewStringToken(buf []rune, quoteType rune) *Token {
 	return &Token{
 		Type:    TypeString,
 		Literal: util.Copy(buf),
-		Info:    quoteType,
 	}
 }
 
@@ -369,7 +366,6 @@ func NewVarQuoteToken(buf []rune) *Token {
 	return &Token{
 		Type:    TypeVarQuote,
 		Literal: util.Copy(buf),
-		Info:    nil,
 	}
 }
 
@@ -378,9 +374,6 @@ func NewCommentToken(buf []rune, isMultiLine bool) *Token {
 	return &Token{
 		Type:    TypeComment,
 		Literal: util.Copy(buf),
-		Info: map[string]bool{
-			"isMultiLine": isMultiLine,
-		},
 	}
 }
 
@@ -389,7 +382,6 @@ func NewNumberToken(buf []rune) *Token {
 	return &Token{
 		Type:    TypeNumber,
 		Literal: util.Copy(buf),
-		Info:    nil,
 	}
 }
 
@@ -398,7 +390,6 @@ func NewMarkToken(buf []rune, t TokenType) *Token {
 	return &Token{
 		Type:    t,
 		Literal: util.Copy(buf),
-		Info:    nil,
 	}
 }
 
@@ -411,7 +402,6 @@ func NewKeywordToken(t TokenType) *Token {
 	return &Token{
 		Type:    t,
 		Literal: l,
-		Info:    nil,
 	}
 }
 
@@ -420,6 +410,5 @@ func NewIdentifierToken(buf []rune) *Token {
 	return &Token{
 		Type:    TypeIdentifier,
 		Literal: util.Copy(buf),
-		Info:    nil,
 	}
 }

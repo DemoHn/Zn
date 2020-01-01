@@ -17,6 +17,7 @@ const (
 	LF  = 10
 )
 
+// declare types
 const (
 	TypeComment = 1
 	TypeText    = 2
