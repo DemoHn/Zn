@@ -545,8 +545,8 @@ func assertNextToken(cases []nextTokenCase, t *testing.T) {
 				if err != nil {
 					t.Errorf("NextToken() failed! expected no error, but got error")
 					t.Error(err)
-				} else if tt.lineInfo != lex.lines.String() {
-					t.Errorf("NextToken() lineInfo expect `%s`, actual `%s`", tt.lineInfo, lex.lines.String())
+				} else if tt.lineInfo != StringifyLines(lex.lines) {
+					t.Errorf("NextToken() lineInfo expect `%s`, actual `%s`", tt.lineInfo, StringifyLines(lex.lines))
 				} else if !reflect.DeepEqual(*tk, tt.token) {
 					t.Errorf("NextToken() return Token failed! expect: %v, got: %v", tt.token, *tk)
 				}
