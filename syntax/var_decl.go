@@ -22,9 +22,9 @@ func (vn *VarDeclareStmt) statementNode() {}
 // ParseVarDeclare - yield VarDeclare node
 // CFG:
 // VarDeclare -> 令 IdfList 为 Expr
-//   IdfList -> I I'
-//        I' -> ，I I'
-//           ->
+//    IdfList -> I I'
+//         I' -> ，I I'
+//            ->
 //
 func (p *Parser) ParseVarDeclare() (*VarDeclareStmt, *error.Error) {
 	// #0. consume LING keyword
@@ -44,7 +44,13 @@ func (p *Parser) ParseVarDeclare() (*VarDeclareStmt, *error.Error) {
 	if err := p.consume(lex.TypeLogicYesW); err != nil {
 		return nil, err
 	}
-	// #3. TODO: parse expression
+
+	// parse expression
+	expr, err := p.ParseExpression()
+	if err != nil {
+		return nil, err
+	}
+	vNode.AssignExpr = expr
 	return vNode, nil
 }
 

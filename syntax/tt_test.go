@@ -1,22 +1,22 @@
 package syntax
 
-/**
+import (
+	"fmt"
+	"testing"
+
+	"github.com/DemoHn/Zn/lex"
+)
+
 func TestRandomly(t *testing.T) {
-	input := "令甲，乙为234"
+	input := "令甲，乙为（【12，34，【“测试到底”，10】】）；令丙为“23”；a 自 设为12；【12】，得到利益"
 	l := lex.NewLexer([]rune(input))
 
 	parser := NewParser(l)
-
-	n, e := parser.ParseVarDeclare()
-
-	if e != nil {
-		t.Error(e)
-		return
+	ast, err := parser.Parse()
+	if err != nil {
+		t.Error(err)
 	}
-	// print all data
-	for _, item := range n.Variables {
-		fmt.Println(*item)
-	}
-	fmt.Println(e)
+
+	data := StringifyAST(ast)
+	fmt.Println(data)
 }
-*/

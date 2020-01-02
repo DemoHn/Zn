@@ -25,12 +25,12 @@ func (va *VarAssignStmt) statementNode() {}
 //
 // CFG:
 // VarAssignStmt -> ExprT 设为 ExprA           (1)
-//               -> ExprA ， 得 ExprT          (2)
+//               -> ExprA ， 得到 ExprT          (2)
 //
 // TODO:
 // we need special handling for
 //
-// FuncName ： A，B，C，得ExprT
+// FuncName ： A，B，C，得到 ExprT
 func (p *Parser) ParseVarAssignStmt() (*VarAssignStmt, *error.Error) {
 	// #0. parse first expression
 	// either ExprT (case 1) or ExprA (case 2)

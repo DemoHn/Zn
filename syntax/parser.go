@@ -10,18 +10,6 @@ type Node interface {
 	getType() nodeType
 }
 
-// Statement - a program consists of statements
-type Statement interface {
-	Node
-	statementNode()
-}
-
-// Expression - a special type of statement
-type Expression interface {
-	Node
-	expressionNode()
-}
-
 type nodeType int
 
 // ProgramNode - the syntax tree of a program
@@ -42,6 +30,7 @@ const (
 	TypeIdentifier nodeType = 5
 	TypeNumber     nodeType = 6
 	TypeString     nodeType = 7
+	TypeBlockStmt  nodeType = 10
 )
 
 // Parser - parse all nodes
@@ -62,6 +51,18 @@ func NewParser(l *lex.Lexer) *Parser {
 	p.next()
 	p.next()
 	return p
+}
+
+// Parse - parse all tokens into an AST (stored as ProgramNode)
+func (p *Parser) Parse() (*ProgramNode, *error.Error) {
+	pg := &ProgramNode{
+		Children: []Statement{},
+	}
+	err := p.ParseStatement(pg)
+	if err != nil {
+		return nil, err
+	}
+	return pg, nil
 }
 
 func (p *Parser) next() *error.Error {
