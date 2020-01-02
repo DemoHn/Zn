@@ -9,7 +9,6 @@ type TokenType int
 type Token struct {
 	Type    TokenType
 	Literal []rune
-	Info    interface{}
 }
 
 //// 0. EOF
@@ -55,10 +54,10 @@ const (
 	GlyphXIAO rune = 0x5C0F
 	// GlyphYIi - 以 - 以
 	GlyphYIi rune = 0x4EE5
-	// GlyphER - 而 - 而
-	GlyphER rune = 0x800C
-	// GlyphDE - 得 - 得
+	// GlyphDE - 得 - 得到
 	GlyphDE rune = 0x5F97
+	// GlyphDAO - 到 - 得到
+	GlyphDAO rune = 0x5230
 	// GlyphGUO - 果 - 如果
 	GlyphGUO rune = 0x679C
 	// GlyphZE - 则 - 否则
@@ -87,10 +86,8 @@ const (
 	GlyphCI rune = 0x6B64
 	// GlyphZHU - 注 - 注
 	GlyphZHU rune = 0x6CE8
-	// GlyphZAI - 在 - 在
-	GlyphZAI rune = 0x5728
-	// GlyphZHONG - 中 - 中
-	GlyphZHONG rune = 0x4E2D
+	// GlyphDUI - 对 - 对于
+	GlyphDUI rune = 0x5BF9
 	// GlyphHUO - 或 - 或
 	GlyphHUO rune = 0x6216
 	// GlyphQIE - 且 - 且
@@ -105,12 +102,11 @@ const (
 var KeywordLeads = []rune{
 	GlyphLING, GlyphWEI, GlyphSHI, GlyphSHE,
 	GlyphRU, GlyphYI, GlyphFAN, GlyphBU, GlyphDENG,
-	GlyphDA, GlyphXIAO, GlyphYIi, GlyphER,
+	GlyphDA, GlyphXIAO, GlyphYIi,
 	GlyphDE, GlyphFOU, GlyphMEI,
 	GlyphCHENG, GlyphZUO, GlyphDING, GlyphLEI,
-	GlyphQI, GlyphCI, GlyphHE,
-	GlyphZAI, GlyphZHONG, GlyphHUO, GlyphQIE,
-	GlyphZHI, GlyphDEo,
+	GlyphQI, GlyphCI, GlyphHE, GlyphHUO, GlyphQIE,
+	GlyphDUI, GlyphZHI, GlyphDEo,
 }
 
 //// 2. markers
@@ -256,146 +252,136 @@ func isIdentifierChar(ch rune, isFirst bool) bool {
 // token types -
 // for special type Tokens, its range varies from 0 - 9
 const (
-	typeEOF           TokenType = 0
-	typeComment       TokenType = 10
-	typeCommaSep      TokenType = 11
-	typeStmtSep       TokenType = 12
-	typeFuncCall      TokenType = 13
-	typeFuncDeclare   TokenType = 14
-	typeObjRef        TokenType = 15
-	typeMustT         TokenType = 16
-	typeAnnoT         TokenType = 17
-	typeMapHash       TokenType = 18
-	typeMoreParam     TokenType = 19
-	typeArrayQuoteL   TokenType = 20
-	typeArrayQuoteR   TokenType = 21
-	typeStmtQuoteL    TokenType = 22
-	typeStmtQuoteR    TokenType = 23
-	typeMapData       TokenType = 24
-	typeDeclareW      TokenType = 40 // 令
-	typeLogicYesW     TokenType = 41 // 为
-	typeLogicYesIIW   TokenType = 42 // 是
-	typeAssignW       TokenType = 43 // 设为
-	typeCondW         TokenType = 44 // 如果
-	typeFuncW         TokenType = 45 // 如何
-	typeStaticFuncW   TokenType = 46 // 何为
-	typeParamAssignW  TokenType = 47 // 已知
-	typeReturnW       TokenType = 48 // 返回
-	typeLogicNotW     TokenType = 49 // 不为
-	typeLogicNotIIW   TokenType = 50 // 不是
-	typeLogicNotEqW   TokenType = 51 // 不等于
-	typeLogicLteW     TokenType = 52 // 不大于
-	typeLogicGteW     TokenType = 53 // 不小于
-	typeLogicLtW      TokenType = 54 // 小于
-	typeLogicGtW      TokenType = 55 // 大于
-	typeVarOneW       TokenType = 56 // 以
-	typeVarTwoW       TokenType = 57 // 而
-	typeFuncYieldW    TokenType = 58 // 得
-	typeCondElseW     TokenType = 59 // 否则
-	typeWhileLoopW    TokenType = 60 // 每当
-	typeObjNewW       TokenType = 61 // 成为
-	typeVarAliasW     TokenType = 62 // 作为
-	typeObjDefineW    TokenType = 63 // 定义
-	typeObjTraitW     TokenType = 64 // 类比
-	typeObjThisW      TokenType = 65 // 其
-	typeObjSelfW      TokenType = 66 // 此
-	typeFuncCallOneW  TokenType = 67 // 在
-	typeFuncCallTwoW  TokenType = 68 // 中
-	typeLogicOrW      TokenType = 69 // 或
-	typeLogicAndW     TokenType = 70 // 且
-	typeObjDotW       TokenType = 71 // 之
-	typeObjDotIIW     TokenType = 72 // 的
-	typeObjConstructW TokenType = 73 // 是为
-	typeLogicEqualW   TokenType = 74 // 等于
-	typeString        TokenType = 90
-	typeVarQuote      TokenType = 91
-	typeNumber        TokenType = 100
-	typeIdentifier    TokenType = 101
+	TypeEOF          TokenType = 0
+	TypeComment      TokenType = 10
+	TypeCommaSep     TokenType = 11
+	TypeStmtSep      TokenType = 12
+	TypeFuncCall     TokenType = 13
+	TypeFuncDeclare  TokenType = 14
+	TypeObjRef       TokenType = 15
+	TypeMustT        TokenType = 16
+	TypeAnnoT        TokenType = 17
+	TypeMapHash      TokenType = 18
+	TypeMoreParam    TokenType = 19
+	TypeArrayQuoteL  TokenType = 20
+	TypeArrayQuoteR  TokenType = 21
+	TypeStmtQuoteL   TokenType = 22
+	TypeStmtQuoteR   TokenType = 23
+	TypeMapData      TokenType = 24
+	TypeDeclareW     TokenType = 40 // 令
+	TypeLogicYesW    TokenType = 41 // 为
+	TypeLogicYesIIW  TokenType = 42 // 是
+	TypeAssignW      TokenType = 43 // 设为
+	TypeCondW        TokenType = 44 // 如果
+	TypeFuncW        TokenType = 45 // 如何
+	TypeStaticFuncW  TokenType = 46 // 何为
+	TypeParamAssignW TokenType = 47 // 已知
+	TypeReturnW      TokenType = 48 // 返回
+	TypeLogicNotW    TokenType = 49 // 不为
+	TypeLogicNotIIW  TokenType = 50 // 不是
+	TypeLogicNotEqW  TokenType = 51 // 不等于
+	TypeLogicLteW    TokenType = 52 // 不大于
+	TypeLogicGteW    TokenType = 53 // 不小于
+	TypeLogicLtW     TokenType = 54 // 小于
+	TypeLogicGtW     TokenType = 55 // 大于
+	TypeVarOneW      TokenType = 56 // 以
+	//
+	TypeFuncYieldW    TokenType = 58 // 得到
+	TypeCondElseW     TokenType = 59 // 否则
+	TypeWhileLoopW    TokenType = 60 // 每当
+	TypeObjNewW       TokenType = 61 // 成为
+	TypeVarAliasW     TokenType = 62 // 作为
+	TypeObjDefineW    TokenType = 63 // 定义
+	TypeObjTraitW     TokenType = 64 // 类比
+	TypeObjThisW      TokenType = 65 // 其
+	TypeObjSelfW      TokenType = 66 // 此
+	TypeFuncCallOneW  TokenType = 67 // 对于
+	TypeLogicOrW      TokenType = 69 // 或
+	TypeLogicAndW     TokenType = 70 // 且
+	TypeObjDotW       TokenType = 71 // 之
+	TypeObjDotIIW     TokenType = 72 // 的
+	TypeObjConstructW TokenType = 73 // 是为
+	TypeLogicEqualW   TokenType = 74 // 等于
+	TypeString        TokenType = 90
+	TypeVarQuote      TokenType = 91
+	TypeNumber        TokenType = 100
+	TypeIdentifier    TokenType = 101
 )
 
 // KeywordTypeMap -
 var KeywordTypeMap = map[TokenType][]rune{
-	typeDeclareW:      []rune{GlyphLING},
-	typeLogicYesW:     []rune{GlyphWEI},
-	typeLogicYesIIW:   []rune{GlyphSHI},
-	typeAssignW:       []rune{GlyphSHE, GlyphWEI},
-	typeCondW:         []rune{GlyphRU, GlyphGUO},
-	typeFuncW:         []rune{GlyphRU, GlyphHE},
-	typeStaticFuncW:   []rune{GlyphHE, GlyphWEI},
-	typeParamAssignW:  []rune{GlyphYI, GlyphZHIy},
-	typeReturnW:       []rune{GlyphFAN, GlyphHUI},
-	typeLogicNotW:     []rune{GlyphBU, GlyphWEI},
-	typeLogicNotIIW:   []rune{GlyphBU, GlyphSHI},
-	typeLogicNotEqW:   []rune{GlyphBU, GlyphDENG, GlyphYU},
-	typeLogicLteW:     []rune{GlyphBU, GlyphDA, GlyphYU},
-	typeLogicGteW:     []rune{GlyphBU, GlyphXIAO, GlyphYU},
-	typeLogicLtW:      []rune{GlyphXIAO, GlyphYU},
-	typeLogicGtW:      []rune{GlyphDA, GlyphYU},
-	typeVarOneW:       []rune{GlyphYIi},
-	typeVarTwoW:       []rune{GlyphER},
-	typeFuncYieldW:    []rune{GlyphDE},
-	typeCondElseW:     []rune{GlyphFOU, GlyphZE},
-	typeWhileLoopW:    []rune{GlyphMEI, GlyphDANG},
-	typeObjNewW:       []rune{GlyphCHENG, GlyphWEI},
-	typeVarAliasW:     []rune{GlyphZUO, GlyphWEI},
-	typeObjDefineW:    []rune{GlyphDING, GlyphYIy},
-	typeObjTraitW:     []rune{GlyphLEI, GlyphBI},
-	typeObjThisW:      []rune{GlyphQI},
-	typeObjSelfW:      []rune{GlyphCI},
-	typeFuncCallOneW:  []rune{GlyphZAI},
-	typeFuncCallTwoW:  []rune{GlyphZHONG},
-	typeLogicOrW:      []rune{GlyphHUO},
-	typeLogicAndW:     []rune{GlyphQIE},
-	typeObjDotW:       []rune{GlyphZHI},
-	typeObjDotIIW:     []rune{GlyphDEo},
-	typeObjConstructW: []rune{GlyphSHI, GlyphWEI},
-	typeLogicEqualW:   []rune{GlyphDENG, GlyphYU},
+	TypeDeclareW:      []rune{GlyphLING},
+	TypeLogicYesW:     []rune{GlyphWEI},
+	TypeLogicYesIIW:   []rune{GlyphSHI},
+	TypeAssignW:       []rune{GlyphSHE, GlyphWEI},
+	TypeCondW:         []rune{GlyphRU, GlyphGUO},
+	TypeFuncW:         []rune{GlyphRU, GlyphHE},
+	TypeStaticFuncW:   []rune{GlyphHE, GlyphWEI},
+	TypeParamAssignW:  []rune{GlyphYI, GlyphZHIy},
+	TypeReturnW:       []rune{GlyphFAN, GlyphHUI},
+	TypeLogicNotW:     []rune{GlyphBU, GlyphWEI},
+	TypeLogicNotIIW:   []rune{GlyphBU, GlyphSHI},
+	TypeLogicNotEqW:   []rune{GlyphBU, GlyphDENG, GlyphYU},
+	TypeLogicLteW:     []rune{GlyphBU, GlyphDA, GlyphYU},
+	TypeLogicGteW:     []rune{GlyphBU, GlyphXIAO, GlyphYU},
+	TypeLogicLtW:      []rune{GlyphXIAO, GlyphYU},
+	TypeLogicGtW:      []rune{GlyphDA, GlyphYU},
+	TypeVarOneW:       []rune{GlyphYIi},
+	TypeFuncYieldW:    []rune{GlyphDE, GlyphDAO},
+	TypeCondElseW:     []rune{GlyphFOU, GlyphZE},
+	TypeWhileLoopW:    []rune{GlyphMEI, GlyphDANG},
+	TypeObjNewW:       []rune{GlyphCHENG, GlyphWEI},
+	TypeVarAliasW:     []rune{GlyphZUO, GlyphWEI},
+	TypeObjDefineW:    []rune{GlyphDING, GlyphYIy},
+	TypeObjTraitW:     []rune{GlyphLEI, GlyphBI},
+	TypeObjThisW:      []rune{GlyphQI},
+	TypeObjSelfW:      []rune{GlyphCI},
+	TypeFuncCallOneW:  []rune{GlyphDUI, GlyphYU},
+	TypeLogicOrW:      []rune{GlyphHUO},
+	TypeLogicAndW:     []rune{GlyphQIE},
+	TypeObjDotW:       []rune{GlyphZHI},
+	TypeObjDotIIW:     []rune{GlyphDEo},
+	TypeObjConstructW: []rune{GlyphSHI, GlyphWEI},
+	TypeLogicEqualW:   []rune{GlyphDENG, GlyphYU},
 }
 
 // NewTokenEOF - new EOF token
 func NewTokenEOF() *Token {
 	return &Token{
-		Type:    typeEOF,
+		Type:    TypeEOF,
 		Literal: []rune{},
-		Info:    nil,
 	}
 }
 
 // NewStringToken -
 func NewStringToken(buf []rune, quoteType rune) *Token {
 	return &Token{
-		Type:    typeString,
+		Type:    TypeString,
 		Literal: util.Copy(buf),
-		Info:    quoteType,
 	}
 }
 
 // NewVarQuoteToken -
 func NewVarQuoteToken(buf []rune) *Token {
 	return &Token{
-		Type:    typeVarQuote,
+		Type:    TypeVarQuote,
 		Literal: util.Copy(buf),
-		Info:    nil,
 	}
 }
 
 // NewCommentToken -
 func NewCommentToken(buf []rune, isMultiLine bool) *Token {
 	return &Token{
-		Type:    typeComment,
+		Type:    TypeComment,
 		Literal: util.Copy(buf),
-		Info: map[string]bool{
-			"isMultiLine": isMultiLine,
-		},
 	}
 }
 
 // NewNumberToken -
 func NewNumberToken(buf []rune) *Token {
 	return &Token{
-		Type:    typeNumber,
+		Type:    TypeNumber,
 		Literal: util.Copy(buf),
-		Info:    nil,
 	}
 }
 
@@ -404,7 +390,6 @@ func NewMarkToken(buf []rune, t TokenType) *Token {
 	return &Token{
 		Type:    t,
 		Literal: util.Copy(buf),
-		Info:    nil,
 	}
 }
 
@@ -417,15 +402,13 @@ func NewKeywordToken(t TokenType) *Token {
 	return &Token{
 		Type:    t,
 		Literal: l,
-		Info:    nil,
 	}
 }
 
 // NewIdentifierToken -
 func NewIdentifierToken(buf []rune) *Token {
 	return &Token{
-		Type:    typeIdentifier,
+		Type:    TypeIdentifier,
 		Literal: util.Copy(buf),
-		Info:    nil,
 	}
 }

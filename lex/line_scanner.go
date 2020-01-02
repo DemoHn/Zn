@@ -1,9 +1,6 @@
 package lex
 
 import (
-	"fmt"
-	"strings"
-
 	"github.com/DemoHn/Zn/error"
 )
 
@@ -134,41 +131,4 @@ func (ls *LineScanner) PushLine(endIndex int) {
 func (ls *LineScanner) HasScanIndent() bool {
 	state := ls.lines[ls.rowPos].scanState
 	return state == scanIndent
-}
-
-// String shows all lines info for testing.
-// format::=
-//   {lineInfo1} {lineInfo2} {lineInfo3} ...
-//
-// lineInfo ::=
-//   Space<2>[23,45] or
-//   Tab<4>[0,1] or
-//   Empty<0>
-func (ls *LineScanner) String() string {
-	ss := []string{}
-	var indentChar string
-	// get indent type
-	switch ls.indentType {
-	case IdetUnknown:
-		indentChar = "Unknown"
-	case IdetSpace:
-		indentChar = "Space"
-	case IdetTab:
-		indentChar = "Tab"
-	}
-
-	for _, line := range ls.lines {
-		if line.scanState == scanEnd {
-			if line.EmptyLine {
-				ss = append(ss, "Empty<0>")
-			} else {
-				ss = append(ss, fmt.Sprintf(
-					"%s<%d>[%d,%d]",
-					indentChar, line.IndentNum,
-					line.Start, line.End,
-				))
-			}
-		}
-	}
-	return strings.Join(ss, " ")
 }

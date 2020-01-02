@@ -22,11 +22,8 @@ func TestNextToken_CommentsONLY(t *testing.T) {
 			input:       "注：这是一个长 长 的单行注释comment",
 			expectError: false,
 			token: Token{
-				Type:    typeComment,
+				Type:    TypeComment,
 				Literal: []rune("这是一个长 长 的单行注释comment"),
-				Info: map[string]bool{
-					"isMultiLine": false,
-				},
 			},
 			lineInfo: "Unknown<0>[0,21]",
 		},
@@ -35,11 +32,8 @@ func TestNextToken_CommentsONLY(t *testing.T) {
 			input:       "注：",
 			expectError: false,
 			token: Token{
-				Type:    typeComment,
+				Type:    TypeComment,
 				Literal: []rune(""),
-				Info: map[string]bool{
-					"isMultiLine": false,
-				},
 			},
 			lineInfo: "Unknown<0>[0,1]",
 		},
@@ -48,11 +42,8 @@ func TestNextToken_CommentsONLY(t *testing.T) {
 			input:       "注： “",
 			expectError: false,
 			token: Token{
-				Type:    typeComment,
+				Type:    TypeComment,
 				Literal: []rune(" “"),
-				Info: map[string]bool{
-					"isMultiLine": false,
-				},
 			},
 			lineInfo: "Unknown<0>[0,3]",
 		},
@@ -61,11 +52,8 @@ func TestNextToken_CommentsONLY(t *testing.T) {
 			input:       "注 1024 2048 ：",
 			expectError: false,
 			token: Token{
-				Type:    typeComment,
+				Type:    TypeComment,
 				Literal: []rune(""),
-				Info: map[string]bool{
-					"isMultiLine": false,
-				},
 			},
 			lineInfo: "Unknown<0>[0,12]",
 		},
@@ -74,11 +62,8 @@ func TestNextToken_CommentsONLY(t *testing.T) {
 			input:       "注：注：注：nach nach\r\n注：又是一个注",
 			expectError: false,
 			token: Token{
-				Type:    typeComment,
+				Type:    TypeComment,
 				Literal: []rune("注：注：nach nach"),
-				Info: map[string]bool{
-					"isMultiLine": false,
-				},
 			},
 			lineInfo: "Unknown<0>[0,14]",
 		},
@@ -88,11 +73,8 @@ func TestNextToken_CommentsONLY(t *testing.T) {
 			input:       "注：“假设这是一个注” 后面假设又是一些数",
 			expectError: false,
 			token: Token{
-				Type:    typeComment,
+				Type:    TypeComment,
 				Literal: []rune("假设这是一个注"),
-				Info: map[string]bool{
-					"isMultiLine": true,
-				},
 			},
 			lineInfo: "",
 		},
@@ -101,11 +83,8 @@ func TestNextToken_CommentsONLY(t *testing.T) {
 			input:       "注：“假设这又是一个注”",
 			expectError: false,
 			token: Token{
-				Type:    typeComment,
+				Type:    TypeComment,
 				Literal: []rune("假设这又是一个注"),
-				Info: map[string]bool{
-					"isMultiLine": true,
-				},
 			},
 			lineInfo: "",
 		},
@@ -114,11 +93,8 @@ func TestNextToken_CommentsONLY(t *testing.T) {
 			input:       "注 1234 5678 ：“假设这又是一个注”",
 			expectError: false,
 			token: Token{
-				Type:    typeComment,
+				Type:    TypeComment,
 				Literal: []rune("假设这又是一个注"),
-				Info: map[string]bool{
-					"isMultiLine": true,
-				},
 			},
 			lineInfo: "",
 		},
@@ -127,11 +103,8 @@ func TestNextToken_CommentsONLY(t *testing.T) {
 			input:       "注：“”",
 			expectError: false,
 			token: Token{
-				Type:    typeComment,
+				Type:    TypeComment,
 				Literal: []rune(""),
-				Info: map[string]bool{
-					"isMultiLine": true,
-				},
 			},
 			lineInfo: "",
 		},
@@ -140,11 +113,8 @@ func TestNextToken_CommentsONLY(t *testing.T) {
 			input:       "注：“一一\r\n    二二\n三三\n四四”",
 			expectError: false,
 			token: Token{
-				Type:    typeComment,
+				Type:    TypeComment,
 				Literal: []rune("一一\r\n    二二\n三三\n四四"),
-				Info: map[string]bool{
-					"isMultiLine": true,
-				},
 			},
 			lineInfo: "Unknown<0>[0,4] Unknown<0>[7,12] Unknown<0>[14,15]",
 		},
@@ -153,11 +123,8 @@ func TestNextToken_CommentsONLY(t *testing.T) {
 			input:       "注：“一一「2233」《某本书》注：“”二二\n     ”",
 			expectError: false,
 			token: Token{
-				Type:    typeComment,
+				Type:    TypeComment,
 				Literal: []rune("一一「2233」《某本书》注：“”二二\n     "),
-				Info: map[string]bool{
-					"isMultiLine": true,
-				},
 			},
 			lineInfo: "Unknown<0>[0,21]",
 		},
@@ -166,11 +133,8 @@ func TestNextToken_CommentsONLY(t *testing.T) {
 			input:       "注：「PK」",
 			expectError: false,
 			token: Token{
-				Type:    typeComment,
+				Type:    TypeComment,
 				Literal: []rune("PK"),
-				Info: map[string]bool{
-					"isMultiLine": true,
-				},
 			},
 			lineInfo: "",
 		},
@@ -179,11 +143,8 @@ func TestNextToken_CommentsONLY(t *testing.T) {
 			input:       "注：「PKG“”",
 			expectError: false,
 			token: Token{
-				Type:    typeComment,
+				Type:    TypeComment,
 				Literal: []rune("PKG“”"),
-				Info: map[string]bool{
-					"isMultiLine": true,
-				},
 			},
 			lineInfo: "Unknown<0>[0,7]",
 		},
@@ -198,9 +159,8 @@ func TestNextToken_StringONLY(t *testing.T) {
 			input:       "“LSK” 多出来的",
 			expectError: false,
 			token: Token{
-				Type:    typeString,
+				Type:    TypeString,
 				Literal: []rune("LSK"),
-				Info:    '“',
 			},
 			lineInfo: "",
 		},
@@ -209,9 +169,8 @@ func TestNextToken_StringONLY(t *testing.T) {
 			input:       "“这 是 一 个 字 符 串”",
 			expectError: false,
 			token: Token{
-				Type:    typeString,
+				Type:    TypeString,
 				Literal: []rune("这 是 一 个 字 符 串"),
-				Info:    '“',
 			},
 			lineInfo: "",
 		},
@@ -220,9 +179,8 @@ func TestNextToken_StringONLY(t *testing.T) {
 			input:       "“「233」 ‘456’ 《〈who〉》『『is』』”",
 			expectError: false,
 			token: Token{
-				Type:    typeString,
+				Type:    TypeString,
 				Literal: []rune("「233」 ‘456’ 《〈who〉》『『is』』"),
-				Info:    '“',
 			},
 			lineInfo: "",
 		},
@@ -231,9 +189,8 @@ func TestNextToken_StringONLY(t *testing.T) {
 			input:       "『233\n    456\r\n7  』",
 			expectError: false,
 			token: Token{
-				Type:    typeString,
+				Type:    TypeString,
 				Literal: []rune("233\n    456\r\n7  "),
-				Info:    '『',
 			},
 			lineInfo: "Unknown<0>[0,3] Unknown<0>[5,11]",
 		},
@@ -249,9 +206,8 @@ func TestNextToken_VarQuoteONLY(t *testing.T) {
 			input:       "·正常之变量·",
 			expectError: false,
 			token: Token{
-				Type:    typeVarQuote,
+				Type:    TypeVarQuote,
 				Literal: []rune("正常之变量"),
-				Info:    nil,
 			},
 			lineInfo: "",
 		},
@@ -260,9 +216,8 @@ func TestNextToken_VarQuoteONLY(t *testing.T) {
 			input:       "· 正常 之 变量  ·",
 			expectError: false,
 			token: Token{
-				Type:    typeVarQuote,
+				Type:    TypeVarQuote,
 				Literal: []rune("正常之变量"),
-				Info:    nil,
 			},
 			lineInfo: "",
 		},
@@ -271,9 +226,8 @@ func TestNextToken_VarQuoteONLY(t *testing.T) {
 			input:       "· 知/其/不- 可/而*为+ _abcd_之1235 AJ·",
 			expectError: false,
 			token: Token{
-				Type:    typeVarQuote,
+				Type:    TypeVarQuote,
 				Literal: []rune("知/其/不-可/而*为+_abcd_之1235AJ"),
-				Info:    nil,
 			},
 			lineInfo: "",
 		},
@@ -282,9 +236,8 @@ func TestNextToken_VarQuoteONLY(t *testing.T) {
 			input:       "·_korea_char102·",
 			expectError: false,
 			token: Token{
-				Type:    typeVarQuote,
+				Type:    TypeVarQuote,
 				Literal: []rune("_korea_char102"),
-				Info:    nil,
 			},
 			lineInfo: "",
 		},
@@ -329,9 +282,8 @@ func TestNextToken_NumberONLY(t *testing.T) {
 			input:       "123456七",
 			expectError: false,
 			token: Token{
-				Type:    typeNumber,
+				Type:    TypeNumber,
 				Literal: []rune("123456"),
-				Info:    nil,
 			},
 			lineInfo: "",
 		},
@@ -340,9 +292,8 @@ func TestNextToken_NumberONLY(t *testing.T) {
 			input:       "123456",
 			expectError: false,
 			token: Token{
-				Type:    typeNumber,
+				Type:    TypeNumber,
 				Literal: []rune("123456"),
-				Info:    nil,
 			},
 			lineInfo: "",
 		},
@@ -351,9 +302,8 @@ func TestNextToken_NumberONLY(t *testing.T) {
 			input:       "-123.456km",
 			expectError: false,
 			token: Token{
-				Type:    typeNumber,
+				Type:    TypeNumber,
 				Literal: []rune("-123.456"),
-				Info:    nil,
 			},
 			lineInfo: "",
 		},
@@ -362,9 +312,8 @@ func TestNextToken_NumberONLY(t *testing.T) {
 			input:       "+00000.456km",
 			expectError: false,
 			token: Token{
-				Type:    typeNumber,
+				Type:    TypeNumber,
 				Literal: []rune("+00000.456"),
-				Info:    nil,
 			},
 			lineInfo: "",
 		},
@@ -373,9 +322,8 @@ func TestNextToken_NumberONLY(t *testing.T) {
 			input:       "+000003 Rs",
 			expectError: false,
 			token: Token{
-				Type:    typeNumber,
+				Type:    TypeNumber,
 				Literal: []rune("+000003"),
-				Info:    nil,
 			},
 			lineInfo: "",
 		},
@@ -384,9 +332,8 @@ func TestNextToken_NumberONLY(t *testing.T) {
 			input:       "+000003E+05 Rs",
 			expectError: false,
 			token: Token{
-				Type:    typeNumber,
+				Type:    TypeNumber,
 				Literal: []rune("+000003E+05"),
-				Info:    nil,
 			},
 			lineInfo: "",
 		},
@@ -395,9 +342,8 @@ func TestNextToken_NumberONLY(t *testing.T) {
 			input:       "+000003e-25 Rs",
 			expectError: false,
 			token: Token{
-				Type:    typeNumber,
+				Type:    TypeNumber,
 				Literal: []rune("+000003e-25"),
-				Info:    nil,
 			},
 			lineInfo: "",
 		},
@@ -406,9 +352,8 @@ func TestNextToken_NumberONLY(t *testing.T) {
 			input:       "-003.0452e+25 Rs",
 			expectError: false,
 			token: Token{
-				Type:    typeNumber,
+				Type:    TypeNumber,
 				Literal: []rune("-003.0452e+25"),
-				Info:    nil,
 			},
 			lineInfo: "",
 		},
@@ -417,9 +362,8 @@ func TestNextToken_NumberONLY(t *testing.T) {
 			input:       "-12_300_500_800_900 RSU",
 			expectError: false,
 			token: Token{
-				Type:    typeNumber,
+				Type:    TypeNumber,
 				Literal: []rune("-12300500800900"),
-				Info:    nil,
 			},
 			lineInfo: "",
 		},
@@ -453,21 +397,21 @@ func TestNextToken_NumberONLY(t *testing.T) {
 func TestNextToken_MarkerONLY(t *testing.T) {
 	// 01. generate TRUE cases
 	var markerMap = map[string]TokenType{
-		"，":  typeCommaSep,
-		"：":  typeFuncCall,
-		"；":  typeStmtSep,
-		"？":  typeFuncDeclare,
-		"&":  typeObjRef,
-		"！":  typeMustT,
-		"@":  typeAnnoT,
-		"#":  typeMapHash,
-		"……": typeMoreParam,
-		"【":  typeArrayQuoteL,
-		"】":  typeArrayQuoteR,
-		"（":  typeStmtQuoteL,
-		"）":  typeStmtQuoteR,
-		"==": typeMapData,
-		"⟺":  typeMapData,
+		"，":  TypeCommaSep,
+		"：":  TypeFuncCall,
+		"；":  TypeStmtSep,
+		"？":  TypeFuncDeclare,
+		"&":  TypeObjRef,
+		"！":  TypeMustT,
+		"@":  TypeAnnoT,
+		"#":  TypeMapHash,
+		"……": TypeMoreParam,
+		"【":  TypeArrayQuoteL,
+		"】":  TypeArrayQuoteR,
+		"（":  TypeStmtQuoteL,
+		"）":  TypeStmtQuoteR,
+		"==": TypeMapData,
+		"⟺":  TypeMapData,
 	}
 
 	var cases = make([]nextTokenCase, 0)
@@ -479,7 +423,6 @@ func TestNextToken_MarkerONLY(t *testing.T) {
 			token: Token{
 				Type:    v,
 				Literal: []rune(k),
-				Info:    nil,
 			},
 		})
 	}
@@ -494,7 +437,7 @@ func TestNextToken_IdentifierONLY_SUCCESS(t *testing.T) {
 			input:       "反",
 			expectError: false,
 			token: Token{
-				Type:    typeIdentifier,
+				Type:    TypeIdentifier,
 				Literal: []rune("反"),
 			},
 		},
@@ -503,7 +446,7 @@ func TestNextToken_IdentifierONLY_SUCCESS(t *testing.T) {
 			input:       "正定县",
 			expectError: false,
 			token: Token{
-				Type:    typeIdentifier,
+				Type:    TypeIdentifier,
 				Literal: []rune("正定县"),
 			},
 		},
@@ -512,7 +455,7 @@ func TestNextToken_IdentifierONLY_SUCCESS(t *testing.T) {
 			input:       "正  定  县",
 			expectError: false,
 			token: Token{
-				Type:    typeIdentifier,
+				Type:    TypeIdentifier,
 				Literal: []rune("正定县"),
 			},
 		},
@@ -521,7 +464,7 @@ func TestNextToken_IdentifierONLY_SUCCESS(t *testing.T) {
 			input:       "正定县2345",
 			expectError: false,
 			token: Token{
-				Type:    typeIdentifier,
+				Type:    TypeIdentifier,
 				Literal: []rune("正定县2345"),
 			},
 		},
@@ -530,7 +473,7 @@ func TestNextToken_IdentifierONLY_SUCCESS(t *testing.T) {
 			input:       "正定/+_县/2345",
 			expectError: false,
 			token: Token{
-				Type:    typeIdentifier,
+				Type:    TypeIdentifier,
 				Literal: []rune("正定/+_县/2345"),
 			},
 		},
@@ -539,7 +482,7 @@ func TestNextToken_IdentifierONLY_SUCCESS(t *testing.T) {
 			input:       "正定县「」",
 			expectError: false,
 			token: Token{
-				Type:    typeIdentifier,
+				Type:    TypeIdentifier,
 				Literal: []rune("正定县"),
 			},
 		},
@@ -548,7 +491,7 @@ func TestNextToken_IdentifierONLY_SUCCESS(t *testing.T) {
 			input:       "正定县·如果·",
 			expectError: false,
 			token: Token{
-				Type:    typeIdentifier,
+				Type:    TypeIdentifier,
 				Literal: []rune("正定县"),
 			},
 		},
@@ -557,7 +500,7 @@ func TestNextToken_IdentifierONLY_SUCCESS(t *testing.T) {
 			input:       "正定县（河北）",
 			expectError: false,
 			token: Token{
-				Type:    typeIdentifier,
+				Type:    TypeIdentifier,
 				Literal: []rune("正定县"),
 			},
 		},
@@ -566,7 +509,7 @@ func TestNextToken_IdentifierONLY_SUCCESS(t *testing.T) {
 			input:       "正定县作为大县",
 			expectError: false,
 			token: Token{
-				Type:    typeIdentifier,
+				Type:    TypeIdentifier,
 				Literal: []rune("正定县"),
 			},
 		},
@@ -575,7 +518,7 @@ func TestNextToken_IdentifierONLY_SUCCESS(t *testing.T) {
 			input:       "正定县如大县",
 			expectError: false,
 			token: Token{
-				Type:    typeIdentifier,
+				Type:    TypeIdentifier,
 				Literal: []rune("正定县如大县"),
 			},
 		},
@@ -584,7 +527,7 @@ func TestNextToken_IdentifierONLY_SUCCESS(t *testing.T) {
 			input:       "如不果返回",
 			expectError: false,
 			token: Token{
-				Type:    typeIdentifier,
+				Type:    TypeIdentifier,
 				Literal: []rune("如不果"),
 			},
 		},
@@ -602,8 +545,8 @@ func assertNextToken(cases []nextTokenCase, t *testing.T) {
 				if err != nil {
 					t.Errorf("NextToken() failed! expected no error, but got error")
 					t.Error(err)
-				} else if tt.lineInfo != lex.lines.String() {
-					t.Errorf("NextToken() lineInfo expect `%s`, actual `%s`", tt.lineInfo, lex.lines.String())
+				} else if tt.lineInfo != StringifyLines(lex.lines) {
+					t.Errorf("NextToken() lineInfo expect `%s`, actual `%s`", tt.lineInfo, StringifyLines(lex.lines))
 				} else if !reflect.DeepEqual(*tk, tt.token) {
 					t.Errorf("NextToken() return Token failed! expect: %v, got: %v", tt.token, *tk)
 				}

@@ -38,8 +38,8 @@ func TestLineScanner_PushLine(t *testing.T) {
 		ls := NewLineScanner()
 		execInput(tt.input, ls)
 		// get result
-		if ls.String() != tt.result {
-			t.Errorf("test pushline result expect:%s, actual:%s", tt.result, ls.String())
+		if StringifyLines(ls) != tt.result {
+			t.Errorf("test pushline result expect:%s, actual:%s", tt.result, StringifyLines(ls))
 		}
 	}
 }
@@ -85,8 +85,8 @@ func TestLineScanner_PushAndSetIndent(t *testing.T) {
 			t.Errorf("test pushline should NOT throw error, but error: %v thrown", err)
 		} else if err == nil && tt.withError == true {
 			t.Error("test pushline result expected error, but no error thrown!")
-		} else if tt.withError == false && ls.String() != tt.result {
-			t.Errorf("test pushline result expect:%s, actual:%s", tt.result, ls.String())
+		} else if tt.withError == false && StringifyLines(ls) != tt.result {
+			t.Errorf("test pushline result expect:%s, actual:%s", tt.result, StringifyLines(ls))
 		}
 
 	}

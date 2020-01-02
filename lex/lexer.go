@@ -432,43 +432,43 @@ func (l *Lexer) parseMarkers(ch rune) (*Token, *error.Error) {
 	// switch
 	switch ch {
 	case Comma:
-		return NewMarkToken(l.chBuffer, typeCommaSep), nil
+		return NewMarkToken(l.chBuffer, TypeCommaSep), nil
 	case Colon:
-		return NewMarkToken(l.chBuffer, typeFuncCall), nil
+		return NewMarkToken(l.chBuffer, TypeFuncCall), nil
 	case Semicolon:
-		return NewMarkToken(l.chBuffer, typeStmtSep), nil
+		return NewMarkToken(l.chBuffer, TypeStmtSep), nil
 	case QuestionMark:
-		return NewMarkToken(l.chBuffer, typeFuncDeclare), nil
+		return NewMarkToken(l.chBuffer, TypeFuncDeclare), nil
 	case RefMark:
-		return NewMarkToken(l.chBuffer, typeObjRef), nil
+		return NewMarkToken(l.chBuffer, TypeObjRef), nil
 	case BangMark:
-		return NewMarkToken(l.chBuffer, typeMustT), nil
+		return NewMarkToken(l.chBuffer, TypeMustT), nil
 	case AnnotationMark:
-		return NewMarkToken(l.chBuffer, typeAnnoT), nil
+		return NewMarkToken(l.chBuffer, TypeAnnoT), nil
 	case HashMark:
-		return NewMarkToken(l.chBuffer, typeMapHash), nil
+		return NewMarkToken(l.chBuffer, TypeMapHash), nil
 	case EllipsisMark:
 		if l.peek() == EllipsisMark {
 			l.pushBuffer(l.next())
-			return NewMarkToken(l.chBuffer, typeMoreParam), nil
+			return NewMarkToken(l.chBuffer, TypeMoreParam), nil
 		}
 		return nil, error.NewErrorSLOT("invalid ellipsis")
 	case LeftBracket:
-		return NewMarkToken(l.chBuffer, typeArrayQuoteL), nil
+		return NewMarkToken(l.chBuffer, TypeArrayQuoteL), nil
 	case RightBracket:
-		return NewMarkToken(l.chBuffer, typeArrayQuoteR), nil
+		return NewMarkToken(l.chBuffer, TypeArrayQuoteR), nil
 	case LeftParen:
-		return NewMarkToken(l.chBuffer, typeStmtQuoteL), nil
+		return NewMarkToken(l.chBuffer, TypeStmtQuoteL), nil
 	case RightParen:
-		return NewMarkToken(l.chBuffer, typeStmtQuoteR), nil
+		return NewMarkToken(l.chBuffer, TypeStmtQuoteR), nil
 	case Equal:
 		if l.peek() == Equal {
 			l.pushBuffer(l.next())
-			return NewMarkToken(l.chBuffer, typeMapData), nil
+			return NewMarkToken(l.chBuffer, TypeMapData), nil
 		}
 		return nil, error.NewErrorSLOT("invalid single euqal")
 	case DoubleArrow:
-		return NewMarkToken(l.chBuffer, typeMapData), nil
+		return NewMarkToken(l.chBuffer, TypeMapData), nil
 	}
 
 	return nil, error.NewErrorSLOT("invalid marker")
@@ -488,20 +488,20 @@ func (l *Lexer) parseKeyword(ch rune, moveForward bool) (bool, *Token) {
 	// manual matching one or consecutive keywords
 	switch ch {
 	case GlyphLING:
-		tk = NewKeywordToken(typeDeclareW)
+		tk = NewKeywordToken(TypeDeclareW)
 	case GlyphWEI:
-		tk = NewKeywordToken(typeLogicYesW)
+		tk = NewKeywordToken(TypeLogicYesW)
 	case GlyphSHI:
 		if l.peek() == GlyphWEI {
 			wordLen = 2
-			tk = NewKeywordToken(typeObjConstructW)
+			tk = NewKeywordToken(TypeObjConstructW)
 		} else {
-			tk = NewKeywordToken(typeLogicYesIIW)
+			tk = NewKeywordToken(TypeLogicYesIIW)
 		}
 	case GlyphSHE:
 		if l.peek() == GlyphWEI {
 			wordLen = 2
-			tk = NewKeywordToken(typeAssignW)
+			tk = NewKeywordToken(TypeAssignW)
 		} else {
 			return false, nil
 		}
@@ -509,31 +509,31 @@ func (l *Lexer) parseKeyword(ch rune, moveForward bool) (bool, *Token) {
 		switch l.peek() {
 		case GlyphGUO:
 			wordLen = 2
-			tk = NewKeywordToken(typeCondW)
+			tk = NewKeywordToken(TypeCondW)
 		case GlyphHE:
 			wordLen = 2
-			tk = NewKeywordToken(typeFuncW)
+			tk = NewKeywordToken(TypeFuncW)
 		default:
 			return false, nil
 		}
 	case GlyphHE:
 		if l.peek() == GlyphWEI {
 			wordLen = 2
-			tk = NewKeywordToken(typeStaticFuncW)
+			tk = NewKeywordToken(TypeStaticFuncW)
 		} else {
 			return false, nil
 		}
 	case GlyphYI:
 		if l.peek() == GlyphZHIy {
 			wordLen = 2
-			tk = NewKeywordToken(typeParamAssignW)
+			tk = NewKeywordToken(TypeParamAssignW)
 		} else {
 			return false, nil
 		}
 	case GlyphFAN:
 		if l.peek() == GlyphHUI {
 			wordLen = 2
-			tk = NewKeywordToken(typeReturnW)
+			tk = NewKeywordToken(TypeReturnW)
 		} else {
 			return false, nil
 		}
@@ -541,28 +541,28 @@ func (l *Lexer) parseKeyword(ch rune, moveForward bool) (bool, *Token) {
 		switch l.peek() {
 		case GlyphWEI:
 			wordLen = 2
-			tk = NewKeywordToken(typeLogicNotW)
+			tk = NewKeywordToken(TypeLogicNotW)
 		case GlyphSHI:
 			wordLen = 2
-			tk = NewKeywordToken(typeLogicNotIIW)
+			tk = NewKeywordToken(TypeLogicNotIIW)
 		case GlyphDENG:
 			if l.peek2() == GlyphYU {
 				wordLen = 3
-				tk = NewKeywordToken(typeLogicNotEqW)
+				tk = NewKeywordToken(TypeLogicNotEqW)
 			} else {
 				return false, nil
 			}
 		case GlyphDA:
 			if l.peek2() == GlyphYU {
 				wordLen = 3
-				tk = NewKeywordToken(typeLogicLteW)
+				tk = NewKeywordToken(TypeLogicLteW)
 			} else {
 				return false, nil
 			}
 		case GlyphXIAO:
 			if l.peek2() == GlyphYU {
 				wordLen = 3
-				tk = NewKeywordToken(typeLogicGteW)
+				tk = NewKeywordToken(TypeLogicGteW)
 			} else {
 				return false, nil
 			}
@@ -570,88 +570,94 @@ func (l *Lexer) parseKeyword(ch rune, moveForward bool) (bool, *Token) {
 	case GlyphDENG:
 		if l.peek() == GlyphYU {
 			wordLen = 2
-			tk = NewKeywordToken(typeLogicEqualW)
+			tk = NewKeywordToken(TypeLogicEqualW)
 		} else {
 			return false, nil
 		}
 	case GlyphDA:
 		if l.peek() == GlyphYU {
 			wordLen = 2
-			tk = NewKeywordToken(typeLogicGtW)
+			tk = NewKeywordToken(TypeLogicGtW)
 		} else {
 			return false, nil
 		}
 	case GlyphXIAO:
 		if l.peek() == GlyphYU {
 			wordLen = 2
-			tk = NewKeywordToken(typeLogicLtW)
+			tk = NewKeywordToken(TypeLogicLtW)
 		} else {
 			return false, nil
 		}
 	case GlyphYIi:
-		tk = NewKeywordToken(typeVarOneW)
-	case GlyphER:
-		tk = NewKeywordToken(typeVarTwoW)
+		tk = NewKeywordToken(TypeVarOneW)
 	case GlyphDE:
-		tk = NewKeywordToken(typeFuncYieldW)
+		if l.peek() == GlyphDAO {
+			wordLen = 2
+			tk = NewKeywordToken(TypeFuncYieldW)
+		} else {
+			return false, nil
+		}
+	case GlyphDUI:
+		if l.peek() == GlyphYU {
+			wordLen = 2
+			tk = NewKeywordToken(TypeFuncCallOneW)
+		} else {
+			return false, nil
+		}
 	case GlyphFOU:
 		if l.peek() == GlyphZE {
 			wordLen = 2
-			tk = NewKeywordToken(typeCondElseW)
+			tk = NewKeywordToken(TypeCondElseW)
 		} else {
 			return false, nil
 		}
 	case GlyphMEI:
 		if l.peek() == GlyphDANG {
 			wordLen = 2
-			tk = NewKeywordToken(typeWhileLoopW)
+			tk = NewKeywordToken(TypeWhileLoopW)
 		} else {
 			return false, nil
 		}
 	case GlyphCHENG:
 		if l.peek() == GlyphWEI {
 			wordLen = 2
-			tk = NewKeywordToken(typeObjNewW)
+			tk = NewKeywordToken(TypeObjNewW)
 		} else {
 			return false, nil
 		}
 	case GlyphZUO:
 		if l.peek() == GlyphWEI {
 			wordLen = 2
-			tk = NewKeywordToken(typeVarAliasW)
+			tk = NewKeywordToken(TypeVarAliasW)
 		} else {
 			return false, nil
 		}
 	case GlyphDING:
 		if l.peek() == GlyphYIy {
 			wordLen = 2
-			tk = NewKeywordToken(typeObjDefineW)
+			tk = NewKeywordToken(TypeObjDefineW)
 		} else {
 			return false, nil
 		}
 	case GlyphLEI:
 		if l.peek() == GlyphBI {
 			wordLen = 2
-			tk = NewKeywordToken(typeObjTraitW)
+			tk = NewKeywordToken(TypeObjTraitW)
 		} else {
 			return false, nil
 		}
 	case GlyphQI:
-		tk = NewKeywordToken(typeObjThisW)
+		tk = NewKeywordToken(TypeObjThisW)
 	case GlyphCI:
-		tk = NewKeywordToken(typeObjSelfW)
-	case GlyphZAI:
-		tk = NewKeywordToken(typeFuncCallOneW)
-	case GlyphZHONG:
-		tk = NewKeywordToken(typeFuncCallTwoW)
+		tk = NewKeywordToken(TypeObjSelfW)
 	case GlyphHUO:
-		tk = NewKeywordToken(typeLogicOrW)
+		tk = NewKeywordToken(TypeLogicOrW)
 	case GlyphQIE:
-		tk = NewKeywordToken(typeLogicAndW)
+		tk = NewKeywordToken(TypeLogicAndW)
 	case GlyphZHI:
-		tk = NewKeywordToken(typeObjDotW)
+		tk = NewKeywordToken(TypeObjDotW)
 	case GlyphDEo:
-		tk = NewKeywordToken(typeObjDotIIW)
+		tk = NewKeywordToken(TypeObjDotIIW)
 	}
 
 	if tk != nil {
