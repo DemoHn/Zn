@@ -11,7 +11,7 @@ import (
 // i.e.
 // TargetExpr := AssignExpr
 type VarAssignStmt struct {
-	TargetExpr Expression
+	TargetVar  *ID
 	AssignExpr Expression
 }
 
@@ -20,15 +20,17 @@ func (va *VarAssignStmt) statementNode() {}
 // ParseVarAssignStmt - parse general variable assign statement
 //
 // CFG:
-// VarAssignStmt -> ExprT 为 ExprA           (1)
-// VarAssignStmt -> ExprT 是 ExprA           (1A)
-//               -> ExprA ， 得到 ExprT       (2)
+// VarAssignStmt -> TargetV 为 ExprA           (1)
+// VarAssignStmt -> TargetV 是 ExprA           (1A)
+//               -> ExprA ， 得到 TargetV       (2)
 //
 // TODO:
 // we need special handling for
 //
-// FuncName ： A，B，C，得到 ExprT
+// FuncName ： A，B，C，得到 TargetV
 func (p *Parser) ParseVarAssignStmt() (*VarAssignStmt, *error.Error) {
+	var stmt = new(VarAssignStmt)
+	var isTargetFirst = true
 	// #0. parse first expression
 	// either ExprT (case 1) or ExprA (case 2)
 	firstExpr, err := p.ParseExpression()
@@ -37,19 +39,27 @@ func (p *Parser) ParseVarAssignStmt() (*VarAssignStmt, *error.Error) {
 	}
 
 	// #1. parse the middle one
-	var order int // type (1)
-	t1 := p.current().Type
-	if t1 == lex.TypeLogicYesW || t1 == lex.TypeLogicYesIIW {
-		order = 1
-		p.next()
-	} else if t1 == lex.TypeCommaSep {
-		if p.peek().Type == lex.TypeFuncYieldW {
-			order = 2
-			p.next()
+	switch p.current().Type {
+	case lex.TypeLogicYesW, lex.TypeLogicYesIIW:
+		// NOTICE: currently we only support ID as the first expr, so we
+		// check the type here
+		if id, ok := firstExpr.(*ID); ok {
+			stmt.TargetVar = id
 			p.next()
 		} else {
-			return nil, error.NewErrorSLOT("parsing comma wrongly (should not exist here)")
+			return nil, error.NewErrorSLOT("invalid syntax")
 		}
+	case lex.TypeCommaSep:
+		if p.peek().Type == lex.TypeFuncYieldW {
+			stmt.AssignExpr = firstExpr
+			p.next()
+			p.next()
+			isTargetFirst = false
+		} else {
+			return nil, error.NewErrorSLOT("invalid syntax")
+		}
+	default:
+		return nil, error.NewErrorSLOT("invalid syntax")
 	}
 
 	// #2. parse the second expression
@@ -57,17 +67,16 @@ func (p *Parser) ParseVarAssignStmt() (*VarAssignStmt, *error.Error) {
 	if err != nil {
 		return nil, err
 	}
-
-	if order == 1 {
-		return &VarAssignStmt{
-			TargetExpr: firstExpr,
-			AssignExpr: secondExpr,
-		}, nil
-	} else if order == 2 {
-		return &VarAssignStmt{
-			TargetExpr: secondExpr,
-			AssignExpr: firstExpr,
-		}, nil
+	if isTargetFirst {
+		stmt.AssignExpr = secondExpr
+	} else {
+		// assert the second expr as ID
+		if id, ok := secondExpr.(*ID); ok {
+			stmt.TargetVar = id
+		} else {
+			return nil, error.NewErrorSLOT("invalid syntax")
+		}
 	}
-	return nil, error.NewErrorSLOT("unknown error (should not exists here)")
+
+	return stmt, nil
 }
