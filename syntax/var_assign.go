@@ -15,10 +15,6 @@ type VarAssignStmt struct {
 	AssignExpr Expression
 }
 
-func (va *VarAssignStmt) getType() nodeType {
-	return TypeVarAssign
-}
-
 func (va *VarAssignStmt) statementNode() {}
 
 // ParseVarAssignStmt - parse general variable assign statement

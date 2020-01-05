@@ -16,10 +16,6 @@ type BlockStatement struct {
 	Children []Statement
 }
 
-func (bs *BlockStatement) getType() nodeType {
-	return TypeBlockStmt
-}
-
 func (bs *BlockStatement) statementNode() {}
 
 // ParseStatement - a program consists of statements
