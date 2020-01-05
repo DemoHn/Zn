@@ -7,10 +7,9 @@ import (
 
 // ArrayExpr - array expression
 type ArrayExpr struct {
+	PrimeExpr
 	Items []Expression
 }
-
-func (ae *ArrayExpr) expressionNode() {}
 
 // ParseArrayExpr - yield ArrayExpr node
 // CFG:

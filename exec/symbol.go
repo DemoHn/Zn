@@ -23,3 +23,12 @@ func (st *SymbolTable) Lookup(id string) (ZnObject, bool) {
 	}
 	return nil, false
 }
+
+// SetData - set symbol table data
+func (st *SymbolTable) SetData(id string, obj ZnObject) bool {
+	if _, ok := st.Symbols[id]; ok {
+		st.Symbols[id] = obj
+		return true
+	}
+	return false
+}

@@ -1,21 +1,32 @@
 package exec
 
 import (
+	"fmt"
+	"strconv"
+	"strings"
+
 	"github.com/DemoHn/Zn/error"
 	"github.com/DemoHn/Zn/syntax"
 )
 
 // Interpreter - the main interpreter to execute the program and yield results
 type Interpreter struct {
-	Program *syntax.ProgramNode
-	Symbol  *SymbolTable
+	Symbol *SymbolTable
+}
+
+// NewInterpreter -
+func NewInterpreter() *Interpreter {
+	return &Interpreter{
+		Symbol: &SymbolTable{
+			Symbols: map[string]ZnObject{},
+		},
+	}
 }
 
 // Execute - execute the program and yield the result
-func (it *Interpreter) Execute() string {
-	pg := it.Program
+func (it *Interpreter) Execute(program *syntax.ProgramNode) string {
 	var err *error.Error
-	for _, stmt := range pg.Children {
+	for _, stmt := range program.Children {
 		switch s := stmt.(type) {
 		case *syntax.VarDeclareStmt:
 			err = it.handleVarDeclareStmt(s)
@@ -29,6 +40,7 @@ func (it *Interpreter) Execute() string {
 			}
 		default:
 			// regard as unknown statement and ignore it
+			// TODO: to be continued...
 			continue
 		}
 	}
@@ -39,11 +51,24 @@ func (it *Interpreter) Execute() string {
 
 // print - print result
 func (it *Interpreter) print(err *error.Error) string {
-	return "233"
+	if err != nil {
+		return err.Error()
+	}
+
+	strs := []string{}
+	for k, symbol := range it.Symbol.Symbols {
+		symStr := "ε"
+		if symbol != nil {
+			symStr = symbol.String()
+		}
+		strs = append(strs, fmt.Sprintf("‹%s› => %s", k, symStr))
+	}
+
+	return strings.Join(strs, "\n")
 }
 
 func (it *Interpreter) handleVarDeclareStmt(stmt *syntax.VarDeclareStmt) *error.Error {
-	obj := execExpression(stmt.AssignExpr)
+	obj := execExpression(it, stmt.AssignExpr)
 	for _, v := range stmt.Variables {
 		vtag := v.GetLiteral()
 		// TODO: need copy object!
@@ -56,10 +81,63 @@ func (it *Interpreter) handleVarDeclareStmt(stmt *syntax.VarDeclareStmt) *error.
 }
 
 func (it *Interpreter) handleVarAssignStmt(stmt *syntax.VarAssignStmt) *error.Error {
-	// TODO
+	obj := execExpression(it, stmt.AssignExpr)
+	vtag := stmt.TargetVar.GetLiteral()
+
+	if _, ok := it.Symbol.Lookup(vtag); ok {
+		it.Symbol.SetData(vtag, obj)
+		return nil
+	}
+	return error.NewErrorSLOT("variable not defined!")
+}
+
+func execExpression(it *Interpreter, expr syntax.Expression) ZnObject {
+	if expr.IsPrimitive() {
+		return execPrimitiveExpr(it, expr)
+	}
+	// TODO: to be continued...
 	return nil
 }
 
-func execExpression(expr syntax.Expression) ZnObject {
-	return nil
+func execPrimitiveExpr(it *Interpreter, expr syntax.Expression) ZnObject {
+	switch e := expr.(type) {
+	case *syntax.Number:
+		return parseNumber(e.GetLiteral())
+	case *syntax.String:
+		zstr := new(ZnString)
+		zstr.SetValue(e.GetLiteral())
+
+		return zstr
+	case *syntax.ID:
+		vtag := e.GetLiteral()
+		if obj, ok := it.Symbol.Lookup(vtag); ok {
+			return obj
+		}
+		return nil
+	case *syntax.ArrayExpr:
+		znObjs := []ZnObject{}
+		znArr := new(ZnArray)
+		for _, item := range e.Items {
+			znObjs = append(znObjs, execPrimitiveExpr(it, item))
+		}
+
+		znArr.Init(znObjs)
+		return znArr
+	default:
+		// TODO: to be continued...
+		return nil
+	}
+}
+
+func parseNumber(numstr string) ZnObject {
+	// TODO: to be continued...
+	// TODO2: differetiate Int and Float!
+	i, e := strconv.Atoi(numstr)
+	if e != nil {
+		return nil
+	}
+
+	zint := new(ZnInteger)
+	zint.SetValue(int64(i))
+	return zint
 }
