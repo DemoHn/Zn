@@ -123,7 +123,6 @@ head:
 		goto head
 	case CR, LF:
 		l.parseCRLF(ch)
-		l.parseIndents(l.peek())
 		goto head
 	// meet with 注, it may be possibly a lead character of a comment block
 	// notice: it would also be a normal identifer (if 注[number]：) does not satisfy.
