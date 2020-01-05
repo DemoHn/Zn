@@ -42,7 +42,7 @@ func StringifyAST(node Node) string {
 		return fmt.Sprintf("$VD(vars=(%s) expr=(%s))", strings.Join(vars, " "), expr)
 	case *VarAssignStmt:
 		var target, assign string
-		target = StringifyAST(v.TargetExpr)
+		target = StringifyAST(v.TargetVar)
 		assign = StringifyAST(v.AssignExpr)
 
 		return fmt.Sprintf("$VA(target=(%s) assign=(%s))", target, assign)
