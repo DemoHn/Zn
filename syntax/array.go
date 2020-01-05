@@ -5,12 +5,6 @@ import (
 	"github.com/DemoHn/Zn/lex"
 )
 
-// Expression - a special type of statement
-type Expression interface {
-	Node
-	expressionNode()
-}
-
 // ArrayExpr - array expression
 type ArrayExpr struct {
 	Items []Expression

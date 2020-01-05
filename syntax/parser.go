@@ -21,6 +21,18 @@ type Parser struct {
 	peek2Token   *lex.Token
 }
 
+// Expression - a special type of statement
+type Expression interface {
+	Node
+	expressionNode()
+}
+
+// Statement - a program consists of statements
+type Statement interface {
+	Node
+	statementNode()
+}
+
 // NewParser -
 func NewParser(l *lex.Lexer) *Parser {
 	p := &Parser{
@@ -95,4 +107,84 @@ func (p *Parser) consumeFunc(callback func(*lex.Token), validTypes ...lex.TokenT
 		}
 	}
 	return error.NewErrorSLOT("syntax error")
+}
+
+//// parse element functions
+
+// ParseStatement - a program consists of statements
+//
+// CFG:
+// Statement -> VarDeclareStmt
+//           -> VarAssignStmt
+//           -> ；
+func (p *Parser) ParseStatement(pg *ProgramNode) *error.Error {
+	switch p.current().Type {
+	case lex.TypeStmtSep:
+		p.consume(lex.TypeStmtSep)
+		// skip
+		return nil
+	case lex.TypeDeclareW:
+		stmt, err := p.ParseVarDeclare()
+		if err != nil {
+			return err
+		}
+		pg.Children = append(pg.Children, stmt)
+		return nil
+	default:
+		stmt, err := p.ParseVarAssignStmt()
+		if err != nil {
+			return err
+		}
+		pg.Children = append(pg.Children, stmt)
+		return nil
+	}
+}
+
+// ParseExpression - parse general expression (abstract expression type)
+//
+// currently, expression only contains
+// ID
+// Number
+// String
+// ArrayExpr
+// （ Expr ）
+func (p *Parser) ParseExpression() (Expression, *error.Error) {
+	var tk Expression
+	switch p.current().Type {
+	case lex.TypeIdentifier, lex.TypeVarQuote, lex.TypeNumber, lex.TypeString:
+		return p.ParsePrimeExpr()
+	case lex.TypeArrayQuoteL:
+		token, err := p.ParseArrayExpr()
+		if err != nil {
+			return nil, err
+		}
+		tk = token
+	case lex.TypeStmtQuoteL:
+		token, err := parseParenExpr(p)
+		if err != nil {
+			return nil, err
+		}
+		tk = token
+	default:
+		return nil, error.NewErrorSLOT("no match expression")
+	}
+	return tk, nil
+}
+
+func parseParenExpr(p *Parser) (Expression, *error.Error) {
+	// #0. left paren
+	if err := p.consume(lex.TypeStmtQuoteL); err != nil {
+		return nil, err
+	}
+	// #1. parse expr
+	expr, err := p.ParseExpression()
+	if err != nil {
+		return nil, err
+	}
+
+	// #2. right paren
+	if err := p.consume(lex.TypeStmtQuoteR); err != nil {
+		return nil, err
+	}
+	return expr, nil
 }
