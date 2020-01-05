@@ -11,10 +11,6 @@ type VarDeclareStmt struct {
 	AssignExpr Expression
 }
 
-func (vn *VarDeclareStmt) getType() nodeType {
-	return TypeVarDeclare
-}
-
 func (vn *VarDeclareStmt) statementNode() {}
 
 // parsing process
@@ -83,9 +79,9 @@ func parseIdentifierTail(p *Parser, vNode *VarDeclareStmt) *error.Error {
 // callback -
 func cbIdentifier(vNode *VarDeclareStmt) func(tk *lex.Token) {
 	return func(tk *lex.Token) {
+		tid := new(ID)
+		tid.SetLiteral(string(tk.Literal))
 		// append variables
-		vNode.Variables = append(vNode.Variables, &ID{
-			literal: string(tk.Literal),
-		})
+		vNode.Variables = append(vNode.Variables, tid)
 	}
 }

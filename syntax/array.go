@@ -16,10 +16,6 @@ type ArrayExpr struct {
 	Items []Expression
 }
 
-func (ae *ArrayExpr) getType() nodeType {
-	return TypeArrayExpr
-}
-
 func (ae *ArrayExpr) expressionNode() {}
 
 // ParseArrayExpr - yield ArrayExpr node

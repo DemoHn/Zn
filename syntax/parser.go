@@ -6,32 +6,12 @@ import (
 )
 
 // Node - general node type
-type Node interface {
-	getType() nodeType
-}
-
-type nodeType int
+type Node interface{}
 
 // ProgramNode - the syntax tree of a program
 type ProgramNode struct {
 	Children []Statement
 }
-
-func (p *ProgramNode) getType() nodeType {
-	return TypeProgram
-}
-
-// declare node types
-const (
-	TypeProgram    nodeType = 0
-	TypeVarDeclare nodeType = 1 // 令...为...
-	TypeVarAssign  nodeType = 2 // ...设为... | XXX，得YYY
-	TypeArrayExpr  nodeType = 3 // 【1，2，3，4】
-	TypeIdentifier nodeType = 5
-	TypeNumber     nodeType = 6
-	TypeString     nodeType = 7
-	TypeBlockStmt  nodeType = 10
-)
 
 // Parser - parse all nodes
 type Parser struct {

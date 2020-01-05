@@ -5,41 +5,6 @@ import (
 	"github.com/DemoHn/Zn/lex"
 )
 
-// some concrete prime expression types
-
-// ID - Identifier type
-type ID struct {
-	literal string
-}
-
-func (x *ID) getType() nodeType {
-	return TypeIdentifier
-}
-
-func (x *ID) expressionNode() {}
-
-// Number -
-type Number struct {
-	literal string
-}
-
-func (n *Number) getType() nodeType {
-	return TypeNumber
-}
-
-func (n *Number) expressionNode() {}
-
-// String -
-type String struct {
-	literal string
-}
-
-func (s *String) getType() nodeType {
-	return TypeString
-}
-
-func (s *String) expressionNode() {}
-
 // ParseExpression - parse general expression (abstract expression type)
 //
 // currently, expression only contains
@@ -51,21 +16,8 @@ func (s *String) expressionNode() {}
 func (p *Parser) ParseExpression() (Expression, *error.Error) {
 	var tk Expression
 	switch p.current().Type {
-	case lex.TypeIdentifier, lex.TypeVarQuote:
-		tk = &ID{
-			literal: string(p.current().Literal),
-		}
-		p.next()
-	case lex.TypeNumber:
-		tk = &Number{
-			literal: string(p.current().Literal),
-		}
-		p.next()
-	case lex.TypeString:
-		tk = &String{
-			literal: string(p.current().Literal),
-		}
-		p.next()
+	case lex.TypeIdentifier, lex.TypeVarQuote, lex.TypeNumber, lex.TypeString:
+		return p.ParsePrimeExpr()
 	case lex.TypeArrayQuoteL:
 		token, err := p.ParseArrayExpr()
 		if err != nil {
