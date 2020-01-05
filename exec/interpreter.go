@@ -11,5 +11,5 @@ type Interpreter struct {
 
 // Execute - execute the program and yield the result
 func (i *Interpreter) Execute() string {
-
+	return ""
 }

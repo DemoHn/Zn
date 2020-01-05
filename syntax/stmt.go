@@ -25,44 +25,28 @@ func (bs *BlockStatement) statementNode() {}
 // ParseStatement - a program consists of statements
 //
 // CFG:
-// Statement -> StmtItem StmtTail
-// StmtTail  -> ；StmtItem StmtTail
-//           ->
-// StmtItem  -> VarDeclareStmt
+// Statement -> VarDeclareStmt
 //           -> VarAssignStmt
+//           -> ；
 func (p *Parser) ParseStatement(pg *ProgramNode) *error.Error {
-	// #0. parse statement item
-	stmt, err := parseStmtItem(p)
-	if err != nil {
-		return err
-	}
-	pg.Children = append(pg.Children, stmt)
-	// #1. parse statement tail
-	return parseStmtTail(p, pg)
-}
-
-func parseStmtItem(p *Parser) (Statement, *error.Error) {
 	switch p.current().Type {
+	case lex.TypeStmtSep:
+		p.consume(lex.TypeStmtSep)
+		// skip
+		return nil
 	case lex.TypeDeclareW:
-		return p.ParseVarDeclare()
+		stmt, err := p.ParseVarDeclare()
+		if err != nil {
+			return err
+		}
+		pg.Children = append(pg.Children, stmt)
+		return nil
 	default:
-		return p.ParseVarAssignStmt()
-	}
-}
-
-func parseStmtTail(p *Parser, pg *ProgramNode) *error.Error {
-	t := p.current().Type
-	if t != lex.TypeStmtSep {
+		stmt, err := p.ParseVarAssignStmt()
+		if err != nil {
+			return err
+		}
+		pg.Children = append(pg.Children, stmt)
 		return nil
 	}
-	p.consume(lex.TypeStmtSep)
-
-	// #1. parse stmt item
-	stmt, err := parseStmtItem(p)
-	if err != nil {
-		return err
-	}
-	pg.Children = append(pg.Children, stmt)
-	// #2. parse stmt tail
-	return parseStmtTail(p, pg)
 }

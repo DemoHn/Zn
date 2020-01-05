@@ -58,9 +58,11 @@ func (p *Parser) Parse() (*ProgramNode, *error.Error) {
 	pg := &ProgramNode{
 		Children: []Statement{},
 	}
-	err := p.ParseStatement(pg)
-	if err != nil {
-		return nil, err
+	for p.current().Type != lex.TypeEOF {
+		err := p.ParseStatement(pg)
+		if err != nil {
+			return nil, err
+		}
 	}
 	return pg, nil
 }
