@@ -24,7 +24,7 @@ type Parser struct {
 // Expression - a special type of statement
 type Expression interface {
 	Node
-	expressionNode()
+	IsPrimitive() bool
 }
 
 // Statement - a program consists of statements

@@ -10,7 +10,11 @@ type PrimeExpr struct {
 	literal string
 }
 
-func (pe *PrimeExpr) expressionNode() {}
+// IsPrimitive - a primeExpr must be primitive, that is, no longer additional
+// calculation required.
+func (pe *PrimeExpr) IsPrimitive() bool {
+	return true
+}
 
 // SetLiteral - set literal for primeExpr
 func (pe *PrimeExpr) SetLiteral(literal string) {
