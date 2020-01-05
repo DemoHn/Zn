@@ -96,6 +96,14 @@ func TestNextToken_MixedText(t *testing.T) {
 			expectError: false,
 			tokens:      "$22[（] $23[）] $11[，] $101[A/B] $18[#] $100[25]",
 		},
+		{
+			name:        "keyword after line",
+			input:       "令甲，乙为（【12，34，【“测试到底”，10】】）\n令丙为“23”",
+			expectError: false,
+			tokens: "$40[令] $101[甲] $11[，] $101[乙] $41[为] $22[（] $20[【] $100[12]" +
+				" $11[，] $100[34] $11[，] $20[【] $90[测试到底] $11[，] $100[10] $21[】]" +
+				" $21[】] $23[）] $40[令] $101[丙] $41[为] $90[23]",
+		},
 	}
 
 	assertTokens(cases, t)

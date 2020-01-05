@@ -8,7 +8,7 @@ import (
 )
 
 func TestRandomly(t *testing.T) {
-	input := "令甲，乙为（【12，34，【“测试到底”，10】】）；令丙为“23”；a 自 设为12；【12】，得到利益"
+	input := "令甲，乙为（【12，34，【“测试到底”，10】】）\n  令丙为“23”；a 自 设为12；【12】，得到利益"
 	l := lex.NewLexer([]rune(input))
 
 	parser := NewParser(l)
