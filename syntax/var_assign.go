@@ -24,8 +24,9 @@ func (va *VarAssignStmt) statementNode() {}
 // ParseVarAssignStmt - parse general variable assign statement
 //
 // CFG:
-// VarAssignStmt -> ExprT 设为 ExprA           (1)
-//               -> ExprA ， 得到 ExprT          (2)
+// VarAssignStmt -> ExprT 为 ExprA           (1)
+// VarAssignStmt -> ExprT 是 ExprA           (1A)
+//               -> ExprA ， 得到 ExprT       (2)
 //
 // TODO:
 // we need special handling for
@@ -42,7 +43,7 @@ func (p *Parser) ParseVarAssignStmt() (*VarAssignStmt, *error.Error) {
 	// #1. parse the middle one
 	var order int // type (1)
 	t1 := p.current().Type
-	if t1 == lex.TypeAssignW {
+	if t1 == lex.TypeLogicYesW || t1 == lex.TypeLogicYesIIW {
 		order = 1
 		p.next()
 	} else if t1 == lex.TypeCommaSep {

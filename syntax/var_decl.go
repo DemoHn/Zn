@@ -60,10 +60,7 @@ func parseIdentifierList(p *Parser, vNode *VarDeclareStmt) *error.Error {
 		return err
 	}
 	// #1. parse identifier tail
-	if err := parseIdentifierTail(p, vNode); err != nil {
-		return err
-	}
-	return nil
+	return parseIdentifierTail(p, vNode)
 }
 
 func parseIdentifierTail(p *Parser, vNode *VarDeclareStmt) *error.Error {

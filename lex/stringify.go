@@ -20,11 +20,6 @@ func StringifyAllTokens(tks []*Token) string {
 	return strings.Join(tokenStrs, " ")
 }
 
-func ParseTokenSeries(tkSeries string) []*Token {
-	// TODO
-	return nil
-}
-
 // StringifyLines - stringify current parsed lines into readable string info
 // format::=
 //   {lineInfo1} {lineInfo2} {lineInfo3} ...
