@@ -24,12 +24,10 @@ const (
 	// GlyphXXX - 关键词中文名 - 可能出现的关键词位置
 	// GlyphLING - 令 - 令
 	GlyphLING rune = 0x4EE4
-	// GlyphWEI - 为 - 为，设为，不为，成为，作为，是为，何为
+	// GlyphWEI - 为 - 为，不为，成为，作为，是为，何为
 	GlyphWEI rune = 0x4E3A
 	// GlyphSHI - 是 - 是，不是，是为
 	GlyphSHI rune = 0x662F
-	// GlyphSHE - 设 - 设为
-	GlyphSHE rune = 0x8BBE
 	// GlyphRU - 如 - 如何，如果
 	GlyphRU rune = 0x5982
 	// GlyphHE - 何 - 如何，何为
@@ -82,7 +80,7 @@ const (
 	GlyphBI rune = 0x6BD4
 	// GlyphQI - 其 - 其
 	GlyphQI rune = 0x5176
-	// GlyphCI - 此 - 此
+	// GlyphCI - 此 - 此，止之
 	GlyphCI rune = 0x6B64
 	// GlyphZHU - 注 - 注
 	GlyphZHU rune = 0x6CE8
@@ -100,7 +98,7 @@ const (
 
 // KeywordLeads - all glyphs that would be possible of the first character of one keyword.
 var KeywordLeads = []rune{
-	GlyphLING, GlyphWEI, GlyphSHI, GlyphSHE,
+	GlyphLING, GlyphWEI, GlyphSHI,
 	GlyphRU, GlyphYI, GlyphFAN, GlyphBU, GlyphDENG,
 	GlyphDA, GlyphXIAO, GlyphYIi,
 	GlyphDE, GlyphFOU, GlyphMEI,
@@ -271,7 +269,6 @@ const (
 	TypeDeclareW     TokenType = 40 // 令
 	TypeLogicYesW    TokenType = 41 // 为
 	TypeLogicYesIIW  TokenType = 42 // 是
-	TypeAssignW      TokenType = 43 // 设为
 	TypeCondW        TokenType = 44 // 如果
 	TypeFuncW        TokenType = 45 // 如何
 	TypeStaticFuncW  TokenType = 46 // 何为
@@ -302,6 +299,7 @@ const (
 	TypeObjDotIIW     TokenType = 72 // 的
 	TypeObjConstructW TokenType = 73 // 是为
 	TypeLogicEqualW   TokenType = 74 // 等于
+	TypeStaticSelfW   TokenType = 75 // 此之
 	TypeString        TokenType = 90
 	TypeVarQuote      TokenType = 91
 	TypeNumber        TokenType = 100
@@ -313,7 +311,6 @@ var KeywordTypeMap = map[TokenType][]rune{
 	TypeDeclareW:      []rune{GlyphLING},
 	TypeLogicYesW:     []rune{GlyphWEI},
 	TypeLogicYesIIW:   []rune{GlyphSHI},
-	TypeAssignW:       []rune{GlyphSHE, GlyphWEI},
 	TypeCondW:         []rune{GlyphRU, GlyphGUO},
 	TypeFuncW:         []rune{GlyphRU, GlyphHE},
 	TypeStaticFuncW:   []rune{GlyphHE, GlyphWEI},
@@ -343,6 +340,7 @@ var KeywordTypeMap = map[TokenType][]rune{
 	TypeObjDotIIW:     []rune{GlyphDEo},
 	TypeObjConstructW: []rune{GlyphSHI, GlyphWEI},
 	TypeLogicEqualW:   []rune{GlyphDENG, GlyphYU},
+	TypeStaticSelfW:   []rune{GlyphCI, GlyphZHI},
 }
 
 // NewTokenEOF - new EOF token

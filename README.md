@@ -74,7 +74,7 @@ TODO
 ```
 令A，B，C为XX
 
-D设为12
+D为12
 
 EXPR，得E
 ```
