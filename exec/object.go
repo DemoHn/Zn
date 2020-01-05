@@ -1,5 +1,5 @@
 package exec
 
-// ZnObject - the global Zn Object
-type ZnObject struct {
+// ZnObject - the global Zn Object interface
+type ZnObject interface {
 }
