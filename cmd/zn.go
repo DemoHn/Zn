@@ -26,6 +26,7 @@ func execProgram(text string, inpt *exec.Interpreter) (string, error) {
 		return "", err
 	}
 
+	// return with green color
 	return fmt.Sprintf("\x1b[32m%s\x1b[0m\n", nInpt.Execute(programNode)), nil
 }
 
