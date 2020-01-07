@@ -13,14 +13,13 @@ import (
 const version = "rv1"
 
 // ExecuteProgram - read file and execute
-func execProgram(text string, inpt *exec.Interpreter) (string, error) {
+func execProgram(text []rune, inpt *exec.Interpreter) (string, error) {
 	var nInpt *exec.Interpreter = inpt
 	if inpt == nil {
 		nInpt = exec.NewInterpreter()
 	}
 
-	data := []rune(text)
-	p := syntax.NewParser(lex.NewLexer(data))
+	p := syntax.NewParser(lex.NewLexer(text))
 	programNode, err := p.Parse()
 	if err != nil {
 		return "", err
@@ -53,7 +52,7 @@ func EnterREPL() {
 		// append history
 		linerR.AppendHistory(text)
 
-		rtn, errE := execProgram(text, inpt)
+		rtn, errE := execProgram([]rune(text), inpt)
 		if errE != nil {
 			fmt.Printf("[语法错误] %s\n", errE.Error())
 			continue
@@ -61,6 +60,20 @@ func EnterREPL() {
 
 		fmt.Println(rtn)
 	}
+}
+
+// ExecProgram -
+func ExecProgram(file string) {
+	s := lex.Source{}
+	data, _ := s.ReadTextFromFile(file)
+	s.AddSourceInput(data)
+
+	rtn, errE := execProgram(s.Inputs[0].Text, nil)
+	if errE != nil {
+		fmt.Printf("[语法错误] %s\n", errE.Error())
+	}
+
+	fmt.Println(rtn)
 }
 
 // ShowVersion - show version

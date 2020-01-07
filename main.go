@@ -15,14 +15,18 @@ var (
 func main() {
 	flag.Parse()
 
-	// args := flag.Args()
+	args := flag.Args()
 	// show flags
 	if versionFlag {
 		cmd.ShowVersion()
 		os.Exit(0)
 	}
 
-	cmd.EnterREPL()
+	if len(args) > 0 {
+		cmd.ExecProgram(args[0])
+	} else {
+		cmd.EnterREPL()
+	}
 	os.Exit(0)
 }
 
