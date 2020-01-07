@@ -1,46 +1,64 @@
 package cmd
 
 import (
-	"bufio"
 	"fmt"
 	"os"
 
 	"github.com/DemoHn/Zn/exec"
 	"github.com/DemoHn/Zn/lex"
 	"github.com/DemoHn/Zn/syntax"
+	"github.com/peterh/liner"
 )
 
 const version = "rv1"
 
 // ExecuteProgram - read file and execute
-func ExecuteProgram() {
-	// TODO
+func execProgram(text string, inpt *exec.Interpreter) (string, error) {
+	var nInpt *exec.Interpreter = inpt
+	if inpt == nil {
+		nInpt = exec.NewInterpreter()
+	}
+
+	data := []rune(text)
+	p := syntax.NewParser(lex.NewLexer(data))
+	programNode, err := p.Parse()
+	if err != nil {
+		return "", err
+	}
+
+	return fmt.Sprintf("\x1b[32m%s\x1b[0m\n", nInpt.Execute(programNode)), nil
 }
 
 // EnterREPL - enter REPL to handle data
 func EnterREPL() {
-	scanner := bufio.NewScanner(os.Stdin)
+	linerR := liner.NewLiner()
+	linerR.SetCtrlCAborts(true)
+
 	inpt := exec.NewInterpreter()
 
-	fmt.Printf("Zn> ")
-	for scanner.Scan() {
-		// exect
-		data := []rune(scanner.Text())
-		p := syntax.NewParser(lex.NewLexer(data))
-		programNode, err := p.Parse()
+	for {
+		text, err := linerR.Prompt("Zn> ")
 		if err != nil {
-			fmt.Printf("[SyntaxError] %s\n", err.Error())
+			if err == liner.ErrPromptAborted {
+				os.Exit(0)
+			} else if err.Error() == "EOF" {
+				os.Exit(0)
+			} else {
+				fmt.Printf("未知错误：%s\n", err.Error())
+				os.Exit(0)
+			}
+		}
 
-			fmt.Printf("Zn> ")
+		// append history
+		linerR.AppendHistory(text)
+
+		rtn, errE := execProgram(text, inpt)
+		if errE != nil {
+			fmt.Printf("[语法错误] %s\n", errE.Error())
 			continue
 		}
 
-		fmt.Printf("%s\n", inpt.Execute(programNode))
-		fmt.Printf("Zn> ")
-	}
-
-	if scanner.Err() != nil {
-		// handle error.
+		fmt.Println(rtn)
 	}
 }
 
