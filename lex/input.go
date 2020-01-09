@@ -90,7 +90,6 @@ end:
 	}
 
 	is.encBuffer = append(is.encBuffer, p[:t]...)
-	count := 0
 	for len(is.encBuffer) > 0 {
 		r, size := utf8.DecodeRune(is.encBuffer)
 		if r == utf8.RuneError {
@@ -99,7 +98,6 @@ end:
 
 		rs = append(rs, r)
 		is.encBuffer = is.encBuffer[size:]
-		count = count + size
 	}
 	return rs, nil
 }
