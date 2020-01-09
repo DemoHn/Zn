@@ -1,11 +1,23 @@
 package lex
 
 import (
+	"fmt"
 	"testing"
-
-	"github.com/DemoHn/Zn/error"
 )
 
+func TestTT(t *testing.T) {
+	is := NewBufferStream([]byte("世界你好"))
+
+	for !is.End() {
+		rr, err := is.Read(7)
+		if err != nil {
+			t.Error(err)
+		}
+		fmt.Println(string(rr))
+	}
+}
+
+/**
 func TestSource_AddSourceInput(t *testing.T) {
 	type args struct {
 		rawData []byte
@@ -70,3 +82,5 @@ func TestSource_AddSourceInput(t *testing.T) {
 		})
 	}
 }
+
+*/
