@@ -13,6 +13,7 @@ type Lexer struct {
 	chBuffer     []rune // the buffer for parsing & generating tokens
 	lineBuffer   []rune
 	cursor       int
+	peekCursor   int
 	blockSize    int
 }
 
@@ -25,46 +26,52 @@ func NewLexer(in *InputStream) *Lexer {
 		chBuffer:    []rune{},
 		lineBuffer:  []rune{},
 		cursor:      0,
+		peekCursor:  0,
 		blockSize:   256,
 	}
 }
 
 // next - return current rune, and move forward the cursor for 1 character.
 func (l *Lexer) next() rune {
-	if l.cursor+2 >= len(l.lineBuffer) {
-		if l.End() {
-			return EOF
-		}
-		if b, err := l.Read(l.blockSize); err == nil {
-			l.lineBuffer = append(l.lineBuffer, b...)
-		} else {
-			// TODO: handle error
+	if l.peekCursor+2 >= len(l.lineBuffer) {
+		if !l.End() {
+			if b, err := l.Read(l.blockSize); err == nil {
+				l.lineBuffer = append(l.lineBuffer, b...)
+				// add a EOF char manually to mark the end
+				if l.End() {
+					l.lineBuffer = append(l.lineBuffer, EOF)
+				}
+			} else {
+				// TODO: handle error
+			}
 		}
 	}
 
 	// still no data, return EOF directly
-	if l.cursor >= len(l.lineBuffer) {
+	if l.peekCursor >= len(l.lineBuffer) {
 		return EOF
 	}
-	data := l.lineBuffer[l.cursor]
-	l.cursor = l.cursor + 1
+	data := l.lineBuffer[l.peekCursor]
+	l.cursor = l.peekCursor
+	l.peekCursor++
+
 	return data
 }
 
 // peek - get the character of the cursor
 func (l *Lexer) peek() rune {
-	if l.cursor+1 >= len(l.lineBuffer) {
+	if l.peekCursor >= len(l.lineBuffer) {
 		return EOF
 	}
-	return l.lineBuffer[l.cursor+1]
+	return l.lineBuffer[l.peekCursor]
 }
 
 // peek2 - get the next next character without moving the cursor
 func (l *Lexer) peek2() rune {
-	if l.cursor+2 >= len(l.lineBuffer) {
+	if l.peekCursor+1 >= len(l.lineBuffer) {
 		return EOF
 	}
-	return l.lineBuffer[l.cursor+2]
+	return l.lineBuffer[l.peekCursor+1]
 }
 
 // current - get current char value
@@ -78,6 +85,7 @@ func (l *Lexer) current() rune {
 // rebase - rebase cursor within the same line
 func (l *Lexer) rebase(cursor int) {
 	l.cursor = cursor
+	l.peekCursor = cursor + 1
 }
 
 func (l *Lexer) clearBuffer() {

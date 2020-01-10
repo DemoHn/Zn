@@ -289,11 +289,11 @@ func TestNextToken_NumberONLY(t *testing.T) {
 		},
 		{
 			name:        "normal number (start to end)",
-			input:       "123456",
+			input:       "1234567",
 			expectError: false,
 			token: Token{
 				Type:    TypeNumber,
-				Literal: []rune("123456"),
+				Literal: []rune("1234567"),
 			},
 			lineInfo: "",
 		},
