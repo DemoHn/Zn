@@ -11,7 +11,7 @@ import (
 
 // Source stores all source code inputs (whatever from REPL, file, or CLI etc.) as an array.
 type Source struct {
-	streams []InputStream
+	streams []*InputStream
 }
 
 // InputStream stores code text with utf-8 encoding
@@ -25,12 +25,12 @@ type InputStream struct {
 // NewSource - new source
 func NewSource() *Source {
 	return &Source{
-		streams: []InputStream{},
+		streams: []*InputStream{},
 	}
 }
 
 // AddStream -
-func (s *Source) AddStream(stream InputStream) {
+func (s *Source) AddStream(stream *InputStream) {
 	s.streams = append(s.streams, stream)
 }
 

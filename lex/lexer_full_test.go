@@ -111,7 +111,7 @@ func TestNextToken_MixedText(t *testing.T) {
 
 func assertTokens(cases []tokensCase, t *testing.T) {
 	for _, tt := range cases {
-		lex := NewLexer([]rune(tt.input))
+		lex := NewLexer(NewBufferStream([]byte(tt.input)))
 		t.Run(tt.name, func(t *testing.T) {
 			var tErr error
 			var tokens = make([]*Token, 0)
