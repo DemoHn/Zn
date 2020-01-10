@@ -1,14 +1,6 @@
 package lex
 
-import (
-	"regexp"
-	"strconv"
-	"strings"
-	"testing"
-
-	"github.com/DemoHn/Zn/error"
-)
-
+/**
 // TestPushLine - test pushline only
 func TestLineScanner_PushLine(t *testing.T) {
 	cases := []struct {
@@ -127,3 +119,4 @@ func execInput(input string, ls *LineScanner) *error.Error {
 
 	return nil
 }
+*/

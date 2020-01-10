@@ -28,11 +28,11 @@ func StringifyAllTokens(tks []*Token) string {
 //   Space<2>[23,45] or
 //   Tab<4>[0,1] or
 //   Empty<0>
-func StringifyLines(ls *LineScanner) string {
+func StringifyLines(ls *LineStack) string {
 	ss := []string{}
 	var indentChar string
 	// get indent type
-	switch ls.indentType {
+	switch ls.IndentType {
 	case IdetUnknown:
 		indentChar = "Unknown"
 	case IdetSpace:
@@ -42,17 +42,15 @@ func StringifyLines(ls *LineScanner) string {
 	}
 
 	for _, line := range ls.lines {
-		if line.scanState == scanEnd {
-			if line.EmptyLine {
-				ss = append(ss, "Empty<0>")
-			} else {
-				ss = append(ss, fmt.Sprintf(
-					"%s<%d>[%d,%d]",
-					indentChar, line.IndentNum,
-					line.Start, line.End,
-				))
-			}
+		if line.Indents == 0 && len(line.Source) == 0 {
+			ss = append(ss, "Empty<0>")
+		} else {
+			ss = append(ss, fmt.Sprintf(
+				"%s<%d>",
+				indentChar, line.Indents,
+			))
 		}
+
 	}
 	return strings.Join(ss, " ")
 }

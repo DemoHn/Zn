@@ -25,7 +25,7 @@ func TestNextToken_CommentsONLY(t *testing.T) {
 				Type:    TypeComment,
 				Literal: []rune("这是一个长 长 的单行注释comment"),
 			},
-			lineInfo: "Unknown<0>[0,21]",
+			lineInfo: "Unknown<0>",
 		},
 		{
 			name:        "singleLine empty comment",
@@ -35,7 +35,7 @@ func TestNextToken_CommentsONLY(t *testing.T) {
 				Type:    TypeComment,
 				Literal: []rune(""),
 			},
-			lineInfo: "Unknown<0>[0,1]",
+			lineInfo: "Unknown<0>",
 		},
 		{
 			name:        "singleLine empty comment (single quote)",
@@ -45,7 +45,7 @@ func TestNextToken_CommentsONLY(t *testing.T) {
 				Type:    TypeComment,
 				Literal: []rune(" “"),
 			},
-			lineInfo: "Unknown<0>[0,3]",
+			lineInfo: "Unknown<0>",
 		},
 		{
 			name:        "singleLine empty comment (with number)",
@@ -55,7 +55,7 @@ func TestNextToken_CommentsONLY(t *testing.T) {
 				Type:    TypeComment,
 				Literal: []rune(""),
 			},
-			lineInfo: "Unknown<0>[0,12]",
+			lineInfo: "Unknown<0>",
 		},
 		{
 			name:        "singleLine comment with newline",
@@ -65,7 +65,7 @@ func TestNextToken_CommentsONLY(t *testing.T) {
 				Type:    TypeComment,
 				Literal: []rune("注：注：nach nach"),
 			},
-			lineInfo: "Unknown<0>[0,14]",
+			lineInfo: "Unknown<0>",
 		},
 		//// multi-line comment
 		{
@@ -116,7 +116,7 @@ func TestNextToken_CommentsONLY(t *testing.T) {
 				Type:    TypeComment,
 				Literal: []rune("一一\r\n    二二\n三三\n四四"),
 			},
-			lineInfo: "Unknown<0>[0,4] Unknown<0>[7,12] Unknown<0>[14,15]",
+			lineInfo: "Unknown<0> Unknown<0> Unknown<0>",
 		},
 		{
 			name:        "mutlLine comment with quote stack",
@@ -126,7 +126,7 @@ func TestNextToken_CommentsONLY(t *testing.T) {
 				Type:    TypeComment,
 				Literal: []rune("一一「2233」《某本书》注：“”二二\n     "),
 			},
-			lineInfo: "Unknown<0>[0,21]",
+			lineInfo: "Unknown<0>",
 		},
 		{
 			name:        "mutlLine comment with straight quote",
@@ -146,7 +146,7 @@ func TestNextToken_CommentsONLY(t *testing.T) {
 				Type:    TypeComment,
 				Literal: []rune("PKG“”"),
 			},
-			lineInfo: "Unknown<0>[0,7]",
+			lineInfo: "Unknown<0>",
 		},
 	}
 	assertNextToken(cases, t)
@@ -192,7 +192,7 @@ func TestNextToken_StringONLY(t *testing.T) {
 				Type:    TypeString,
 				Literal: []rune("233\n    456\r\n7  "),
 			},
-			lineInfo: "Unknown<0>[0,3] Unknown<0>[5,11]",
+			lineInfo: "Unknown<0> Unknown<0>",
 		},
 	}
 
@@ -537,7 +537,7 @@ func TestNextToken_IdentifierONLY_SUCCESS(t *testing.T) {
 
 func assertNextToken(cases []nextTokenCase, t *testing.T) {
 	for _, tt := range cases {
-		lex := NewLexer([]rune(tt.input))
+		lex := NewLexer(NewBufferStream([]byte(tt.input)))
 		t.Run(tt.name, func(t *testing.T) {
 			tk, err := lex.NextToken()
 			// validate error
@@ -545,8 +545,8 @@ func assertNextToken(cases []nextTokenCase, t *testing.T) {
 				if err != nil {
 					t.Errorf("NextToken() failed! expected no error, but got error")
 					t.Error(err)
-				} else if tt.lineInfo != StringifyLines(lex.lines) {
-					t.Errorf("NextToken() lineInfo expect `%s`, actual `%s`", tt.lineInfo, StringifyLines(lex.lines))
+				} else if tt.lineInfo != StringifyLines(lex.LineStack) {
+					t.Errorf("NextToken() lineInfo expect `%s`, actual `%s`", tt.lineInfo, StringifyLines(lex.LineStack))
 				} else if !reflect.DeepEqual(*tk, tt.token) {
 					t.Errorf("NextToken() return Token failed! expect: %v, got: %v", tt.token, *tk)
 				}
