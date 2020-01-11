@@ -10,6 +10,7 @@ type LineStack struct {
 	IndentType
 	lines []LineInfo
 	scanCursor
+	lineBuffer []rune
 }
 
 // LineInfo - stores the (absolute) start & end index of this line
@@ -65,6 +66,7 @@ func NewLineStack() *LineStack {
 			indents:   0,
 			scanState: scanInit,
 		},
+		lineBuffer: []rune{},
 	}
 }
 
@@ -106,7 +108,7 @@ func (ls *LineStack) SetIndent(count int, t IndentType) *error.Error {
 
 // PushLine - push effective line text into line info
 // change scanState from 1 -> 2
-func (ls *LineStack) PushLine(lineBuffer []rune, lastIndex int) {
+func (ls *LineStack) PushLine(lastIndex int) {
 	idets := ls.scanCursor.indents
 	count := idets
 	if ls.IndentType == IdetSpace {
@@ -116,7 +118,7 @@ func (ls *LineStack) PushLine(lineBuffer []rune, lastIndex int) {
 	// push index
 	line := LineInfo{
 		Indents: idets,
-		Source:  util.Copy(lineBuffer[count : lastIndex+1]),
+		Source:  util.Copy(ls.lineBuffer[count : lastIndex+1]),
 	}
 	ls.lines = append(ls.lines, line)
 	ls.scanCursor.scanState = scanEnd
@@ -137,4 +139,22 @@ func (ls *LineStack) NewLine() {
 func (ls *LineStack) HasScanIndent() bool {
 	state := ls.scanCursor.scanState
 	return state == scanIndent
+}
+
+// AppendLineBuffer - push data to lineBuffer
+func (ls *LineStack) AppendLineBuffer(data []rune) {
+	ls.lineBuffer = append(ls.lineBuffer, data...)
+}
+
+// GetColIndex - get value from lineBuffer
+func (ls *LineStack) GetColIndex(idx int) rune {
+	if idx >= len(ls.lineBuffer) {
+		return EOF
+	}
+	return ls.lineBuffer[idx]
+}
+
+// GetLineBufferSize -
+func (ls *LineStack) GetLineBufferSize() int {
+	return len(ls.lineBuffer)
 }
