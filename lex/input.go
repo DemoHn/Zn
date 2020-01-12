@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"io"
 	"os"
+	"strings"
 	"unicode/utf8"
 
 	"github.com/DemoHn/Zn/error"
@@ -11,7 +12,7 @@ import (
 
 // Source stores all source code inputs (whatever from REPL, file, or CLI etc.) as an array.
 type Source struct {
-	streams []*InputStream
+	Streams []*InputStream
 }
 
 // InputStream stores code text with utf-8 encoding
@@ -25,13 +26,13 @@ type InputStream struct {
 // NewSource - new source
 func NewSource() *Source {
 	return &Source{
-		streams: []*InputStream{},
+		Streams: []*InputStream{},
 	}
 }
 
 // AddStream -
 func (s *Source) AddStream(stream *InputStream) {
-	s.streams = append(s.streams, stream)
+	s.Streams = append(s.Streams, stream)
 }
 
 // InputStream helpers
@@ -57,6 +58,16 @@ func NewFileStream(path string) (*InputStream, *error.Error) {
 // NewBufferStream - create stream from buffer - usually for REPL
 func NewBufferStream(buf []byte) *InputStream {
 	r := bytes.NewReader(buf)
+	return &InputStream{
+		Scope:   "$repl",
+		Reader:  r,
+		readEnd: false,
+	}
+}
+
+// NewTextStream - create stream from text - usually for REPL
+func NewTextStream(text string) *InputStream {
+	r := strings.NewReader(text)
 	return &InputStream{
 		Scope:   "$repl",
 		Reader:  r,

@@ -13,13 +13,13 @@ import (
 const version = "rv1"
 
 // ExecuteProgram - read file and execute
-func execProgram(text []rune, inpt *exec.Interpreter) (string, error) {
+func execProgram(stream *lex.InputStream, inpt *exec.Interpreter) (string, error) {
 	var nInpt *exec.Interpreter = inpt
 	if inpt == nil {
 		nInpt = exec.NewInterpreter()
 	}
 
-	p := syntax.NewParser(lex.NewLexer(text))
+	p := syntax.NewParser(lex.NewLexer(stream))
 	programNode, err := p.Parse()
 	if err != nil {
 		return "", err
@@ -52,7 +52,7 @@ func EnterREPL() {
 		// append history
 		linerR.AppendHistory(text)
 
-		rtn, errE := execProgram([]rune(text), inpt)
+		rtn, errE := execProgram(lex.NewTextStream(text), inpt)
 		if errE != nil {
 			fmt.Printf("[语法错误] %s\n", errE.Error())
 			continue
@@ -65,10 +65,11 @@ func EnterREPL() {
 // ExecProgram -
 func ExecProgram(file string) {
 	s := lex.Source{}
-	data, _ := s.ReadTextFromFile(file)
-	s.AddSourceInput(data)
+	// TODO: add error handling
+	in, _ := lex.NewFileStream(file)
+	s.AddStream(in)
 
-	rtn, errE := execProgram(s.Inputs[0].Text, nil)
+	rtn, errE := execProgram(s.Streams[0], nil)
 	if errE != nil {
 		fmt.Printf("[语法错误] %s\n", errE.Error())
 	}
