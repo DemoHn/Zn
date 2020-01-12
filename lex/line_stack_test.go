@@ -390,6 +390,29 @@ func TestLineStack_LineStackSnapshot(t *testing.T) {
 	}
 }
 
+// test AppendLineBuffer, GetColIndex, GetLineBufferSize
+func TestLineStack_LineBuffer(t *testing.T) {
+	ls := NewLineStack()
+
+	ls.AppendLineBuffer([]rune("123456789"))
+	ls.AppendLineBuffer([]rune("ABCD    EFGH"))
+
+	got := ls.GetLineBufferSize()
+	if got != 21 {
+		t.Errorf("buffer length should be %d, got %d", 21, got)
+	}
+
+	c1 := ls.GetColIndex(4)
+	if c1 != '5' {
+		t.Errorf("c1 should be %v, got %v", '5', c1)
+	}
+
+	c2 := ls.GetColIndex(100)
+	if c2 != EOF {
+		t.Errorf("c2 should be %v, got %v", EOF, c1)
+	}
+}
+
 func assertLineBufferOps(t *testing.T, ls *LineStack, input lineStackOp, snaps []lineStackChangeOp) {
 	// do operation
 	switch input.opstr {
