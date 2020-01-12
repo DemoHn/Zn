@@ -98,10 +98,8 @@ func (ls *LineStack) SetIndent(count int, t IndentType) *error.Error {
 	}
 
 	// set scanCursor
-	ls.scanCursor = scanCursor{
-		indents:   indentNum,
-		scanState: scanIndent,
-	}
+	ls.scanCursor.indents = indentNum
+	ls.scanCursor.scanState = scanIndent
 
 	return nil
 }
@@ -126,7 +124,9 @@ func (ls *LineStack) PushLine(lastIndex int) {
 
 // NewLine - reset scanCurosr
 // change scanState from 2 -> 0
-func (ls *LineStack) NewLine() {
+func (ls *LineStack) NewLine(index int) {
+	// reset start index
+	ls.lineBuffer = ls.lineBuffer[index:]
 	ls.scanCursor = scanCursor{
 		indents:   0,
 		scanState: scanInit,

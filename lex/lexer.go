@@ -136,7 +136,7 @@ head:
 
 //// parsing logics
 func (l *Lexer) parseIndents(ch rune) *error.Error {
-	count := 0
+	count := 1
 	for l.peek() == ch {
 		count++
 		l.next()
@@ -161,12 +161,18 @@ func (l *Lexer) parseCRLF(ch rune) []rune {
 
 		// skip one char since we have judge two chars
 		l.next()
-		l.PushLine(l.cursor)
+		l.PushLine(l.cursor - 2)
+		// new line and reset cursor
+		l.NewLine(l.cursor + 1)
+		l.cursor = -1
 		return []rune{ch, p}
 	}
 	// for LF or CR only
 	// LF: <linux>, CR:<old mac>
-	l.PushLine(l.cursor)
+	l.PushLine(l.cursor - 1)
+	// new line and reset cursor
+	l.NewLine(l.cursor + 1)
+	l.cursor = -1
 	return []rune{ch}
 }
 
@@ -217,6 +223,7 @@ func (l *Lexer) parseComment(ch rune, isMultiLine bool) (*Token, *error.Error) {
 		ch = l.next()
 		switch ch {
 		case EOF:
+			l.rebase(l.cursor - 1)
 			return NewCommentToken(l.chBuffer, isMultiLine), nil
 		case CR, LF:
 			// parse CR,LF first
@@ -266,6 +273,7 @@ func (l *Lexer) parseString(ch rune) (*Token, *error.Error) {
 		ch := l.next()
 		switch ch {
 		case EOF:
+			l.rebase(l.cursor - 1)
 			// after meeting with EOF
 			return NewStringToken(l.chBuffer, firstChar), nil
 		// push quotes
