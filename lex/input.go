@@ -95,7 +95,7 @@ end:
 	if t == 0 {
 		is.readEnd = true
 		if len(is.encBuffer) > 0 {
-			return rs, error.DecodeUTF8Fail()
+			return rs, error.DecodeUTF8Fail(is.encBuffer[0])
 		}
 		return rs, nil
 	}
