@@ -29,7 +29,7 @@ type scanCursor struct {
 }
 
 // IndentType - only TAB or SPACE (U+0020) are supported
-type IndentType uint8
+type IndentType = uint8
 
 // scanState - internal line scan state
 type scanState uint8
@@ -79,14 +79,14 @@ func NewLineStack() *LineStack {
 // 2. when IndentType = SPACE, the count is not 4 * N chars
 func (ls *LineStack) SetIndent(count int, t IndentType) *error.Error {
 	if t == IdetSpace && count%4 != 0 {
-		return error.NewErrorSLOT("SPACE count should be 4 times!")
+		return error.InvalidIndentSpaceCount(count)
 	}
 
 	if ls.IndentType == IdetUnknown && t != IdetUnknown {
 		ls.IndentType = t
 	} else {
 		if ls.IndentType != t {
-			return error.NewErrorSLOT("前后indent char 不同！")
+			return error.InvalidIndentType(ls.IndentType, t)
 		}
 	}
 

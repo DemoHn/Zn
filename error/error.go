@@ -4,7 +4,7 @@ package error
 type Error struct {
 	code   uint16
 	text   string
-	cursor *Cursor
+	cursor Cursor
 	info   interface{}
 }
 
@@ -18,21 +18,35 @@ func (e *Error) GetCode() uint16 {
 	return e.code
 }
 
-// NewError model - only set code - usually for tests
-func NewError(code uint16) *Error {
-	return &Error{
-		code:   code,
-		text:   "",
-		cursor: nil,
-		info:   nil,
-	}
+// SetCursor - set error occurance location
+// for better readability
+func (e *Error) SetCursor(cursor Cursor) {
+	e.cursor = cursor
+}
+
+// Display - display detailed error info to user
+// general format:
+//
+// 在 [FILE] 中，位于第 [LINE] 行：
+//     [ LINE TEXT WITHOUT INDENTS AND CRLF ]
+// ‹[ERRCODE]› [ERRCLASS]：[ERRTEXT]
+//
+// example error:
+//
+// 在 draft/example.zn 中，位于第 12 行：
+//     如果代码不为空：
+//    ^
+// ‹2021› 语法错误：此行现行缩进类型为「TAB」，与前设缩进类型「空格」不符！
+func (e *Error) Display() string {
+	return ""
 }
 
 // Cursor denotes the indicator where the error occurs
 type Cursor struct {
-	file   string
-	line   int
-	column int
+	file    string
+	lineNum int
+	colNum  int
+	text    string
 }
 
 // ErrorClass defines the prefix of error code
@@ -41,39 +55,38 @@ type errorClass struct {
 }
 
 // NewError - new error with subcode
-func (ec *errorClass) NewError(subcode uint8, model Error) Error {
+func (ec *errorClass) NewError(subcode uint8, model Error) *Error {
 	var code uint16
 	// code = prefix << 8 + subcode
 	code = uint16(ec.prefix)
 	code = code*256 + uint16(subcode)
 
 	model.code = code
-	return model
+	return &model
 }
 
 // definitions of all error classes inside the Zn Programming language
 var (
-	// 0x10 - inputError
-	// this error class handles all errors before transforming file inputs
-	// to utf-8 encoding text
-	inputError errorClass
-	// 0x11 - lexError
-	// this error class displays all errors occur during lexing stage.
+	// 0x20 - lexError
+	// this error class displays all errors occur during lexing stage. (including input data)
 	lexError errorClass
+	// 0x21 - ioError
+	// I/O related error (e.g. FileNotFound, OpenFileError, ReadFileError)
+	ioError errorClass
 )
 
 // NewErrorSLOT - a tmp placeholder for adding errors quickly while the
 // details has not been thought carefully.
-// 简单来说就是临时错误的坑
+// 简单来说就是临时错误加个坑位，等到正式写代码的时候再用
 func NewErrorSLOT(text string) *Error {
 	return &Error{
-		code:   0xFFFE,
-		text:   text,
-		cursor: nil,
-		info:   nil,
+		code: 0xFFFE,
+		text: text,
+		info: nil,
 	}
 }
+
 func init() {
-	inputError = errorClass{0x10}
-	lexError = errorClass{0x11}
+	lexError = errorClass{0x20}
+	ioError = errorClass{0x21}
 }
