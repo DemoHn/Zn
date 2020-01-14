@@ -120,3 +120,44 @@ func TestError_DisplayMasks(t *testing.T) {
 		})
 	}
 }
+
+func TestError_CalcCursorOffset(t *testing.T) {
+	text := "汉字TA汉字		245μg测试Ѣ2为什么"
+
+	testcases := []struct {
+		name   string
+		cursor int
+		expect int
+	}{
+		{
+			name:   "negative number",
+			cursor: -1,
+			expect: -1,
+		},
+		{
+			name:   "zero index",
+			cursor: 0,
+			expect: 0,
+		},
+		{
+			name:   "first CJK char",
+			cursor: 1,
+			expect: 2,
+		},
+		{
+			name:   "after tabs",
+			cursor: 8,
+			expect: 12,
+		},
+	}
+
+	for _, tt := range testcases {
+		t.Run(tt.name, func(t *testing.T) {
+			got := calcCursorOffset(text, tt.cursor)
+
+			if got != tt.expect {
+				t.Errorf("expect cursor = %d, got = %d", tt.expect, got)
+			}
+		})
+	}
+}

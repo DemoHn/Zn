@@ -70,7 +70,7 @@ func (e *Error) Display() string {
 			line3 = "    "
 		}
 	} else {
-		line3 = fmt.Sprintf("   %s^", strings.Repeat(" ", e.calcCursorOffset(e.cursor.text, e.cursor.colNum)+1))
+		line3 = fmt.Sprintf("   %s^", strings.Repeat(" ", calcCursorOffset(e.cursor.text, e.cursor.colNum)+1))
 	}
 	// line4
 	if e.onMask(dpHideErrClass) {
@@ -90,7 +90,7 @@ func (e *Error) Display() string {
 	return strings.Join(texts, "\n")
 }
 
-func (e *Error) calcCursorOffset(text string, col int) int {
+func calcCursorOffset(text string, col int) int {
 	if col < 0 {
 		return col
 	}
