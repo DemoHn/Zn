@@ -87,7 +87,7 @@ func (is *InputStream) Read(n int) ([]rune, *error.Error) {
 		if err == io.EOF {
 			goto end
 		}
-		return rs, error.NewErrorSLOT("read file error")
+		return rs, error.ReadFileError(err)
 	}
 
 end:
