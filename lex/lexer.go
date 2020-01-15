@@ -89,6 +89,8 @@ func (l *Lexer) NextToken() (tok *Token, err *error.Error) {
 				err.SetCursor(error.Cursor{
 					File:    l.InputStream.Scope,
 					LineNum: l.CurrentLineNum(),
+					Text:    string(l.GetLineBuffer()),
+					ColNum:  0,
 				})
 			}
 		} else {
@@ -750,11 +752,13 @@ func (l *Lexer) parseIdentifier(ch rune) (*Token, *error.Error) {
 func (l *Lexer) moveAndSetCursor(err *error.Error) {
 	curr := l.cursor
 	count := curr
-
+	// default show all buffer
+	buf := l.GetLineBuffer()
 	cursor := error.Cursor{
 		File:    l.InputStream.Scope,
 		ColNum:  curr,
 		LineNum: l.CurrentLineNum(),
+		Text:    string(buf),
 	}
 
 	defer func() {
@@ -769,7 +773,6 @@ func (l *Lexer) moveAndSetCursor(err *error.Error) {
 		count++
 	}
 
-	buf := l.GetLineBuffer()
 	cursor.Text = string(buf[:count+1])
 	err.SetCursor(cursor)
 }
