@@ -245,7 +245,7 @@ func (l *Lexer) parseComment(ch rune, isMultiLine bool) (*Token, *error.Error) {
 	l.clearBuffer()
 	if isMultiLine {
 		if !l.quoteStack.Push(ch) {
-			return nil, error.NewErrorSLOT("push stack is full")
+			return nil, error.QuoteStackFull(l.quoteStack.GetMaxSize())
 		}
 	}
 	// iterate
@@ -272,7 +272,7 @@ func (l *Lexer) parseComment(ch rune, isMultiLine bool) (*Token, *error.Error) {
 				// push left quotes
 				if util.Contains(ch, LeftQuotes) {
 					if !l.quoteStack.Push(ch) {
-						return nil, error.NewErrorSLOT("quote stack if full")
+						return nil, error.QuoteStackFull(l.quoteStack.GetMaxSize())
 					}
 				}
 				// pop right quotes if possible
@@ -310,7 +310,7 @@ func (l *Lexer) parseString(ch rune) (*Token, *error.Error) {
 		case LeftQuoteI, LeftQuoteII, LeftQuoteIII, LeftQuoteIV, LeftQuoteV:
 			l.pushBuffer(ch)
 			if !l.quoteStack.Push(ch) {
-				return nil, error.NewErrorSLOT("quote stack is full")
+				return nil, error.QuoteStackFull(l.quoteStack.GetMaxSize())
 			}
 		// pop quotes if match
 		case RightQuoteI, RightQuoteII, RightQuoteIII, RightQuoteIV, RightQuoteV:
@@ -359,10 +359,10 @@ func (l *Lexer) parseVarQuote(ch rune) (*Token, *error.Error) {
 				l.pushBuffer(ch)
 				count++
 				if count > maxIdentifierLength {
-					return nil, error.NewErrorSLOT("invalid syntax: 变量名太长")
+					return nil, error.IdentifierExceedLength(maxIdentifierLength)
 				}
 			} else {
-				return nil, error.NewErrorSLOT("invalid syntax: invalid var")
+				return nil, error.InvalidIdentifier()
 			}
 		}
 	}
@@ -430,7 +430,7 @@ end:
 		l.rebase(l.cursor - 1)
 		return NewNumberToken(l.chBuffer), nil
 	}
-	return nil, error.NewErrorSLOT("invalid number")
+	return nil, error.InvalidChar(ch)
 }
 
 // parseMarkers -
@@ -462,7 +462,7 @@ func (l *Lexer) parseMarkers(ch rune) (*Token, *error.Error) {
 			l.pushBuffer(l.next())
 			return NewMarkToken(l.chBuffer, TypeMoreParam), nil
 		}
-		return nil, error.NewErrorSLOT("invalid ellipsis")
+		return nil, error.InvalidSingleEllipsis()
 	case LeftBracket:
 		return NewMarkToken(l.chBuffer, TypeArrayQuoteL), nil
 	case RightBracket:
@@ -476,12 +476,11 @@ func (l *Lexer) parseMarkers(ch rune) (*Token, *error.Error) {
 			l.pushBuffer(l.next())
 			return NewMarkToken(l.chBuffer, TypeMapData), nil
 		}
-		return nil, error.NewErrorSLOT("invalid single euqal")
+		return nil, error.InvalidSingleEqual()
 	case DoubleArrow:
 		return NewMarkToken(l.chBuffer, TypeMapData), nil
 	}
-
-	return nil, error.NewErrorSLOT("invalid marker")
+	return nil, error.InvalidChar(ch)
 }
 
 // parseKeyword -
@@ -703,7 +702,7 @@ func (l *Lexer) parseIdentifier(ch rune) (*Token, *error.Error) {
 	}, MarkLeads...)
 
 	if !isIdentifierChar(ch, true) {
-		return nil, error.NewErrorSLOT("invalid identifier")
+		return nil, error.InvalidIdentifier()
 	}
 	// push first char
 	l.pushBuffer(ch)
@@ -739,13 +738,13 @@ func (l *Lexer) parseIdentifier(ch rune) (*Token, *error.Error) {
 
 		if isIdentifierChar(ch, false) {
 			if count >= maxIdentifierLength {
-				return nil, error.NewErrorSLOT("exceed length")
+				return nil, error.IdentifierExceedLength(maxIdentifierLength)
 			}
 			l.pushBuffer(ch)
 			count++
 			continue
 		}
-		return nil, error.NewErrorSLOT("invalid char")
+		return nil, error.InvalidChar(ch)
 	}
 }
 
