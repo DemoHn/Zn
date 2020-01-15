@@ -53,9 +53,9 @@ func (e *Error) Display() string {
 			line1 = fmt.Sprintf("在第 %d 行发现异常：", e.cursor.LineNum)
 		}
 	} else if e.onMask(dpHideLineNum) {
-		line1 = fmt.Sprintf("在 %s 中发现异常：", e.cursor.File)
+		line1 = fmt.Sprintf("在「%s」中发现异常：", e.cursor.File)
 	} else {
-		line1 = fmt.Sprintf("在 %s 中，位于第 %d 行发现异常：", e.cursor.File, e.cursor.LineNum)
+		line1 = fmt.Sprintf("在「%s」中，位于第 %d 行发现异常：", e.cursor.File, e.cursor.LineNum)
 	}
 	// line2
 	if e.onMask(dpHideLineText) {

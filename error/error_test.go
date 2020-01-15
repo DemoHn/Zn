@@ -26,7 +26,7 @@ func TestError_DisplayMasks(t *testing.T) {
 			name: "show all 0x00",
 			mask: 0x0000,
 			expect: []string{
-				"在 draft/example.zn 中，位于第 3 行发现异常：",
+				"在「draft/example.zn」中，位于第 3 行发现异常：",
 				"    233如果梦想成真，：",
 				"         ^",
 				"‹2045› 语法异常：这是一个测试用的异常信息",
@@ -46,7 +46,7 @@ func TestError_DisplayMasks(t *testing.T) {
 			name: "hide line num 0x04",
 			mask: dpHideLineNum,
 			expect: []string{
-				"在 draft/example.zn 中发现异常：",
+				"在「draft/example.zn」中发现异常：",
 				"    233如果梦想成真，：",
 				"         ^",
 				"‹2045› 语法异常：这是一个测试用的异常信息",
@@ -66,7 +66,7 @@ func TestError_DisplayMasks(t *testing.T) {
 			name: "hide line text 0x08",
 			mask: dpHideLineText,
 			expect: []string{
-				"在 draft/example.zn 中，位于第 3 行发现异常：",
+				"在「draft/example.zn」中，位于第 3 行发现异常：",
 				"‹2045› 语法异常：这是一个测试用的异常信息",
 			},
 		},
@@ -74,7 +74,7 @@ func TestError_DisplayMasks(t *testing.T) {
 			name: "hide line cursor only 0x02",
 			mask: dpHideLineCursor,
 			expect: []string{
-				"在 draft/example.zn 中，位于第 3 行发现异常：",
+				"在「draft/example.zn」中，位于第 3 行发现异常：",
 				"    233如果梦想成真，：",
 				"    ",
 				"‹2045› 语法异常：这是一个测试用的异常信息",
@@ -84,7 +84,7 @@ func TestError_DisplayMasks(t *testing.T) {
 			name: "hide line cursor and text 0x0A",
 			mask: dpHideLineCursor | dpHideLineText,
 			expect: []string{
-				"在 draft/example.zn 中，位于第 3 行发现异常：",
+				"在「draft/example.zn」中，位于第 3 行发现异常：",
 				"‹2045› 语法异常：这是一个测试用的异常信息",
 			},
 		},
@@ -92,7 +92,7 @@ func TestError_DisplayMasks(t *testing.T) {
 			name: "hide err class only 0x10",
 			mask: dpHideErrClass,
 			expect: []string{
-				"在 draft/example.zn 中，位于第 3 行发现异常：",
+				"在「draft/example.zn」中，位于第 3 行发现异常：",
 				"    233如果梦想成真，：",
 				"         ^",
 				"这是一个测试用的异常信息",
