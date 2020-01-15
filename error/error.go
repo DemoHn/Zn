@@ -50,18 +50,18 @@ func (e *Error) Display() string {
 		if e.onMask(dpHideLineNum) {
 			line1 = "发现异常："
 		} else {
-			line1 = fmt.Sprintf("在第 %d 行发现异常：", e.cursor.lineNum)
+			line1 = fmt.Sprintf("在第 %d 行发现异常：", e.cursor.LineNum)
 		}
 	} else if e.onMask(dpHideLineNum) {
-		line1 = fmt.Sprintf("在 %s 中发现异常：", e.cursor.file)
+		line1 = fmt.Sprintf("在 %s 中发现异常：", e.cursor.File)
 	} else {
-		line1 = fmt.Sprintf("在 %s 中，位于第 %d 行发现异常：", e.cursor.file, e.cursor.lineNum)
+		line1 = fmt.Sprintf("在 %s 中，位于第 %d 行发现异常：", e.cursor.File, e.cursor.LineNum)
 	}
 	// line2
 	if e.onMask(dpHideLineText) {
 		line2 = ""
 	} else {
-		line2 = fmt.Sprintf("    %s", e.cursor.text)
+		line2 = fmt.Sprintf("    %s", e.cursor.Text)
 	}
 	// line3
 	if e.onMask(dpHideLineText) || e.onMask(dpHideLineCursor) {
@@ -70,7 +70,7 @@ func (e *Error) Display() string {
 			line3 = "    "
 		}
 	} else {
-		line3 = fmt.Sprintf("   %s^", strings.Repeat(" ", calcCursorOffset(e.cursor.text, e.cursor.colNum)+1))
+		line3 = fmt.Sprintf("   %s^", strings.Repeat(" ", calcCursorOffset(e.cursor.Text, e.cursor.ColNum)+1))
 	}
 	// line4
 	if e.onMask(dpHideErrClass) {
@@ -145,10 +145,10 @@ const (
 
 // Cursor denotes the indicator where the error occurs
 type Cursor struct {
-	file    string
-	lineNum int
-	colNum  int
-	text    string
+	File    string
+	LineNum int
+	ColNum  int
+	Text    string
 }
 
 // ErrorClass defines the prefix of error code

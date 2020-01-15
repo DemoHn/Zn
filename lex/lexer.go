@@ -40,7 +40,10 @@ func (l *Lexer) next() rune {
 			if b, err := l.Read(l.blockSize); err == nil {
 				l.AppendLineBuffer(b)
 			} else {
-				// TODO: handle error
+				// throw the error globally
+				// it will be handled (recovered) in NextToken(),
+				// similiar with try-catch statement.
+				panic(err)
 			}
 		}
 	}
@@ -78,13 +81,31 @@ func (l *Lexer) SetBlockSize(size int) {
 }
 
 // NextToken - parse and generate the next token (including comments)
-func (l *Lexer) NextToken() (*Token, *error.Error) {
+func (l *Lexer) NextToken() (tok *Token, err *error.Error) {
+	defer func() {
+		if r := recover(); r != nil {
+			if verr, ok := r.(*error.Error); ok {
+				err = verr
+				err.SetCursor(error.Cursor{
+					File:    l.InputStream.Scope,
+					LineNum: l.CurrentLineNum(),
+				})
+			}
+		} else {
+			if err != nil {
+				// move and set cursor for the incoming error
+				l.moveAndSetCursor(err)
+			}
+		}
+	}()
+
 head:
 	var ch = l.next()
 	switch ch {
 	case EOF:
 		l.PushLine(l.cursor - 1)
-		return NewTokenEOF(), nil
+		tok = NewTokenEOF()
+		return
 	case SP, TAB:
 		// if indent has been scanned, it should be regarded as whitespaces
 		// (it's totally ignored)
@@ -103,16 +124,19 @@ head:
 		cursor := l.cursor
 		isComment, isMultiLine := l.validateComment(ch)
 		if isComment {
-			return l.parseComment(l.GetColIndex(l.cursor), isMultiLine)
+			tok, err = l.parseComment(l.GetColIndex(l.cursor), isMultiLine)
+			return
 		}
 
 		l.rebase(cursor)
 		// goto normal identifier
 	// left quotes
 	case LeftQuoteI, LeftQuoteII, LeftQuoteIII, LeftQuoteIV, LeftQuoteV:
-		return l.parseString(ch)
+		tok, err = l.parseString(ch)
+		return
 	case MiddleDot:
-		return l.parseVarQuote(ch)
+		tok, err = l.parseVarQuote(ch)
+		return
 	default:
 		// skip whitespaces
 		if isWhiteSpace(ch) {
@@ -121,17 +145,21 @@ head:
 		}
 		// parse number
 		if isNumber(ch) || ch == '+' || ch == '-' {
-			return l.parseNumber(ch)
+			tok, err = l.parseNumber(ch)
+			return
 		}
 		if util.Contains(ch, MarkLeads) {
-			return l.parseMarkers(ch)
+			tok, err = l.parseMarkers(ch)
+			return
 		}
 		// suppose it's a keyword
 		if isKeyword, tk := l.parseKeyword(ch, true); isKeyword {
-			return tk, nil
+			tok = tk
+			return
 		}
 	}
-	return l.parseIdentifier(ch)
+	tok, err = l.parseIdentifier(ch)
+	return
 }
 
 //// parsing logics
@@ -717,4 +745,31 @@ func (l *Lexer) parseIdentifier(ch rune) (*Token, *error.Error) {
 		}
 		return nil, error.NewErrorSLOT("invalid char")
 	}
+}
+
+func (l *Lexer) moveAndSetCursor(err *error.Error) {
+	curr := l.cursor
+	count := curr
+
+	cursor := error.Cursor{
+		File:    l.InputStream.Scope,
+		ColNum:  curr,
+		LineNum: l.CurrentLineNum(),
+	}
+
+	defer func() {
+		// recover but not handle it
+		recover()
+		err.SetCursor(cursor)
+	}()
+
+	// move on util to the line end
+	for !util.Contains(l.peek(), []rune{CR, LF, EOF}) {
+		l.next()
+		count++
+	}
+
+	buf := l.GetLineBuffer()
+	cursor.Text = string(buf[:count+1])
+	err.SetCursor(cursor)
 }

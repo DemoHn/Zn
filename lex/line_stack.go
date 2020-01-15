@@ -158,3 +158,16 @@ func (ls *LineStack) GetColIndex(idx int) rune {
 func (ls *LineStack) GetLineBufferSize() int {
 	return len(ls.lineBuffer)
 }
+
+// GetLineBuffer -
+func (ls *LineStack) GetLineBuffer() []rune {
+	return ls.lineBuffer
+}
+
+// CurrentLineNum -
+func (ls *LineStack) CurrentLineNum() int {
+	if ls.scanCursor.scanState == scanEnd {
+		return len(ls.lines)
+	}
+	return len(ls.lines) + 1
+}
