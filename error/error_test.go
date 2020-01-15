@@ -10,10 +10,10 @@ func TestError_DisplayMasks(t *testing.T) {
 		code: 0x2045,
 		text: "这是一个测试用的异常信息",
 		cursor: Cursor{
-			file:    "draft/example.zn",
-			lineNum: 3,
-			colNum:  4,
-			text:    "233如果梦想成真，：",
+			File:    "draft/example.zn",
+			LineNum: 3,
+			ColNum:  4,
+			Text:    "233如果梦想成真，：",
 		},
 	}
 

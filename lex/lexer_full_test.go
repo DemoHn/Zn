@@ -1,6 +1,7 @@
 package lex
 
 import (
+	"fmt"
 	"testing"
 )
 
@@ -138,10 +139,26 @@ func TestNextToken_MixedText(t *testing.T) {
 	assertTokens(cases, t)
 }
 
+func TestLL(t *testing.T) {
+	input := "那那那那那那那那那\r\n那那那那那那那那 那那那那那那那那 那那那那那那那那 3那那那那那那那QQQ "
+	lex := NewLexer(NewTextStream(input))
+
+	for {
+		tk, err := lex.NextToken()
+		if err != nil {
+			fmt.Println(err.Display())
+			break
+		}
+		if tk.Type == TypeEOF {
+			break
+		}
+	}
+}
+
 func assertTokens(cases []tokensCase, t *testing.T) {
 	for _, tt := range cases {
 
-		lex := NewLexer(NewBufferStream([]byte(tt.input)))
+		lex := NewLexer(NewTextStream(tt.input))
 		t.Run(tt.name, func(t *testing.T) {
 			var tErr error
 			var tokens = make([]*Token, 0)
