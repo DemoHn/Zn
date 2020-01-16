@@ -2,6 +2,8 @@ package lex
 
 import (
 	"fmt"
+	"regexp"
+	"strconv"
 	"strings"
 )
 
@@ -18,6 +20,23 @@ func StringifyAllTokens(tks []*Token) string {
 		tokenStrs = append(tokenStrs, stringifyToken(tk))
 	}
 	return strings.Join(tokenStrs, " ")
+}
+
+// ParseTokenStr - from token str to tokens
+func ParseTokenStr(str string) []Token {
+	tks := make([]Token, 0)
+	r := regexp.MustCompile(`\$(\d+)\[(.+?)\]`)
+	matches := r.FindAllStringSubmatch(str, -1)
+
+	for _, match := range matches {
+		n, _ := strconv.Atoi(match[1])
+		tks = append(tks, Token{
+			Type:    TokenType(n),
+			Literal: []rune(match[2]),
+		})
+	}
+
+	return tks
 }
 
 // StringifyLines - stringify current parsed lines into readable string info

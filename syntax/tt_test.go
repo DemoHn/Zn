@@ -19,4 +19,7 @@ func TestRandomly(t *testing.T) {
 
 	data := StringifyAST(ast)
 	fmt.Println(data)
+
+	q := lex.ParseTokenStr("$16[DIU] $17[DIU]")
+	fmt.Println(q)
 }
