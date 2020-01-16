@@ -15,7 +15,7 @@ type ProgramNode struct {
 
 // Parser - parse all nodes
 type Parser struct {
-	lexer  *lex.Lexer
+	*lex.Lexer
 	tokens [3]*lex.Token
 }
 
@@ -34,31 +34,41 @@ type Statement interface {
 // NewParser -
 func NewParser(l *lex.Lexer) *Parser {
 	p := &Parser{
-		lexer: l,
+		Lexer: l,
 	}
 	// read current and peek token
-	p.next()
-	p.next()
-	p.next()
 	return p
 }
 
 // Parse - parse all tokens into an AST (stored as ProgramNode)
-func (p *Parser) Parse() (*ProgramNode, *error.Error) {
-	pg := &ProgramNode{
+func (p *Parser) Parse() (pg *ProgramNode, err *error.Error) {
+	defer func() {
+		if err != nil {
+			p.MoveAndSetCursor(err)
+		}
+	}()
+
+	// pre-read tokens
+	for i := 0; i < 3; i++ {
+		err = p.next()
+		if err != nil {
+			return
+		}
+	}
+	pg = &ProgramNode{
 		Children: []Statement{},
 	}
 	for p.current().Type != lex.TypeEOF {
-		err := p.ParseStatement(pg)
+		err = p.ParseStatement(pg)
 		if err != nil {
-			return nil, err
+			return
 		}
 	}
-	return pg, nil
+	return
 }
 
 func (p *Parser) next() *error.Error {
-	tk, err := p.lexer.NextToken()
+	tk, err := p.NextToken()
 	if err != nil {
 		return err
 	}
@@ -91,7 +101,7 @@ func (p *Parser) consume(validTypes ...lex.TokenType) *error.Error {
 			return p.next()
 		}
 	}
-	return error.NewErrorSLOT("syntax error")
+	return error.InvalidSyntax()
 }
 
 // consume one token with error func
@@ -104,7 +114,7 @@ func (p *Parser) consumeFunc(callback func(*lex.Token), validTypes ...lex.TokenT
 			return p.next()
 		}
 	}
-	return error.NewErrorSLOT("syntax error")
+	return error.InvalidSyntax()
 }
 
 //// parse element functions
@@ -164,7 +174,7 @@ func (p *Parser) ParseExpression() (Expression, *error.Error) {
 		}
 		tk = token
 	default:
-		return nil, error.NewErrorSLOT("no match expression")
+		return nil, error.InvalidSyntax()
 	}
 	return tk, nil
 }
