@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/DemoHn/Zn/error"
 	"github.com/DemoHn/Zn/exec"
 	"github.com/DemoHn/Zn/lex"
 	"github.com/DemoHn/Zn/syntax"
@@ -13,7 +14,7 @@ import (
 const version = "rv1"
 
 // ExecuteProgram - read file and execute
-func execProgram(stream *lex.InputStream, inpt *exec.Interpreter) (string, error) {
+func execProgram(stream *lex.InputStream, inpt *exec.Interpreter) (string, *error.Error) {
 	var nInpt *exec.Interpreter = inpt
 	if inpt == nil {
 		nInpt = exec.NewInterpreter()
@@ -54,7 +55,7 @@ func EnterREPL() {
 
 		rtn, errE := execProgram(lex.NewTextStream(text), inpt)
 		if errE != nil {
-			fmt.Printf("[语法错误] %s\n", errE.Error())
+			fmt.Printf("%s\n", errE.Display())
 			continue
 		}
 

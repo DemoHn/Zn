@@ -91,12 +91,13 @@ func (l *Lexer) NextToken() (tok *Token, err *error.Error) {
 					LineNum: l.CurrentLineNum(),
 					Text:    string(l.GetLineBuffer()),
 					ColNum:  0,
+					SetFlag: true,
 				})
 			}
 		} else {
 			if err != nil {
 				// move and set cursor for the incoming error
-				l.moveAndSetCursor(err)
+				l.MoveAndSetCursor(err)
 			}
 		}
 	}()
@@ -748,7 +749,9 @@ func (l *Lexer) parseIdentifier(ch rune) (*Token, *error.Error) {
 	}
 }
 
-func (l *Lexer) moveAndSetCursor(err *error.Error) {
+// MoveAndSetCursor - retrieve full text of the line and set the current cursor
+// to display errors
+func (l *Lexer) MoveAndSetCursor(err *error.Error) {
 	curr := l.cursor
 	count := curr
 	// default show all buffer
@@ -758,6 +761,7 @@ func (l *Lexer) moveAndSetCursor(err *error.Error) {
 		ColNum:  curr,
 		LineNum: l.CurrentLineNum(),
 		Text:    string(buf),
+		SetFlag: true,
 	}
 
 	defer func() {

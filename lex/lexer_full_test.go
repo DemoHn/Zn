@@ -140,7 +140,7 @@ func TestNextToken_MixedText(t *testing.T) {
 }
 
 func TestLL(t *testing.T) {
-	input := "那那那那那那那那那\r\n那那那那那那那那 那那那那那那那那 那那那那那那那那 3那那那那那那那QQQ "
+	input := "那那那那那那那那那\r\n那那那那那那那那 那那那那那那那那 那那那那那那那那 3那那那那那那那 "
 	lex := NewLexer(NewTextStream(input))
 
 	for {
