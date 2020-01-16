@@ -15,10 +15,8 @@ type ProgramNode struct {
 
 // Parser - parse all nodes
 type Parser struct {
-	lexer        *lex.Lexer
-	currentToken *lex.Token
-	peekToken    *lex.Token
-	peek2Token   *lex.Token
+	lexer  *lex.Lexer
+	tokens [3]*lex.Token
 }
 
 // Expression - a special type of statement
@@ -65,22 +63,22 @@ func (p *Parser) next() *error.Error {
 		return err
 	}
 
-	p.currentToken = p.peekToken
-	p.peekToken = p.peek2Token
-	p.peek2Token = tk
+	p.tokens[0] = p.tokens[1]
+	p.tokens[1] = p.tokens[2]
+	p.tokens[2] = tk
 	return nil
 }
 
 func (p *Parser) current() *lex.Token {
-	return p.currentToken
+	return p.tokens[0]
 }
 
 func (p *Parser) peek() *lex.Token {
-	return p.peekToken
+	return p.tokens[1]
 }
 
 func (p *Parser) peek2() *lex.Token {
-	return p.peek2Token
+	return p.tokens[2]
 }
 
 // consume one token (without callback), will return error if the incoming token (p.currentToken)
