@@ -16,7 +16,8 @@ type ProgramNode struct {
 // Parser - parse all nodes
 type Parser struct {
 	*lex.Lexer
-	tokens [3]*lex.Token
+	tokens     [3]*lex.Token
+	mockTokens mockTokens
 }
 
 // Expression - a special type of statement
@@ -31,10 +32,17 @@ type Statement interface {
 	statementNode()
 }
 
+type mockTokens struct {
+	tokens       []lex.Token
+	cursor       int
+	useMockToken bool
+}
+
 // NewParser -
 func NewParser(l *lex.Lexer) *Parser {
 	p := &Parser{
-		Lexer: l,
+		Lexer:      l,
+		mockTokens: mockTokens{}, // mockTokens data, for unit testing
 	}
 	// read current and peek token
 	return p
@@ -67,10 +75,33 @@ func (p *Parser) Parse() (pg *ProgramNode, err *error.Error) {
 	return
 }
 
+// InitMockToken - init mockToken for parser
+// after that, tokens will be retrieved directly from provided token list instead of lexer.
+// this API is used actively for unit testing.
+func (p *Parser) InitMockToken(tokens []lex.Token) {
+	p.mockTokens = mockTokens{
+		tokens:       tokens,
+		cursor:       0,
+		useMockToken: true,
+	}
+}
+
 func (p *Parser) next() *error.Error {
-	tk, err := p.NextToken()
-	if err != nil {
-		return err
+	var tk *lex.Token
+	var err *error.Error
+	// use pre-load token list
+	if p.mockTokens.useMockToken {
+		if p.mockTokens.cursor >= len(p.mockTokens.tokens) {
+			tk = lex.NewTokenEOF()
+		} else {
+			tk = &(p.mockTokens.tokens[p.mockTokens.cursor])
+			p.mockTokens.cursor = p.mockTokens.cursor + 1
+		}
+	} else {
+		tk, err = p.NextToken()
+		if err != nil {
+			return err
+		}
 	}
 
 	p.tokens[0] = p.tokens[1]
