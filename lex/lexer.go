@@ -88,7 +88,7 @@ func (l *Lexer) NextToken() (tok *Token, err *error.Error) {
 				err = verr
 				err.SetCursor(error.Cursor{
 					File:    l.InputStream.Scope,
-					LineNum: l.CurrentLineNum(),
+					LineNum: l.CurrentLine,
 					Text:    string(l.GetLineBuffer()),
 					ColNum:  0,
 					SetFlag: true,
@@ -97,7 +97,7 @@ func (l *Lexer) NextToken() (tok *Token, err *error.Error) {
 		} else {
 			if err != nil {
 				// move and set cursor for the incoming error
-				l.MoveAndSetCursor(err)
+				l.moveAndSetCursor(err)
 			}
 		}
 	}()
@@ -107,7 +107,7 @@ head:
 	switch ch {
 	case EOF:
 		l.PushLine(l.cursor - 1)
-		tok = NewTokenEOF()
+		tok = NewTokenEOF(l.CurrentLine, l.cursor)
 		return
 	case SP, TAB:
 		// if indent has been scanned, it should be regarded as whitespaces
@@ -249,18 +249,26 @@ func (l *Lexer) parseComment(ch rune, isMultiLine bool) (*Token, *error.Error) {
 			return nil, error.QuoteStackFull(l.quoteStack.GetMaxSize())
 		}
 	}
+	rg := TokenRange{
+		StartLine: l.CurrentLine,
+		StartCol:  l.cursor,
+	}
 	// iterate
 	for {
 		ch = l.next()
 		switch ch {
 		case EOF:
 			l.rebase(l.cursor - 1)
-			return NewCommentToken(l.chBuffer, isMultiLine), nil
+			rg.EndLine = l.CurrentLine
+			rg.EndCol = l.cursor
+			return NewCommentToken(l.chBuffer, isMultiLine, rg), nil
 		case CR, LF:
 			// parse CR,LF first
 			nl := l.parseCRLF(ch)
 			if !isMultiLine {
-				return NewCommentToken(l.chBuffer, isMultiLine), nil
+				rg.EndLine = l.CurrentLine
+				rg.EndCol = l.cursor
+				return NewCommentToken(l.chBuffer, isMultiLine, rg), nil
 			}
 			// for multi-line comment blocks, CRLF is also included
 			l.pushBuffer(nl...)
@@ -284,7 +292,9 @@ func (l *Lexer) parseComment(ch rune, isMultiLine bool) (*Token, *error.Error) {
 					}
 					// stop quoting
 					if l.quoteStack.IsEmpty() {
-						return NewCommentToken(l.chBuffer, isMultiLine), nil
+						rg.EndLine = l.CurrentLine
+						rg.EndCol = l.cursor
+						return NewCommentToken(l.chBuffer, isMultiLine, rg), nil
 					}
 				}
 			}
@@ -299,6 +309,10 @@ func (l *Lexer) parseString(ch rune) (*Token, *error.Error) {
 	l.clearBuffer()
 	l.quoteStack.Push(ch)
 	firstChar := ch
+	rg := TokenRange{
+		StartLine: l.CurrentLine,
+		StartCol:  l.cursor,
+	}
 	// iterate
 	for {
 		ch := l.next()
@@ -306,7 +320,9 @@ func (l *Lexer) parseString(ch rune) (*Token, *error.Error) {
 		case EOF:
 			l.rebase(l.cursor - 1)
 			// after meeting with EOF
-			return NewStringToken(l.chBuffer, firstChar), nil
+			rg.EndLine = l.CurrentLine
+			rg.EndCol = l.cursor
+			return NewStringToken(l.chBuffer, firstChar, rg), nil
 		// push quotes
 		case LeftQuoteI, LeftQuoteII, LeftQuoteIII, LeftQuoteIV, LeftQuoteV:
 			l.pushBuffer(ch)
@@ -321,7 +337,9 @@ func (l *Lexer) parseString(ch rune) (*Token, *error.Error) {
 			}
 			// stop quoting
 			if l.quoteStack.IsEmpty() {
-				return NewStringToken(l.chBuffer, firstChar), nil
+				rg.EndLine = l.CurrentLine
+				rg.EndCol = l.cursor
+				return NewStringToken(l.chBuffer, firstChar, rg), nil
 			}
 			l.pushBuffer(ch)
 		case CR, LF:
@@ -339,6 +357,10 @@ func (l *Lexer) parseString(ch rune) (*Token, *error.Error) {
 func (l *Lexer) parseVarQuote(ch rune) (*Token, *error.Error) {
 	// setup
 	l.clearBuffer()
+	rg := TokenRange{
+		StartLine: l.CurrentLine,
+		EndLine:   l.cursor,
+	}
 	// iterate
 	count := 0
 	for {
@@ -348,9 +370,13 @@ func (l *Lexer) parseVarQuote(ch rune) (*Token, *error.Error) {
 		switch ch {
 		case EOF:
 			l.rebase(l.cursor - 1)
-			return NewVarQuoteToken(l.chBuffer), nil
+			rg.EndLine = l.CurrentLine
+			rg.EndCol = l.cursor
+			return NewVarQuoteToken(l.chBuffer, rg), nil
 		case MiddleDot:
-			return NewVarQuoteToken(l.chBuffer), nil
+			rg.EndLine = l.CurrentLine
+			rg.EndCol = l.cursor
+			return NewVarQuoteToken(l.chBuffer, rg), nil
 		default:
 			// ignore white-spaces!
 			if isWhiteSpace(ch) {
@@ -373,6 +399,11 @@ func (l *Lexer) parseVarQuote(ch rune) (*Token, *error.Error) {
 func (l *Lexer) parseNumber(ch rune) (*Token, *error.Error) {
 	// setup
 	l.clearBuffer()
+	rg := TokenRange{
+		StartLine: l.CurrentLine,
+		StartCol:  l.cursor,
+	}
+
 	// hand-written regex parser
 	// ref: https://cyberzhg.github.io/toolbox/min_dfa?regex=KG18cCk/TisuP04rKChlfEUpKG18cCk/TispPw==
 	// or the documentation has declared that.
@@ -429,7 +460,9 @@ end:
 	if util.ContainsInt(state, endStates) {
 		// back to last available char
 		l.rebase(l.cursor - 1)
-		return NewNumberToken(l.chBuffer), nil
+		rg.EndLine = l.CurrentLine
+		rg.EndCol = l.cursor
+		return NewNumberToken(l.chBuffer, rg), nil
 	}
 	return nil, error.InvalidChar(ch)
 }
@@ -440,46 +473,50 @@ func (l *Lexer) parseMarkers(ch rune) (*Token, *error.Error) {
 	l.clearBuffer()
 	l.pushBuffer(ch)
 
+	startR := TokenRange{
+		StartLine: l.CurrentLine,
+		StartCol:  l.cursor,
+	}
 	// switch
 	switch ch {
 	case Comma:
-		return NewMarkToken(l.chBuffer, TypeCommaSep), nil
+		return NewMarkToken(l.chBuffer, TypeCommaSep, startR, 1), nil
 	case Colon:
-		return NewMarkToken(l.chBuffer, TypeFuncCall), nil
+		return NewMarkToken(l.chBuffer, TypeFuncCall, startR, 1), nil
 	case Semicolon:
-		return NewMarkToken(l.chBuffer, TypeStmtSep), nil
+		return NewMarkToken(l.chBuffer, TypeStmtSep, startR, 1), nil
 	case QuestionMark:
-		return NewMarkToken(l.chBuffer, TypeFuncDeclare), nil
+		return NewMarkToken(l.chBuffer, TypeFuncDeclare, startR, 1), nil
 	case RefMark:
-		return NewMarkToken(l.chBuffer, TypeObjRef), nil
+		return NewMarkToken(l.chBuffer, TypeObjRef, startR, 1), nil
 	case BangMark:
-		return NewMarkToken(l.chBuffer, TypeMustT), nil
+		return NewMarkToken(l.chBuffer, TypeMustT, startR, 1), nil
 	case AnnotationMark:
-		return NewMarkToken(l.chBuffer, TypeAnnoT), nil
+		return NewMarkToken(l.chBuffer, TypeAnnoT, startR, 1), nil
 	case HashMark:
-		return NewMarkToken(l.chBuffer, TypeMapHash), nil
+		return NewMarkToken(l.chBuffer, TypeMapHash, startR, 1), nil
 	case EllipsisMark:
 		if l.peek() == EllipsisMark {
 			l.pushBuffer(l.next())
-			return NewMarkToken(l.chBuffer, TypeMoreParam), nil
+			return NewMarkToken(l.chBuffer, TypeMoreParam, startR, 2), nil
 		}
 		return nil, error.InvalidSingleEllipsis()
 	case LeftBracket:
-		return NewMarkToken(l.chBuffer, TypeArrayQuoteL), nil
+		return NewMarkToken(l.chBuffer, TypeArrayQuoteL, startR, 1), nil
 	case RightBracket:
-		return NewMarkToken(l.chBuffer, TypeArrayQuoteR), nil
+		return NewMarkToken(l.chBuffer, TypeArrayQuoteR, startR, 1), nil
 	case LeftParen:
-		return NewMarkToken(l.chBuffer, TypeStmtQuoteL), nil
+		return NewMarkToken(l.chBuffer, TypeStmtQuoteL, startR, 1), nil
 	case RightParen:
-		return NewMarkToken(l.chBuffer, TypeStmtQuoteR), nil
+		return NewMarkToken(l.chBuffer, TypeStmtQuoteR, startR, 1), nil
 	case Equal:
 		if l.peek() == Equal {
 			l.pushBuffer(l.next())
-			return NewMarkToken(l.chBuffer, TypeMapData), nil
+			return NewMarkToken(l.chBuffer, TypeMapData, startR, 2), nil
 		}
 		return nil, error.InvalidSingleEqual()
 	case DoubleArrow:
-		return NewMarkToken(l.chBuffer, TypeMapData), nil
+		return NewMarkToken(l.chBuffer, TypeMapData, startR, 1), nil
 	}
 	return nil, error.InvalidChar(ch)
 }
@@ -495,6 +532,10 @@ func (l *Lexer) parseKeyword(ch rune, moveForward bool) (bool, *Token) {
 	var tk *Token
 	var wordLen = 1
 
+	rg := TokenRange{
+		StartLine: l.CurrentLine,
+		StartCol:  l.cursor,
+	}
 	// manual matching one or consecutive keywords
 	switch ch {
 	case GlyphLING:
@@ -680,6 +721,9 @@ func (l *Lexer) parseKeyword(ch rune, moveForward bool) (bool, *Token) {
 			}
 		}
 
+		rg.EndLine = rg.StartLine
+		rg.EndCol = rg.StartCol + wordLen - 1
+		tk.SetTokenRange(rg)
 		return true, tk
 	}
 	return false, nil
@@ -705,6 +749,11 @@ func (l *Lexer) parseIdentifier(ch rune) (*Token, *error.Error) {
 	if !isIdentifierChar(ch, true) {
 		return nil, error.InvalidIdentifier()
 	}
+
+	rg := TokenRange{
+		StartLine: l.CurrentLine,
+		StartCol:  l.cursor,
+	}
 	// push first char
 	l.pushBuffer(ch)
 	count++
@@ -721,20 +770,26 @@ func (l *Lexer) parseIdentifier(ch rune) (*Token, *error.Error) {
 		// then terminate the identifier parsing process.
 		if isKeyword, _ := l.parseKeyword(ch, false); isKeyword {
 			l.rebase(prev)
-			return NewIdentifierToken(l.chBuffer), nil
+			rg.EndLine = l.CurrentLine
+			rg.EndCol = l.cursor
+			return NewIdentifierToken(l.chBuffer, rg), nil
 		}
 		// parse 注
 		if ch == GlyphZHU {
 			if validComment, _ := l.validateComment(ch); validComment {
 				l.rebase(prev)
-				return NewIdentifierToken(l.chBuffer), nil
+				rg.EndLine = l.CurrentLine
+				rg.EndCol = l.cursor
+				return NewIdentifierToken(l.chBuffer, rg), nil
 			}
 			l.rebase(prev + 1)
 		}
 		// other char as terminator
 		if util.Contains(ch, terminators) {
 			l.rebase(prev)
-			return NewIdentifierToken(l.chBuffer), nil
+			rg.EndLine = l.CurrentLine
+			rg.EndCol = l.cursor
+			return NewIdentifierToken(l.chBuffer, rg), nil
 		}
 
 		if isIdentifierChar(ch, false) {
@@ -749,9 +804,9 @@ func (l *Lexer) parseIdentifier(ch rune) (*Token, *error.Error) {
 	}
 }
 
-// MoveAndSetCursor - retrieve full text of the line and set the current cursor
+// moveAndSetCursor - retrieve full text of the line and set the current cursor
 // to display errors
-func (l *Lexer) MoveAndSetCursor(err *error.Error) {
+func (l *Lexer) moveAndSetCursor(err *error.Error) {
 	curr := l.cursor
 	count := curr
 	// default show all buffer
@@ -759,7 +814,7 @@ func (l *Lexer) MoveAndSetCursor(err *error.Error) {
 	cursor := error.Cursor{
 		File:    l.InputStream.Scope,
 		ColNum:  curr,
-		LineNum: l.CurrentLineNum(),
+		LineNum: l.CurrentLine,
 		Text:    string(buf),
 		SetFlag: true,
 	}

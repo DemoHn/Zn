@@ -8,7 +8,8 @@ import (
 // LineStack - store line source and its indent info
 type LineStack struct {
 	IndentType
-	lines []LineInfo
+	CurrentLine int
+	lines       []LineInfo
 	scanCursor
 	lineBuffer []rune
 }
@@ -60,8 +61,9 @@ const (
 // NewLineStack - new line stack
 func NewLineStack() *LineStack {
 	return &LineStack{
-		IndentType: IdetUnknown,
-		lines:      []LineInfo{},
+		IndentType:  IdetUnknown,
+		lines:       []LineInfo{},
+		CurrentLine: 1,
 		scanCursor: scanCursor{
 			indents:   0,
 			scanState: scanInit,
@@ -131,6 +133,8 @@ func (ls *LineStack) NewLine(index int) {
 		indents:   0,
 		scanState: scanInit,
 	}
+	// add CurrentLine
+	ls.CurrentLine++
 }
 
 // HasScanIndent - determines if indents has been scanned properly
@@ -162,12 +166,4 @@ func (ls *LineStack) GetLineBufferSize() int {
 // GetLineBuffer -
 func (ls *LineStack) GetLineBuffer() []rune {
 	return ls.lineBuffer
-}
-
-// CurrentLineNum -
-func (ls *LineStack) CurrentLineNum() int {
-	if ls.scanCursor.scanState == scanEnd {
-		return len(ls.lines)
-	}
-	return len(ls.lines) + 1
 }
