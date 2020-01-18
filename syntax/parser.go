@@ -57,14 +57,10 @@ func (p *Parser) Parse() (pg *ProgramNode, err *error.Error) {
 			// of current() token
 			if (err.GetCode() & 0xff) >= uint16(0x50) {
 				if tk := p.current(); tk != nil {
-					startLine := tk.Range.StartLine
-					txt := p.LineStack.GetLine(startLine - 1).Source
-					err.SetCursor(error.Cursor{
-						File:    p.InputStream.Scope,
-						LineNum: startLine,
-						Text:    string(txt),
-						ColNum:  tk.Range.StartCol,
-					})
+					line := tk.Range.StartLine
+					col := tk.Range.StartCol
+
+					p.moveAndSetCursor(line, col, err)
 				}
 			}
 		}
@@ -106,7 +102,7 @@ func (p *Parser) next() *error.Error {
 	// use pre-load token list
 	if p.mockTokens.useMockToken {
 		if p.mockTokens.cursor >= len(p.mockTokens.tokens) {
-			tk = lex.NewTokenEOF()
+			tk = lex.NewTokenEOF(0, 0)
 		} else {
 			tk = &(p.mockTokens.tokens[p.mockTokens.cursor])
 			p.mockTokens.cursor = p.mockTokens.cursor + 1
@@ -222,6 +218,27 @@ func (p *Parser) ParseExpression() (Expression, *error.Error) {
 		return nil, error.InvalidSyntax()
 	}
 	return tk, nil
+}
+
+// similar to lexer's version, but with given line & col
+func (p *Parser) moveAndSetCursor(line int, col int, err *error.Error) {
+	buf := p.GetLineBuffer()
+	cursor := error.Cursor{
+		File:    p.Lexer.InputStream.Scope,
+		ColNum:  col,
+		LineNum: line,
+		Text:    string(buf),
+	}
+
+	defer func() {
+		// recover but not handle it
+		recover()
+		err.SetCursor(cursor)
+	}()
+
+	endCursor := p.SlideToLineEnd()
+	cursor.Text = string(buf[:endCursor+1])
+	err.SetCursor(cursor)
 }
 
 func parseParenExpr(p *Parser) (Expression, *error.Error) {
