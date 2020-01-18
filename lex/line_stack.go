@@ -167,3 +167,8 @@ func (ls *LineStack) GetLineBufferSize() int {
 func (ls *LineStack) GetLineBuffer() []rune {
 	return ls.lineBuffer
 }
+
+// GetLine -
+func (ls *LineStack) GetLine(idx int) LineInfo {
+	return ls.lines[idx]
+}

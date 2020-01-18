@@ -52,7 +52,21 @@ func NewParser(l *lex.Lexer) *Parser {
 func (p *Parser) Parse() (pg *ProgramNode, err *error.Error) {
 	defer func() {
 		if err != nil {
-			p.MoveAndSetCursor(err)
+			// if subcode >= 0x50, that means this error is generated from
+			// parser, i.e. we have to set cursor manually by retrieving the start cursor
+			// of current() token
+			if (err.GetCode() & 0xff) >= uint16(0x50) {
+				if tk := p.current(); tk != nil {
+					startLine := tk.Range.StartLine
+					txt := p.LineStack.GetLine(startLine - 1).Source
+					err.SetCursor(error.Cursor{
+						File:    p.InputStream.Scope,
+						LineNum: startLine,
+						Text:    string(txt),
+						ColNum:  tk.Range.StartCol,
+					})
+				}
+			}
 		}
 	}()
 

@@ -149,7 +149,6 @@ type Cursor struct {
 	LineNum int
 	ColNum  int
 	Text    string
-	SetFlag bool
 }
 
 // ErrorClass defines the prefix of error code
