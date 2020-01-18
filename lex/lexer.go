@@ -91,7 +91,6 @@ func (l *Lexer) NextToken() (tok *Token, err *error.Error) {
 					LineNum: l.CurrentLine,
 					Text:    string(l.GetLineBuffer()),
 					ColNum:  0,
-					SetFlag: true,
 				})
 			}
 		} else {
@@ -816,7 +815,6 @@ func (l *Lexer) moveAndSetCursor(err *error.Error) {
 		ColNum:  curr,
 		LineNum: l.CurrentLine,
 		Text:    string(buf),
-		SetFlag: true,
 	}
 
 	defer func() {
