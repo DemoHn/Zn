@@ -75,3 +75,9 @@ func TestVarDecl_OK(t *testing.T) {
 		})
 	}
 }
+
+/**
+var TestVarDecl_Error(t *testing.T) {
+
+}
+*/
