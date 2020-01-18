@@ -807,7 +807,6 @@ func (l *Lexer) parseIdentifier(ch rune) (*Token, *error.Error) {
 // to display errors
 func (l *Lexer) moveAndSetCursor(err *error.Error) {
 	curr := l.cursor
-	count := curr
 	// default show all buffer
 	buf := l.GetLineBuffer()
 	cursor := error.Cursor{
@@ -823,12 +822,19 @@ func (l *Lexer) moveAndSetCursor(err *error.Error) {
 		err.SetCursor(cursor)
 	}()
 
+	endCursor := l.SlideToLineEnd()
+	cursor.Text = string(buf[:endCursor+1])
+	err.SetCursor(cursor)
+}
+
+// SlideToLineEnd - slide cursor to the end of line
+// usually used to show the full text of current line while handling error
+// @return colNum of last char
+func (l *Lexer) SlideToLineEnd() int {
 	// move on util to the line end
 	for !util.Contains(l.peek(), []rune{CR, LF, EOF}) {
 		l.next()
-		count++
 	}
 
-	cursor.Text = string(buf[:count+1])
-	err.SetCursor(cursor)
+	return l.cursor
 }
