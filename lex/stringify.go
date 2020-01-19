@@ -2,6 +2,8 @@ package lex
 
 import (
 	"fmt"
+	"regexp"
+	"strconv"
 	"strings"
 )
 
@@ -20,38 +22,50 @@ func StringifyAllTokens(tks []*Token) string {
 	return strings.Join(tokenStrs, " ")
 }
 
+// ParseTokenStr - from token str to tokens
+func ParseTokenStr(str string) []Token {
+	tks := make([]Token, 0)
+	r := regexp.MustCompile(`\$(\d+)\[(.+?)\]`)
+	matches := r.FindAllStringSubmatch(str, -1)
+
+	for _, match := range matches {
+		n, _ := strconv.Atoi(match[1])
+		tks = append(tks, Token{
+			Type:    TokenType(n),
+			Literal: []rune(match[2]),
+		})
+	}
+
+	return tks
+}
+
 // StringifyLines - stringify current parsed lines into readable string info
 // format::=
 //   {lineInfo1} {lineInfo2} {lineInfo3} ...
 //
 // lineInfo ::=
-//   Space<2>[23,45] or
-//   Tab<4>[0,1] or
-//   Empty<0>
-func StringifyLines(ls *LineScanner) string {
+//   SP<2>[text1] or
+//   T<4>[text2] or
+//   E<0>
+func StringifyLines(ls *LineStack) string {
 	ss := []string{}
 	var indentChar string
 	// get indent type
-	switch ls.indentType {
+	switch ls.IndentType {
 	case IdetUnknown:
-		indentChar = "Unknown"
+		indentChar = "U"
 	case IdetSpace:
-		indentChar = "Space"
+		indentChar = "SP"
 	case IdetTab:
-		indentChar = "Tab"
+		indentChar = "T"
 	}
 
 	for _, line := range ls.lines {
-		if line.scanState == scanEnd {
-			if line.EmptyLine {
-				ss = append(ss, "Empty<0>")
-			} else {
-				ss = append(ss, fmt.Sprintf(
-					"%s<%d>[%d,%d]",
-					indentChar, line.IndentNum,
-					line.Start, line.End,
-				))
-			}
+		if len(line.Source) == 0 {
+			ss = append(ss, fmt.Sprintf("E<%d>", line.Indents))
+		} else {
+			ss = append(ss,
+				fmt.Sprintf("%s<%d>[%s]", indentChar, line.Indents, string(line.Source)))
 		}
 	}
 	return strings.Join(ss, " ")

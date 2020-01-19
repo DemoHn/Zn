@@ -15,10 +15,9 @@ type ProgramNode struct {
 
 // Parser - parse all nodes
 type Parser struct {
-	lexer        *lex.Lexer
-	currentToken *lex.Token
-	peekToken    *lex.Token
-	peek2Token   *lex.Token
+	*lex.Lexer
+	tokens     [3]*lex.Token
+	mockTokens mockTokens
 }
 
 // Expression - a special type of statement
@@ -33,54 +32,104 @@ type Statement interface {
 	statementNode()
 }
 
+type mockTokens struct {
+	tokens       []lex.Token
+	cursor       int
+	useMockToken bool
+}
+
 // NewParser -
 func NewParser(l *lex.Lexer) *Parser {
 	p := &Parser{
-		lexer: l,
+		Lexer:      l,
+		mockTokens: mockTokens{}, // mockTokens data, for unit testing
 	}
 	// read current and peek token
-	p.next()
-	p.next()
-	p.next()
 	return p
 }
 
 // Parse - parse all tokens into an AST (stored as ProgramNode)
-func (p *Parser) Parse() (*ProgramNode, *error.Error) {
-	pg := &ProgramNode{
+func (p *Parser) Parse() (pg *ProgramNode, err *error.Error) {
+	defer func() {
+		if err != nil {
+			// if subcode >= 0x50, that means this error is generated from
+			// parser, i.e. we have to set cursor manually by retrieving the start cursor
+			// of current() token
+			if (err.GetCode() & 0xff) >= uint16(0x50) {
+				if tk := p.current(); tk != nil {
+					line := tk.Range.StartLine
+					col := tk.Range.StartCol
+
+					p.moveAndSetCursor(line, col, err)
+				}
+			}
+		}
+	}()
+
+	// pre-read tokens
+	for i := 0; i < 3; i++ {
+		err = p.next()
+		if err != nil {
+			return
+		}
+	}
+	pg = &ProgramNode{
 		Children: []Statement{},
 	}
 	for p.current().Type != lex.TypeEOF {
-		err := p.ParseStatement(pg)
+		err = p.ParseStatement(pg)
 		if err != nil {
-			return nil, err
+			return
 		}
 	}
-	return pg, nil
+	return
+}
+
+// InitMockToken - init mockToken for parser
+// after that, tokens will be retrieved directly from provided token list instead of lexer.
+// this API is used actively for unit testing.
+func (p *Parser) InitMockToken(tokens []lex.Token) {
+	p.mockTokens = mockTokens{
+		tokens:       tokens,
+		cursor:       0,
+		useMockToken: true,
+	}
 }
 
 func (p *Parser) next() *error.Error {
-	tk, err := p.lexer.NextToken()
-	if err != nil {
-		return err
+	var tk *lex.Token
+	var err *error.Error
+	// use pre-load token list
+	if p.mockTokens.useMockToken {
+		if p.mockTokens.cursor >= len(p.mockTokens.tokens) {
+			tk = lex.NewTokenEOF(0, 0)
+		} else {
+			tk = &(p.mockTokens.tokens[p.mockTokens.cursor])
+			p.mockTokens.cursor = p.mockTokens.cursor + 1
+		}
+	} else {
+		tk, err = p.NextToken()
+		if err != nil {
+			return err
+		}
 	}
 
-	p.currentToken = p.peekToken
-	p.peekToken = p.peek2Token
-	p.peek2Token = tk
+	p.tokens[0] = p.tokens[1]
+	p.tokens[1] = p.tokens[2]
+	p.tokens[2] = tk
 	return nil
 }
 
 func (p *Parser) current() *lex.Token {
-	return p.currentToken
+	return p.tokens[0]
 }
 
 func (p *Parser) peek() *lex.Token {
-	return p.peekToken
+	return p.tokens[1]
 }
 
 func (p *Parser) peek2() *lex.Token {
-	return p.peek2Token
+	return p.tokens[2]
 }
 
 // consume one token (without callback), will return error if the incoming token (p.currentToken)
@@ -93,7 +142,7 @@ func (p *Parser) consume(validTypes ...lex.TokenType) *error.Error {
 			return p.next()
 		}
 	}
-	return error.NewErrorSLOT("syntax error")
+	return error.InvalidSyntax()
 }
 
 // consume one token with error func
@@ -106,7 +155,7 @@ func (p *Parser) consumeFunc(callback func(*lex.Token), validTypes ...lex.TokenT
 			return p.next()
 		}
 	}
-	return error.NewErrorSLOT("syntax error")
+	return error.InvalidSyntax()
 }
 
 //// parse element functions
@@ -166,9 +215,30 @@ func (p *Parser) ParseExpression() (Expression, *error.Error) {
 		}
 		tk = token
 	default:
-		return nil, error.NewErrorSLOT("no match expression")
+		return nil, error.InvalidSyntax()
 	}
 	return tk, nil
+}
+
+// similar to lexer's version, but with given line & col
+func (p *Parser) moveAndSetCursor(line int, col int, err *error.Error) {
+	buf := p.GetLineBuffer()
+	cursor := error.Cursor{
+		File:    p.Lexer.InputStream.Scope,
+		ColNum:  col,
+		LineNum: line,
+		Text:    string(buf),
+	}
+
+	defer func() {
+		// recover but not handle it
+		recover()
+		err.SetCursor(cursor)
+	}()
+
+	endCursor := p.SlideToLineEnd()
+	cursor.Text = string(buf[:endCursor+1])
+	err.SetCursor(cursor)
 }
 
 func parseParenExpr(p *Parser) (Expression, *error.Error) {

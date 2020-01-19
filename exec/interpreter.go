@@ -132,6 +132,9 @@ func execPrimitiveExpr(it *Interpreter, expr syntax.Expression) ZnObject {
 func parseNumber(numstr string) ZnObject {
 	// TODO: to be continued...
 	// TODO2: differetiate Int and Float!
+	// TODO3: we are going to a infinite-size long number
+	//
+	// need more standard to describe that
 	i, e := strconv.Atoi(numstr)
 	if e != nil {
 		return nil

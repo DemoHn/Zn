@@ -5,117 +5,113 @@ import (
 	"github.com/DemoHn/Zn/util"
 )
 
+const (
+	defBlockSize int = 256
+)
+
 // Lexer is a structure that pe provides a set of tools to help tokenizing the code.
 type Lexer struct {
-	lines      *LineScanner
-	currentPos int
-	peekPos    int
-	quoteStack *util.RuneStack
-	chBuffer   []rune
-	code       []rune // source code
+	*LineStack
+	quoteStack   *util.RuneStack
+	*InputStream        // input stream
+	chBuffer     []rune // the buffer for parsing & generating tokens
+	cursor       int
+	blockSize    int
 }
 
 // NewLexer - new lexer
-func NewLexer(code []rune) *Lexer {
+func NewLexer(in *InputStream) *Lexer {
 	return &Lexer{
-		lines:      NewLineScanner(),
-		currentPos: 0,
-		peekPos:    0,
-		quoteStack: util.NewRuneStack(32),
-		chBuffer:   []rune{},
-		code:       append(code, EOF),
+		LineStack:   NewLineStack(),
+		quoteStack:  util.NewRuneStack(32),
+		InputStream: in,
+		chBuffer:    []rune{},
+		cursor:      -1,
+		blockSize:   defBlockSize,
 	}
 }
 
 // next - return current rune, and move forward the cursor for 1 character.
 func (l *Lexer) next() rune {
-	if l.peekPos >= len(l.code) {
-		return EOF
+	l.cursor++
+
+	if l.cursor+2 >= l.GetLineBufferSize() {
+		if !l.End() {
+			if b, err := l.Read(l.blockSize); err == nil {
+				l.AppendLineBuffer(b)
+			} else {
+				// throw the error globally
+				// it will be handled (recovered) in NextToken(),
+				// similiar with try-catch statement.
+				panic(err)
+			}
+		}
 	}
 
-	data := l.code[l.peekPos]
-
-	l.currentPos = l.peekPos
-	l.peekPos++
-	return data
+	// still no data, return EOF directly
+	return l.GetColIndex(l.cursor)
 }
 
 // peek - get the character of the cursor
 func (l *Lexer) peek() rune {
-	if l.peekPos >= len(l.code) {
-		return EOF
-	}
-	data := l.code[l.peekPos]
-
-	return data
+	return l.GetColIndex(l.cursor + 1)
 }
 
 // peek2 - get the next next character without moving the cursor
 func (l *Lexer) peek2() rune {
-	if l.peekPos >= len(l.code)-1 {
-		return EOF
-	}
-	data := l.code[l.peekPos+1]
-
-	return data
+	return l.GetColIndex(l.cursor + 2)
 }
 
-// peek3 - get the next next next character without moving the cursor
-func (l *Lexer) peek3() rune {
-	if l.peekPos >= len(l.code)-2 {
-		return EOF
-	}
-	data := l.code[l.peekPos+2]
-
-	return data
-}
-
-// current - get current char value
-func (l *Lexer) current() rune {
-	if l.peekPos >= len(l.code) {
-		return EOF
-	}
-
-	return l.code[l.currentPos]
-}
-
-// rebase - rebase cursor
+// rebase - rebase cursor within the same line
 func (l *Lexer) rebase(cursor int) {
-	l.currentPos = cursor
-	l.peekPos = cursor + 1
+	l.cursor = cursor
 }
 
 func (l *Lexer) clearBuffer() {
 	l.chBuffer = []rune{}
 }
 
-func (l *Lexer) pushBuffer(ch rune) {
-	l.chBuffer = append(l.chBuffer, ch)
+func (l *Lexer) pushBuffer(ch ...rune) {
+	l.chBuffer = append(l.chBuffer, ch...)
 }
 
-// pushBufferRange - push buffer for a range
-// @returns bool - if push success
-func (l *Lexer) pushBufferRange(start int, end int) bool {
-	if end >= len(l.code) || start > end {
-		return false
-	}
-
-	l.chBuffer = append(l.chBuffer, l.code[start:end+1]...)
-	return true
+// SetBlockSize -
+func (l *Lexer) SetBlockSize(size int) {
+	l.blockSize = size
 }
 
 // NextToken - parse and generate the next token (including comments)
-func (l *Lexer) NextToken() (*Token, *error.Error) {
+func (l *Lexer) NextToken() (tok *Token, err *error.Error) {
+	defer func() {
+		if r := recover(); r != nil {
+			if verr, ok := r.(*error.Error); ok {
+				err = verr
+				err.SetCursor(error.Cursor{
+					File:    l.InputStream.Scope,
+					LineNum: l.CurrentLine,
+					Text:    string(l.GetLineBuffer()),
+					ColNum:  0,
+				})
+			}
+		} else {
+			if err != nil {
+				// move and set cursor for the incoming error
+				l.moveAndSetCursor(err)
+			}
+		}
+	}()
+
 head:
 	var ch = l.next()
 	switch ch {
 	case EOF:
-		l.lines.PushLine(l.currentPos)
-		return NewTokenEOF(), nil
+		l.PushLine(l.cursor - 1)
+		tok = NewTokenEOF(l.CurrentLine, l.cursor)
+		return
 	case SP, TAB:
 		// if indent has been scanned, it should be regarded as whitespaces
 		// (it's totally ignored)
-		if !l.lines.HasScanIndent() {
+		if !l.HasScanIndent() {
 			l.parseIndents(ch)
 		} else {
 			l.consumeWhiteSpace(ch)
@@ -127,19 +123,22 @@ head:
 	// meet with 注, it may be possibly a lead character of a comment block
 	// notice: it would also be a normal identifer (if 注[number]：) does not satisfy.
 	case GlyphZHU:
-		cursor := l.currentPos
+		cursor := l.cursor
 		isComment, isMultiLine := l.validateComment(ch)
 		if isComment {
-			return l.parseComment(l.current(), isMultiLine)
+			tok, err = l.parseComment(l.GetColIndex(l.cursor), isMultiLine)
+			return
 		}
 
 		l.rebase(cursor)
 		// goto normal identifier
 	// left quotes
 	case LeftQuoteI, LeftQuoteII, LeftQuoteIII, LeftQuoteIV, LeftQuoteV:
-		return l.parseString(ch)
+		tok, err = l.parseString(ch)
+		return
 	case MiddleDot:
-		return l.parseVarQuote(ch)
+		tok, err = l.parseVarQuote(ch)
+		return
 	default:
 		// skip whitespaces
 		if isWhiteSpace(ch) {
@@ -148,22 +147,26 @@ head:
 		}
 		// parse number
 		if isNumber(ch) || ch == '+' || ch == '-' {
-			return l.parseNumber(ch)
+			tok, err = l.parseNumber(ch)
+			return
 		}
 		if util.Contains(ch, MarkLeads) {
-			return l.parseMarkers(ch)
+			tok, err = l.parseMarkers(ch)
+			return
 		}
 		// suppose it's a keyword
 		if isKeyword, tk := l.parseKeyword(ch, true); isKeyword {
-			return tk, nil
+			tok = tk
+			return
 		}
 	}
-	return l.parseIdentifier(ch)
+	tok, err = l.parseIdentifier(ch)
+	return
 }
 
 //// parsing logics
 func (l *Lexer) parseIndents(ch rune) *error.Error {
-	count := 0
+	count := 1
 	for l.peek() == ch {
 		count++
 		l.next()
@@ -176,23 +179,31 @@ func (l *Lexer) parseIndents(ch rune) *error.Error {
 	case SP:
 		indentType = IdetSpace
 	}
-	return l.lines.SetIndent(count, indentType, l.currentPos+1)
+	return l.SetIndent(count, indentType)
 }
 
-func (l *Lexer) parseCRLF(ch rune) {
-	cursor := l.currentPos
+// parseCRLF and return the newline chars by the way
+func (l *Lexer) parseCRLF(ch rune) []rune {
+	p := l.peek()
 	// for CRLF <windows type> or LFCR
-	if (ch == CR && l.peek() == LF) ||
-		(ch == LF && l.peek() == CR) {
+	if (ch == CR && p == LF) ||
+		(ch == LF && p == CR) {
 
 		// skip one char since we have judge two chars
 		l.next()
-		l.lines.PushLine(cursor - 1)
-		return
+		l.PushLine(l.cursor - 2)
+		// new line and reset cursor
+		l.NewLine(l.cursor + 1)
+		l.cursor = -1
+		return []rune{ch, p}
 	}
 	// for LF or CR only
 	// LF: <linux>, CR:<old mac>
-	l.lines.PushLine(cursor - 1)
+	l.PushLine(l.cursor - 1)
+	// new line and reset cursor
+	l.NewLine(l.cursor + 1)
+	l.cursor = -1
+	return []rune{ch}
 }
 
 // validate if the coming block is a comment block
@@ -234,34 +245,42 @@ func (l *Lexer) parseComment(ch rune, isMultiLine bool) (*Token, *error.Error) {
 	l.clearBuffer()
 	if isMultiLine {
 		if !l.quoteStack.Push(ch) {
-			return nil, error.NewErrorSLOT("push stack is full")
+			return nil, error.QuoteStackFull(l.quoteStack.GetMaxSize())
 		}
+	}
+	rg := TokenRange{
+		StartLine: l.CurrentLine,
+		StartCol:  l.cursor,
 	}
 	// iterate
 	for {
 		ch = l.next()
 		switch ch {
 		case EOF:
-			l.lines.PushLine(l.currentPos - 1)
-			return NewCommentToken(l.chBuffer, isMultiLine), nil
+			l.rebase(l.cursor - 1)
+			rg.EndLine = l.CurrentLine
+			rg.EndCol = l.cursor
+			return NewCommentToken(l.chBuffer, isMultiLine, rg), nil
 		case CR, LF:
-			c1 := l.currentPos
 			// parse CR,LF first
-			l.parseCRLF(ch)
+			nl := l.parseCRLF(ch)
 			if !isMultiLine {
-				return NewCommentToken(l.chBuffer, isMultiLine), nil
+				rg.EndLine = l.CurrentLine
+				rg.EndCol = l.cursor
+				return NewCommentToken(l.chBuffer, isMultiLine, rg), nil
 			}
 			// for multi-line comment blocks, CRLF is also included
-			l.pushBufferRange(c1, l.currentPos)
+			l.pushBuffer(nl...)
+
 			// manually set no indents
-			l.lines.SetIndent(0, IdetUnknown, l.currentPos+1)
+			l.SetIndent(0, IdetUnknown)
 		default:
 			// for mutli-line comment, calculate quotes is necessary.
 			if isMultiLine {
 				// push left quotes
 				if util.Contains(ch, LeftQuotes) {
 					if !l.quoteStack.Push(ch) {
-						return nil, error.NewErrorSLOT("quote stack if full")
+						return nil, error.QuoteStackFull(l.quoteStack.GetMaxSize())
 					}
 				}
 				// pop right quotes if possible
@@ -272,7 +291,9 @@ func (l *Lexer) parseComment(ch rune, isMultiLine bool) (*Token, *error.Error) {
 					}
 					// stop quoting
 					if l.quoteStack.IsEmpty() {
-						return NewCommentToken(l.chBuffer, isMultiLine), nil
+						rg.EndLine = l.CurrentLine
+						rg.EndCol = l.cursor
+						return NewCommentToken(l.chBuffer, isMultiLine, rg), nil
 					}
 				}
 			}
@@ -287,19 +308,25 @@ func (l *Lexer) parseString(ch rune) (*Token, *error.Error) {
 	l.clearBuffer()
 	l.quoteStack.Push(ch)
 	firstChar := ch
+	rg := TokenRange{
+		StartLine: l.CurrentLine,
+		StartCol:  l.cursor,
+	}
 	// iterate
 	for {
 		ch := l.next()
 		switch ch {
 		case EOF:
+			l.rebase(l.cursor - 1)
 			// after meeting with EOF
-			l.lines.PushLine(l.currentPos - 1)
-			return NewStringToken(l.chBuffer, firstChar), nil
+			rg.EndLine = l.CurrentLine
+			rg.EndCol = l.cursor
+			return NewStringToken(l.chBuffer, firstChar, rg), nil
 		// push quotes
 		case LeftQuoteI, LeftQuoteII, LeftQuoteIII, LeftQuoteIV, LeftQuoteV:
 			l.pushBuffer(ch)
 			if !l.quoteStack.Push(ch) {
-				return nil, error.NewErrorSLOT("quote stack is full")
+				return nil, error.QuoteStackFull(l.quoteStack.GetMaxSize())
 			}
 		// pop quotes if match
 		case RightQuoteI, RightQuoteII, RightQuoteIII, RightQuoteIV, RightQuoteV:
@@ -309,15 +336,17 @@ func (l *Lexer) parseString(ch rune) (*Token, *error.Error) {
 			}
 			// stop quoting
 			if l.quoteStack.IsEmpty() {
-				return NewStringToken(l.chBuffer, firstChar), nil
+				rg.EndLine = l.CurrentLine
+				rg.EndCol = l.cursor
+				return NewStringToken(l.chBuffer, firstChar, rg), nil
 			}
 			l.pushBuffer(ch)
 		case CR, LF:
-			c1 := l.currentPos
-			l.parseCRLF(ch)
+
+			nl := l.parseCRLF(ch)
 			// push buffer & mark new line
-			l.pushBufferRange(c1, l.currentPos)
-			l.lines.SetIndent(0, IdetUnknown, l.currentPos+1)
+			l.pushBuffer(nl...)
+			l.SetIndent(0, IdetUnknown)
 		default:
 			l.pushBuffer(ch)
 		}
@@ -327,6 +356,10 @@ func (l *Lexer) parseString(ch rune) (*Token, *error.Error) {
 func (l *Lexer) parseVarQuote(ch rune) (*Token, *error.Error) {
 	// setup
 	l.clearBuffer()
+	rg := TokenRange{
+		StartLine: l.CurrentLine,
+		EndLine:   l.cursor,
+	}
 	// iterate
 	count := 0
 	for {
@@ -335,10 +368,14 @@ func (l *Lexer) parseVarQuote(ch rune) (*Token, *error.Error) {
 		// of an identifier
 		switch ch {
 		case EOF:
-			l.lines.PushLine(l.currentPos - 1)
-			return NewVarQuoteToken(l.chBuffer), nil
+			l.rebase(l.cursor - 1)
+			rg.EndLine = l.CurrentLine
+			rg.EndCol = l.cursor
+			return NewVarQuoteToken(l.chBuffer, rg), nil
 		case MiddleDot:
-			return NewVarQuoteToken(l.chBuffer), nil
+			rg.EndLine = l.CurrentLine
+			rg.EndCol = l.cursor
+			return NewVarQuoteToken(l.chBuffer, rg), nil
 		default:
 			// ignore white-spaces!
 			if isWhiteSpace(ch) {
@@ -348,10 +385,10 @@ func (l *Lexer) parseVarQuote(ch rune) (*Token, *error.Error) {
 				l.pushBuffer(ch)
 				count++
 				if count > maxIdentifierLength {
-					return nil, error.NewErrorSLOT("invalid syntax: 变量名太长")
+					return nil, error.IdentifierExceedLength(maxIdentifierLength)
 				}
 			} else {
-				return nil, error.NewErrorSLOT("invalid syntax: invalid var")
+				return nil, error.InvalidIdentifier()
 			}
 		}
 	}
@@ -361,6 +398,11 @@ func (l *Lexer) parseVarQuote(ch rune) (*Token, *error.Error) {
 func (l *Lexer) parseNumber(ch rune) (*Token, *error.Error) {
 	// setup
 	l.clearBuffer()
+	rg := TokenRange{
+		StartLine: l.CurrentLine,
+		StartCol:  l.cursor,
+	}
+
 	// hand-written regex parser
 	// ref: https://cyberzhg.github.io/toolbox/min_dfa?regex=KG18cCk/TisuP04rKChlfEUpKG18cCk/TispPw==
 	// or the documentation has declared that.
@@ -416,10 +458,12 @@ func (l *Lexer) parseNumber(ch rune) (*Token, *error.Error) {
 end:
 	if util.ContainsInt(state, endStates) {
 		// back to last available char
-		l.rebase(l.currentPos - 1)
-		return NewNumberToken(l.chBuffer), nil
+		l.rebase(l.cursor - 1)
+		rg.EndLine = l.CurrentLine
+		rg.EndCol = l.cursor
+		return NewNumberToken(l.chBuffer, rg), nil
 	}
-	return nil, error.NewErrorSLOT("invalid number")
+	return nil, error.InvalidChar(ch)
 }
 
 // parseMarkers -
@@ -428,49 +472,52 @@ func (l *Lexer) parseMarkers(ch rune) (*Token, *error.Error) {
 	l.clearBuffer()
 	l.pushBuffer(ch)
 
+	startR := TokenRange{
+		StartLine: l.CurrentLine,
+		StartCol:  l.cursor,
+	}
 	// switch
 	switch ch {
 	case Comma:
-		return NewMarkToken(l.chBuffer, TypeCommaSep), nil
+		return NewMarkToken(l.chBuffer, TypeCommaSep, startR, 1), nil
 	case Colon:
-		return NewMarkToken(l.chBuffer, TypeFuncCall), nil
+		return NewMarkToken(l.chBuffer, TypeFuncCall, startR, 1), nil
 	case Semicolon:
-		return NewMarkToken(l.chBuffer, TypeStmtSep), nil
+		return NewMarkToken(l.chBuffer, TypeStmtSep, startR, 1), nil
 	case QuestionMark:
-		return NewMarkToken(l.chBuffer, TypeFuncDeclare), nil
+		return NewMarkToken(l.chBuffer, TypeFuncDeclare, startR, 1), nil
 	case RefMark:
-		return NewMarkToken(l.chBuffer, TypeObjRef), nil
+		return NewMarkToken(l.chBuffer, TypeObjRef, startR, 1), nil
 	case BangMark:
-		return NewMarkToken(l.chBuffer, TypeMustT), nil
+		return NewMarkToken(l.chBuffer, TypeMustT, startR, 1), nil
 	case AnnotationMark:
-		return NewMarkToken(l.chBuffer, TypeAnnoT), nil
+		return NewMarkToken(l.chBuffer, TypeAnnoT, startR, 1), nil
 	case HashMark:
-		return NewMarkToken(l.chBuffer, TypeMapHash), nil
+		return NewMarkToken(l.chBuffer, TypeMapHash, startR, 1), nil
 	case EllipsisMark:
 		if l.peek() == EllipsisMark {
 			l.pushBuffer(l.next())
-			return NewMarkToken(l.chBuffer, TypeMoreParam), nil
+			return NewMarkToken(l.chBuffer, TypeMoreParam, startR, 2), nil
 		}
-		return nil, error.NewErrorSLOT("invalid ellipsis")
+		return nil, error.InvalidSingleEllipsis()
 	case LeftBracket:
-		return NewMarkToken(l.chBuffer, TypeArrayQuoteL), nil
+		return NewMarkToken(l.chBuffer, TypeArrayQuoteL, startR, 1), nil
 	case RightBracket:
-		return NewMarkToken(l.chBuffer, TypeArrayQuoteR), nil
+		return NewMarkToken(l.chBuffer, TypeArrayQuoteR, startR, 1), nil
 	case LeftParen:
-		return NewMarkToken(l.chBuffer, TypeStmtQuoteL), nil
+		return NewMarkToken(l.chBuffer, TypeStmtQuoteL, startR, 1), nil
 	case RightParen:
-		return NewMarkToken(l.chBuffer, TypeStmtQuoteR), nil
+		return NewMarkToken(l.chBuffer, TypeStmtQuoteR, startR, 1), nil
 	case Equal:
 		if l.peek() == Equal {
 			l.pushBuffer(l.next())
-			return NewMarkToken(l.chBuffer, TypeMapData), nil
+			return NewMarkToken(l.chBuffer, TypeMapData, startR, 2), nil
 		}
-		return nil, error.NewErrorSLOT("invalid single euqal")
+		return nil, error.InvalidSingleEqual()
 	case DoubleArrow:
-		return NewMarkToken(l.chBuffer, TypeMapData), nil
+		return NewMarkToken(l.chBuffer, TypeMapData, startR, 1), nil
 	}
-
-	return nil, error.NewErrorSLOT("invalid marker")
+	return nil, error.InvalidChar(ch)
 }
 
 // parseKeyword -
@@ -484,6 +531,10 @@ func (l *Lexer) parseKeyword(ch rune, moveForward bool) (bool, *Token) {
 	var tk *Token
 	var wordLen = 1
 
+	rg := TokenRange{
+		StartLine: l.CurrentLine,
+		StartCol:  l.cursor,
+	}
 	// manual matching one or consecutive keywords
 	switch ch {
 	case GlyphLING:
@@ -663,15 +714,15 @@ func (l *Lexer) parseKeyword(ch rune, moveForward bool) (bool, *Token) {
 			case 1:
 				l.pushBuffer(ch)
 			case 2:
-				l.pushBuffer(ch)
-				l.pushBuffer(l.next())
+				l.pushBuffer(ch, l.next())
 			case 3:
-				l.pushBuffer(ch)
-				l.pushBuffer(l.next())
-				l.pushBuffer(l.next())
+				l.pushBuffer(ch, l.next(), l.next())
 			}
 		}
 
+		rg.EndLine = rg.StartLine
+		rg.EndCol = rg.StartCol + wordLen - 1
+		tk.SetTokenRange(rg)
 		return true, tk
 	}
 	return false, nil
@@ -695,7 +746,12 @@ func (l *Lexer) parseIdentifier(ch rune) (*Token, *error.Error) {
 	}, MarkLeads...)
 
 	if !isIdentifierChar(ch, true) {
-		return nil, error.NewErrorSLOT("invalid identifier")
+		return nil, error.InvalidIdentifier()
+	}
+
+	rg := TokenRange{
+		StartLine: l.CurrentLine,
+		StartCol:  l.cursor,
 	}
 	// push first char
 	l.pushBuffer(ch)
@@ -703,7 +759,7 @@ func (l *Lexer) parseIdentifier(ch rune) (*Token, *error.Error) {
 
 	// iterate
 	for {
-		prev := l.currentPos
+		prev := l.cursor
 		ch = l.next()
 
 		if isWhiteSpace(ch) {
@@ -713,30 +769,72 @@ func (l *Lexer) parseIdentifier(ch rune) (*Token, *error.Error) {
 		// then terminate the identifier parsing process.
 		if isKeyword, _ := l.parseKeyword(ch, false); isKeyword {
 			l.rebase(prev)
-			return NewIdentifierToken(l.chBuffer), nil
+			rg.EndLine = l.CurrentLine
+			rg.EndCol = l.cursor
+			return NewIdentifierToken(l.chBuffer, rg), nil
 		}
 		// parse 注
 		if ch == GlyphZHU {
 			if validComment, _ := l.validateComment(ch); validComment {
 				l.rebase(prev)
-				return NewIdentifierToken(l.chBuffer), nil
+				rg.EndLine = l.CurrentLine
+				rg.EndCol = l.cursor
+				return NewIdentifierToken(l.chBuffer, rg), nil
 			}
 			l.rebase(prev + 1)
 		}
 		// other char as terminator
 		if util.Contains(ch, terminators) {
 			l.rebase(prev)
-			return NewIdentifierToken(l.chBuffer), nil
+			rg.EndLine = l.CurrentLine
+			rg.EndCol = l.cursor
+			return NewIdentifierToken(l.chBuffer, rg), nil
 		}
 
 		if isIdentifierChar(ch, false) {
 			if count >= maxIdentifierLength {
-				return nil, error.NewErrorSLOT("exceed length")
+				return nil, error.IdentifierExceedLength(maxIdentifierLength)
 			}
 			l.pushBuffer(ch)
 			count++
 			continue
 		}
-		return nil, error.NewErrorSLOT("invalid char")
+		return nil, error.InvalidChar(ch)
 	}
+}
+
+// moveAndSetCursor - retrieve full text of the line and set the current cursor
+// to display errors
+func (l *Lexer) moveAndSetCursor(err *error.Error) {
+	curr := l.cursor
+	// default show all buffer
+	buf := l.GetLineBuffer()
+	cursor := error.Cursor{
+		File:    l.InputStream.Scope,
+		ColNum:  curr,
+		LineNum: l.CurrentLine,
+		Text:    string(buf),
+	}
+
+	defer func() {
+		// recover but not handle it
+		recover()
+		err.SetCursor(cursor)
+	}()
+
+	endCursor := l.SlideToLineEnd()
+	cursor.Text = string(buf[:endCursor+1])
+	err.SetCursor(cursor)
+}
+
+// SlideToLineEnd - slide cursor to the end of line
+// usually used to show the full text of current line while handling error
+// @return colNum of last char
+func (l *Lexer) SlideToLineEnd() int {
+	// move on util to the line end
+	for !util.Contains(l.peek(), []rune{CR, LF, EOF}) {
+		l.next()
+	}
+
+	return l.cursor
 }

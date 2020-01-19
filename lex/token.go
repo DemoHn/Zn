@@ -9,6 +9,20 @@ type TokenType int
 type Token struct {
 	Type    TokenType
 	Literal []rune
+	Range   TokenRange
+}
+
+// TokenRange - actual occupation range of a token
+type TokenRange struct {
+	StartLine int
+	StartCol  int
+	EndLine   int
+	EndCol    int
+}
+
+// SetTokenRange -
+func (tk *Token) SetTokenRange(rg TokenRange) {
+	tk.Range = rg
 }
 
 //// 0. EOF
@@ -344,50 +358,64 @@ var KeywordTypeMap = map[TokenType][]rune{
 }
 
 // NewTokenEOF - new EOF token
-func NewTokenEOF() *Token {
+func NewTokenEOF(line int, col int) *Token {
 	return &Token{
 		Type:    TypeEOF,
 		Literal: []rune{},
+		Range: TokenRange{
+			StartLine: line,
+			StartCol:  col,
+			EndLine:   line,
+			EndCol:    col,
+		},
 	}
 }
 
 // NewStringToken -
-func NewStringToken(buf []rune, quoteType rune) *Token {
+func NewStringToken(buf []rune, quoteType rune, rg TokenRange) *Token {
 	return &Token{
 		Type:    TypeString,
 		Literal: util.Copy(buf),
+		Range:   rg,
 	}
 }
 
 // NewVarQuoteToken -
-func NewVarQuoteToken(buf []rune) *Token {
+func NewVarQuoteToken(buf []rune, rg TokenRange) *Token {
 	return &Token{
 		Type:    TypeVarQuote,
 		Literal: util.Copy(buf),
+		Range:   rg,
 	}
 }
 
 // NewCommentToken -
-func NewCommentToken(buf []rune, isMultiLine bool) *Token {
+func NewCommentToken(buf []rune, isMultiLine bool, rg TokenRange) *Token {
 	return &Token{
 		Type:    TypeComment,
 		Literal: util.Copy(buf),
+		Range:   rg,
 	}
 }
 
 // NewNumberToken -
-func NewNumberToken(buf []rune) *Token {
+func NewNumberToken(buf []rune, rg TokenRange) *Token {
 	return &Token{
 		Type:    TypeNumber,
 		Literal: util.Copy(buf),
+		Range:   rg,
 	}
 }
 
 // NewMarkToken -
-func NewMarkToken(buf []rune, t TokenType) *Token {
+func NewMarkToken(buf []rune, t TokenType, startR TokenRange, num int) *Token {
+	rg := startR
+	rg.EndLine = startR.StartLine
+	rg.EndCol = startR.EndCol + num - 1
 	return &Token{
 		Type:    t,
 		Literal: util.Copy(buf),
+		Range:   rg,
 	}
 }
 
@@ -404,9 +432,10 @@ func NewKeywordToken(t TokenType) *Token {
 }
 
 // NewIdentifierToken -
-func NewIdentifierToken(buf []rune) *Token {
+func NewIdentifierToken(buf []rune, rg TokenRange) *Token {
 	return &Token{
 		Type:    TypeIdentifier,
 		Literal: util.Copy(buf),
+		Range:   rg,
 	}
 }

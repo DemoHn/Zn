@@ -1,8 +1,10 @@
 package lex
 
 import (
-	"io/ioutil"
+	"bytes"
+	"io"
 	"os"
+	"strings"
 	"unicode/utf8"
 
 	"github.com/DemoHn/Zn/error"
@@ -10,62 +12,108 @@ import (
 
 // Source stores all source code inputs (whatever from REPL, file, or CLI etc.) as an array.
 type Source struct {
-	Inputs []SourceInput
+	Streams []*InputStream
 }
 
-// SourceInput stores code text with utf-8 encoding
-type SourceInput struct {
-	Scope string // TODO - define the scope
-	Text  []rune
+// InputStream stores code text with utf-8 encoding
+type InputStream struct {
+	Scope string // TODO - define the scope [now default is $global]
+	io.Reader
+	encBuffer []byte // encoding utf-8 string buffer
+	readEnd   bool
 }
 
-// the only instance of source object
-var source Source
-
-//// methods
-
-// AddSourceInput transforms and adds one input (e.g. code file) from raw byte format to
-// utf-8 encoding source. Throws error if transforming failed
-func (s *Source) AddSourceInput(rawData []byte) *error.Error {
-	var input = SourceInput{
-		// TODO: define scope
-		Scope: "",
-		Text:  make([]rune, 0),
+// NewSource - new source
+func NewSource() *Source {
+	return &Source{
+		Streams: []*InputStream{},
 	}
-
-	b := rawData
-	for len(b) > 0 {
-		r, size := utf8.DecodeRune(b)
-		if r == utf8.RuneError {
-			return error.DecodeUTF8Fail()
-		}
-		input.Text = append(input.Text, r)
-		b = b[size:]
-	}
-
-	s.Inputs = append(s.Inputs, input)
-	return nil
 }
 
-// ReadTextFromFile - read code text from file
-func (s *Source) ReadTextFromFile(absPath string) ([]byte, *error.Error) {
+// AddStream -
+func (s *Source) AddStream(stream *InputStream) {
+	s.Streams = append(s.Streams, stream)
+}
+
+// InputStream helpers
+
+// NewFileStream - create stream from file
+func NewFileStream(path string) (*InputStream, *error.Error) {
 	// stat if file exists
-	if _, err := os.Stat(absPath); os.IsNotExist(err) {
-		return []byte{}, error.FileNotFound(absPath)
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		return nil, error.FileNotFound(path)
 	}
-
 	// open file
-	data, err := ioutil.ReadFile(absPath)
-	if err != nil {
-		return []byte{}, error.FileOpenError(absPath, err)
+	file, e := os.Open(path)
+	if e != nil {
+		return nil, error.FileOpenError(path, e)
 	}
-
-	return data, nil
+	return &InputStream{
+		Scope:   path,
+		Reader:  file,
+		readEnd: false,
+	}, nil
 }
 
-// init global source object
-func init() {
-	source = Source{
-		Inputs: []SourceInput{},
+// NewBufferStream - create stream from buffer - usually for REPL
+func NewBufferStream(buf []byte) *InputStream {
+	r := bytes.NewReader(buf)
+	return &InputStream{
+		Scope:   "$repl",
+		Reader:  r,
+		readEnd: false,
 	}
+}
+
+// NewTextStream - create stream from text - usually for REPL
+func NewTextStream(text string) *InputStream {
+	r := strings.NewReader(text)
+	return &InputStream{
+		Scope:   "$repl",
+		Reader:  r,
+		readEnd: false,
+	}
+}
+
+// inputStream method
+
+// Read - read n bytes and yields proper rune chars
+func (is *InputStream) Read(n int) ([]rune, *error.Error) {
+	p := make([]byte, n)
+	rs := []rune{}
+
+	t, err := is.Reader.Read(p)
+	if err != nil {
+		if err == io.EOF {
+			goto end
+		}
+		return rs, error.ReadFileError(err)
+	}
+
+end:
+	// stop parsing utf-8 since p is empty
+	if t == 0 {
+		is.readEnd = true
+		if len(is.encBuffer) > 0 {
+			return rs, error.DecodeUTF8Fail(is.encBuffer[0])
+		}
+		return rs, nil
+	}
+
+	is.encBuffer = append(is.encBuffer, p[:t]...)
+	for len(is.encBuffer) > 0 {
+		r, size := utf8.DecodeRune(is.encBuffer)
+		if r == utf8.RuneError {
+			return rs, nil
+		}
+
+		rs = append(rs, r)
+		is.encBuffer = is.encBuffer[size:]
+	}
+	return rs, nil
+}
+
+// End - if reading inputStream has ended
+func (is *InputStream) End() bool {
+	return is.readEnd
 }
