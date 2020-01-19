@@ -56,3 +56,8 @@ func (rs *RuneStack) IsEmpty() bool {
 func (rs *RuneStack) IsFull() bool {
 	return rs.count == rs.maxSize
 }
+
+// GetMaxSize -
+func (rs *RuneStack) GetMaxSize() int {
+	return rs.maxSize
+}

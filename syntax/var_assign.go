@@ -24,10 +24,6 @@ func (va *VarAssignStmt) statementNode() {}
 // VarAssignStmt -> TargetV 是 ExprA           (1A)
 //               -> ExprA ， 得到 TargetV       (2)
 //
-// TODO:
-// we need special handling for
-//
-// FuncName ： A，B，C，得到 TargetV
 func (p *Parser) ParseVarAssignStmt() (*VarAssignStmt, *error.Error) {
 	var stmt = new(VarAssignStmt)
 	var isTargetFirst = true
