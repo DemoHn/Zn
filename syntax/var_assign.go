@@ -43,7 +43,7 @@ func (p *Parser) ParseVarAssignStmt() (*VarAssignStmt, *error.Error) {
 			stmt.TargetVar = id
 			p.next()
 		} else {
-			return nil, error.NewErrorSLOT("invalid syntax")
+			return nil, error.InvalidSyntax()
 		}
 	case lex.TypeCommaSep:
 		if p.peek().Type == lex.TypeFuncYieldW {
@@ -52,10 +52,10 @@ func (p *Parser) ParseVarAssignStmt() (*VarAssignStmt, *error.Error) {
 			p.next()
 			isTargetFirst = false
 		} else {
-			return nil, error.NewErrorSLOT("invalid syntax")
+			return nil, error.InvalidSyntax()
 		}
 	default:
-		return nil, error.NewErrorSLOT("invalid syntax")
+		return nil, error.InvalidSyntax()
 	}
 
 	// #2. parse the second expression
@@ -70,7 +70,7 @@ func (p *Parser) ParseVarAssignStmt() (*VarAssignStmt, *error.Error) {
 		if id, ok := secondExpr.(*ID); ok {
 			stmt.TargetVar = id
 		} else {
-			return nil, error.NewErrorSLOT("invalid syntax")
+			return nil, error.InvalidSyntax()
 		}
 	}
 
