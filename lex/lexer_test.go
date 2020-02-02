@@ -507,7 +507,7 @@ func assertNextToken(cases []nextTokenCase, t *testing.T) {
 				if err != nil {
 					t.Errorf("NextToken() failed! expected no error, but got error")
 					t.Error(err)
-				} else if !reflect.DeepEqual(*tk, tt.token) {
+				} else if !reflect.DeepEqual(tk.Type, tt.token.Type) || !reflect.DeepEqual(tk.Literal, tt.token.Literal) {
 					t.Errorf("NextToken() return Token failed! expect: %v, got: %v", tt.token, *tk)
 				}
 			} else {
