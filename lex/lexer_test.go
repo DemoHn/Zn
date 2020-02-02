@@ -11,6 +11,7 @@ type nextTokenCase struct {
 	input       string
 	expectError bool
 	token       Token
+	errCursor   int
 }
 
 // mainly for testing parseCommentHead()
@@ -223,25 +224,25 @@ func TestNextToken_VarQuoteONLY(t *testing.T) {
 			name:        "invalid quote - number at first",
 			input:       "·123ABC·",
 			expectError: true,
-			token:       Token{},
+			errCursor:   1,
 		},
 		{
 			name:        "invalid quote - invalid punctuation",
 			input:       "·正（大）光明·",
 			expectError: true,
-			token:       Token{},
+			errCursor:   2,
 		},
 		{
 			name:        "invalid quote - char buffer overflow",
 			input:       "·这是一个很长变量这是一个很长变量这是一个很长变量这是一个很长变量这是一个很长变量·",
 			expectError: true,
-			token:       Token{},
+			errCursor:   33,
 		},
 		{
 			name:        "invalid quote - CR, LFs are not allowed inside quotes",
 			input:       "·变量\r\n又是变量名·",
 			expectError: true,
-			token:       Token{},
+			errCursor:   3,
 		},
 	}
 	assertNextToken(cases, t)
@@ -332,24 +333,57 @@ func TestNextToken_NumberONLY(t *testing.T) {
 				Literal: []rune("-12300500800900"),
 			},
 		},
+		{
+			name:        "*10^ as E",
+			input:       "23.5*10^8",
+			expectError: false,
+			token: Token{
+				Type:    TypeNumber,
+				Literal: []rune("23.5*10^8"),
+			},
+		},
 		// test fail cases
 		{
 			name:        "operater only",
 			input:       "---",
 			expectError: true,
-			token:       Token{},
+			errCursor:   1,
 		},
 		{
 			name:        "operater only #2",
 			input:       "-++",
 			expectError: true,
-			token:       Token{},
+			errCursor:   1,
 		},
 		{
 			name:        "E first",
 			input:       "-E+3",
 			expectError: true,
-			token:       Token{},
+			errCursor:   1,
+		},
+		{
+			name:        "E without following PM mark",
+			input:       "2395.234E34",
+			expectError: true,
+			errCursor:   9,
+		},
+		{
+			name:        "number with other weird char",
+			input:       "23.r",
+			expectError: true,
+			errCursor:   3,
+		},
+		{
+			name:        "numbers *9^",
+			input:       "1111*9^23",
+			expectError: true,
+			errCursor:   5,
+		},
+		{
+			name:        "incomplete *10^",
+			input:       "1234*10^",
+			expectError: true,
+			errCursor:   8,
 		},
 	}
 
@@ -513,6 +547,8 @@ func assertNextToken(cases []nextTokenCase, t *testing.T) {
 			} else {
 				if err == nil {
 					t.Errorf("NextToken() failed! expected error, but got no error")
+				} else if err.GetCursor().ColNum != tt.errCursor {
+					t.Errorf("Err cursor location not match! expect: %d, got: %d", tt.errCursor, err.GetCursor().ColNum)
 				}
 			}
 		})
