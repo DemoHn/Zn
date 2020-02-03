@@ -146,7 +146,7 @@ head:
 			goto head
 		}
 		// parse number
-		if isNumber(ch) || ch == '+' || ch == '-' {
+		if isNumber(ch) || util.Contains(ch, []rune{'.', '+', '-'}) {
 			tok, err = l.parseNumber(ch)
 			return
 		}
@@ -394,7 +394,8 @@ func (l *Lexer) parseVarQuote(ch rune) (*Token, *error.Error) {
 	}
 }
 
-// regex: ^[-+]?[0-9]*\.?[0-9]+(E[-+]?[0-9]+)?$
+// regex: ^[Ff]?[-+]?[0-9]*\.?[0-9]+((([eE][-+])|(\*(10)?\^[-+]?))[0-9]+)?$
+// ref: https://github.com/DemoHn/Zn/issues/4
 func (l *Lexer) parseNumber(ch rune) (*Token, *error.Error) {
 	// setup
 	l.clearBuffer()
@@ -404,10 +405,25 @@ func (l *Lexer) parseNumber(ch rune) (*Token, *error.Error) {
 	}
 
 	// hand-written regex parser
-	// ref: https://cyberzhg.github.io/toolbox/min_dfa?regex=KG18cCk/TisuP04rKChlfEUpKG18cCk/TispPw==
-	// or the documentation has declared that.
-	var state = 1
-	var endStates = []int{2, 4, 6}
+	// ref: https://cyberzhg.github.io/toolbox/min_dfa?regex=Rj9QP0QqLj9EKygoKEVQKXwocygxMCk/dVA/KSlEKyk/
+	// hand-drawn min-DFA:
+	// https://github.com/DemoHn/Zn/issues/6
+	const (
+		sBegin      = 1
+		sDot        = 2
+		sIntEnd     = 3
+		sIntPMFlag  = 5
+		sDotDecEnd  = 6
+		sEFlag      = 7
+		sSFlag      = 8
+		sExpPMFlag  = 9
+		sSciI       = 10
+		sSciEndFlag = 11
+		sExpEnd     = 12
+		sSciII      = 13
+	)
+	var state = sBegin
+	var endStates = []int{sIntEnd, sDotDecEnd, sExpEnd}
 
 	for {
 		switch ch {
@@ -415,41 +431,84 @@ func (l *Lexer) parseNumber(ch rune) (*Token, *error.Error) {
 			goto end
 		case 'e', 'E':
 			switch state {
-			case 2, 4:
-				state = 5
+			case sDotDecEnd, sIntEnd:
+				state = sEFlag
 			default:
 				goto end
 			}
 		case '.':
 			switch state {
-			case 2:
-				state = 4
+			case sBegin, sIntPMFlag, sIntEnd:
+				state = sDot
 			default:
 				goto end
 			}
 		case '-', '+':
 			switch state {
-			case 1:
-				state = 3
-			case 5:
-				state = 7
+			case sBegin:
+				state = sIntPMFlag
+			case sEFlag, sSciEndFlag:
+				state = sExpPMFlag
 			default:
 				goto end
 			}
 		case '_':
 			ch = l.next()
 			continue
-		default:
-			if isNumber(ch) {
-				switch state {
-				case 1, 2, 3:
-					state = 2
-				case 5, 6, 7:
-					state = 6
-				}
-			} else {
+		case '*':
+			switch state {
+			case sDotDecEnd, sIntEnd:
+				state = sSFlag
+			default:
 				goto end
 			}
+		case '1':
+			switch state {
+			case sSFlag:
+				state = sSciI
+				// same with other numbers
+			case sBegin, sIntEnd, sIntPMFlag:
+				state = sIntEnd
+			case sDot, sDotDecEnd:
+				state = sDotDecEnd
+			case sExpPMFlag, sSciEndFlag, sExpEnd:
+				state = sExpEnd
+			default:
+				goto end
+			}
+		case '0':
+			switch state {
+			case sSciI:
+				state = sSciII
+			case sBegin, sIntEnd, sIntPMFlag:
+				state = sIntEnd
+			case sDot, sDotDecEnd:
+				state = sDotDecEnd
+			case sExpPMFlag, sSciEndFlag, sExpEnd:
+				state = sExpEnd
+			default:
+				goto end
+			}
+		case '2', '3', '4', '5', '6', '7', '8', '9':
+			switch state {
+			case sBegin, sIntEnd, sIntPMFlag:
+				state = sIntEnd
+			case sDot, sDotDecEnd:
+				state = sDotDecEnd
+			case sExpPMFlag, sSciEndFlag, sExpEnd:
+				state = sExpEnd
+			default:
+				goto end
+			}
+		case '^':
+			switch state {
+			case sSFlag, sSciII:
+				state = sSciEndFlag
+			default:
+				goto end
+			}
+		default:
+			goto end
 		}
 		l.pushBuffer(ch)
 		ch = l.next()

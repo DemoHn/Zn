@@ -50,38 +50,6 @@ func (zs *ZnString) SetValue(v string) bool {
 	return true
 }
 
-// ZnInteger - Zn integer type (a sub-type of Number?)
-type ZnInteger struct {
-	ZnNullable
-	Value int64
-}
-
-func (zs *ZnInteger) String() string {
-	return fmt.Sprintf("%d", zs.Value)
-}
-
-// SetValue -
-func (zs *ZnInteger) SetValue(v int64) bool {
-	zs.Value = v
-	return true
-}
-
-// ZnFloat - Zn float type (a sub-type of Number?)
-type ZnFloat struct {
-	ZnNullable
-	Value float64
-}
-
-func (zs *ZnFloat) String() string {
-	return fmt.Sprintf("%.8f", zs.Value)
-}
-
-// SetValue -
-func (zs *ZnFloat) SetValue(v float64) bool {
-	zs.Value = v
-	return true
-}
-
 // ZnArray - Zn array type
 type ZnArray struct {
 	ZnNullable

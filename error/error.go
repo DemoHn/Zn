@@ -30,6 +30,11 @@ func (e *Error) SetCursor(cursor Cursor) {
 	e.cursor = cursor
 }
 
+// GetCursor - get error cursor
+func (e *Error) GetCursor() Cursor {
+	return e.cursor
+}
+
 // Display - display detailed error info to user
 // general format:
 //
@@ -48,14 +53,14 @@ func (e *Error) Display() string {
 	// line1
 	if e.onMask(dpHideFileName) {
 		if e.onMask(dpHideLineNum) {
-			line1 = "发现异常："
+			line1 = "发现错误："
 		} else {
-			line1 = fmt.Sprintf("在第 %d 行发现异常：", e.cursor.LineNum)
+			line1 = fmt.Sprintf("在第 %d 行发现错误：", e.cursor.LineNum)
 		}
 	} else if e.onMask(dpHideLineNum) {
-		line1 = fmt.Sprintf("在「%s」中发现异常：", e.cursor.File)
+		line1 = fmt.Sprintf("在「%s」中发现错误：", e.cursor.File)
 	} else {
-		line1 = fmt.Sprintf("在「%s」中，位于第 %d 行发现异常：", e.cursor.File, e.cursor.LineNum)
+		line1 = fmt.Sprintf("在「%s」中，位于第 %d 行发现错误：", e.cursor.File, e.cursor.LineNum)
 	}
 	// line2
 	if e.onMask(dpHideLineText) {
@@ -194,7 +199,7 @@ func init() {
 	ioError = errorClass{0x21}
 
 	errClassMap = map[uint16]string{
-		0x0020: "语法异常",
-		0x0021: "I/O异常",
+		0x0020: "语法错误",
+		0x0021: "I/O错误",
 	}
 }
