@@ -65,6 +65,11 @@ func TestDecimal_ParseValue(t *testing.T) {
 			value: "(false, 0, -7)",
 		},
 		{
+			name:  "1.000x",
+			input: "1.0000000",
+			value: "(false, 10000000, -7)",
+		},
+		{
 			name:  "*10^",
 			input: "-2345.678*10^38",
 			value: "(true, 2345678, 35)",

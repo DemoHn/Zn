@@ -2,7 +2,6 @@ package exec
 
 import (
 	"fmt"
-	"strconv"
 	"strings"
 
 	"github.com/DemoHn/Zn/error"
@@ -102,7 +101,10 @@ func execExpression(it *Interpreter, expr syntax.Expression) ZnObject {
 func execPrimitiveExpr(it *Interpreter, expr syntax.Expression) ZnObject {
 	switch e := expr.(type) {
 	case *syntax.Number:
-		return parseNumber(e.GetLiteral())
+		zd := new(ZnDecimal)
+		zd.SetValue(e.GetLiteral())
+
+		return zd
 	case *syntax.String:
 		zstr := new(ZnString)
 		zstr.SetValue(e.GetLiteral())
@@ -127,20 +129,4 @@ func execPrimitiveExpr(it *Interpreter, expr syntax.Expression) ZnObject {
 		// TODO: to be continued...
 		return nil
 	}
-}
-
-func parseNumber(numstr string) ZnObject {
-	// TODO: to be continued...
-	// TODO2: differetiate Int and Float!
-	// TODO3: we are going to a infinite-size long number
-	//
-	// need more standard to describe that
-	i, e := strconv.Atoi(numstr)
-	if e != nil {
-		return nil
-	}
-
-	zint := new(ZnInteger)
-	zint.SetValue(int64(i))
-	return zint
 }

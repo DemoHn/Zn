@@ -1,8 +1,10 @@
 package exec
 
 import (
+	"fmt"
 	"math/big"
 	"strconv"
+	"strings"
 
 	"github.com/DemoHn/Zn/error"
 )
@@ -16,9 +18,31 @@ type ZnDecimal struct {
 	exp  int
 }
 
-func (zd *ZnDecimal) String() string {
-	// TODO -
-	return "[NUMBER]"
+// String - show decimal display string
+func (zd *ZnDecimal) String() (data string) {
+	var sflag = ""
+	if zd.sign {
+		sflag = "-"
+	}
+
+	var txt = zd.co.String()
+
+	if zd.exp == 0 {
+		data = fmt.Sprintf("%s%s", sflag, txt)
+	} else if zd.exp > 0 {
+		var zeros = strings.Repeat("0", zd.exp)
+		data = fmt.Sprintf("%s%s%s", sflag, txt, zeros)
+	} else {
+		// case: zd.exp < 0
+		if zd.exp+len(txt) <= 0 {
+			var zeros = strings.Repeat("0", -(zd.exp + len(txt)))
+			data = fmt.Sprintf("%s0.%s%s", sflag, zeros, txt)
+		} else {
+			pt := zd.exp + len(txt)
+			data = fmt.Sprintf("%s%s.%s", sflag, txt[:pt], txt[pt:])
+		}
+	}
+	return
 }
 
 // SetValue - set decimal value from raw string
@@ -67,9 +91,13 @@ func (zd *ZnDecimal) SetValue(raw string) *error.Error {
 			switch x {
 			case '.':
 				state = sDotNum
-			case '*': // *10^
+			case '*': // *10^ or *^
 				state = sExpNum
-				idx = idx + 3
+				if rawR[idx+1] == '^' {
+					idx = idx + 1
+				} else {
+					idx = idx + 3
+				}
 			case 'E', 'e':
 				state = sExpNum
 			default:
@@ -77,9 +105,13 @@ func (zd *ZnDecimal) SetValue(raw string) *error.Error {
 			}
 		case sDotNum:
 			switch x {
-			case '*':
+			case '*': // *10^ or *^
 				state = sExpNum
-				idx = idx + 3
+				if rawR[idx+1] == '^' {
+					idx = idx + 1
+				} else {
+					idx = idx + 3
+				}
 			case 'E', 'e':
 				state = sExpNum
 			default:
