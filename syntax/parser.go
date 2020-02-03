@@ -18,6 +18,7 @@ type Parser struct {
 	*lex.Lexer
 	tokens     [3]*lex.Token
 	mockTokens mockTokens
+	lineMask   uint16
 }
 
 // Expression - a special type of statement
@@ -37,6 +38,11 @@ type mockTokens struct {
 	cursor       int
 	useMockToken bool
 }
+
+const (
+	modeInline uint16 = 0x01
+	modeBlock  uint16 = 0x02
+)
 
 // NewParser -
 func NewParser(l *lex.Lexer) *Parser {
@@ -99,7 +105,8 @@ func (p *Parser) InitMockToken(tokens []lex.Token) {
 func (p *Parser) next() *error.Error {
 	var tk *lex.Token
 	var err *error.Error
-	// use pre-load token list
+
+	// use pre-load token list (for mock tests)
 	if p.mockTokens.useMockToken {
 		if p.mockTokens.cursor >= len(p.mockTokens.tokens) {
 			tk = lex.NewTokenEOF(0, 0)
@@ -107,9 +114,18 @@ func (p *Parser) next() *error.Error {
 			tk = &(p.mockTokens.tokens[p.mockTokens.cursor])
 			p.mockTokens.cursor = p.mockTokens.cursor + 1
 		}
-	} else {
+	} else { // normal way
 		tk, err = p.NextToken()
 		if err != nil {
+			return err
+		}
+	}
+
+	// after retrieving next token successfully, check if current token has
+	// violate lineMasks
+	// check the comment of validateLineMask() for details
+	if p.tokens[0] != nil && p.tokens[1] != nil {
+		if err = p.validateLineMask(p.tokens[0], p.tokens[1]); err != nil {
 			return err
 		}
 	}
@@ -130,6 +146,28 @@ func (p *Parser) peek() *lex.Token {
 
 func (p *Parser) peek2() *lex.Token {
 	return p.tokens[2]
+}
+
+func (p *Parser) setLineMask(loc uint16) {
+	p.lineMask = p.lineMask | loc
+}
+
+func (p *Parser) unsetLineMask(loc uint16) {
+	p.lineMask = p.lineMask & (^loc)
+}
+
+func (p *Parser) validateLineMask(lastToken *lex.Token, newToken *lex.Token) *error.Error {
+
+	var line1 = lastToken.Range.EndLine
+	var line2 = newToken.Range.StartLine
+	// if new token has entered a new line
+	if line2 > line1 {
+		// for modeInline, all tokens should have no explicit newline (CRLF)
+		if (p.lineMask & modeInline) > 0 {
+			return error.NewErrorSLOT("prohibited newline! mostly because the statement doesn't finish yet!")
+		}
+	}
+	return nil
 }
 
 // consume one token (without callback), will return error if the incoming token (p.currentToken)

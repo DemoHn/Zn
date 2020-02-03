@@ -23,6 +23,9 @@ func (vn *VarDeclareStmt) statementNode() {}
 //            ->
 //
 func (p *Parser) ParseVarDeclare() (*VarDeclareStmt, *error.Error) {
+	p.setLineMask(modeInline)
+	defer p.unsetLineMask(modeInline)
+
 	// #0. consume LING keyword
 	if err := p.consume(lex.TypeDeclareW); err != nil {
 		return nil, err
