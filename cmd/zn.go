@@ -72,7 +72,7 @@ func ExecProgram(file string) {
 
 	rtn, errE := execProgram(s.Streams[0], nil)
 	if errE != nil {
-		fmt.Printf("[语法错误] %s\n", errE.Error())
+		fmt.Printf("%s\n", errE.Display())
 	}
 
 	fmt.Println(rtn)
