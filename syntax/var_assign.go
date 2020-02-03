@@ -25,6 +25,9 @@ func (va *VarAssignStmt) statementNode() {}
 //               -> ExprA ， 得到 TargetV       (2)
 //
 func (p *Parser) ParseVarAssignStmt() (*VarAssignStmt, *error.Error) {
+	p.setLineMask(modeInline)
+	defer p.unsetLineMask(modeInline)
+
 	var stmt = new(VarAssignStmt)
 	var isTargetFirst = true
 	// #0. parse first expression
