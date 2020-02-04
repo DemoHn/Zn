@@ -46,17 +46,19 @@ const (
 
 // NewParser -
 func NewParser(l *lex.Lexer) *Parser {
-	p := &Parser{
+	return &Parser{
 		Lexer:      l,
 		mockTokens: mockTokens{}, // mockTokens data, for unit testing
 	}
-	// read current and peek token
-	return p
 }
 
 // Parse - parse all tokens into an AST (stored as ProgramNode)
 func (p *Parser) Parse() (pg *ProgramNode, err *error.Error) {
 	defer func() {
+		// recover error from next()
+		if r := recover(); r != nil {
+			err, _ = r.(*error.Error)
+		}
 		if err != nil {
 			// if subcode >= 0x50, that means this error is generated from
 			// parser, i.e. we have to set cursor manually by retrieving the start cursor
@@ -72,19 +74,15 @@ func (p *Parser) Parse() (pg *ProgramNode, err *error.Error) {
 		}
 	}()
 
-	// pre-read tokens
-	for i := 0; i < 3; i++ {
-		err = p.next()
-		if err != nil {
-			return
-		}
-	}
+	// advance tokens TWICE
+	p.next()
+	p.next()
+
 	pg = &ProgramNode{
 		Children: []Statement{},
 	}
-	for p.current().Type != lex.TypeEOF {
-		err = p.ParseStatement(pg)
-		if err != nil {
+	for p.peek().Type != lex.TypeEOF {
+		if err = ParseStatement(p, pg); err != nil {
 			return
 		}
 	}
@@ -102,7 +100,7 @@ func (p *Parser) InitMockToken(tokens []lex.Token) {
 	}
 }
 
-func (p *Parser) next() *error.Error {
+func (p *Parser) next() *lex.Token {
 	var tk *lex.Token
 	var err *error.Error
 
@@ -117,7 +115,7 @@ func (p *Parser) next() *error.Error {
 	} else { // normal way
 		tk, err = p.NextToken()
 		if err != nil {
-			return err
+			panic(err)
 		}
 	}
 
@@ -126,14 +124,16 @@ func (p *Parser) next() *error.Error {
 	// check the comment of validateLineMask() for details
 	if p.tokens[0] != nil && p.tokens[1] != nil {
 		if err = p.validateLineMask(p.tokens[0], p.tokens[1]); err != nil {
-			return err
+			panic(err)
 		}
 	}
 
+	// move advanced token buffer
 	p.tokens[0] = p.tokens[1]
 	p.tokens[1] = p.tokens[2]
 	p.tokens[2] = tk
-	return nil
+
+	return p.tokens[0]
 }
 
 func (p *Parser) current() *lex.Token {
@@ -170,30 +170,33 @@ func (p *Parser) validateLineMask(lastToken *lex.Token, newToken *lex.Token) *er
 	return nil
 }
 
-// consume one token (without callback), will return error if the incoming token (p.currentToken)
-// is not in validTypes
+// consume one token with denoted validTypes
+// if not, return syntaxError
 func (p *Parser) consume(validTypes ...lex.TokenType) *error.Error {
-	tk := p.current()
-	tkType := tk.Type
+	tkType := p.peek().Type
 	for _, item := range validTypes {
 		if item == tkType {
-			return p.next()
+			p.next()
+			return nil
 		}
 	}
 	return error.InvalidSyntax()
 }
 
-// consume one token with error func
-func (p *Parser) consumeFunc(callback func(*lex.Token), validTypes ...lex.TokenType) *error.Error {
-	tk := p.current()
-	tkType := tk.Type
-	for _, item := range validTypes {
-		if item == tkType {
-			callback(tk)
-			return p.next()
+// trying to consume one token. if the token is valid in the given range of tokenTypes,
+// will return its tokenType; if not, then nothing will happen.
+//
+// returns (matched, tokenType)
+func (p *Parser) tryConsume(validTypes []lex.TokenType) (bool, *lex.Token) {
+	tk := p.peek()
+	for _, vt := range validTypes {
+		if vt == tk.Type {
+			p.next()
+			return true, tk
 		}
 	}
-	return error.InvalidSyntax()
+
+	return false, nil
 }
 
 //// parse element functions
@@ -204,27 +207,33 @@ func (p *Parser) consumeFunc(callback func(*lex.Token), validTypes ...lex.TokenT
 // Statement -> VarDeclareStmt
 //           -> VarAssignStmt
 //           -> ；
-func (p *Parser) ParseStatement(pg *ProgramNode) *error.Error {
-	switch p.current().Type {
-	case lex.TypeStmtSep:
-		p.consume(lex.TypeStmtSep)
-		// skip
-		return nil
-	case lex.TypeDeclareW:
-		stmt, err := p.ParseVarDeclare()
-		if err != nil {
-			return err
-		}
-		pg.Children = append(pg.Children, stmt)
-		return nil
-	default:
-		stmt, err := p.ParseVarAssignStmt()
-		if err != nil {
-			return err
-		}
-		pg.Children = append(pg.Children, stmt)
-		return nil
+func ParseStatement(p *Parser, pg *ProgramNode) *error.Error {
+	validTypes := []lex.TokenType{
+		lex.TypeStmtSep,
+		lex.TypeDeclareW,
 	}
+	match, tk := p.tryConsume(validTypes)
+	if match {
+		switch tk.Type {
+		case lex.TypeStmtSep:
+			// skip
+			return nil
+		case lex.TypeDeclareW:
+			stmt, err := ParseVarDeclare(p)
+			if err != nil {
+				return err
+			}
+			pg.Children = append(pg.Children, stmt)
+			return nil
+		}
+	}
+
+	stmt, err := p.ParseVarAssignStmt()
+	if err != nil {
+		return err
+	}
+	pg.Children = append(pg.Children, stmt)
+	return nil
 }
 
 // ParseExpression - parse general expression (abstract expression type)
@@ -235,27 +244,26 @@ func (p *Parser) ParseStatement(pg *ProgramNode) *error.Error {
 // String
 // ArrayExpr
 // （ Expr ）
-func (p *Parser) ParseExpression() (Expression, *error.Error) {
-	var tk Expression
-	switch p.current().Type {
-	case lex.TypeIdentifier, lex.TypeVarQuote, lex.TypeNumber, lex.TypeString:
-		return p.ParsePrimeExpr()
-	case lex.TypeArrayQuoteL:
-		token, err := p.ParseArrayExpr()
-		if err != nil {
-			return nil, err
-		}
-		tk = token
-	case lex.TypeStmtQuoteL:
-		token, err := parseParenExpr(p)
-		if err != nil {
-			return nil, err
-		}
-		tk = token
-	default:
-		return nil, error.InvalidSyntax()
+func ParseExpression(p *Parser) (Expression, *error.Error) {
+	var validTypes = []lex.TokenType{
+		lex.TypeIdentifier, lex.TypeVarQuote, lex.TypeNumber, lex.TypeString,
+		lex.TypeArrayQuoteL,
 	}
-	return tk, nil
+
+	match, tk := p.tryConsume(validTypes)
+	if match {
+		switch tk.Type {
+		case lex.TypeIdentifier, lex.TypeVarQuote, lex.TypeNumber, lex.TypeString:
+			return ParsePrimeExpr(p)
+		case lex.TypeArrayQuoteL:
+			token, err := ParseArrayExpr(p)
+			if err != nil {
+				return nil, err
+			}
+			return token, nil
+		}
+	}
+	return nil, error.InvalidSyntax()
 }
 
 // similar to lexer's version, but with given line & col
@@ -277,22 +285,4 @@ func (p *Parser) moveAndSetCursor(line int, col int, err *error.Error) {
 	endCursor := p.SlideToLineEnd()
 	cursor.Text = string(buf[:endCursor+1])
 	err.SetCursor(cursor)
-}
-
-func parseParenExpr(p *Parser) (Expression, *error.Error) {
-	// #0. left paren
-	if err := p.consume(lex.TypeStmtQuoteL); err != nil {
-		return nil, err
-	}
-	// #1. parse expr
-	expr, err := p.ParseExpression()
-	if err != nil {
-		return nil, err
-	}
-
-	// #2. right paren
-	if err := p.consume(lex.TypeStmtQuoteR); err != nil {
-		return nil, err
-	}
-	return expr, nil
 }

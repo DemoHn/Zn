@@ -32,14 +32,14 @@ func (p *Parser) ParseVarAssignStmt() (*VarAssignStmt, *error.Error) {
 	var isTargetFirst = true
 	// #0. parse first expression
 	// either ExprT (case 1) or ExprA (case 2)
-	firstExpr, err := p.ParseExpression()
+	firstExpr, err := ParseExpression(p)
 	if err != nil {
 		return nil, err
 	}
 
 	// #1. parse the middle one
-	switch p.current().Type {
-	case lex.TypeLogicYesW, lex.TypeLogicYesIIW:
+	switch p.peek().Type {
+	case lex.TypeLogicYesW:
 		// NOTICE: currently we only support ID as the first expr, so we
 		// check the type here
 		if id, ok := firstExpr.(*ID); ok {
@@ -49,7 +49,7 @@ func (p *Parser) ParseVarAssignStmt() (*VarAssignStmt, *error.Error) {
 			return nil, error.InvalidSyntax()
 		}
 	case lex.TypeCommaSep:
-		if p.peek().Type == lex.TypeFuncYieldW {
+		if p.peek2().Type == lex.TypeFuncYieldW {
 			stmt.AssignExpr = firstExpr
 			p.next()
 			p.next()
@@ -62,7 +62,7 @@ func (p *Parser) ParseVarAssignStmt() (*VarAssignStmt, *error.Error) {
 	}
 
 	// #2. parse the second expression
-	secondExpr, err := p.ParseExpression()
+	secondExpr, err := ParseExpression(p)
 	if err != nil {
 		return nil, err
 	}

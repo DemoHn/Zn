@@ -22,14 +22,9 @@ func (vn *VarDeclareStmt) statementNode() {}
 //         I' -> ，I I'
 //            ->
 //
-func (p *Parser) ParseVarDeclare() (*VarDeclareStmt, *error.Error) {
+func ParseVarDeclare(p *Parser) (*VarDeclareStmt, *error.Error) {
 	p.setLineMask(modeInline)
 	defer p.unsetLineMask(modeInline)
-
-	// #0. consume LING keyword
-	if err := p.consume(lex.TypeDeclareW); err != nil {
-		return nil, err
-	}
 
 	vNode := &VarDeclareStmt{
 		Variables:  make([]*ID, 0),
@@ -45,46 +40,56 @@ func (p *Parser) ParseVarDeclare() (*VarDeclareStmt, *error.Error) {
 	}
 
 	// parse expression
-	expr, err := p.ParseExpression()
+	expr, err := ParseExpression(p)
 	if err != nil {
 		return nil, err
 	}
+
 	vNode.AssignExpr = expr
 	return vNode, nil
 }
 
 func parseIdentifierList(p *Parser, vNode *VarDeclareStmt) *error.Error {
-	// #0. consume Identifier
-	if err := p.consumeFunc(cbIdentifier(vNode), lex.TypeVarQuote, lex.TypeIdentifier); err != nil {
-		return err
-	}
-	// #1. parse identifier tail
-	return parseIdentifierTail(p, vNode)
-}
-
-func parseIdentifierTail(p *Parser, vNode *VarDeclareStmt) *error.Error {
-	// skip all parsing
-	if p.current().Type != lex.TypeCommaSep {
-		return nil
-	}
-	// #0. consume comma
-	if err := p.consume(lex.TypeCommaSep); err != nil {
-		return err
+	validTypes := []lex.TokenType{
+		lex.TypeVarQuote,
+		lex.TypeIdentifier,
 	}
 	// #1. consume Identifier
-	if err := p.consumeFunc(cbIdentifier(vNode), lex.TypeVarQuote, lex.TypeIdentifier); err != nil {
-		return err
-	}
-	// #2. parse tail nested again
-	return parseIdentifierTail(p, vNode)
-}
-
-// callback -
-func cbIdentifier(vNode *VarDeclareStmt) func(tk *lex.Token) {
-	return func(tk *lex.Token) {
+	if match, tk := p.tryConsume(validTypes); match {
 		tid := new(ID)
 		tid.SetLiteral(string(tk.Literal))
 		// append variables
 		vNode.Variables = append(vNode.Variables, tid)
+	} else {
+		return error.InvalidSyntax()
 	}
+
+	// #2. parse identifier tail
+	return parseIdentifierTail(p, vNode)
+}
+
+func parseIdentifierTail(p *Parser, vNode *VarDeclareStmt) *error.Error {
+	commaTypes := []lex.TokenType{
+		lex.TypeCommaSep,
+	}
+	idTypes := []lex.TokenType{
+		lex.TypeVarQuote,
+		lex.TypeIdentifier,
+	}
+	// #1. consume Comma
+	if match, _ := p.tryConsume(commaTypes); !match {
+		return nil
+	}
+	// #2. consume Identifier
+	if match, tk := p.tryConsume(idTypes); match {
+		tid := new(ID)
+		tid.SetLiteral(string(tk.Literal))
+		// append variables
+		vNode.Variables = append(vNode.Variables, tid)
+	} else {
+		return error.InvalidSyntax()
+	}
+
+	// #3. parse tail nested again
+	return parseIdentifierTail(p, vNode)
 }

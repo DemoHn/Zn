@@ -26,12 +26,7 @@ type ArrayExpr struct {
 //             -> ID
 //             -> ArrayExpr
 //             -> （ Expr ）
-func (p *Parser) ParseArrayExpr() (*ArrayExpr, *error.Error) {
-	// #0. consume left brancket
-	if err := p.consume(lex.TypeArrayQuoteL); err != nil {
-		return nil, err
-	}
-
+func ParseArrayExpr(p *Parser) (*ArrayExpr, *error.Error) {
 	ar := &ArrayExpr{
 		Items: make([]Expression, 0),
 	}
@@ -48,7 +43,7 @@ func (p *Parser) ParseArrayExpr() (*ArrayExpr, *error.Error) {
 
 func parseItemList(p *Parser, ar *ArrayExpr) *error.Error {
 	// #0. parse expression
-	expr, err := p.ParseExpression()
+	expr, err := ParseExpression(p)
 	if err != nil {
 		return err
 	}
@@ -59,16 +54,12 @@ func parseItemList(p *Parser, ar *ArrayExpr) *error.Error {
 }
 
 func parseItemListTail(p *Parser, ar *ArrayExpr) *error.Error {
-	// skip parsing
-	if p.current().Type != lex.TypeCommaSep {
+	// #0. consume comma
+	if match, _ := p.tryConsume([]lex.TokenType{lex.TypeCommaSep}); !match {
 		return nil
 	}
-	// #0. consume comma
-	if err := p.consume(lex.TypeCommaSep); err != nil {
-		return err
-	}
 	// #1. parse expression
-	expr, err := p.ParseExpression()
+	expr, err := ParseExpression(p)
 	if err != nil {
 		return err
 	}
