@@ -108,6 +108,8 @@ const (
 	GlyphZHI rune = 0x4E4B
 	// GlyphDEo - 的 - 的
 	GlyphDEo rune = 0x7684
+	// GlyphZAI - 再 - 再如
+	GlyphZAI rune = 0x518D
 )
 
 // KeywordLeads - all glyphs that would be possible of the first character of one keyword.
@@ -118,7 +120,7 @@ var KeywordLeads = []rune{
 	GlyphDE, GlyphFOU, GlyphMEI,
 	GlyphCHENG, GlyphZUO, GlyphDING, GlyphLEI,
 	GlyphQI, GlyphCI, GlyphHE, GlyphHUO, GlyphQIE,
-	GlyphDUI, GlyphZHI, GlyphDEo,
+	GlyphDUI, GlyphZHI, GlyphDEo, GlyphZAI,
 }
 
 //// 2. markers
@@ -282,7 +284,7 @@ const (
 	TypeMapData      TokenType = 24
 	TypeDeclareW     TokenType = 40 // 令
 	TypeLogicYesW    TokenType = 41 // 为
-	TypeLogicYesIIW  TokenType = 42 // 是
+	TypeCondOtherW   TokenType = 43 // 再如
 	TypeCondW        TokenType = 44 // 如果
 	TypeFuncW        TokenType = 45 // 如何
 	TypeStaticFuncW  TokenType = 46 // 何为
@@ -324,7 +326,6 @@ const (
 var KeywordTypeMap = map[TokenType][]rune{
 	TypeDeclareW:      []rune{GlyphLING},
 	TypeLogicYesW:     []rune{GlyphWEI},
-	TypeLogicYesIIW:   []rune{GlyphSHI},
 	TypeCondW:         []rune{GlyphRU, GlyphGUO},
 	TypeFuncW:         []rune{GlyphRU, GlyphHE},
 	TypeStaticFuncW:   []rune{GlyphHE, GlyphWEI},
@@ -355,6 +356,7 @@ var KeywordTypeMap = map[TokenType][]rune{
 	TypeObjConstructW: []rune{GlyphSHI, GlyphWEI},
 	TypeLogicEqualW:   []rune{GlyphDENG, GlyphYU},
 	TypeStaticSelfW:   []rune{GlyphCI, GlyphZHI},
+	TypeCondOtherW:    []rune{GlyphZAI, GlyphRU},
 }
 
 // NewTokenEOF - new EOF token

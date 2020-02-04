@@ -199,6 +199,28 @@ func (p *Parser) tryConsume(validTypes []lex.TokenType) (bool, *lex.Token) {
 	return false, nil
 }
 
+// expectBlockIndent - detect if the Indent(peek) == Indent(current) + 1
+// returns (validBlockIndent, newIndent)
+func (p *Parser) expectBlockIndent() (bool, int) {
+	var peekLine = p.peek().Range.StartLine
+	var currLine = p.current().Range.StartLine
+
+	var peekIndent = p.GetLine(peekLine).Indents
+	var currIndent = p.GetLine(currLine).Indents
+
+	if peekIndent == currIndent+1 {
+		return true, peekIndent
+	}
+	return false, 0
+}
+
+// getPeekIndent -
+func (p *Parser) getPeekIndent() int {
+	var peekLine = p.peek().Range.StartLine
+
+	return p.GetLine(peekLine).Indents
+}
+
 //// parse element functions
 
 // ParseStatement - a program consists of statements

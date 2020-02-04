@@ -605,7 +605,7 @@ func (l *Lexer) parseKeyword(ch rune, moveForward bool) (bool, *Token) {
 			wordLen = 2
 			tk = NewKeywordToken(TypeObjConstructW)
 		} else {
-			tk = NewKeywordToken(TypeLogicYesIIW)
+			return false, nil
 		}
 	case GlyphRU:
 		switch l.peek() {
@@ -748,6 +748,13 @@ func (l *Lexer) parseKeyword(ch rune, moveForward bool) (bool, *Token) {
 		} else {
 			return false, nil
 		}
+	case GlyphZAI:
+		if l.peek() == GlyphRU {
+			wordLen = 2
+			tk = NewKeywordToken(TypeCondOtherW)
+		} else {
+			return false, nil
+		}
 	case GlyphQI:
 		tk = NewKeywordToken(TypeObjThisW)
 	case GlyphCI:
@@ -815,7 +822,6 @@ func (l *Lexer) parseIdentifier(ch rune) (*Token, *error.Error) {
 	// push first char
 	l.pushBuffer(ch)
 	count++
-
 	// iterate
 	for {
 		prev := l.cursor
