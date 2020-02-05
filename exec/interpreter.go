@@ -23,9 +23,12 @@ func NewInterpreter() *Interpreter {
 }
 
 // Execute - execute the program and yield the result
-func (it *Interpreter) Execute(program *syntax.ProgramNode) string {
+func (it *Interpreter) Execute(program *syntax.Program) string {
+	if program.Content == nil {
+		return ""
+	}
 	var err *error.Error
-	for _, stmt := range program.Children {
+	for _, stmt := range program.Content.Children {
 		switch s := stmt.(type) {
 		case *syntax.VarDeclareStmt:
 			err = it.handleVarDeclareStmt(s)

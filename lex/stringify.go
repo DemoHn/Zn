@@ -28,12 +28,23 @@ func ParseTokenStr(str string) []Token {
 	r := regexp.MustCompile(`\$(\d+)\[(.+?)\]`)
 	matches := r.FindAllStringSubmatch(str, -1)
 
+	lineCursor := 1
+	colCursor := 0
 	for _, match := range matches {
 		n, _ := strconv.Atoi(match[1])
+		l := []rune(match[2])
 		tks = append(tks, Token{
 			Type:    TokenType(n),
-			Literal: []rune(match[2]),
+			Literal: l,
+			Range: TokenRange{
+				StartLine: lineCursor,
+				StartCol:  colCursor,
+				EndLine:   lineCursor,
+				EndCol:    colCursor + len(l),
+			},
 		})
+
+		colCursor = colCursor + len(l) + 1
 	}
 
 	return tks
