@@ -46,6 +46,35 @@ func StringifyAST(node Node) string {
 		assign = StringifyAST(v.AssignExpr)
 
 		return fmt.Sprintf("$VA(target=(%s) assign=(%s))", target, assign)
+	case *ConditionStmt:
+		var conds = []string{}
+		// add if-branch
+		ifExpr := fmt.Sprintf("ifExpr=(%s)", StringifyAST(v.IfTrueExpr))
+		ifBlock := fmt.Sprintf("ifBlock=(%s)", StringifyAST(v.IfTrueBlock))
+		conds = append(conds, ifExpr, ifBlock)
+
+		// add else-branch
+		if v.HasIfFalse {
+			elseBlock := fmt.Sprintf("elseBlock=(%s)", StringifyAST(v.IfFalseBlock))
+
+			conds = append(conds, elseBlock)
+		}
+
+		// add other branchs
+		for idx, expr := range v.OtherExprs {
+			otherExpr := fmt.Sprintf("otherExpr[]=(%s)", StringifyAST(expr))
+			otherBlock := fmt.Sprintf("otherBlock[]=(%s)", StringifyAST(v.OtherBlocks[idx]))
+
+			conds = append(conds, otherExpr, otherBlock)
+		}
+
+		return fmt.Sprintf("$IF(%s)", strings.Join(conds, " "))
+	case *BlockStmt:
+		var statements = []string{}
+		for _, stmt := range v.Content {
+			statements = append(statements, StringifyAST(stmt))
+		}
+		return fmt.Sprintf("$BK(%s)", strings.Join(statements, " "))
 	default:
 		return ""
 	}

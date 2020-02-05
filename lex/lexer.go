@@ -184,26 +184,27 @@ func (l *Lexer) parseIndents(ch rune) *error.Error {
 
 // parseCRLF and return the newline chars by the way
 func (l *Lexer) parseCRLF(ch rune) []rune {
+	var rtn = []rune{}
 	p := l.peek()
 	// for CRLF <windows type> or LFCR
-	if (ch == CR && p == LF) ||
-		(ch == LF && p == CR) {
-
+	if (ch == CR && p == LF) || (ch == LF && p == CR) {
 		// skip one char since we have judge two chars
 		l.next()
 		l.PushLine(l.cursor - 2)
-		// new line and reset cursor
-		l.NewLine(l.cursor + 1)
-		l.cursor = -1
-		return []rune{ch, p}
+
+		rtn = []rune{ch, p}
+	} else {
+		// for LF or CR only
+		// LF: <linux>, CR:<old mac>
+		l.PushLine(l.cursor - 1)
+		rtn = []rune{ch}
 	}
-	// for LF or CR only
-	// LF: <linux>, CR:<old mac>
-	l.PushLine(l.cursor - 1)
+
 	// new line and reset cursor
 	l.NewLine(l.cursor + 1)
 	l.cursor = -1
-	return []rune{ch}
+
+	return rtn
 }
 
 // validate if the coming block is a comment block

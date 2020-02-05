@@ -78,9 +78,7 @@ func (p *Parser) Parse() (pg *ProgramNode, err *error.Error) {
 	p.next()
 	p.next()
 
-	pg = &ProgramNode{
-		Children: []Statement{},
-	}
+	pg = new(ProgramNode)
 	for p.peek().Type != lex.TypeEOF {
 		if err = ParseStatement(p, pg); err != nil {
 			return
@@ -205,8 +203,8 @@ func (p *Parser) expectBlockIndent() (bool, int) {
 	var peekLine = p.peek().Range.StartLine
 	var currLine = p.current().Range.StartLine
 
-	var peekIndent = p.GetLine(peekLine).Indents
-	var currIndent = p.GetLine(currLine).Indents
+	var peekIndent = p.GetLineIndent(peekLine)
+	var currIndent = p.GetLineIndent(currLine)
 
 	if peekIndent == currIndent+1 {
 		return true, peekIndent
@@ -218,7 +216,7 @@ func (p *Parser) expectBlockIndent() (bool, int) {
 func (p *Parser) getPeekIndent() int {
 	var peekLine = p.peek().Range.StartLine
 
-	return p.GetLine(peekLine).Indents
+	return p.GetLineIndent(peekLine)
 }
 
 //// parse element functions
@@ -233,6 +231,7 @@ func ParseStatement(p *Parser, pg *ProgramNode) *error.Error {
 	validTypes := []lex.TokenType{
 		lex.TypeStmtSep,
 		lex.TypeDeclareW,
+		lex.TypeCondW,
 	}
 	match, tk := p.tryConsume(validTypes)
 	if match {
@@ -242,6 +241,15 @@ func ParseStatement(p *Parser, pg *ProgramNode) *error.Error {
 			return nil
 		case lex.TypeDeclareW:
 			stmt, err := ParseVarDeclare(p)
+			if err != nil {
+				return err
+			}
+			pg.Children = append(pg.Children, stmt)
+			return nil
+		case lex.TypeCondW:
+			mainIndent := p.getPeekIndent()
+
+			stmt, err := ParseCondStmt(p, mainIndent)
 			if err != nil {
 				return err
 			}
@@ -265,7 +273,6 @@ func ParseStatement(p *Parser, pg *ProgramNode) *error.Error {
 // Number
 // String
 // ArrayExpr
-// （ Expr ）
 func ParseExpression(p *Parser) (Expression, *error.Error) {
 	var validTypes = []lex.TokenType{
 		lex.TypeIdentifier, lex.TypeVarQuote, lex.TypeNumber, lex.TypeString,
