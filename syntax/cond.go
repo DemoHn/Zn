@@ -65,7 +65,6 @@ func ParseCondStmt(p *Parser, mainIndent int) (*ConditionStmt, *error.Error) {
 	var branchTokenType = lex.TypeCondW
 
 	for p.peek().Type != lex.TypeEOF {
-		p.setLineMask(modeInline)
 		// when firstBranch = true, we are parsing (if-branch) by default
 		if !firstBranch {
 			// check indent
@@ -80,7 +79,7 @@ func ParseCondStmt(p *Parser, mainIndent int) (*ConditionStmt, *error.Error) {
 				return stmt, nil
 			}
 		}
-
+		p.setLineMask(modeInline)
 		// #1 parse expression
 		if branchTokenType != lex.TypeCondElseW {
 			condExpr, err = ParseExpression(p)
