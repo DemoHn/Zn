@@ -5,6 +5,7 @@ import (
 	"github.com/DemoHn/Zn/lex"
 )
 
+/**
 // Node - general node type
 type Node interface{}
 
@@ -12,6 +13,7 @@ type Node interface{}
 type ProgramNode struct {
 	Children []Statement
 }
+*/
 
 // Parser - parse all nodes
 type Parser struct {
@@ -21,6 +23,7 @@ type Parser struct {
 	lineMask   uint16
 }
 
+/**
 // Expression - a special type of statement
 type Expression interface {
 	Node
@@ -32,7 +35,7 @@ type Statement interface {
 	Node
 	statementNode()
 }
-
+*/
 type mockTokens struct {
 	tokens       []lex.Token
 	cursor       int
@@ -53,7 +56,7 @@ func NewParser(l *lex.Lexer) *Parser {
 }
 
 // Parse - parse all tokens into an AST (stored as ProgramNode)
-func (p *Parser) Parse() (pg *ProgramNode, err *error.Error) {
+func (p *Parser) Parse() (pg *Program, err *error.Error) {
 	defer func() {
 		// recover error from next()
 		if r := recover(); r != nil {
@@ -78,11 +81,13 @@ func (p *Parser) Parse() (pg *ProgramNode, err *error.Error) {
 	p.next()
 	p.next()
 
-	pg = new(ProgramNode)
-	for p.peek().Type != lex.TypeEOF {
-		if err = ParseStatement(p, pg); err != nil {
-			return
-		}
+	pg = new(Program)
+	var block *BlockStmt
+
+	peekIndent := p.getPeekIndent()
+	block, err = ParseBlockStmt(p, peekIndent)
+	if err == nil {
+		pg.Content = block
 	}
 	return
 }
@@ -219,6 +224,7 @@ func (p *Parser) getPeekIndent() int {
 	return p.GetLineIndent(peekLine)
 }
 
+/**
 //// parse element functions
 
 // ParseStatement - a program consists of statements
@@ -294,6 +300,7 @@ func ParseExpression(p *Parser) (Expression, *error.Error) {
 	}
 	return nil, error.InvalidSyntax()
 }
+**/
 
 // similar to lexer's version, but with given line & col
 func (p *Parser) moveAndSetCursor(line int, col int, err *error.Error) {

@@ -8,12 +8,8 @@ import (
 // StringifyAST - stringify an abstract ProgramNode into a readable string
 func StringifyAST(node Node) string {
 	switch v := node.(type) {
-	case *ProgramNode:
-		var statements = []string{}
-		for _, stmt := range v.Children {
-			statements = append(statements, StringifyAST(stmt))
-		}
-		return fmt.Sprintf("$PG(%s)", strings.Join(statements, " "))
+	case *Program:
+		return fmt.Sprintf("$PG(%s)", StringifyAST(v.Content))
 	// expressions
 	case *ArrayExpr:
 		var exprs = []string{}
@@ -22,11 +18,11 @@ func StringifyAST(node Node) string {
 		}
 		return fmt.Sprintf("$ARR(%s)", strings.Join(exprs, " "))
 	case *Number:
-		return fmt.Sprintf("$NUM(%s)", v.literal)
+		return fmt.Sprintf("$NUM(%s)", v.Literal)
 	case *String:
-		return fmt.Sprintf("$STR(%s)", v.literal)
+		return fmt.Sprintf("$STR(%s)", v.Literal)
 	case *ID:
-		return fmt.Sprintf("$ID(%s)", v.literal)
+		return fmt.Sprintf("$ID(%s)", v.Literal)
 	// var assign expressions
 	case *VarDeclareStmt:
 		var vars = []string{}
@@ -46,7 +42,7 @@ func StringifyAST(node Node) string {
 		assign = StringifyAST(v.AssignExpr)
 
 		return fmt.Sprintf("$VA(target=(%s) assign=(%s))", target, assign)
-	case *ConditionStmt:
+	case *BranchStmt:
 		var conds = []string{}
 		// add if-branch
 		ifExpr := fmt.Sprintf("ifExpr=(%s)", StringifyAST(v.IfTrueExpr))
@@ -54,9 +50,8 @@ func StringifyAST(node Node) string {
 		conds = append(conds, ifExpr, ifBlock)
 
 		// add else-branch
-		if v.HasIfFalse {
+		if v.HasElse {
 			elseBlock := fmt.Sprintf("elseBlock=(%s)", StringifyAST(v.IfFalseBlock))
-
 			conds = append(conds, elseBlock)
 		}
 
@@ -71,7 +66,7 @@ func StringifyAST(node Node) string {
 		return fmt.Sprintf("$IF(%s)", strings.Join(conds, " "))
 	case *BlockStmt:
 		var statements = []string{}
-		for _, stmt := range v.Content {
+		for _, stmt := range v.Children {
 			statements = append(statements, StringifyAST(stmt))
 		}
 		return fmt.Sprintf("$BK(%s)", strings.Join(statements, " "))
