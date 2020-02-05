@@ -5,53 +5,21 @@ import (
 	"github.com/DemoHn/Zn/lex"
 )
 
-/**
-// Node - general node type
-type Node interface{}
-
-// ProgramNode - the syntax tree of a program
-type ProgramNode struct {
-	Children []Statement
-}
-*/
-
 // Parser - parse all nodes
 type Parser struct {
 	*lex.Lexer
-	tokens     [3]*lex.Token
-	mockTokens mockTokens
-	lineMask   uint16
-}
-
-/**
-// Expression - a special type of statement
-type Expression interface {
-	Node
-	IsPrimitive() bool
-}
-
-// Statement - a program consists of statements
-type Statement interface {
-	Node
-	statementNode()
-}
-*/
-type mockTokens struct {
-	tokens       []lex.Token
-	cursor       int
-	useMockToken bool
+	tokens   [3]*lex.Token
+	lineMask uint16
 }
 
 const (
 	modeInline uint16 = 0x01
-	modeBlock  uint16 = 0x02
 )
 
 // NewParser -
 func NewParser(l *lex.Lexer) *Parser {
 	return &Parser{
-		Lexer:      l,
-		mockTokens: mockTokens{}, // mockTokens data, for unit testing
+		Lexer: l,
 	}
 }
 
@@ -92,34 +60,13 @@ func (p *Parser) Parse() (pg *Program, err *error.Error) {
 	return
 }
 
-// InitMockToken - init mockToken for parser
-// after that, tokens will be retrieved directly from provided token list instead of lexer.
-// this API is used actively for unit testing.
-func (p *Parser) InitMockToken(tokens []lex.Token) {
-	p.mockTokens = mockTokens{
-		tokens:       tokens,
-		cursor:       0,
-		useMockToken: true,
-	}
-}
-
 func (p *Parser) next() *lex.Token {
 	var tk *lex.Token
 	var err *error.Error
 
-	// use pre-load token list (for mock tests)
-	if p.mockTokens.useMockToken {
-		if p.mockTokens.cursor >= len(p.mockTokens.tokens) {
-			tk = lex.NewTokenEOF(0, 0)
-		} else {
-			tk = &(p.mockTokens.tokens[p.mockTokens.cursor])
-			p.mockTokens.cursor = p.mockTokens.cursor + 1
-		}
-	} else { // normal way
-		tk, err = p.NextToken()
-		if err != nil {
-			panic(err)
-		}
+	tk, err = p.NextToken()
+	if err != nil {
+		panic(err)
 	}
 
 	// after retrieving next token successfully, check if current token has
@@ -223,84 +170,6 @@ func (p *Parser) getPeekIndent() int {
 
 	return p.GetLineIndent(peekLine)
 }
-
-/**
-//// parse element functions
-
-// ParseStatement - a program consists of statements
-//
-// CFG:
-// Statement -> VarDeclareStmt
-//           -> VarAssignStmt
-//           -> ；
-func ParseStatement(p *Parser, pg *ProgramNode) *error.Error {
-	validTypes := []lex.TokenType{
-		lex.TypeStmtSep,
-		lex.TypeDeclareW,
-		lex.TypeCondW,
-	}
-	match, tk := p.tryConsume(validTypes)
-	if match {
-		switch tk.Type {
-		case lex.TypeStmtSep:
-			// skip
-			return nil
-		case lex.TypeDeclareW:
-			stmt, err := ParseVarDeclare(p)
-			if err != nil {
-				return err
-			}
-			pg.Children = append(pg.Children, stmt)
-			return nil
-		case lex.TypeCondW:
-			mainIndent := p.getPeekIndent()
-
-			stmt, err := ParseCondStmt(p, mainIndent)
-			if err != nil {
-				return err
-			}
-			pg.Children = append(pg.Children, stmt)
-			return nil
-		}
-	}
-
-	stmt, err := p.ParseVarAssignStmt()
-	if err != nil {
-		return err
-	}
-	pg.Children = append(pg.Children, stmt)
-	return nil
-}
-
-// ParseExpression - parse general expression (abstract expression type)
-//
-// currently, expression only contains
-// ID
-// Number
-// String
-// ArrayExpr
-func ParseExpression(p *Parser) (Expression, *error.Error) {
-	var validTypes = []lex.TokenType{
-		lex.TypeIdentifier, lex.TypeVarQuote, lex.TypeNumber, lex.TypeString,
-		lex.TypeArrayQuoteL,
-	}
-
-	match, tk := p.tryConsume(validTypes)
-	if match {
-		switch tk.Type {
-		case lex.TypeIdentifier, lex.TypeVarQuote, lex.TypeNumber, lex.TypeString:
-			return ParsePrimeExpr(p)
-		case lex.TypeArrayQuoteL:
-			token, err := ParseArrayExpr(p)
-			if err != nil {
-				return nil, err
-			}
-			return token, nil
-		}
-	}
-	return nil, error.InvalidSyntax()
-}
-**/
 
 // similar to lexer's version, but with given line & col
 func (p *Parser) moveAndSetCursor(line int, col int, err *error.Error) {
