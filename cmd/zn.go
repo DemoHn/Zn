@@ -25,6 +25,7 @@ func execProgram(stream *lex.InputStream, inpt *exec.Interpreter) (string, *erro
 	if err != nil {
 		return "", err
 	}
+	fmt.Printf("node = \x1b[33m%s\x1b[0m\n", syntax.StringifyAST(programNode))
 
 	// return with green color
 	return fmt.Sprintf("\x1b[32m%s\x1b[0m\n", nInpt.Execute(programNode)), nil
@@ -72,7 +73,7 @@ func ExecProgram(file string) {
 
 	rtn, errE := execProgram(s.Streams[0], nil)
 	if errE != nil {
-		fmt.Printf("[语法错误] %s\n", errE.Error())
+		fmt.Printf("%s\n", errE.Display())
 	}
 
 	fmt.Println(rtn)

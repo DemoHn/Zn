@@ -23,9 +23,12 @@ func NewInterpreter() *Interpreter {
 }
 
 // Execute - execute the program and yield the result
-func (it *Interpreter) Execute(program *syntax.ProgramNode) string {
+func (it *Interpreter) Execute(program *syntax.Program) string {
+	if program.Content == nil {
+		return ""
+	}
 	var err *error.Error
-	for _, stmt := range program.Children {
+	for _, stmt := range program.Content.Children {
 		switch s := stmt.(type) {
 		case *syntax.VarDeclareStmt:
 			err = it.handleVarDeclareStmt(s)
@@ -67,13 +70,16 @@ func (it *Interpreter) print(err *error.Error) string {
 }
 
 func (it *Interpreter) handleVarDeclareStmt(stmt *syntax.VarDeclareStmt) *error.Error {
-	obj := execExpression(it, stmt.AssignExpr)
-	for _, v := range stmt.Variables {
-		vtag := v.GetLiteral()
-		// TODO: need copy object!
-		if !it.Symbol.Insert(vtag, obj) {
-			return error.NewErrorSLOT("variable redeclaration!")
+	for _, vpair := range stmt.AssignPair {
+		obj := execExpression(it, vpair.AssignExpr)
+		for _, v := range vpair.Variables {
+			vtag := v.GetLiteral()
+			// TODO: need copy object!
+			if !it.Symbol.Insert(vtag, obj) {
+				return error.NewErrorSLOT("variable redeclaration!")
+			}
 		}
+
 	}
 
 	return nil
