@@ -10,6 +10,8 @@ import (
 // Node -
 type Node interface{}
 
+type consumerFunc func(idx int, nodes []Node) (Node, *error.Error)
+
 // Statement -
 type Statement interface {
 	Node
@@ -307,6 +309,11 @@ func ParseVarAssignStmt(p *Parser) (*VarAssignStmt, *error.Error) {
 //         I' -> ，I I'
 //            ->
 //
+// or block declaration:
+//
+// VarDeclare -> 令 ：
+//           ...     I1 ， I2，
+//           ...     I3 ， I4， I5 ...
 func ParseVarDeclare(p *Parser) (*VarDeclareStmt, *error.Error) {
 	vNode := &VarDeclareStmt{
 		AssignPair: []VDAssignPair{},
@@ -320,9 +327,10 @@ func ParseVarDeclare(p *Parser) (*VarDeclareStmt, *error.Error) {
 	const (
 		tagWithAssignExpr = 10
 	)
+	var nodes = []Node{}
+	var err *error.Error
 
-	// #1. consume identifier declare list (comma list)
-	nodes, err := parseCommaList(p, func(idx int, nodes []Node) (Node, *error.Error) {
+	var consumer = func(idx int, nodes []Node) (Node, *error.Error) {
 		// subExpr -> ID
 		//         -> ID 为 expr
 		var idExpr *ID
@@ -348,13 +356,27 @@ func ParseVarDeclare(p *Parser) (*VarDeclareStmt, *error.Error) {
 			Tag:      tagWithAssignExpr,
 			Children: []Node{idExpr, assignExpr},
 		}, nil
-	})
-	if err != nil {
-		return nil, err
+	}
+	// #01. try to read colon
+	// if colon exists -> parse comma list by block
+	// if colon not exists -> parse comma list inline
+	if match, _ := p.tryConsume([]lex.TokenType{lex.TypeFuncCall}); match {
+		expected, blockIndent := p.expectBlockIndent()
+		if !expected {
+			return nil, error.InvalidSyntax()
+		}
+		if nodes, err = parseCommaListBlock(p, blockIndent, consumer); err != nil {
+			return nil, err
+		}
+	} else {
+		// #02. consume identifier declare list (comma list) inline
+		if nodes, err = parseCommaList(p, consumer); err != nil {
+			return nil, err
+		}
 	}
 
 	var idPtrList = []*ID{}
-	// #2. translate & append nodes to pair
+	// #03. translate & append nodes to pair
 	for _, node := range nodes {
 		switch v := node.(type) {
 		case *ID:
@@ -382,75 +404,7 @@ func ParseVarDeclare(p *Parser) (*VarDeclareStmt, *error.Error) {
 	}
 
 	return vNode, nil
-	// #1. consume identifier list
-	/**
-	if err := parseIdentifierList(p, vNode); err != nil {
-		return nil, err
-	}
-	// #2. consume logicYes
-	if err := p.consume(lex.TypeLogicYesW); err != nil {
-		return nil, err
-	}
-
-	p.unsetLineMask(modeInline)
-
-	// parse expression
-	expr, err := ParseExpression(p)
-	if err != nil {
-		return nil, err
-	}
-
-	vNode.AssignExpr = expr
-	return vNode, nil
-	*/
 }
-
-/**
-func parseIdentifierList(p *Parser, vNode *VarDeclareStmt) *error.Error {
-	validTypes := []lex.TokenType{
-		lex.TypeVarQuote,
-		lex.TypeIdentifier,
-	}
-	// #1. consume Identifier
-	if match, tk := p.tryConsume(validTypes); match {
-		tid := new(ID)
-		tid.SetLiteral(string(tk.Literal))
-		// append variables
-		vNode.Variables = append(vNode.Variables, tid)
-	} else {
-		return error.InvalidSyntax()
-	}
-
-	// #2. parse identifier tail
-	return parseIdentifierTail(p, vNode)
-}
-
-func parseIdentifierTail(p *Parser, vNode *VarDeclareStmt) *error.Error {
-	commaTypes := []lex.TokenType{
-		lex.TypeCommaSep,
-	}
-	idTypes := []lex.TokenType{
-		lex.TypeVarQuote,
-		lex.TypeIdentifier,
-	}
-	// #1. consume Comma
-	if match, _ := p.tryConsume(commaTypes); !match {
-		return nil
-	}
-	// #2. consume Identifier
-	if match, tk := p.tryConsume(idTypes); match {
-		tid := new(ID)
-		tid.SetLiteral(string(tk.Literal))
-		// append variables
-		vNode.Variables = append(vNode.Variables, tid)
-	} else {
-		return error.InvalidSyntax()
-	}
-
-	// #3. parse tail nested again
-	return parseIdentifierTail(p, vNode)
-}
-*/
 
 // ParseBlockStmt - parse all statements inside a block
 func ParseBlockStmt(p *Parser, blockIndent int) (*BlockStmt, *error.Error) {
@@ -582,7 +536,7 @@ func ParseBranchStmt(p *Parser, mainIndent int) (*BranchStmt, *error.Error) {
 }
 
 // parse helpers
-func parseCommaList(p *Parser, consumer func(idx int, nodes []Node) (Node, *error.Error)) ([]Node, *error.Error) {
+func parseCommaList(p *Parser, consumer consumerFunc) ([]Node, *error.Error) {
 	var node Node
 	var err *error.Error
 	//
@@ -599,6 +553,42 @@ func parseCommaList(p *Parser, consumer func(idx int, nodes []Node) (Node, *erro
 
 	// iterate to get value
 	for {
+		// consume comma
+		if match, _ := p.tryConsume(sepTypes); !match {
+			// stop parsing immediately
+			return list, nil
+		}
+		if node, err = consumer(len(list), list); err != nil {
+			return nil, err
+		}
+		list = append(list, node)
+	}
+}
+
+func parseCommaListBlock(p *Parser, blockIndent int, consumer consumerFunc) ([]Node, *error.Error) {
+	var node Node
+	var err *error.Error
+	//
+	list := []Node{}
+
+	var sepTypes = []lex.TokenType{
+		lex.TypeCommaSep,
+	}
+	// first token MUST be exactly on the indent
+	if p.getPeekIndent() != blockIndent {
+		return nil, error.NewErrorSLOT("unexpected indent")
+	}
+	// first item MUST be consumed!
+	if node, err = consumer(0, list); err != nil {
+		return nil, err
+	}
+	list = append(list, node)
+
+	// iterate to get value
+	for {
+		if p.getPeekIndent() != blockIndent {
+			return list, nil
+		}
 		// consume comma
 		if match, _ := p.tryConsume(sepTypes); !match {
 			// stop parsing immediately
