@@ -23,7 +23,25 @@ func StringifyAST(node Node) string {
 		return fmt.Sprintf("$STR(%s)", v.Literal)
 	case *ID:
 		return fmt.Sprintf("$ID(%s)", v.Literal)
+	case *LogicExpr:
+		var typeStrMap = map[LogicType]string{
+			LogicIS:  "$IS",
+			LogicEQ:  "$EQ",
+			LogicNEQ: "$NEQ",
+			LogicAND: "$AND",
+			LogicOR:  "$OR",
+			LogicGT:  "$GT",
+			LogicGTE: "$GTE",
+			LogicLT:  "$LT",
+			LogicLTE: "$LTE",
+		}
+
+		lstr := StringifyAST(v.LeftExpr)
+		rstr := StringifyAST(v.RightExpr)
+		return fmt.Sprintf("%s(%s %s)", typeStrMap[v.Type], lstr, rstr)
 	// var assign expressions
+	case *EmptyStmt:
+		return "$"
 	case *VarDeclareStmt:
 		var items = []string{}
 		// parse vars
@@ -38,7 +56,7 @@ func StringifyAST(node Node) string {
 		}
 		// parse exprs
 		return fmt.Sprintf("$VD(%s)", strings.Join(items, " "))
-	case *VarAssignStmt:
+	case *VarAssignExpr:
 		var target, assign string
 		target = StringifyAST(v.TargetVar)
 		assign = StringifyAST(v.AssignExpr)
