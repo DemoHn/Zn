@@ -565,8 +565,12 @@ func (l *Lexer) parseMarkers(ch rune) (*Token, *error.Error) {
 	case RightBracket:
 		return NewMarkToken(l.chBuffer, TypeArrayQuoteR, startR, 1), nil
 	case LeftParen:
-		return NewMarkToken(l.chBuffer, TypeStmtQuoteL, startR, 1), nil
+		return NewMarkToken(l.chBuffer, TypeFuncQuoteL, startR, 1), nil
 	case RightParen:
+		return NewMarkToken(l.chBuffer, TypeFuncQuoteR, startR, 1), nil
+	case LeftCurlyBracket:
+		return NewMarkToken(l.chBuffer, TypeStmtQuoteL, startR, 1), nil
+	case RightCurlyBracket:
 		return NewMarkToken(l.chBuffer, TypeStmtQuoteR, startR, 1), nil
 	case Equal:
 		if l.peek() == Equal {

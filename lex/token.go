@@ -126,21 +126,23 @@ var KeywordLeads = []rune{
 //// 2. markers
 // declare marks
 const (
-	Comma          rune = 0xFF0C //，
-	Colon          rune = 0xFF1A //：
-	Semicolon      rune = 0xFF1B //；
-	QuestionMark   rune = 0xFF1F //？
-	RefMark        rune = 0x0026 // &
-	BangMark       rune = 0xFF01 // ！
-	AnnotationMark rune = 0x0040 // @
-	HashMark       rune = 0x0023 // #
-	EllipsisMark   rune = 0x2026 // …
-	LeftBracket    rune = 0x3010 // 【
-	RightBracket   rune = 0x3011 // 】
-	LeftParen      rune = 0xFF08 // （
-	RightParen     rune = 0xFF09 // ）
-	Equal          rune = 0x003D // =
-	DoubleArrow    rune = 0x27FA // ⟺
+	Comma             rune = 0xFF0C //，
+	Colon             rune = 0xFF1A //：
+	Semicolon         rune = 0xFF1B //；
+	QuestionMark      rune = 0xFF1F //？
+	RefMark           rune = 0x0026 // &
+	BangMark          rune = 0xFF01 // ！
+	AnnotationMark    rune = 0x0040 // @
+	HashMark          rune = 0x0023 // #
+	EllipsisMark      rune = 0x2026 // …
+	LeftBracket       rune = 0x3010 // 【
+	RightBracket      rune = 0x3011 // 】
+	LeftParen         rune = 0xFF08 // （
+	RightParen        rune = 0xFF09 // ）
+	Equal             rune = 0x003D // =
+	DoubleArrow       rune = 0x27FA // ⟺
+	LeftCurlyBracket  rune = 0x007B // {
+	RightCurlyBracket rune = 0x007D // }
 )
 
 // MarkLeads -
@@ -148,6 +150,7 @@ var MarkLeads = []rune{
 	Comma, Colon, Semicolon, QuestionMark, RefMark, BangMark,
 	AnnotationMark, HashMark, EllipsisMark, LeftBracket,
 	RightBracket, LeftParen, RightParen, Equal, DoubleArrow,
+	LeftCurlyBracket, RightCurlyBracket,
 }
 
 //// 3. spaces
@@ -279,9 +282,11 @@ const (
 	TypeMoreParam    TokenType = 19
 	TypeArrayQuoteL  TokenType = 20
 	TypeArrayQuoteR  TokenType = 21
-	TypeStmtQuoteL   TokenType = 22
-	TypeStmtQuoteR   TokenType = 23
+	TypeFuncQuoteL   TokenType = 22
+	TypeFuncQuoteR   TokenType = 23
 	TypeMapData      TokenType = 24
+	TypeStmtQuoteL   TokenType = 25 // {
+	TypeStmtQuoteR   TokenType = 26 // }
 	TypeDeclareW     TokenType = 40 // 令
 	TypeLogicYesW    TokenType = 41 // 为
 	TypeCondOtherW   TokenType = 43 // 再如
