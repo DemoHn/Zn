@@ -404,8 +404,10 @@ func TestNextToken_MarkerONLY(t *testing.T) {
 		"……": TypeMoreParam,
 		"【":  TypeArrayQuoteL,
 		"】":  TypeArrayQuoteR,
-		"（":  TypeStmtQuoteL,
-		"）":  TypeStmtQuoteR,
+		"（":  TypeFuncQuoteL,
+		"）":  TypeFuncQuoteR,
+		"{":  TypeStmtQuoteL,
+		"}":  TypeStmtQuoteR,
 		"==": TypeMapData,
 		"⟺":  TypeMapData,
 	}
