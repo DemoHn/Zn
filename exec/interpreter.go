@@ -35,8 +35,8 @@ func (it *Interpreter) Execute(program *syntax.Program) string {
 			if err != nil {
 				break
 			}
-		case *syntax.VarAssignStmt:
-			err = it.handleVarAssignStmt(s)
+		case *syntax.VarAssignExpr:
+			err = it.handleVarAssignExpr(s)
 			if err != nil {
 				break
 			}
@@ -85,7 +85,7 @@ func (it *Interpreter) handleVarDeclareStmt(stmt *syntax.VarDeclareStmt) *error.
 	return nil
 }
 
-func (it *Interpreter) handleVarAssignStmt(stmt *syntax.VarAssignStmt) *error.Error {
+func (it *Interpreter) handleVarAssignExpr(stmt *syntax.VarAssignExpr) *error.Error {
 	obj := execExpression(it, stmt.AssignExpr)
 	vtag := stmt.TargetVar.GetLiteral()
 
