@@ -30,10 +30,21 @@ type Program struct {
 	Content *BlockStmt
 }
 
+// NodeList - a node that packs several nodes
+type NodeList struct {
+	Tag      int
+	Children []Node
+}
+
 //// Statements (struct)
 
 // VarDeclareStmt - declare variables as init its values
 type VarDeclareStmt struct {
+	AssignPair []VDAssignPair
+}
+
+// VDAssignPair - helper type
+type VDAssignPair struct {
 	Variables  []*ID
 	AssignExpr Expression
 }
@@ -204,12 +215,22 @@ func ParseExpression(p *Parser) (Expression, *error.Error) {
 //             -> ArrayExpr
 func ParseArrayExpr(p *Parser) (*ArrayExpr, *error.Error) {
 	ar := &ArrayExpr{
-		Items: make([]Expression, 0),
+		Items: []Expression{},
 	}
-	// #1. consume item list
-	if err := parseItemList(p, ar); err != nil {
+	// #1. consume item list (comma list)
+	exprs, err := parseCommaList(p, func(idx int, nodes []Node) (Node, *error.Error) {
+		return ParseExpression(p)
+	})
+	if err != nil {
 		return nil, err
 	}
+
+	// type cast (because there's no GENERIC TYPE in golang!!!)
+	for _, expr := range exprs {
+		exprT, _ := expr.(Expression)
+		ar.Items = append(ar.Items, exprT)
+	}
+
 	// #2. consume right brancket
 	if err := p.consume(lex.TypeArrayQuoteR); err != nil {
 		return nil, err
@@ -217,39 +238,10 @@ func ParseArrayExpr(p *Parser) (*ArrayExpr, *error.Error) {
 	return ar, nil
 }
 
-func parseItemList(p *Parser, ar *ArrayExpr) *error.Error {
-	// #0. parse expression
-	expr, err := ParseExpression(p)
-	if err != nil {
-		return err
-	}
-	ar.Items = append(ar.Items, expr)
-
-	// #1. parse list tail
-	return parseItemListTail(p, ar)
-}
-
-func parseItemListTail(p *Parser, ar *ArrayExpr) *error.Error {
-	// #0. consume comma
-	if match, _ := p.tryConsume([]lex.TokenType{lex.TypeCommaSep}); !match {
-		return nil
-	}
-	// #1. parse expression
-	expr, err := ParseExpression(p)
-	if err != nil {
-		return err
-	}
-	ar.Items = append(ar.Items, expr)
-
-	// #2. parse tail nested again
-	return parseItemListTail(p, ar)
-}
-
 // ParseVarAssignStmt - parse general variable assign statement
 //
 // CFG:
 // VarAssignStmt -> TargetV 为 ExprA           (1)
-// VarAssignStmt -> TargetV 是 ExprA           (1A)
 //               -> ExprA ， 得到 TargetV       (2)
 //
 func ParseVarAssignStmt(p *Parser) (*VarAssignStmt, *error.Error) {
@@ -316,14 +308,82 @@ func ParseVarAssignStmt(p *Parser) (*VarAssignStmt, *error.Error) {
 //            ->
 //
 func ParseVarDeclare(p *Parser) (*VarDeclareStmt, *error.Error) {
-	p.setLineMask(modeInline)
-	defer p.unsetLineMask(modeInline)
-
 	vNode := &VarDeclareStmt{
-		Variables:  make([]*ID, 0),
-		AssignExpr: nil,
+		AssignPair: []VDAssignPair{},
 	}
+
+	idTypes := []lex.TokenType{
+		lex.TypeVarQuote,
+		lex.TypeIdentifier,
+	}
+
+	const (
+		tagWithAssignExpr = 10
+	)
+
+	// #1. consume identifier declare list (comma list)
+	nodes, err := parseCommaList(p, func(idx int, nodes []Node) (Node, *error.Error) {
+		// subExpr -> ID
+		//         -> ID 为 expr
+		var idExpr *ID
+		// #1. consume ID first
+		if match, tk := p.tryConsume(idTypes); match {
+			idExpr = new(ID)
+			idExpr.SetLiteral(string(tk.Literal))
+		} else {
+			return nil, error.InvalidSyntax()
+		}
+
+		// #2. consume LogicYes - if not, return ID directly
+		if match2, _ := p.tryConsume([]lex.TokenType{lex.TypeLogicYesW}); !match2 {
+			return idExpr, nil
+		}
+
+		// #3. consume expr
+		assignExpr, err2 := ParseExpression(p)
+		if err2 != nil {
+			return nil, err2
+		}
+		return &NodeList{
+			Tag:      tagWithAssignExpr,
+			Children: []Node{idExpr, assignExpr},
+		}, nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	var idPtrList = []*ID{}
+	// #2. translate & append nodes to pair
+	for _, node := range nodes {
+		switch v := node.(type) {
+		case *ID:
+			idPtrList = append(idPtrList, v)
+		case *NodeList:
+			if v.Tag == tagWithAssignExpr {
+				newPair := VDAssignPair{
+					Variables: []*ID{},
+				}
+
+				firstID, _ := v.Children[0].(*ID)
+				idPtrList = append(idPtrList, firstID)
+				//
+				secondExpr, _ := v.Children[1].(Expression)
+				// copy newPair
+				newPair.Variables = append(newPair.Variables, idPtrList...)
+				newPair.AssignExpr = secondExpr
+
+				// append newPair
+				vNode.AssignPair = append(vNode.AssignPair, newPair)
+				// clear idPtrList
+				idPtrList = []*ID{}
+			}
+		}
+	}
+
+	return vNode, nil
 	// #1. consume identifier list
+	/**
 	if err := parseIdentifierList(p, vNode); err != nil {
 		return nil, err
 	}
@@ -331,6 +391,8 @@ func ParseVarDeclare(p *Parser) (*VarDeclareStmt, *error.Error) {
 	if err := p.consume(lex.TypeLogicYesW); err != nil {
 		return nil, err
 	}
+
+	p.unsetLineMask(modeInline)
 
 	// parse expression
 	expr, err := ParseExpression(p)
@@ -340,8 +402,10 @@ func ParseVarDeclare(p *Parser) (*VarDeclareStmt, *error.Error) {
 
 	vNode.AssignExpr = expr
 	return vNode, nil
+	*/
 }
 
+/**
 func parseIdentifierList(p *Parser, vNode *VarDeclareStmt) *error.Error {
 	validTypes := []lex.TokenType{
 		lex.TypeVarQuote,
@@ -386,6 +450,7 @@ func parseIdentifierTail(p *Parser, vNode *VarDeclareStmt) *error.Error {
 	// #3. parse tail nested again
 	return parseIdentifierTail(p, vNode)
 }
+*/
 
 // ParseBlockStmt - parse all statements inside a block
 func ParseBlockStmt(p *Parser, blockIndent int) (*BlockStmt, *error.Error) {
@@ -425,6 +490,7 @@ func ParseBlockStmt(p *Parser, blockIndent int) (*BlockStmt, *error.Error) {
 //         ...     IfFalseBlock
 func ParseBranchStmt(p *Parser, mainIndent int) (*BranchStmt, *error.Error) {
 	var condExpr Expression
+	var condBlock *BlockStmt
 	var err *error.Error
 
 	var stmt = new(BranchStmt)
@@ -438,61 +504,109 @@ func ParseBranchStmt(p *Parser, mainIndent int) (*BranchStmt, *error.Error) {
 	//
 	// thus for other branches (like else-branch and elseif-branch),
 	// we should consume the corresponding keyword explicitly. (否则，再如)
-	var firstBranch = true
-	var branchTokenType = lex.TypeCondW
+	const (
+		stateInit        = 0
+		stateIfBranch    = 1
+		stateElseBranch  = 2
+		stateOtherBranch = 3
+	)
+	var hState = stateInit
 
 	for p.peek().Type != lex.TypeEOF {
-		// when firstBranch = true, we are parsing (if-branch) by default
-		if !firstBranch {
-			// check indent
+		// parse header
+		switch hState {
+		case stateInit:
+			hState = stateIfBranch
+		case stateIfBranch, stateOtherBranch:
 			if p.getPeekIndent() != mainIndent {
 				return stmt, nil
 			}
-			// consume other condKeywords (否则，再如)
+			// parse related keywords (如果 expr： , 再如 expr：, 否则：)
 			if match, tk := p.tryConsume(condKeywords); match {
-				branchTokenType = tk.Type
+				if tk.Type == lex.TypeCondOtherW {
+					hState = stateOtherBranch
+				} else {
+					hState = stateElseBranch
+				}
 			} else {
-				// for other keywords, this parsing task has
+				return stmt, nil
+			}
+		case stateElseBranch:
+			if p.getPeekIndent() != mainIndent {
+				return stmt, nil
+			}
+			if match, _ := p.tryConsume([]lex.TokenType{lex.TypeCondElseW}); !match {
 				return stmt, nil
 			}
 		}
+
 		p.setLineMask(modeInline)
-		// #1 parse expression
-		if branchTokenType != lex.TypeCondElseW {
-			condExpr, err = ParseExpression(p)
-			if err != nil {
+		// #1. parse expr
+		if hState != stateElseBranch {
+			if condExpr, err = ParseExpression(p); err != nil {
 				return nil, err
 			}
 		}
+
 		// #2. parse colon
-		if err := p.consume(lex.TypeFuncCall); err != nil {
+		if err = p.consume(lex.TypeFuncCall); err != nil {
 			return nil, err
 		}
-		// #3 parse block stmts
 		p.unsetLineMask(modeInline)
+
+		// #3. parse block statements
 		ok, blockIndent := p.expectBlockIndent()
 		if !ok {
 			return nil, error.NewErrorSLOT("unexpected indent")
 		}
-		blockStmt, err := ParseBlockStmt(p, blockIndent)
-		if err != nil {
+		if condBlock, err = ParseBlockStmt(p, blockIndent); err != nil {
 			return nil, err
 		}
 
-		// #4. merge data
-		switch branchTokenType {
-		case lex.TypeCondW:
+		// #4. fill data
+		switch hState {
+		case stateIfBranch:
 			stmt.IfTrueExpr = condExpr
-			stmt.IfTrueBlock = blockStmt
-			firstBranch = false
-		case lex.TypeCondElseW:
-			// set false-branch flag
-			stmt.HasElse = true
-			stmt.IfFalseBlock = blockStmt
-		case lex.TypeCondOtherW:
+			stmt.IfTrueBlock = condBlock
+		case stateOtherBranch:
 			stmt.OtherExprs = append(stmt.OtherExprs, condExpr)
-			stmt.OtherBlocks = append(stmt.OtherBlocks, blockStmt)
+			stmt.OtherBlocks = append(stmt.OtherBlocks, condBlock)
+		case stateElseBranch:
+			stmt.HasElse = true
+			stmt.IfFalseBlock = condBlock
+			// only one else-branch is accepted
+			return stmt, nil
 		}
 	}
 	return stmt, nil
+}
+
+// parse helpers
+func parseCommaList(p *Parser, consumer func(idx int, nodes []Node) (Node, *error.Error)) ([]Node, *error.Error) {
+	var node Node
+	var err *error.Error
+	//
+	list := []Node{}
+
+	var sepTypes = []lex.TokenType{
+		lex.TypeCommaSep,
+	}
+	// first item MUST be consumed!
+	if node, err = consumer(0, list); err != nil {
+		return nil, err
+	}
+	list = append(list, node)
+
+	// iterate to get value
+	for {
+		// consume comma
+		if match, _ := p.tryConsume(sepTypes); !match {
+			// stop parsing immediately
+			return list, nil
+		}
+		if node, err = consumer(len(list), list); err != nil {
+			return nil, err
+		}
+		list = append(list, node)
+	}
 }

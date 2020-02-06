@@ -70,13 +70,16 @@ func (it *Interpreter) print(err *error.Error) string {
 }
 
 func (it *Interpreter) handleVarDeclareStmt(stmt *syntax.VarDeclareStmt) *error.Error {
-	obj := execExpression(it, stmt.AssignExpr)
-	for _, v := range stmt.Variables {
-		vtag := v.GetLiteral()
-		// TODO: need copy object!
-		if !it.Symbol.Insert(vtag, obj) {
-			return error.NewErrorSLOT("variable redeclaration!")
+	for _, vpair := range stmt.AssignPair {
+		obj := execExpression(it, vpair.AssignExpr)
+		for _, v := range vpair.Variables {
+			vtag := v.GetLiteral()
+			// TODO: need copy object!
+			if !it.Symbol.Insert(vtag, obj) {
+				return error.NewErrorSLOT("variable redeclaration!")
+			}
 		}
+
 	}
 
 	return nil
