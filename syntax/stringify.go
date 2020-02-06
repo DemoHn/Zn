@@ -25,17 +25,19 @@ func StringifyAST(node Node) string {
 		return fmt.Sprintf("$ID(%s)", v.Literal)
 	// var assign expressions
 	case *VarDeclareStmt:
-		var vars = []string{}
-		var expr string
-
+		var items = []string{}
 		// parse vars
-		for _, vd := range v.Variables {
-			vars = append(vars, StringifyAST(vd))
+		for _, vpair := range v.AssignPair {
+			var vars = []string{}
+			var expr string
+			for _, vd := range vpair.Variables {
+				vars = append(vars, StringifyAST(vd))
+			}
+			expr = StringifyAST(vpair.AssignExpr)
+			items = append(items, fmt.Sprintf("vars[]=(%s) expr[]=(%s)", strings.Join(vars, " "), expr))
 		}
 		// parse exprs
-		expr = StringifyAST(v.AssignExpr)
-
-		return fmt.Sprintf("$VD(vars=(%s) expr=(%s))", strings.Join(vars, " "), expr)
+		return fmt.Sprintf("$VD(%s)", strings.Join(items, " "))
 	case *VarAssignStmt:
 		var target, assign string
 		target = StringifyAST(v.TargetVar)

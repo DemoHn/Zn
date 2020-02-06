@@ -1,12 +1,6 @@
 package syntax
 
-import (
-	"reflect"
-	"testing"
-
-	"github.com/DemoHn/Zn/lex"
-)
-
+/**
 func TestVarDecl_OK(t *testing.T) {
 	testcases := []struct {
 		name     string
@@ -76,7 +70,6 @@ func TestVarDecl_OK(t *testing.T) {
 	}
 }
 
-/**
 var TestVarDecl_Error(t *testing.T) {
 
 }
