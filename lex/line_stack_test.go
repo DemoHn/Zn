@@ -217,7 +217,7 @@ func TestLineStack_LineStackSnapshot(t *testing.T) {
 					opstr: "cursor",
 					cursor: scanCursor{
 						indents:   0,
-						scanState: scanInit,
+						scanState: scanIndent,
 					},
 				},
 			},

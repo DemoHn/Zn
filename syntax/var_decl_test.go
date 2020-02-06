@@ -1,34 +1,28 @@
 package syntax
 
-import (
-	"reflect"
-	"testing"
-
-	"github.com/DemoHn/Zn/lex"
-)
-
+/**
 func TestVarDecl_OK(t *testing.T) {
 	testcases := []struct {
 		name     string
-		tokens   string
+		input    string
 		declVars []string
 		exprType reflect.Type
 	}{
 		{
 			name:     "one var decl",
-			tokens:   "$40[令] $101[他] $41[为] $100[1200]",
+			input:    "令他为1200",
 			declVars: []string{"他"},
 			exprType: reflect.TypeOf(&Number{}),
 		},
 		{
 			name:     "two var decl (with var quote)",
-			tokens:   "$40[令] $101[变量] $11[，] $91[此之代码] $41[为] $100[1200]",
+			input:    "令变量，·此之代码·为1200",
 			declVars: []string{"变量", "此之代码"},
 			exprType: reflect.TypeOf(&Number{}),
 		},
 		{
 			name:     "three var decl",
-			tokens:   "$40[令] $101[变量] $11[，] $101[大新闻] $11[，] $101[名字] $41[为] $101[空]",
+			input:    "令变量，大新闻，名字为空",
 			declVars: []string{"变量", "大新闻", "名字"},
 			exprType: reflect.TypeOf(&ID{}),
 		},
@@ -36,9 +30,9 @@ func TestVarDecl_OK(t *testing.T) {
 
 	for _, tt := range testcases {
 		t.Run(tt.name, func(t *testing.T) {
-			tkList := lex.ParseTokenStr(tt.tokens)
-			p := NewParser(nil)
-			p.InitMockToken(tkList)
+			s := lex.NewTextStream(tt.input)
+			l := lex.NewLexer(s)
+			p := NewParser(l)
 
 			pg, err := p.Parse()
 			if err != nil {
@@ -48,11 +42,11 @@ func TestVarDecl_OK(t *testing.T) {
 			}
 
 			// assert programNode
-			if len(pg.Children) == 0 {
+			if len(pg.Content.Children) == 0 {
 				t.Errorf("Parsed programNode should have at least 1 stmt, got 0!")
 				return
 			}
-			stmt, ok := pg.Children[0].(*VarDeclareStmt)
+			stmt, ok := pg.Content.Children[0].(*VarDeclareStmt)
 			if !ok {
 				t.Errorf("Parsed first item should be a *VarDeclareStmt!")
 				return
@@ -61,7 +55,7 @@ func TestVarDecl_OK(t *testing.T) {
 			// assert data
 			vars := []string{}
 			for _, item := range stmt.Variables {
-				vars = append(vars, item.literal)
+				vars = append(vars, item.Literal)
 			}
 
 			if !reflect.DeepEqual(vars, tt.declVars) {
@@ -76,7 +70,6 @@ func TestVarDecl_OK(t *testing.T) {
 	}
 }
 
-/**
 var TestVarDecl_Error(t *testing.T) {
 
 }

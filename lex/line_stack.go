@@ -47,13 +47,11 @@ const (
 //
 // [ IDENTS ] [ TEXT TEXT TEXT ] [ CR LF ]
 // ^         ^                  ^
-// 0         1                  2
+// 1         1                  2
 //
-// 0: scanInit
 // 1: scanIndent
 // 2: scanEnd
 const (
-	scanInit   scanState = 0
 	scanIndent scanState = 1
 	scanEnd    scanState = 2
 )
@@ -66,7 +64,7 @@ func NewLineStack() *LineStack {
 		CurrentLine: 1,
 		scanCursor: scanCursor{
 			indents:   0,
-			scanState: scanInit,
+			scanState: scanIndent,
 		},
 		lineBuffer: []rune{},
 	}
@@ -101,7 +99,6 @@ func (ls *LineStack) SetIndent(count int, t IndentType) *error.Error {
 
 	// set scanCursor
 	ls.scanCursor.indents = indentNum
-	ls.scanCursor.scanState = scanIndent
 
 	return nil
 }
@@ -131,7 +128,7 @@ func (ls *LineStack) NewLine(index int) {
 	ls.lineBuffer = ls.lineBuffer[index:]
 	ls.scanCursor = scanCursor{
 		indents:   0,
-		scanState: scanInit,
+		scanState: scanIndent,
 	}
 	// add CurrentLine
 	ls.CurrentLine++
@@ -141,8 +138,7 @@ func (ls *LineStack) NewLine(index int) {
 // If so, further SPs and TABs would be regarded as normal whitespaces and will
 // be neglacted as usual.
 func (ls *LineStack) HasScanIndent() bool {
-	state := ls.scanCursor.scanState
-	return state == scanIndent
+	return ls.scanState == scanIndent && ls.indents != 0
 }
 
 // AppendLineBuffer - push data to lineBuffer
@@ -168,7 +164,22 @@ func (ls *LineStack) GetLineBuffer() []rune {
 	return ls.lineBuffer
 }
 
-// GetLine -
-func (ls *LineStack) GetLine(idx int) LineInfo {
-	return ls.lines[idx]
+// GetLineIndent - get current lineNum indent
+// NOTE: lineNum starts from 1
+// NOTE2: if lineNum not found, return -1
+func (ls *LineStack) GetLineIndent(lineNum int) int {
+	// lineNum exceeds current range
+	if lineNum > ls.CurrentLine {
+		return -1
+	}
+	if lineNum == ls.CurrentLine {
+		return ls.indents
+	}
+
+	if lineNum > 0 {
+		lineInfo := ls.lines[lineNum-1]
+		return lineInfo.Indents
+	}
+
+	return -1
 }
