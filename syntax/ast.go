@@ -20,7 +20,7 @@ type Statement interface {
 
 // Expression - a speical type of statement - that yields value after execution
 type Expression interface {
-	Node
+	Statement
 	exprNode()
 	IsPrimitive() bool
 }
@@ -114,6 +114,32 @@ type ArrayExpr struct {
 	Items []Expression
 }
 
+// LogicType - define several logic type (OR, AND, EQ, etc)
+type LogicType uint8
+
+// declare some logic types
+const (
+	LogicOR  LogicType = 1 // 或
+	LogicAND LogicType = 2 // 且
+	LogicIS  LogicType = 3 // 此 ... 为 ...
+	LogicEQ  LogicType = 4 // 等于
+	LogicNEQ LogicType = 5 // 不等于
+	LogicGT  LogicType = 6 // 大于
+	LogicGTE LogicType = 7 // 不小于
+	LogicLT  LogicType = 8 // 小于
+	LogicLTE LogicType = 9 // 不大于
+)
+
+// LogicExpr - logical expression return TRUE (真) or FALSE (假) only
+type LogicExpr struct {
+	Type      LogicType
+	LeftExpr  Expression
+	RightExpr Expression
+}
+
+// IsPrimitive -
+func (le *LogicExpr) IsPrimitive() bool { return false }
+
 // implement expression interface
 
 // IsPrimitive - a primeExpr must be primitive, that is, no longer additional
@@ -127,6 +153,10 @@ func (pe *PrimeExpr) SetLiteral(literal string) { pe.Literal = literal }
 func (pe *PrimeExpr) GetLiteral() string { return pe.Literal }
 
 func (pe *PrimeExpr) exprNode() {}
+func (pe *PrimeExpr) stmtNode() {}
+
+func (le *LogicExpr) exprNode() {}
+func (le *LogicExpr) stmtNode() {}
 
 //////// Parse Methods
 
@@ -155,18 +185,123 @@ func ParseStatement(p *Parser) (Statement, *error.Error) {
 			return ParseBranchStmt(p, mainIndent)
 		}
 	}
-
-	return ParseVarAssignStmt(p)
+	return ParseExpression(p)
+	//return ParseVarAssignStmt(p)
 }
 
-// ParseExpression - parse general expression (abstract expression type)
+// ParseExpression - parse an expression, see the following CFG for details
 //
-// currently, expression only contains
+// CFG:
+// E  -> AndE E'
+// E' -> 或 AndE E'
+//    ->
+//
+// AndE  -> EqE AndE'
+// AndE' -> 且 EqE AndE'
+//       ->
+//
+// EqE   -> VaE
+// EqE'  -> 等于 VaE
+//       -> 不等于 VaE
+//       -> 小于 VaE
+//       -> 不小于 VaE
+//       -> 大于 VaE
+//       -> 不大于 VaE
+//       ->
+//
+// VaE   -> BsE VaE'
+// VaE'  -> 为 BsE
+//       ->
+//
+// BsE   -> { E }
+//       -> （ ID ： E，E，...）
+//       -> 此 E 为 E
+//       -> ID
+//       -> Number
+//       -> String
+//       -> 【 E，E，...】
+//
+func ParseExpression(p *Parser) (Expression, *error.Error) {
+	var logicItemParser func(int) (Expression, *error.Error)
+	var logicItemTailParser func(int, Expression) (Expression, *error.Error)
+	// logicKeywords, ordered by precedence asc
+	// that means, the very begin logicKeyword ([]lex.TokenType) has lowest precedence
+	var logicKeywords = [4][]lex.TokenType{
+		[]lex.TokenType{lex.TypeLogicOrW},
+		[]lex.TokenType{lex.TypeLogicAndW},
+		[]lex.TokenType{
+			lex.TypeLogicEqualW,
+			lex.TypeLogicNotEqW,
+			lex.TypeLogicGtW,
+			lex.TypeLogicGteW,
+			lex.TypeLogicLtW,
+			lex.TypeLogicLteW,
+		},
+		[]lex.TokenType{lex.TypeLogicYesW}, // notice: this represents for Variable Assignment!
+	}
+	var logicTypeMap = map[lex.TokenType]LogicType{
+		lex.TypeLogicOrW:    LogicOR,
+		lex.TypeLogicAndW:   LogicAND,
+		lex.TypeLogicEqualW: LogicEQ,
+		lex.TypeLogicNotEqW: LogicNEQ,
+		lex.TypeLogicGtW:    LogicGT,
+		lex.TypeLogicGteW:   LogicGTE,
+		lex.TypeLogicLtW:    LogicLT,
+		lex.TypeLogicLteW:   LogicLTE,
+		lex.TypeLogicYesW:   LogicIS,
+	}
+	var logicAllowTails = [4]bool{true, true, false, false}
+
+	//// anynomous function definition
+	logicItemParser = func(idx int) (Expression, *error.Error) {
+		if idx >= len(logicKeywords) {
+			return ParseBasicExpr(p)
+		}
+		// #1. match item
+		expr1, err := logicItemParser(idx + 1)
+		if err != nil {
+			return nil, err
+		}
+		return logicItemTailParser(idx, expr1)
+	}
+
+	//// anynomous function definition
+	logicItemTailParser = func(idx int, leftExpr Expression) (Expression, *error.Error) {
+		// #1. consume keyword
+		match, tk := p.tryConsume(logicKeywords[idx])
+		if !match {
+			return leftExpr, nil
+		}
+		// #2. consume Y
+		rightExpr, err := logicItemParser(idx + 1)
+		if err != nil {
+			return nil, err
+		}
+		// compose logic expr
+		logicExpr := &LogicExpr{
+			Type:      logicTypeMap[tk.Type],
+			LeftExpr:  leftExpr,
+			RightExpr: rightExpr,
+		}
+		// #3. consume X' (X-tail)
+		if !logicAllowTails[idx] {
+			return logicItemTailParser(idx, logicExpr)
+		} else {
+			return logicExpr, nil
+		}
+	}
+
+	return logicItemParser(0)
+}
+
+// ParseBasicExpr - parse general basic expression
+//
+// currently, basic expression only contains
 // ID
 // Number
 // String
 // ArrayExpr
-func ParseExpression(p *Parser) (Expression, *error.Error) {
+func ParseBasicExpr(p *Parser) (Expression, *error.Error) {
 	var validTypes = []lex.TokenType{
 		lex.TypeIdentifier,
 		lex.TypeVarQuote,
