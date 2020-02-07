@@ -117,6 +117,15 @@ type VarAssignExpr struct {
 	AssignExpr Expression
 }
 
+// FuncCallExpr - function call
+type FuncCallExpr struct {
+	FuncName *ID
+	Params   []Expression
+}
+
+// IsPrimitive -
+func (fc *FuncCallExpr) IsPrimitive() bool { return false }
+
 // IsPrimitive -
 func (va *VarAssignExpr) IsPrimitive() bool { return false }
 
@@ -167,6 +176,9 @@ func (le *LogicExpr) stmtNode() {}
 func (va *VarAssignExpr) exprNode() {}
 func (va *VarAssignExpr) stmtNode() {}
 
+func (fc *FuncCallExpr) exprNode() {}
+func (fc *FuncCallExpr) stmtNode() {}
+
 //////// Parse Methods
 
 // ParseStatement - a program consists of statements
@@ -195,8 +207,8 @@ func ParseStatement(p *Parser) (Statement, *error.Error) {
 			return ParseBranchStmt(p, mainIndent)
 		}
 	}
+	// other case, parse expression
 	return ParseExpression(p)
-	//return ParseVarAssignStmt(p)
 }
 
 // ParseExpression - parse an expression, see the following CFG for details
@@ -222,14 +234,6 @@ func ParseStatement(p *Parser) (Statement, *error.Error) {
 // VaE   -> BsE VaE'
 // VaE'  -> 为 BsE
 //       ->
-//
-// BsE   -> { E }
-//       -> （ ID ： E，E，...）
-//       -> 此 E 为 E
-//       -> ID
-//       -> Number
-//       -> String
-//       -> 【 E，E，...】
 //
 func ParseExpression(p *Parser) (Expression, *error.Error) {
 	var logicItemParser func(int) (Expression, *error.Error)
@@ -316,11 +320,14 @@ func ParseExpression(p *Parser) (Expression, *error.Error) {
 
 // ParseBasicExpr - parse general basic expression
 //
-// currently, basic expression only contains
-// ID
-// Number
-// String
-// ArrayExpr
+// CFG:
+// BsE   -> { E }
+//       -> （ ID ： E，E，...）
+//       -> 此 E 为 E
+//       -> ID
+//       -> Number
+//       -> String
+//       -> 【 E，E，...】
 func ParseBasicExpr(p *Parser) (Expression, *error.Error) {
 	var validTypes = []lex.TokenType{
 		lex.TypeIdentifier,
@@ -329,6 +336,7 @@ func ParseBasicExpr(p *Parser) (Expression, *error.Error) {
 		lex.TypeString,
 		lex.TypeArrayQuoteL,
 		lex.TypeStmtQuoteL,
+		lex.TypeFuncQuoteL,
 	}
 
 	match, tk := p.tryConsume(validTypes)
@@ -361,6 +369,8 @@ func ParseBasicExpr(p *Parser) (Expression, *error.Error) {
 				return nil, err
 			}
 			return expr, nil
+		case lex.TypeFuncQuoteL:
+			return ParseFuncCallExpr(p)
 		}
 	}
 	return nil, error.InvalidSyntax()
@@ -403,6 +413,53 @@ func ParseArrayExpr(p *Parser) (*ArrayExpr, *error.Error) {
 		return nil, err
 	}
 	return ar, nil
+}
+
+// ParseFuncCallExpr - yield FuncCallExpr node
+//
+// CFG:
+// FuncCallExpr  -> （ ID ： commaList ）
+// commaList     -> E commaListTail
+// commaListTail -> ， E commaListTail
+//               ->
+func ParseFuncCallExpr(p *Parser) (*FuncCallExpr, *error.Error) {
+	var callExpr = &FuncCallExpr{
+		Params: []Expression{},
+	}
+	var validIDKeywords = []lex.TokenType{
+		lex.TypeVarQuote,
+		lex.TypeIdentifier,
+	}
+	// #1. parse ID
+	match, tk := p.tryConsume(validIDKeywords)
+	if !match {
+		return nil, error.InvalidSyntax()
+	}
+	idExpr := new(ID)
+	idExpr.SetLiteral(string(tk.Literal))
+	callExpr.FuncName = idExpr
+	// #2. parse colon (maybe there's no params)
+	match2, _ := p.tryConsume([]lex.TokenType{lex.TypeFuncCall})
+	if match2 {
+		// #2.1 parse comma list
+		nodes, err := parseCommaList(p, func(idx int, nodes []Node) (Node, *error.Error) {
+			return ParseExpression(p)
+		})
+		if err != nil {
+			return nil, err
+		}
+		// #2.2 translate nodes into params
+		for _, node := range nodes {
+			v, _ := node.(Expression)
+			callExpr.Params = append(callExpr.Params, v)
+		}
+	}
+
+	// #3. parse right quote
+	if err := p.consume(lex.TypeFuncQuoteR); err != nil {
+		return nil, err
+	}
+	return callExpr, nil
 }
 
 // ParseVarDeclareStmt - yield VarDeclare node

@@ -62,6 +62,15 @@ func StringifyAST(node Node) string {
 		assign = StringifyAST(v.AssignExpr)
 
 		return fmt.Sprintf("$VA(target=(%s) assign=(%s))", target, assign)
+	case *FuncCallExpr:
+		var params = []string{}
+		var name = StringifyAST(v.FuncName)
+
+		for _, p := range v.Params {
+			params = append(params, StringifyAST(p))
+		}
+
+		return fmt.Sprintf("$FN(name=(%s) params=(%s))", name, strings.Join(params, " "))
 	case *BranchStmt:
 		var conds = []string{}
 		// add if-branch

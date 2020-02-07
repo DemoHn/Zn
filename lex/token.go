@@ -282,8 +282,8 @@ const (
 	TypeMoreParam    TokenType = 19
 	TypeArrayQuoteL  TokenType = 20
 	TypeArrayQuoteR  TokenType = 21
-	TypeFuncQuoteL   TokenType = 22
-	TypeFuncQuoteR   TokenType = 23
+	TypeFuncQuoteL   TokenType = 22 // （
+	TypeFuncQuoteR   TokenType = 23 // ）
 	TypeMapData      TokenType = 24
 	TypeStmtQuoteL   TokenType = 25 // {
 	TypeStmtQuoteR   TokenType = 26 // }
