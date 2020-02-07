@@ -337,6 +337,7 @@ func ParseBasicExpr(p *Parser) (Expression, *error.Error) {
 		lex.TypeArrayQuoteL,
 		lex.TypeStmtQuoteL,
 		lex.TypeFuncQuoteL,
+		lex.TypeObjSelfW,
 	}
 
 	match, tk := p.tryConsume(validTypes)
@@ -371,6 +372,8 @@ func ParseBasicExpr(p *Parser) (Expression, *error.Error) {
 			return expr, nil
 		case lex.TypeFuncQuoteL:
 			return ParseFuncCallExpr(p)
+		case lex.TypeObjSelfW:
+			return ParseLogicISExpr(p)
 		}
 	}
 	return nil, error.InvalidSyntax()
@@ -460,6 +463,32 @@ func ParseFuncCallExpr(p *Parser) (*FuncCallExpr, *error.Error) {
 		return nil, err
 	}
 	return callExpr, nil
+}
+
+// ParseLogicISExpr - logic IS 此 ... 为 ...
+// CFG:
+// LogicIS -> 此 BasicExpr 为 BasicExpr
+func ParseLogicISExpr(p *Parser) (*LogicExpr, *error.Error) {
+	// #1. parse expr1
+	expr1, err := ParseBasicExpr(p)
+	if err != nil {
+		return nil, err
+	}
+	// #2. consume LogicYes
+	if err := p.consume(lex.TypeLogicYesW); err != nil {
+		return nil, err
+	}
+	// #3. parse expr2
+	expr2, err := ParseBasicExpr(p)
+	if err != nil {
+		return nil, err
+	}
+
+	return &LogicExpr{
+		Type:      LogicIS,
+		LeftExpr:  expr1,
+		RightExpr: expr2,
+	}, nil
 }
 
 // ParseVarDeclareStmt - yield VarDeclare node
