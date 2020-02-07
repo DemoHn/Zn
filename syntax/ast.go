@@ -328,6 +328,7 @@ func ParseBasicExpr(p *Parser) (Expression, *error.Error) {
 		lex.TypeNumber,
 		lex.TypeString,
 		lex.TypeArrayQuoteL,
+		lex.TypeStmtQuoteL,
 	}
 
 	match, tk := p.tryConsume(validTypes)
@@ -351,6 +352,15 @@ func ParseBasicExpr(p *Parser) (Expression, *error.Error) {
 				return nil, err
 			}
 			return arrExpr, nil
+		case lex.TypeStmtQuoteL:
+			expr, err := ParseExpression(p)
+			if err != nil {
+				return nil, err
+			}
+			if err := p.consume(lex.TypeStmtQuoteR); err != nil {
+				return nil, err
+			}
+			return expr, nil
 		}
 	}
 	return nil, error.InvalidSyntax()
