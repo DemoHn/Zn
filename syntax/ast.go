@@ -328,6 +328,7 @@ func ParseExpression(p *Parser) (Expression, *error.Error) {
 //       -> Number
 //       -> String
 //       -> 【 E，E，...】
+//       -> 【】                              (empty array)
 func ParseBasicExpr(p *Parser) (Expression, *error.Error) {
 	var validTypes = []lex.TokenType{
 		lex.TypeIdentifier,
@@ -382,20 +383,18 @@ func ParseBasicExpr(p *Parser) (Expression, *error.Error) {
 // ParseArrayExpr - yield ArrayExpr node
 // CFG:
 // ArrayExpr -> 【 ItemList 】
+//           -> 【】
 // ItemList  -> Expr ExprTail
 //           ->
 // ExprTail  -> ， Expr ExprTail
 //           ->
-//
-// Expr      -> PrimaryExpr
-//
-// PrimaryExpr -> Number
-//             -> String
-//             -> ID
-//             -> ArrayExpr
 func ParseArrayExpr(p *Parser) (*ArrayExpr, *error.Error) {
 	ar := &ArrayExpr{
 		Items: []Expression{},
+	}
+	// #0. trying comsume right bracket to see if it's an empty array
+	if match, _ := p.tryConsume([]lex.TokenType{lex.TypeArrayQuoteR}); match {
+		return ar, nil
 	}
 	// #1. consume item list (comma list)
 	exprs, err := parseCommaList(p, func(idx int, nodes []Node) (Node, *error.Error) {
