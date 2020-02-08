@@ -93,6 +93,8 @@ func StringifyAST(node Node) string {
 		}
 
 		return fmt.Sprintf("$IF(%s)", strings.Join(conds, " "))
+	case *WhileLoopStmt:
+		return fmt.Sprintf("$WL(expr=(%s) block=(%s))", StringifyAST(v.TrueExpr), StringifyAST(v.LoopBlock))
 	case *BlockStmt:
 		var statements = []string{}
 		for _, stmt := range v.Children {
