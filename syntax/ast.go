@@ -68,6 +68,14 @@ type BranchStmt struct {
 	HasElse bool
 }
 
+// WhileLoopStmt - (while) statement
+type WhileLoopStmt struct {
+	// while this expression satisfies (return TRUE), the following block executes.
+	TrueExpr Expression
+	// execution block
+	LoopBlock *BlockStmt
+}
+
 // BlockStmt -
 type BlockStmt struct {
 	Children []Statement
@@ -78,6 +86,7 @@ func (vn *VarDeclareStmt) stmtNode() {}
 func (bk *BlockStmt) stmtNode()      {}
 func (bs *BranchStmt) stmtNode()     {}
 func (es *EmptyStmt) stmtNode()      {}
+func (wl *WhileLoopStmt) stmtNode()  {}
 
 //// Expressions (struct)
 
@@ -193,6 +202,7 @@ func ParseStatement(p *Parser) (Statement, *error.Error) {
 		lex.TypeStmtSep,
 		lex.TypeDeclareW,
 		lex.TypeCondW,
+		lex.TypeWhileLoopW,
 	}
 	match, tk := p.tryConsume(validTypes)
 	if match {
@@ -205,6 +215,8 @@ func ParseStatement(p *Parser) (Statement, *error.Error) {
 		case lex.TypeCondW:
 			mainIndent := p.getPeekIndent()
 			return ParseBranchStmt(p, mainIndent)
+		case lex.TypeWhileLoopW:
+			return ParseWhileLoopStmt(p)
 		}
 	}
 	// other case, parse expression
@@ -592,6 +604,36 @@ func ParseVarDeclareStmt(p *Parser) (*VarDeclareStmt, *error.Error) {
 	}
 
 	return vNode, nil
+}
+
+// ParseWhileLoopStmt - yield while loop node
+// CFG:
+// WhileLoopStmt -> 每当 Expr ：
+//               ..     Block
+func ParseWhileLoopStmt(p *Parser) (*WhileLoopStmt, *error.Error) {
+	// #1. consume expr
+	trueExpr, err := ParseExpression(p)
+	if err != nil {
+		return nil, err
+	}
+	// #2. parse colon
+	if err := p.consume(lex.TypeFuncCall); err != nil {
+		return nil, err
+	}
+	// #3. parse block
+	expected, blockIndent := p.expectBlockIndent()
+	if !expected {
+		return nil, error.InvalidSyntax()
+	}
+	block, err := ParseBlockStmt(p, blockIndent)
+	if err != nil {
+		return nil, err
+	}
+
+	return &WhileLoopStmt{
+		TrueExpr:  trueExpr,
+		LoopBlock: block,
+	}, nil
 }
 
 // ParseBlockStmt - parse all statements inside a block
