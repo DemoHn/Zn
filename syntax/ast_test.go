@@ -15,7 +15,65 @@ TODO
 */
 var testSuccessSuites = []string{
 	varDeclCasesOK,
+	whileLoopCasesOK,
 }
+
+const whileLoopCasesOK = `
+========
+1. one line block
+--------
+每当1：
+	令A为B
+--------
+$PG($BK(
+	$WL(
+		expr=($NUM(1))
+		block=($BK($VD(
+				vars[]=($ID(A))
+				expr[]=($ID(B))
+		)))
+	)
+))
+
+========
+2. nested while loop statement
+--------
+每当1：
+	A为B
+	每当2：
+		C为D
+		E为F
+	每当3：
+		100
+	G为H
+	K为L
+
+M为N
+--------
+$PG($BK(
+	$WL(
+		expr=($NUM(1))
+		block=($BK(
+			$VA(target=($ID(A)) assign=($ID(B)))
+			$WL(
+				expr=($NUM(2))
+				block=($BK(
+					$VA(target=($ID(C)) assign=($ID(D)))
+					$VA(target=($ID(E)) assign=($ID(F)))
+				))
+			)
+			$WL(
+				expr=($NUM(3))
+				block=($BK($NUM(100)))
+			)
+			$VA(target=($ID(G)) assign=($ID(H)))
+			$VA(target=($ID(K)) assign=($ID(L)))
+		))
+	)
+
+	$VA(target=($ID(M)) assign=($ID(N)))
+))
+`
 
 const varDeclCasesOK = `
 ========

@@ -38,7 +38,7 @@ func StringifyAST(node Node) string {
 
 		lstr := StringifyAST(v.LeftExpr)
 		rstr := StringifyAST(v.RightExpr)
-		return fmt.Sprintf("%s(%s %s)", typeStrMap[v.Type], lstr, rstr)
+		return fmt.Sprintf("%s(L=(%s) R=(%s))", typeStrMap[v.Type], lstr, rstr)
 	// var assign expressions
 	case *EmptyStmt:
 		return "$"
