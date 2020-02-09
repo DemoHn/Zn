@@ -9,8 +9,9 @@ import (
 
 // SymbolInfo - symbol info
 type SymbolInfo struct {
-	nestLevel int
-	value     ZnValue
+	nestLevel  int
+	value      ZnValue
+	isConstant bool // if isConstant = true, the value of this symbol is prohibited from any modification.
 }
 
 // SymbolTable - a global hash-table manages all symbols
@@ -25,17 +26,30 @@ type SymbolTable struct {
 
 // NewSymbolTable -
 func NewSymbolTable() *SymbolTable {
-	return &SymbolTable{
+	var st = &SymbolTable{
 		symbolMap: map[string][]SymbolInfo{},
 		nestLevel: 0,
 	}
+
+	// copy some symbols from predefined values
+	for defaultKey, defaultValue := range predefinedValues {
+		st.symbolMap[defaultKey] = []SymbolInfo{
+			{
+				nestLevel:  0,
+				value:      defaultValue,
+				isConstant: true,
+			},
+		}
+	}
+	return st
 }
 
 // Bind - add value to symbol table
-func (st *SymbolTable) Bind(id string, obj ZnValue) *error.Error {
+func (st *SymbolTable) Bind(id string, obj ZnValue, isConstant bool) *error.Error {
 	newInfo := SymbolInfo{
-		nestLevel: st.nestLevel,
-		value:     obj,
+		nestLevel:  st.nestLevel,
+		value:      obj,
+		isConstant: isConstant,
 	}
 
 	symArr, ok := st.symbolMap[id]
@@ -99,6 +113,9 @@ func (st *SymbolTable) SetData(id string, obj ZnValue) *error.Error {
 
 	if symArr != nil && len(symArr) > 0 {
 		symArr[0].value = obj
+		if symArr[0].isConstant {
+			return error.NewErrorSLOT("assignment to constant variable!")
+		}
 		return nil
 	}
 

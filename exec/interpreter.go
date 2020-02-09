@@ -61,7 +61,7 @@ func (it *Interpreter) handleVarDeclareStmt(stmt *syntax.VarDeclareStmt) *error.
 		for _, v := range vpair.Variables {
 			vtag := v.GetLiteral()
 			// TODO: need copy object!
-			if err := it.Bind(vtag, obj); err != nil {
+			if err := it.Bind(vtag, obj, false); err != nil {
 				return err
 			}
 		}
@@ -111,3 +111,5 @@ func execPrimitiveExpr(it *Interpreter, expr syntax.Expression) ZnValue {
 		return nil
 	}
 }
+
+//// Execute statements
