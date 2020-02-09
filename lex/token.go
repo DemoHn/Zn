@@ -40,7 +40,7 @@ const (
 	GlyphLING rune = 0x4EE4
 	// GlyphWEI - 为 - 为，不为，成为，作为，是为，何为
 	GlyphWEI rune = 0x4E3A
-	// GlyphSHI - 是 - 是，不是，是为
+	// GlyphSHI - 是 - 是为
 	GlyphSHI rune = 0x662F
 	// GlyphRU - 如 - 如何，如果
 	GlyphRU rune = 0x5982
@@ -296,7 +296,6 @@ const (
 	TypeParamAssignW TokenType = 47 // 已知
 	TypeReturnW      TokenType = 48 // 返回
 	TypeLogicNotW    TokenType = 49 // 不为
-	TypeLogicNotIIW  TokenType = 50 // 不是
 	TypeLogicNotEqW  TokenType = 51 // 不等于
 	TypeLogicLteW    TokenType = 52 // 不大于
 	TypeLogicGteW    TokenType = 53 // 不小于
@@ -337,7 +336,6 @@ var KeywordTypeMap = map[TokenType][]rune{
 	TypeParamAssignW:  []rune{GlyphYI, GlyphZHIy},
 	TypeReturnW:       []rune{GlyphFAN, GlyphHUI},
 	TypeLogicNotW:     []rune{GlyphBU, GlyphWEI},
-	TypeLogicNotIIW:   []rune{GlyphBU, GlyphSHI},
 	TypeLogicNotEqW:   []rune{GlyphBU, GlyphDENG, GlyphYU},
 	TypeLogicLteW:     []rune{GlyphBU, GlyphDA, GlyphYU},
 	TypeLogicGteW:     []rune{GlyphBU, GlyphXIAO, GlyphYU},

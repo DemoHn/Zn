@@ -10,6 +10,8 @@ type ZnValue interface {
 	String() string
 }
 
+var predefinedValues map[string]ZnValue
+
 //// Primitive Types Definition
 
 // ZnString - string 「文本」型
@@ -80,4 +82,16 @@ func (zn *ZnNull) String() string {
 // NewZnNull - null value
 func NewZnNull() *ZnNull {
 	return &ZnNull{}
+}
+
+// init function
+func init() {
+	//// predefined values - those variables (symbols) are defined before
+	//// any execution procedure.
+	//// NOTICE: those variables are all constants!
+	predefinedValues = map[string]ZnValue{
+		"真": NewZnBool(true),
+		"假": NewZnBool(false),
+		"空": NewZnNull(),
+	}
 }
