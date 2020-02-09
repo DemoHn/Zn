@@ -1,24 +1,19 @@
 package exec
 
 import (
-	"fmt"
-	"strings"
-
 	"github.com/DemoHn/Zn/error"
 	"github.com/DemoHn/Zn/syntax"
 )
 
 // Interpreter - the main interpreter to execute the program and yield results
 type Interpreter struct {
-	Symbol *SymbolTable
+	*SymbolTable
 }
 
 // NewInterpreter -
 func NewInterpreter() *Interpreter {
 	return &Interpreter{
-		Symbol: &SymbolTable{
-			Symbols: map[string]ZnObject{},
-		},
+		SymbolTable: NewSymbolTable(),
 	}
 }
 
@@ -57,16 +52,7 @@ func (it *Interpreter) print(err *error.Error) string {
 		return err.Error()
 	}
 
-	strs := []string{}
-	for k, symbol := range it.Symbol.Symbols {
-		symStr := "ε"
-		if symbol != nil {
-			symStr = symbol.String()
-		}
-		strs = append(strs, fmt.Sprintf("‹%s› => %s", k, symStr))
-	}
-
-	return strings.Join(strs, "\n")
+	return it.printSymbols()
 }
 
 func (it *Interpreter) handleVarDeclareStmt(stmt *syntax.VarDeclareStmt) *error.Error {
@@ -75,8 +61,8 @@ func (it *Interpreter) handleVarDeclareStmt(stmt *syntax.VarDeclareStmt) *error.
 		for _, v := range vpair.Variables {
 			vtag := v.GetLiteral()
 			// TODO: need copy object!
-			if !it.Symbol.Insert(vtag, obj) {
-				return error.NewErrorSLOT("variable redeclaration!")
+			if err := it.Bind(vtag, obj); err != nil {
+				return err
 			}
 		}
 
@@ -89,11 +75,7 @@ func (it *Interpreter) handleVarAssignExpr(stmt *syntax.VarAssignExpr) *error.Er
 	obj := execExpression(it, stmt.AssignExpr)
 	vtag := stmt.TargetVar.GetLiteral()
 
-	if _, ok := it.Symbol.Lookup(vtag); ok {
-		it.Symbol.SetData(vtag, obj)
-		return nil
-	}
-	return error.NewErrorSLOT("variable not defined!")
+	return it.SetData(vtag, obj)
 }
 
 func execExpression(it *Interpreter, expr syntax.Expression) ZnObject {
@@ -118,7 +100,7 @@ func execPrimitiveExpr(it *Interpreter, expr syntax.Expression) ZnObject {
 		return zstr
 	case *syntax.ID:
 		vtag := e.GetLiteral()
-		if obj, ok := it.Symbol.Lookup(vtag); ok {
+		if obj, err := it.Lookup(vtag); err == nil {
 			return obj
 		}
 		return nil
