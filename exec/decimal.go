@@ -9,7 +9,7 @@ import (
 	"github.com/DemoHn/Zn/error"
 )
 
-// ZnDecimal - decimal number
+// ZnDecimal - decimal number 「数值」型
 type ZnDecimal struct {
 	// decimal internal properties
 	sign bool // if true, this number is NEGATIVE

@@ -12,7 +12,7 @@ type ZnValue interface {
 
 //// Primitive Types Definition
 
-// ZnString - string
+// ZnString - string 「文本」型
 type ZnString struct {
 	Value string
 }
@@ -28,7 +28,7 @@ func NewZnString(value string) *ZnString {
 	}
 }
 
-// ZnBool - (bool)
+// ZnBool - (bool) 「二象」型
 type ZnBool struct {
 	Value bool
 }
@@ -48,7 +48,7 @@ func NewZnBool(value bool) *ZnBool {
 	}
 }
 
-// ZnArray - Zn array type
+// ZnArray - Zn array type 「元组」型
 type ZnArray struct {
 	Value []ZnValue
 }
@@ -67,4 +67,17 @@ func NewZnArray(values []ZnValue) *ZnArray {
 	return &ZnArray{
 		Value: values,
 	}
+}
+
+// ZnNull - Zn null type - a special marker indicates that
+// this value has neither type nor value
+type ZnNull struct{}
+
+func (zn *ZnNull) String() string {
+	return "‹空›"
+}
+
+// NewZnNull - null value
+func NewZnNull() *ZnNull {
+	return &ZnNull{}
 }
