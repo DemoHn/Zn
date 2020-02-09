@@ -10,7 +10,7 @@ import (
 // SymbolInfo - symbol info
 type SymbolInfo struct {
 	nestLevel int
-	value     ZnObject
+	value     ZnValue
 }
 
 // SymbolTable - a global hash-table manages all symbols
@@ -32,7 +32,7 @@ func NewSymbolTable() *SymbolTable {
 }
 
 // Bind - add value to symbol table
-func (st *SymbolTable) Bind(id string, obj ZnObject) *error.Error {
+func (st *SymbolTable) Bind(id string, obj ZnValue) *error.Error {
 	newInfo := SymbolInfo{
 		nestLevel: st.nestLevel,
 		value:     obj,
@@ -57,7 +57,7 @@ func (st *SymbolTable) Bind(id string, obj ZnObject) *error.Error {
 
 // Lookup - find the corresponded value from ID,
 // if nothing found, return error
-func (st *SymbolTable) Lookup(id string) (ZnObject, *error.Error) {
+func (st *SymbolTable) Lookup(id string) (ZnValue, *error.Error) {
 	symArr, ok := st.symbolMap[id]
 	if !ok {
 		return nil, error.NewErrorSLOT("no valid variable found")
@@ -91,7 +91,7 @@ func (st *SymbolTable) ExitScope() {
 }
 
 // SetData -
-func (st *SymbolTable) SetData(id string, obj ZnObject) *error.Error {
+func (st *SymbolTable) SetData(id string, obj ZnValue) *error.Error {
 	symArr, ok := st.symbolMap[id]
 	if !ok {
 		return error.NewErrorSLOT("variable not defined!")

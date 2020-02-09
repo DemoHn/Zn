@@ -87,9 +87,8 @@ func TestDecimal_ParseValue(t *testing.T) {
 	}
 
 	for _, tt := range cases {
-		zd := new(ZnDecimal)
 		t.Run(tt.name, func(t *testing.T) {
-			err := zd.SetValue(tt.input)
+			zd, err := NewZnDecimal(tt.input)
 			if err != nil {
 				if tt.expectError == false {
 					t.Errorf("expect no error, got error: %s", err.Error())

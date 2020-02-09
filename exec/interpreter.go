@@ -78,7 +78,7 @@ func (it *Interpreter) handleVarAssignExpr(stmt *syntax.VarAssignExpr) *error.Er
 	return it.SetData(vtag, obj)
 }
 
-func execExpression(it *Interpreter, expr syntax.Expression) ZnObject {
+func execExpression(it *Interpreter, expr syntax.Expression) ZnValue {
 	if expr.IsPrimitive() {
 		return execPrimitiveExpr(it, expr)
 	}
@@ -86,18 +86,13 @@ func execExpression(it *Interpreter, expr syntax.Expression) ZnObject {
 	return nil
 }
 
-func execPrimitiveExpr(it *Interpreter, expr syntax.Expression) ZnObject {
+func execPrimitiveExpr(it *Interpreter, expr syntax.Expression) ZnValue {
 	switch e := expr.(type) {
 	case *syntax.Number:
-		zd := new(ZnDecimal)
-		zd.SetValue(e.GetLiteral())
-
+		zd, _ := NewZnDecimal(e.GetLiteral())
 		return zd
 	case *syntax.String:
-		zstr := new(ZnString)
-		zstr.SetValue(e.GetLiteral())
-
-		return zstr
+		return NewZnString(e.GetLiteral())
 	case *syntax.ID:
 		vtag := e.GetLiteral()
 		if obj, err := it.Lookup(vtag); err == nil {
@@ -105,14 +100,12 @@ func execPrimitiveExpr(it *Interpreter, expr syntax.Expression) ZnObject {
 		}
 		return nil
 	case *syntax.ArrayExpr:
-		znObjs := []ZnObject{}
-		znArr := new(ZnArray)
+		znObjs := []ZnValue{}
 		for _, item := range e.Items {
 			znObjs = append(znObjs, execPrimitiveExpr(it, item))
 		}
 
-		znArr.Init(znObjs)
-		return znArr
+		return NewZnArray(znObjs)
 	default:
 		// TODO: to be continued...
 		return nil
