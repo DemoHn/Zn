@@ -17,9 +17,39 @@ TODO
 var testSuccessSuites = []string{
 	varDeclCasesOK,
 	whileLoopCasesOK,
+	logicExprCasesOK,
 }
 
 var testFailSuites = []string{}
+
+const logicExprCasesOK = `
+========
+1. low -> high precedence
+--------
+此{A且B或C且D等于E且F为100}为0
+--------
+$PG($BK(
+	$IS(
+		L=($OR(
+				L=($AND(L=($ID(A)) R=($ID(B))))
+				R=($AND(					
+					L=($AND(
+						L=($ID(C))
+						R=($EQ(
+							L=($ID(D))
+							R=($ID(E))
+						))
+					))
+					R=($VA(
+						target=($ID(F))
+						assign=($NUM(100))
+					))
+				))
+		))
+		R=($NUM(0))
+	)
+))
+`
 
 const whileLoopCasesOK = `
 ========
@@ -184,46 +214,9 @@ type astFailCase struct {
 }
 
 func TestAST_OK(t *testing.T) {
-	astCases := []astFailCase{}
-
-	for _, suData := range testSuccessSuites {
-		suites := splitTestSuites(suData)
-		for _, suite := range suites {
-			astCases = append(astCases, astFailCase{
-				name:     suite[0],
-				input:    suite[1],
-				failInfo: suite[2],
-			})
-		}
-	}
-
-	// TODO: filter
-	// after filtering...
-	for _, tt := range astCases {
-		t.Run(tt.name, func(t *testing.T) {
-			in := lex.NewTextStream(tt.input)
-			l := lex.NewLexer(in)
-			p := NewParser(l)
-
-			_, err := p.Parse()
-			if err == nil {
-				t.Errorf("expect error, got no error found")
-			} else {
-				// compare with error code
-				cursor := err.GetCursor()
-				got := fmt.Sprintf("code=%d line=%d col=%d", err.GetCode(), cursor.LineNum, cursor.ColNum)
-				if tt.failInfo != got {
-					t.Errorf("failInfo compare:\nexpect ->\n%s\ngot ->\n%s", tt.failInfo, got)
-				}
-			}
-		})
-	}
-}
-
-func TestAST_FAIL(t *testing.T) {
 	astCases := []astSuccessCase{}
 
-	for _, suData := range testFailSuites {
+	for _, suData := range testSuccessSuites {
 		suites := splitTestSuites(suData)
 		for _, suite := range suites {
 			astCases = append(astCases, astSuccessCase{
@@ -252,6 +245,45 @@ func TestAST_FAIL(t *testing.T) {
 
 				if expect != got {
 					t.Errorf("AST compare:\nexpect ->\n%s\ngot ->\n%s", expect, got)
+				}
+			}
+			//
+		})
+	}
+}
+
+func TestAST_FAIL(t *testing.T) {
+	astCases := []astFailCase{}
+
+	for _, suData := range testFailSuites {
+		suites := splitTestSuites(suData)
+		for _, suite := range suites {
+			astCases = append(astCases, astFailCase{
+				name:     suite[0],
+				input:    suite[1],
+				failInfo: suite[2],
+			})
+		}
+	}
+
+	// TODO: filter
+	// after filtering...
+	for _, tt := range astCases {
+		t.Run(tt.name, func(t *testing.T) {
+			in := lex.NewTextStream(tt.input)
+			l := lex.NewLexer(in)
+			p := NewParser(l)
+
+			_, err := p.Parse()
+
+			if err == nil {
+				t.Errorf("expect error, got no error found")
+			} else {
+				// compare with error code
+				cursor := err.GetCursor()
+				got := fmt.Sprintf("code=%d line=%d col=%d", err.GetCode(), cursor.LineNum, cursor.ColNum)
+				if tt.failInfo != got {
+					t.Errorf("failInfo compare:\nexpect ->\n%s\ngot ->\n%s", tt.failInfo, got)
 				}
 			}
 		})
