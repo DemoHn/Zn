@@ -11,11 +11,22 @@ import (
 
 // ZnDecimal - decimal number
 type ZnDecimal struct {
-	ZnNullable
 	// decimal internal properties
 	sign bool // if true, this number is NEGATIVE
-	co   big.Int
+	co   *big.Int
 	exp  int
+}
+
+// NewZnDecimal -
+func NewZnDecimal(value string) (*ZnDecimal, *error.Error) {
+	var decimal = &ZnDecimal{
+		sign: false,
+		exp:  0,
+		co:   big.NewInt(0),
+	}
+
+	err := decimal.setValue(value)
+	return decimal, err
 }
 
 // String - show decimal display string
@@ -47,7 +58,7 @@ func (zd *ZnDecimal) String() (data string) {
 
 // SetValue - set decimal value from raw string
 // raw string MUST be a valid number string
-func (zd *ZnDecimal) SetValue(raw string) *error.Error {
+func (zd *ZnDecimal) setValue(raw string) *error.Error {
 	var intValS = []rune{}
 	var expValS = []rune{}
 	var dotNum = 0
