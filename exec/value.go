@@ -3,11 +3,21 @@ package exec
 import (
 	"fmt"
 	"strings"
+
+	"github.com/DemoHn/Zn/error"
 )
 
 // ZnValue - general value interface
 type ZnValue interface {
 	String() string
+}
+
+// ZnComparable - to make the value comparable
+type ZnComparable interface {
+	Equals(val ZnComparable) (*ZnBool, *error.Error)      // A 等于 B
+	Is(val ZnComparable) (*ZnBool, *error.Error)          // 此 A 为 B
+	LessThan(val ZnComparable) (*ZnBool, *error.Error)    // A 小于 B
+	GreaterThan(val ZnComparable) (*ZnBool, *error.Error) // A 大于 B
 }
 
 var predefinedValues map[string]ZnValue
@@ -41,6 +51,12 @@ func (zb *ZnBool) String() string {
 		data = "假"
 	}
 	return data
+}
+
+// Rev - reverse value; i.e. from TRUE -> FALSE or from FALSE -> TRUE
+func (zb *ZnBool) Rev() *ZnBool {
+	zb.Value = !zb.Value
+	return zb
 }
 
 // NewZnBool -
