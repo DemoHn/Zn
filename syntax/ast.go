@@ -22,7 +22,6 @@ type Statement interface {
 type Expression interface {
 	Statement
 	exprNode()
-	IsPrimitive() bool
 }
 
 //// program (struct)
@@ -132,12 +131,6 @@ type FuncCallExpr struct {
 	Params   []Expression
 }
 
-// IsPrimitive -
-func (fc *FuncCallExpr) IsPrimitive() bool { return false }
-
-// IsPrimitive -
-func (va *VarAssignExpr) IsPrimitive() bool { return false }
-
 // LogicType - define several logic type (OR, AND, EQ, etc)
 type LogicType uint8
 
@@ -162,14 +155,7 @@ type LogicExpr struct {
 	RightExpr Expression
 }
 
-// IsPrimitive -
-func (le *LogicExpr) IsPrimitive() bool { return false }
-
 // implement expression interface
-
-// IsPrimitive - a primeExpr must be primitive, that is, no longer additional
-// calculation required.
-func (pe *PrimeExpr) IsPrimitive() bool { return true }
 
 // SetLiteral - set literal for primeExpr
 func (pe *PrimeExpr) SetLiteral(literal string) { pe.Literal = literal }
