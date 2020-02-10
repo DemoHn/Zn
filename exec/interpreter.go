@@ -22,20 +22,7 @@ func (it *Interpreter) Execute(program *syntax.Program) string {
 	if program.Content == nil {
 		return ""
 	}
-	var err *error.Error
-	for _, stmt := range program.Content.Children {
-		switch s := stmt.(type) {
-		case *syntax.VarDeclareStmt:
-			err = evalVarDeclareStmt(it, s)
-			if err != nil {
-				break
-			}
-		default:
-			// regard as unknown statement and ignore it
-			// TODO: to be continued...
-			continue
-		}
-	}
+	err := evalBlockStatement(it, program.Content, true)
 
 	// yield result
 	return it.print(err)
@@ -51,6 +38,19 @@ func (it *Interpreter) print(err *error.Error) string {
 }
 
 //// Execute (Evaluate) statements
+
+// EvalStatement - eval statement
+func EvalStatement(it *Interpreter, stmt syntax.Statement) *error.Error {
+	switch v := stmt.(type) {
+	case *syntax.VarDeclareStmt:
+		return evalVarDeclareStmt(it, v)
+	case *syntax.WhileLoopStmt:
+		return evalWhileLoopStmt(it, v)
+	default:
+		return error.NewErrorSLOT("invalid statement type")
+	}
+}
+
 func evalVarDeclareStmt(it *Interpreter, stmt *syntax.VarDeclareStmt) *error.Error {
 	for _, vpair := range stmt.AssignPair {
 		obj, err := EvalExpression(it, vpair.AssignExpr)
@@ -68,6 +68,44 @@ func evalVarDeclareStmt(it *Interpreter, stmt *syntax.VarDeclareStmt) *error.Err
 	}
 
 	return nil
+}
+
+func evalBlockStatement(it *Interpreter, block *syntax.BlockStmt, globalScope bool) *error.Error {
+	if !globalScope {
+		it.EnterScope()
+		defer it.ExitScope()
+	}
+
+	for _, stmt := range block.Children {
+		err := EvalStatement(it, stmt)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func evalWhileLoopStmt(it *Interpreter, loopStmt *syntax.WhileLoopStmt) *error.Error {
+	for {
+		// #1. first execute expr
+		trueExpr, err := EvalExpression(it, loopStmt.TrueExpr)
+		if err != nil {
+			return err
+		}
+		// #2. assert trueExpr to be ZnBool
+		vTrueExpr, ok := trueExpr.(*ZnBool)
+		if !ok {
+			return err
+		}
+		// break the loop if expr yields not true
+		if vTrueExpr.Value == false {
+			return nil
+		}
+		// #3. stmt block
+		if err := evalBlockStatement(it, loopStmt.LoopBlock, false); err != nil {
+			return nil
+		}
+	}
 }
 
 //// Execute (Evaluate) expressions
