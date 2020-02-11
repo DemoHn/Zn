@@ -46,6 +46,8 @@ func EvalStatement(it *Interpreter, stmt syntax.Statement) *error.Error {
 		return evalVarDeclareStmt(it, v)
 	case *syntax.WhileLoopStmt:
 		return evalWhileLoopStmt(it, v)
+	case *syntax.BranchStmt:
+		return evalBranchStmt(it, v)
 	default:
 		return error.NewErrorSLOT("invalid statement type")
 	}
@@ -95,7 +97,7 @@ func evalWhileLoopStmt(it *Interpreter, loopStmt *syntax.WhileLoopStmt) *error.E
 		// #2. assert trueExpr to be ZnBool
 		vTrueExpr, ok := trueExpr.(*ZnBool)
 		if !ok {
-			return err
+			return error.NewErrorSLOT("condition must be bool")
 		}
 		// break the loop if expr yields not true
 		if vTrueExpr.Value == false {
@@ -106,6 +108,42 @@ func evalWhileLoopStmt(it *Interpreter, loopStmt *syntax.WhileLoopStmt) *error.E
 			return nil
 		}
 	}
+}
+
+func evalBranchStmt(it *Interpreter, branchStmt *syntax.BranchStmt) *error.Error {
+	// #1. if branch
+	ifExpr, err := EvalExpression(it, branchStmt.IfTrueExpr)
+	if err != nil {
+		return err
+	}
+	vIfExpr, ok := ifExpr.(*ZnBool)
+	if !ok {
+		return error.NewErrorSLOT("condition must be bool")
+	}
+	// exec if-branch
+	if vIfExpr.Value == true {
+		return evalBlockStatement(it, branchStmt.IfTrueBlock, false)
+	}
+	// exec else-if branches
+	for idx, otherExpr := range branchStmt.OtherExprs {
+		otherExprI, err := EvalExpression(it, otherExpr)
+		if err != nil {
+			return err
+		}
+		vOtherExprI, ok := otherExprI.(*ZnBool)
+		if !ok {
+			return error.NewErrorSLOT("condition must be bool")
+		}
+		// exec else-if branch
+		if vOtherExprI.Value == true {
+			return evalBlockStatement(it, branchStmt.OtherBlocks[idx], false)
+		}
+	}
+	// exec else branch if possible
+	if branchStmt.HasElse == true {
+		return evalBlockStatement(it, branchStmt.IfFalseBlock, false)
+	}
+	return nil
 }
 
 //// Execute (Evaluate) expressions
