@@ -48,6 +48,11 @@ func EvalStatement(it *Interpreter, stmt syntax.Statement) *error.Error {
 		return evalWhileLoopStmt(it, v)
 	case *syntax.BranchStmt:
 		return evalBranchStmt(it, v)
+	case *syntax.EmptyStmt:
+		return nil
+	case syntax.Expression:
+		_, err := EvalExpression(it, v)
+		return err
 	default:
 		return error.NewErrorSLOT("invalid statement type")
 	}
