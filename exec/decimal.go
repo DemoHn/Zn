@@ -12,17 +12,15 @@ import (
 // ZnDecimal - decimal number 「数值」型
 type ZnDecimal struct {
 	// decimal internal properties
-	sign bool // if true, this number is NEGATIVE
-	co   *big.Int
-	exp  int
+	co  *big.Int
+	exp int
 }
 
 // NewZnDecimal -
 func NewZnDecimal(value string) (*ZnDecimal, *error.Error) {
 	var decimal = &ZnDecimal{
-		sign: false,
-		exp:  0,
-		co:   big.NewInt(0),
+		exp: 0,
+		co:  big.NewInt(0),
 	}
 
 	err := decimal.setValue(value)
@@ -32,11 +30,10 @@ func NewZnDecimal(value string) (*ZnDecimal, *error.Error) {
 // String - show decimal display string
 func (zd *ZnDecimal) String() (data string) {
 	var sflag = ""
-	if zd.sign {
+	if zd.co.Sign() < 0 {
 		sflag = "-"
 	}
-
-	var txt = zd.co.String()
+	var txt = new(big.Int).Abs(zd.co).String()
 
 	if zd.exp == 0 {
 		data = fmt.Sprintf("%s%s", sflag, txt)
@@ -89,8 +86,8 @@ func (zd *ZnDecimal) setValue(raw string) *error.Error {
 			case '+':
 				state = sIntNum
 			case '-':
-				zd.sign = true
 				state = sIntNum
+				intValS = append(intValS, '-')
 			case '.':
 				state = sDotNum
 			default:
