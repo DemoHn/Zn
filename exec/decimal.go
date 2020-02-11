@@ -148,3 +148,90 @@ func (zd *ZnDecimal) setValue(raw string) *error.Error {
 	zd.exp = expInt - dotNum
 	return nil
 }
+
+// implement ZnComparale method
+
+// Equals -
+func (zd *ZnDecimal) Equals(val ZnComparable) (*ZnBool, *error.Error) {
+	// TODO: relief type
+	v, ok := val.(*ZnDecimal)
+	if !ok {
+		return nil, error.NewErrorSLOT("Right value must be ZnDecimal")
+	}
+	r1, r2 := rescalePair(zd, v)
+	if res := r1.co.Cmp(r2.co); res == 0 {
+		return NewZnBool(true), nil
+	}
+	return NewZnBool(false), nil
+}
+
+// Is -
+func (zd *ZnDecimal) Is(val ZnComparable) (*ZnBool, *error.Error) {
+	v, ok := val.(*ZnDecimal)
+	if !ok {
+		return nil, error.NewErrorSLOT("Right value must be ZnDecimal")
+	}
+	r1, r2 := rescalePair(zd, v)
+	if res := r1.co.Cmp(r2.co); res == 0 {
+		return NewZnBool(true), nil
+	}
+	return NewZnBool(false), nil
+}
+
+// LessThan -
+func (zd *ZnDecimal) LessThan(val ZnComparable) (*ZnBool, *error.Error) {
+	v, ok := val.(*ZnDecimal)
+	if !ok {
+		return nil, error.NewErrorSLOT("Right value must be ZnDecimal")
+	}
+	r1, r2 := rescalePair(zd, v)
+	if res := r1.co.Cmp(r2.co); res < 0 {
+		return NewZnBool(true), nil
+	}
+	return NewZnBool(false), nil
+}
+
+// GreaterThan -
+func (zd *ZnDecimal) GreaterThan(val ZnComparable) (*ZnBool, *error.Error) {
+	v, ok := val.(*ZnDecimal)
+	if !ok {
+		return nil, error.NewErrorSLOT("Right value must be ZnDecimal")
+	}
+	r1, r2 := rescalePair(zd, v)
+	if res := r1.co.Cmp(r2.co); res > 0 {
+		return NewZnBool(true), nil
+	}
+	return NewZnBool(false), nil
+}
+
+//// decimal helpers
+
+// rescalePair - make exps to be same
+func rescalePair(d1 *ZnDecimal, d2 *ZnDecimal) (*ZnDecimal, *ZnDecimal) {
+	intTen := big.NewInt(10)
+
+	if d1.exp == d2.exp {
+		return d1, d2
+	}
+	if d1.exp > d2.exp {
+		// return new d1
+		diff := d1.exp - d2.exp
+
+		expVal := new(big.Int).Exp(intTen, big.NewInt(int64(diff)), nil)
+		nD1 := &ZnDecimal{
+			co:  new(big.Int).Mul(d1.co, expVal),
+			exp: d2.exp,
+		}
+		return nD1, d2
+	}
+	// d1.exp < d2.exp
+	// return new d2
+	diff := d2.exp - d1.exp
+
+	expVal := new(big.Int).Exp(intTen, big.NewInt(int64(diff)), nil)
+	nD2 := &ZnDecimal{
+		co:  new(big.Int).Mul(d2.co, expVal),
+		exp: d1.exp,
+	}
+	return d1, nD2
+}
