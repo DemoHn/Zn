@@ -40,6 +40,54 @@ func NewZnString(value string) *ZnString {
 	}
 }
 
+// Equals -
+func (zs *ZnString) Equals(val ZnComparable) (*ZnBool, *error.Error) {
+	v, ok := val.(*ZnString)
+	if !ok {
+		return nil, error.NewErrorSLOT("Right value must be ZnString")
+	}
+	if res := strings.Compare(zs.Value, v.Value); res == 0 {
+		return NewZnBool(true), nil
+	}
+	return NewZnBool(false), nil
+}
+
+// Is -
+func (zs *ZnString) Is(val ZnComparable) (*ZnBool, *error.Error) {
+	v, ok := val.(*ZnString)
+	if !ok {
+		return nil, error.NewErrorSLOT("Right value must be ZnString")
+	}
+	if res := strings.Compare(zs.Value, v.Value); res == 0 {
+		return NewZnBool(true), nil
+	}
+	return NewZnBool(false), nil
+}
+
+// LessThan -
+func (zs *ZnString) LessThan(val ZnComparable) (*ZnBool, *error.Error) {
+	v, ok := val.(*ZnString)
+	if !ok {
+		return nil, error.NewErrorSLOT("Right value must be ZnString")
+	}
+	if res := strings.Compare(zs.Value, v.Value); res == -1 {
+		return NewZnBool(true), nil
+	}
+	return NewZnBool(false), nil
+}
+
+// GreaterThan -
+func (zs *ZnString) GreaterThan(val ZnComparable) (*ZnBool, *error.Error) {
+	v, ok := val.(*ZnString)
+	if !ok {
+		return nil, error.NewErrorSLOT("Right value must be ZnString")
+	}
+	if res := strings.Compare(zs.Value, v.Value); res == 1 {
+		return NewZnBool(true), nil
+	}
+	return NewZnBool(false), nil
+}
+
 // ZnBool - (bool) 「二象」型
 type ZnBool struct {
 	Value bool
@@ -59,6 +107,40 @@ func (zb *ZnBool) Rev() *ZnBool {
 	return zb
 }
 
+// Equals -
+func (zb *ZnBool) Equals(val ZnComparable) (*ZnBool, *error.Error) {
+	v, ok := val.(*ZnBool)
+	if !ok {
+		return nil, error.NewErrorSLOT("Right value must be ZnBool")
+	}
+	if zb.Value == v.Value {
+		return NewZnBool(true), nil
+	}
+	return NewZnBool(false), nil
+}
+
+// Is -
+func (zb *ZnBool) Is(val ZnComparable) (*ZnBool, *error.Error) {
+	v, ok := val.(*ZnBool)
+	if !ok {
+		return nil, error.NewErrorSLOT("Right value must be ZnBool")
+	}
+	if zb.Value == v.Value {
+		return NewZnBool(true), nil
+	}
+	return NewZnBool(false), nil
+}
+
+// LessThan -
+func (zb *ZnBool) LessThan(val ZnComparable) (*ZnBool, *error.Error) {
+	return nil, error.NewErrorSLOT("not supported for ZnBool")
+}
+
+// GreaterThan -
+func (zb *ZnBool) GreaterThan(val ZnComparable) (*ZnBool, *error.Error) {
+	return nil, error.NewErrorSLOT("not supported for ZnBool")
+}
+
 // NewZnBool -
 func NewZnBool(value bool) *ZnBool {
 	return &ZnBool{
@@ -71,13 +153,83 @@ type ZnArray struct {
 	Value []ZnValue
 }
 
-func (zs *ZnArray) String() string {
+func (za *ZnArray) String() string {
 	strs := []string{}
-	for _, item := range zs.Value {
+	for _, item := range za.Value {
 		strs = append(strs, item.String())
 	}
 
 	return fmt.Sprintf("【%s】", strings.Join(strs, "，"))
+}
+
+// Equals -
+func (za *ZnArray) Equals(val ZnComparable) (*ZnBool, *error.Error) {
+	v, ok := val.(*ZnArray)
+	if !ok {
+		return nil, error.NewErrorSLOT("right value must be ZnArray")
+	}
+	if len(za.Value) != len(v.Value) {
+		return NewZnBool(false), nil
+	}
+	// cmp each item
+	for idx, item := range za.Value {
+		vitemL, okL := item.(ZnComparable)
+		if !okL {
+			return nil, error.NewErrorSLOT("item must be comparable")
+		}
+		vitemR, okR := v.Value[idx].(ZnComparable)
+		if !okR {
+			return nil, error.NewErrorSLOT("item must be comparable")
+		}
+		cmpVal, err := vitemL.Equals(vitemR)
+		if err != nil {
+			return nil, err
+		}
+		if cmpVal.Value == false {
+			return NewZnBool(false), nil
+		}
+	}
+	return NewZnBool(true), nil
+}
+
+// Is -
+func (za *ZnArray) Is(val ZnComparable) (*ZnBool, *error.Error) {
+	v, ok := val.(*ZnArray)
+	if !ok {
+		return nil, error.NewErrorSLOT("right value must be ZnArray")
+	}
+	if len(za.Value) != len(v.Value) {
+		return NewZnBool(false), nil
+	}
+	// cmp each item
+	for idx, item := range za.Value {
+		vitemL, okL := item.(ZnComparable)
+		if !okL {
+			return nil, error.NewErrorSLOT("item must be comparable")
+		}
+		vitemR, okR := v.Value[idx].(ZnComparable)
+		if !okR {
+			return nil, error.NewErrorSLOT("item must be comparable")
+		}
+		cmpVal, err := vitemL.Is(vitemR)
+		if err != nil {
+			return nil, err
+		}
+		if cmpVal.Value == false {
+			return NewZnBool(false), nil
+		}
+	}
+	return NewZnBool(true), nil
+}
+
+// LessThan -
+func (za *ZnArray) LessThan(val ZnComparable) (*ZnBool, *error.Error) {
+	return nil, error.NewErrorSLOT("not supported for ZnArray")
+}
+
+// GreaterThan -
+func (za *ZnArray) GreaterThan(val ZnComparable) (*ZnBool, *error.Error) {
+	return nil, error.NewErrorSLOT("not supported for ZnArray")
 }
 
 // NewZnArray -
@@ -93,6 +245,34 @@ type ZnNull struct{}
 
 func (zn *ZnNull) String() string {
 	return "‹空›"
+}
+
+// Equals -
+func (zn *ZnNull) Equals(val ZnComparable) (*ZnBool, *error.Error) {
+	_, ok := val.(*ZnNull)
+	if !ok {
+		return NewZnBool(true), nil
+	}
+	return NewZnBool(false), nil
+}
+
+// Is -
+func (zn *ZnNull) Is(val ZnComparable) (*ZnBool, *error.Error) {
+	_, ok := val.(*ZnNull)
+	if !ok {
+		return NewZnBool(true), nil
+	}
+	return NewZnBool(false), nil
+}
+
+// LessThan -
+func (zn *ZnNull) LessThan(val ZnComparable) (*ZnBool, *error.Error) {
+	return nil, error.NewErrorSLOT("not supported for ZnNull")
+}
+
+// GreaterThan -
+func (zn *ZnNull) GreaterThan(val ZnComparable) (*ZnBool, *error.Error) {
+	return nil, error.NewErrorSLOT("not supported for ZnNull")
 }
 
 // NewZnNull - null value
