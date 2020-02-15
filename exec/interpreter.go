@@ -1,6 +1,8 @@
 package exec
 
 import (
+	"fmt"
+
 	"github.com/DemoHn/Zn/error"
 	"github.com/DemoHn/Zn/syntax"
 )
@@ -165,9 +167,37 @@ func EvalExpression(it *Interpreter, expr syntax.Expression) (ZnValue, *error.Er
 		return evalLogicComparator(it, e)
 	case *syntax.Number, *syntax.String, *syntax.ID, *syntax.ArrayExpr:
 		return evalPrimeExpr(it, e)
+	case *syntax.FuncCallExpr:
+		return evalFunctionCall(it, e)
 	default:
 		return nil, error.NewErrorSLOT("unrecognized type")
 	}
+}
+
+// （显示：A，B，C）
+func evalFunctionCall(it *Interpreter, expr *syntax.FuncCallExpr) (ZnValue, *error.Error) {
+	vtag := expr.FuncName.GetLiteral()
+	// find function definition
+	val, err := it.Lookup(vtag)
+	if err != nil {
+		return nil, err
+	}
+	// assert value
+	vval, ok := val.(*ZnFunction)
+	if !ok {
+		return nil, error.NewErrorSLOT(fmt.Sprintf("「%s」须为一个方法", vtag))
+	}
+	// exec params
+	params := []ZnValue{}
+	for _, paramExpr := range expr.Params {
+		pval, err := EvalExpression(it, paramExpr)
+		if err != nil {
+			return nil, err
+		}
+		params = append(params, pval)
+	}
+	// exec function
+	return vval.Exec(params, it.SymbolTable)
 }
 
 // evaluate logic combination expressions
