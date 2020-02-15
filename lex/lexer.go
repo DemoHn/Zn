@@ -649,9 +649,6 @@ func (l *Lexer) parseKeyword(ch rune, moveForward bool) (bool, *Token) {
 		case GlyphWEI:
 			wordLen = 2
 			tk = NewKeywordToken(TypeLogicNotW)
-		case GlyphSHI:
-			wordLen = 2
-			tk = NewKeywordToken(TypeLogicNotIIW)
 		case GlyphDENG:
 			if l.peek2() == GlyphYU {
 				wordLen = 3
