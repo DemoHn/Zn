@@ -22,7 +22,6 @@ type Statement interface {
 type Expression interface {
 	Statement
 	exprNode()
-	IsPrimitive() bool
 }
 
 //// program (struct)
@@ -132,26 +131,21 @@ type FuncCallExpr struct {
 	Params   []Expression
 }
 
-// IsPrimitive -
-func (fc *FuncCallExpr) IsPrimitive() bool { return false }
-
-// IsPrimitive -
-func (va *VarAssignExpr) IsPrimitive() bool { return false }
-
 // LogicType - define several logic type (OR, AND, EQ, etc)
 type LogicType uint8
 
 // declare some logic types
 const (
-	LogicOR  LogicType = 1 // 或
-	LogicAND LogicType = 2 // 且
-	LogicIS  LogicType = 3 // 此 ... 为 ...
-	LogicEQ  LogicType = 4 // 等于
-	LogicNEQ LogicType = 5 // 不等于
-	LogicGT  LogicType = 6 // 大于
-	LogicGTE LogicType = 7 // 不小于
-	LogicLT  LogicType = 8 // 小于
-	LogicLTE LogicType = 9 // 不大于
+	LogicOR  LogicType = 1  // 或
+	LogicAND LogicType = 2  // 且
+	LogicIS  LogicType = 3  // 此 ... 为 ...
+	LogicEQ  LogicType = 4  // 等于
+	LogicNEQ LogicType = 5  // 不等于
+	LogicGT  LogicType = 6  // 大于
+	LogicGTE LogicType = 7  // 不小于
+	LogicLT  LogicType = 8  // 小于
+	LogicLTE LogicType = 9  // 不大于
+	LogicISN LogicType = 10 // 此 ... 不为 ...
 )
 
 // LogicExpr - logical expression return TRUE (真) or FALSE (假) only
@@ -161,14 +155,7 @@ type LogicExpr struct {
 	RightExpr Expression
 }
 
-// IsPrimitive -
-func (le *LogicExpr) IsPrimitive() bool { return false }
-
 // implement expression interface
-
-// IsPrimitive - a primeExpr must be primitive, that is, no longer additional
-// calculation required.
-func (pe *PrimeExpr) IsPrimitive() bool { return true }
 
 // SetLiteral - set literal for primeExpr
 func (pe *PrimeExpr) SetLiteral(literal string) { pe.Literal = literal }
@@ -335,7 +322,8 @@ func ParseExpression(p *Parser) (Expression, *error.Error) {
 // CFG:
 // BsE   -> { E }
 //       -> （ ID ： E，E，...）
-//       -> 此 E 为 E
+//       -> 此 BsE 为 BsE
+//       -> 此 BsE 不为 BsE
 //       -> ID
 //       -> Number
 //       -> String
@@ -351,6 +339,7 @@ func ParseBasicExpr(p *Parser) (Expression, *error.Error) {
 		lex.TypeStmtQuoteL,
 		lex.TypeFuncQuoteL,
 		lex.TypeObjSelfW,
+		lex.TypeLogicNotW,
 	}
 
 	match, tk := p.tryConsume(validTypes)
@@ -387,6 +376,8 @@ func ParseBasicExpr(p *Parser) (Expression, *error.Error) {
 			return ParseFuncCallExpr(p)
 		case lex.TypeObjSelfW:
 			return ParseLogicISExpr(p)
+		case lex.TypeLogicNotW:
+			return ParseLogicISNExpr(p)
 		}
 	}
 	return nil, error.InvalidSyntax()
@@ -497,6 +488,32 @@ func ParseLogicISExpr(p *Parser) (*LogicExpr, *error.Error) {
 
 	return &LogicExpr{
 		Type:      LogicIS,
+		LeftExpr:  expr1,
+		RightExpr: expr2,
+	}, nil
+}
+
+// ParseLogicISNExpr - logic IS 此 ... 不为 ...
+// CFG:
+// LogicIS -> 此 BasicExpr 为 BasicExpr
+func ParseLogicISNExpr(p *Parser) (*LogicExpr, *error.Error) {
+	// #1. parse expr1
+	expr1, err := ParseBasicExpr(p)
+	if err != nil {
+		return nil, err
+	}
+	// #2. consume LogicNot
+	if err := p.consume(lex.TypeLogicNotW); err != nil {
+		return nil, err
+	}
+	// #3. parse expr2
+	expr2, err := ParseBasicExpr(p)
+	if err != nil {
+		return nil, err
+	}
+
+	return &LogicExpr{
+		Type:      LogicISN,
 		LeftExpr:  expr1,
 		RightExpr: expr2,
 	}, nil

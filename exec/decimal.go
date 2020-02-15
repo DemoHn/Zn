@@ -9,23 +9,31 @@ import (
 	"github.com/DemoHn/Zn/error"
 )
 
-// ZnDecimal - decimal number
+// ZnDecimal - decimal number 「数值」型
 type ZnDecimal struct {
-	ZnNullable
 	// decimal internal properties
-	sign bool // if true, this number is NEGATIVE
-	co   big.Int
-	exp  int
+	co  *big.Int
+	exp int
+}
+
+// NewZnDecimal -
+func NewZnDecimal(value string) (*ZnDecimal, *error.Error) {
+	var decimal = &ZnDecimal{
+		exp: 0,
+		co:  big.NewInt(0),
+	}
+
+	err := decimal.setValue(value)
+	return decimal, err
 }
 
 // String - show decimal display string
 func (zd *ZnDecimal) String() (data string) {
 	var sflag = ""
-	if zd.sign {
+	if zd.co.Sign() < 0 {
 		sflag = "-"
 	}
-
-	var txt = zd.co.String()
+	var txt = new(big.Int).Abs(zd.co).String()
 
 	if zd.exp == 0 {
 		data = fmt.Sprintf("%s%s", sflag, txt)
@@ -47,7 +55,7 @@ func (zd *ZnDecimal) String() (data string) {
 
 // SetValue - set decimal value from raw string
 // raw string MUST be a valid number string
-func (zd *ZnDecimal) SetValue(raw string) *error.Error {
+func (zd *ZnDecimal) setValue(raw string) *error.Error {
 	var intValS = []rune{}
 	var expValS = []rune{}
 	var dotNum = 0
@@ -78,8 +86,8 @@ func (zd *ZnDecimal) SetValue(raw string) *error.Error {
 			case '+':
 				state = sIntNum
 			case '-':
-				zd.sign = true
 				state = sIntNum
+				intValS = append(intValS, '-')
 			case '.':
 				state = sDotNum
 			default:
@@ -139,4 +147,91 @@ func (zd *ZnDecimal) SetValue(raw string) *error.Error {
 	}
 	zd.exp = expInt - dotNum
 	return nil
+}
+
+// implement ZnComparale method
+
+// Equals -
+func (zd *ZnDecimal) Equals(val ZnComparable) (*ZnBool, *error.Error) {
+	// TODO: relief type
+	v, ok := val.(*ZnDecimal)
+	if !ok {
+		return nil, error.NewErrorSLOT("Right value must be ZnDecimal")
+	}
+	r1, r2 := rescalePair(zd, v)
+	if res := r1.co.Cmp(r2.co); res == 0 {
+		return NewZnBool(true), nil
+	}
+	return NewZnBool(false), nil
+}
+
+// Is -
+func (zd *ZnDecimal) Is(val ZnComparable) (*ZnBool, *error.Error) {
+	v, ok := val.(*ZnDecimal)
+	if !ok {
+		return nil, error.NewErrorSLOT("Right value must be ZnDecimal")
+	}
+	r1, r2 := rescalePair(zd, v)
+	if res := r1.co.Cmp(r2.co); res == 0 {
+		return NewZnBool(true), nil
+	}
+	return NewZnBool(false), nil
+}
+
+// LessThan -
+func (zd *ZnDecimal) LessThan(val ZnComparable) (*ZnBool, *error.Error) {
+	v, ok := val.(*ZnDecimal)
+	if !ok {
+		return nil, error.NewErrorSLOT("Right value must be ZnDecimal")
+	}
+	r1, r2 := rescalePair(zd, v)
+	if res := r1.co.Cmp(r2.co); res < 0 {
+		return NewZnBool(true), nil
+	}
+	return NewZnBool(false), nil
+}
+
+// GreaterThan -
+func (zd *ZnDecimal) GreaterThan(val ZnComparable) (*ZnBool, *error.Error) {
+	v, ok := val.(*ZnDecimal)
+	if !ok {
+		return nil, error.NewErrorSLOT("Right value must be ZnDecimal")
+	}
+	r1, r2 := rescalePair(zd, v)
+	if res := r1.co.Cmp(r2.co); res > 0 {
+		return NewZnBool(true), nil
+	}
+	return NewZnBool(false), nil
+}
+
+//// decimal helpers
+
+// rescalePair - make exps to be same
+func rescalePair(d1 *ZnDecimal, d2 *ZnDecimal) (*ZnDecimal, *ZnDecimal) {
+	intTen := big.NewInt(10)
+
+	if d1.exp == d2.exp {
+		return d1, d2
+	}
+	if d1.exp > d2.exp {
+		// return new d1
+		diff := d1.exp - d2.exp
+
+		expVal := new(big.Int).Exp(intTen, big.NewInt(int64(diff)), nil)
+		nD1 := &ZnDecimal{
+			co:  new(big.Int).Mul(d1.co, expVal),
+			exp: d2.exp,
+		}
+		return nD1, d2
+	}
+	// d1.exp < d2.exp
+	// return new d2
+	diff := d2.exp - d1.exp
+
+	expVal := new(big.Int).Exp(intTen, big.NewInt(int64(diff)), nil)
+	nD2 := &ZnDecimal{
+		co:  new(big.Int).Mul(d2.co, expVal),
+		exp: d1.exp,
+	}
+	return d1, nD2
 }
