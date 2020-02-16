@@ -22,7 +22,7 @@ func InvalidSingleEqual() *Error {
 func DecodeUTF8Fail(ch byte) *Error {
 	return lexError.NewError(0x20, Error{
 		text: fmt.Sprintf("前方有无法解析成UTF-8编码之异常字符'\\x%x'，请确认文件编码之正确性及完整性", ch),
-		info: ch,
+		info: fmt.Sprintf("charcode=(%d)", ch),
 	})
 }
 
@@ -37,12 +37,7 @@ func InvalidIndentType(expect uint8, got uint8) *Error {
 	}
 	return lexError.NewError(0x21, Error{
 		text: fmt.Sprintf("此行现行缩进类型为%s，与前设缩进类型%s不符", findName(got), findName(expect)),
-		info: struct {
-			expect uint8
-			got    uint8
-		}{
-			expect, got,
-		},
+		info: fmt.Sprintf("expect=(%d) got=(%d)", expect, got),
 	})
 }
 
@@ -50,7 +45,7 @@ func InvalidIndentType(expect uint8, got uint8) *Error {
 func InvalidIndentSpaceCount(count int) *Error {
 	return lexError.NewError(0x22, Error{
 		text: fmt.Sprintf("当缩进类型为「空格」，其所列字符数应为4之倍数：当前空格字符数为%d", count),
-		info: count,
+		info: fmt.Sprintf("count=(%d)", count),
 	})
 }
 
@@ -58,7 +53,7 @@ func InvalidIndentSpaceCount(count int) *Error {
 func QuoteStackFull(maxSize int) *Error {
 	return lexError.NewError(0x23, Error{
 		text: fmt.Sprintf("在文本中嵌套过多引号：最大可以嵌套%d层", maxSize),
-		info: maxSize,
+		info: fmt.Sprintf("maxsize=(%d)", maxSize),
 	})
 }
 
@@ -66,7 +61,6 @@ func QuoteStackFull(maxSize int) *Error {
 func InvalidIdentifier() *Error {
 	return lexError.NewError(0x24, Error{
 		text: "标识符不符合规范",
-		info: nil,
 	})
 }
 
@@ -74,7 +68,7 @@ func InvalidIdentifier() *Error {
 func IdentifierExceedLength(maxLen int32) *Error {
 	return lexError.NewError(0x25, Error{
 		text: fmt.Sprintf("标识符长度超过限制：最大可用长度为%d个字元", maxLen),
-		info: maxLen,
+		info: fmt.Sprintf("maxlen=(%d)", maxLen),
 	})
 }
 
@@ -82,15 +76,6 @@ func IdentifierExceedLength(maxLen int32) *Error {
 func InvalidChar(ch rune) *Error {
 	return lexError.NewError(0x26, Error{
 		text: fmt.Sprintf("未能识别字元「%c」", ch),
-		info: ch,
-	})
-}
-
-//// syntax part (> 0x49)
-
-// InvalidSyntax -
-func InvalidSyntax() *Error {
-	return lexError.NewError(0x50, Error{
-		text: fmt.Sprintf("语句无法被解析，请检查是否有语法错误"),
+		info: fmt.Sprintf("charcode=(%d)", ch),
 	})
 }

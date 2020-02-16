@@ -187,6 +187,7 @@ func (fc *FuncCallExpr) stmtNode() {}
 func ParseStatement(p *Parser) (Statement, *error.Error) {
 	var validTypes = []lex.TokenType{
 		lex.TypeStmtSep,
+		lex.TypeComment,
 		lex.TypeDeclareW,
 		lex.TypeCondW,
 		lex.TypeWhileLoopW,
@@ -194,8 +195,8 @@ func ParseStatement(p *Parser) (Statement, *error.Error) {
 	match, tk := p.tryConsume(validTypes)
 	if match {
 		switch tk.Type {
-		case lex.TypeStmtSep:
-			// skip
+		case lex.TypeStmtSep, lex.TypeComment:
+			// skip them because it's meaningless for syntax parsing
 			return new(EmptyStmt), nil
 		case lex.TypeDeclareW:
 			return ParseVarDeclareStmt(p)
@@ -294,7 +295,7 @@ func ParseExpression(p *Parser) (Expression, *error.Error) {
 		if tk.Type == lex.TypeLogicYesW {
 			vid, ok := leftExpr.(*ID)
 			if !ok {
-				return nil, error.NewErrorSLOT("invalid expr type! should be ID")
+				return nil, error.ExprMustTypeID()
 			}
 			finalExpr = &VarAssignExpr{
 				TargetVar:  vid,
@@ -376,8 +377,6 @@ func ParseBasicExpr(p *Parser) (Expression, *error.Error) {
 			return ParseFuncCallExpr(p)
 		case lex.TypeObjSelfW:
 			return ParseLogicISExpr(p)
-		case lex.TypeLogicNotW:
-			return ParseLogicISNExpr(p)
 		}
 	}
 	return nil, error.InvalidSyntax()
@@ -470,15 +469,29 @@ func ParseFuncCallExpr(p *Parser) (*FuncCallExpr, *error.Error) {
 // ParseLogicISExpr - logic IS 此 ... 为 ...
 // CFG:
 // LogicIS -> 此 BasicExpr 为 BasicExpr
+// LogicIS -> 此 BasicExpr 不为 BasicExpr
 func ParseLogicISExpr(p *Parser) (*LogicExpr, *error.Error) {
+	var judgeTypes = []lex.TokenType{
+		lex.TypeLogicYesW,
+		lex.TypeLogicNotW,
+	}
+
+	var logicType LogicType
 	// #1. parse expr1
 	expr1, err := ParseBasicExpr(p)
 	if err != nil {
 		return nil, err
 	}
-	// #2. consume LogicYes
-	if err := p.consume(lex.TypeLogicYesW); err != nil {
-		return nil, err
+	// #2. consume LogicYes or LogicNot
+	match, tk := p.tryConsume(judgeTypes)
+	if !match {
+		return nil, error.InvalidSyntax()
+	}
+	switch tk.Type {
+	case lex.TypeLogicYesW:
+		logicType = LogicIS
+	case lex.TypeLogicNotW:
+		logicType = LogicISN
 	}
 	// #3. parse expr2
 	expr2, err := ParseBasicExpr(p)
@@ -487,13 +500,13 @@ func ParseLogicISExpr(p *Parser) (*LogicExpr, *error.Error) {
 	}
 
 	return &LogicExpr{
-		Type:      LogicIS,
+		Type:      logicType,
 		LeftExpr:  expr1,
 		RightExpr: expr2,
 	}, nil
 }
 
-// ParseLogicISNExpr - logic IS 此 ... 不为 ...
+// ParseLogicISNExpr - logic ISN 此 ... 不为 ...
 // CFG:
 // LogicIS -> 此 BasicExpr 为 BasicExpr
 func ParseLogicISNExpr(p *Parser) (*LogicExpr, *error.Error) {
@@ -593,10 +606,13 @@ func ParseVarDeclareStmt(p *Parser) (*VarDeclareStmt, *error.Error) {
 	}
 
 	var idPtrList = []*ID{}
+	// to avoid incomplete AssignPair (i.e. only IDs, but no VA part, like 令A，B，C)
+	var completeAssignPair = false
 	// #03. translate & append nodes to pair
 	for _, node := range nodes {
 		switch v := node.(type) {
 		case *ID:
+			completeAssignPair = false
 			idPtrList = append(idPtrList, v)
 		case *NodeList:
 			if v.Tag == tagWithAssignExpr {
@@ -616,8 +632,13 @@ func ParseVarDeclareStmt(p *Parser) (*VarDeclareStmt, *error.Error) {
 				vNode.AssignPair = append(vNode.AssignPair, newPair)
 				// clear idPtrList
 				idPtrList = []*ID{}
+				completeAssignPair = true
 			}
 		}
+	}
+
+	if !completeAssignPair {
+		return nil, error.IncompleteStmtCurr()
 	}
 
 	return vNode, nil
@@ -758,7 +779,7 @@ func ParseBranchStmt(p *Parser, mainIndent int) (*BranchStmt, *error.Error) {
 		// #3. parse block statements
 		ok, blockIndent := p.expectBlockIndent()
 		if !ok {
-			return nil, error.NewErrorSLOT("unexpected indent")
+			return nil, error.UnexpectedIndent()
 		}
 		if condBlock, err = ParseBlockStmt(p, blockIndent); err != nil {
 			return nil, err
@@ -823,7 +844,7 @@ func parseCommaListBlock(p *Parser, blockIndent int, consumer consumerFunc) ([]N
 	}
 	// first token MUST be exactly on the indent
 	if p.getPeekIndent() != blockIndent {
-		return nil, error.NewErrorSLOT("unexpected indent")
+		return nil, error.UnexpectedIndent()
 	}
 	// first item MUST be consumed!
 	if node, err = consumer(0, list); err != nil {
