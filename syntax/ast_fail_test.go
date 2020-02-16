@@ -41,6 +41,16 @@ code=2250 line=3 col=0
     
 --------
 code=2252 line=2 col=5
+
+========
+4. invalid token (lexError)
+--------
+令锅为「锅」
+
+令#$x为100
+    
+--------
+code=2024 line=3 col=2
 `
 
 func TestAST_FAIL(t *testing.T) {

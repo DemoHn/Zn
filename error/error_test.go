@@ -1,7 +1,6 @@
 package error
 
 import (
-	"fmt"
 	"strings"
 	"testing"
 
@@ -210,7 +209,6 @@ func TestError_GetInfo(t *testing.T) {
 			}
 
 			got := e.GetInfo()
-			fmt.Println(got)
 			if !reflect.DeepEqual(tt.expect, got) {
 				t.Errorf("expect info ->\n     %v\n got ->\n     %v", tt.expect, got)
 			}
