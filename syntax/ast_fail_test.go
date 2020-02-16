@@ -11,6 +11,7 @@ import (
 var testFailSuites = []string{
 	varDeclCasesFAIL,
 	whileLoopCasesFAIL,
+	funcCallCasesFAIL,
 }
 
 const varDeclCasesFAIL = `
@@ -151,6 +152,43 @@ code=2250 line=1 col=2
     令数组为【【233】
 --------
 code=2250 line=2 col=14
+`
+
+const funcCallCasesFAIL = `
+========
+1. missing right paren
+--------
+（显示代码 等
+--------
+code=2250 line=1 col=7
+
+========
+2. func name not ID
+--------
+（80000）
+--------
+code=2250 line=1 col=1
+
+========
+3. without colon
+--------
+（显示时间，「2020」）
+--------
+code=2250 line=1 col=5
+
+========
+4. additional right paren
+--------
+（显示时间：「2020」））
+--------
+code=2250 line=1 col=13
+
+========
+5. additional comma
+--------
+（显示时间：「2020」，，500）
+--------
+code=2250 line=1 col=13
 `
 
 type astFailCase struct {
