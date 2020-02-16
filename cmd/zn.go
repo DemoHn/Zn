@@ -68,12 +68,17 @@ func EnterREPL() {
 func ExecProgram(file string) {
 	s := lex.Source{}
 	// TODO: add error handling
-	in, _ := lex.NewFileStream(file)
+	in, errF := lex.NewFileStream(file)
+	if errF != nil {
+		fmt.Println(errF.Display())
+		return
+	}
 	s.AddStream(in)
 
 	rtn, errE := execProgram(s.Streams[0], nil)
 	if errE != nil {
-		fmt.Printf("%s\n", errE.Display())
+		fmt.Println(errE.Display())
+		return
 	}
 
 	fmt.Println(rtn)
