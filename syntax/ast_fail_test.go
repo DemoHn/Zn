@@ -40,7 +40,7 @@ code=2250 line=3 col=0
     【A，B】为100
     
 --------
-code=2250 line=3 col=4
+code=2252 line=2 col=5
 `
 
 func TestAST_FAIL(t *testing.T) {

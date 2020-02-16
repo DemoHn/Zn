@@ -2,6 +2,7 @@ package error
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 )
 
@@ -42,6 +43,23 @@ func (e *Error) GetCursor() Cursor {
 // GetErrorClass - get error class
 func (e *Error) GetErrorClass() int {
 	return int(e.code >> 8)
+}
+
+// GetInfo - get (parsed) info
+func (e *Error) GetInfo() map[string]string {
+	var infoMap = map[string]string{}
+
+	items := strings.Split(e.info, " ")
+	r := regexp.MustCompile(`^(\w+)=\((.+)\)`)
+
+	for _, item := range items {
+		match := r.FindStringSubmatch(item)
+		if len(match) > 0 {
+			infoMap[match[1]] = match[2]
+		}
+	}
+
+	return infoMap
 }
 
 // Display - display detailed error info to user
@@ -210,7 +228,6 @@ func NewErrorSLOT(text string) *Error {
 	return &Error{
 		code: 0xFFFE,
 		text: text,
-		info: nil,
 	}
 }
 
