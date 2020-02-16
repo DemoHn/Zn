@@ -31,14 +31,11 @@ func (p *Parser) Parse() (pg *Program, err *error.Error) {
 			err, _ = r.(*error.Error)
 		}
 		if err != nil {
-			// if subcode >= 0x50, that means this error is generated from
-			// parser, i.e. we have to set cursor manually by retrieving the start cursor
-			// of current() token
-			if (err.GetCode() & 0xff) >= uint16(0x50) {
-				if tk := p.current(); tk != nil {
+			// if err class is syntaxError
+			if err.GetErrorClass() == error.SyntaxErrorClass {
+				if tk := p.peek(); tk != nil {
 					line := tk.Range.StartLine
 					col := tk.Range.StartCol
-
 					p.moveAndSetCursor(line, col, err)
 				}
 			}
@@ -114,7 +111,7 @@ func (p *Parser) validateLineMask(lastToken *lex.Token, newToken *lex.Token) *er
 	if line2 > line1 {
 		// for modeInline, all tokens should have no explicit newline (CRLF)
 		if (p.lineMask & modeInline) > 0 {
-			return error.NewErrorSLOT("prohibited newline! mostly because the statement doesn't finish yet!")
+			return error.IncompleteStmt()
 		}
 	}
 	return nil

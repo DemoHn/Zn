@@ -7,10 +7,14 @@ import (
 
 // Error model
 type Error struct {
-	code        uint16
-	text        string
-	cursor      Cursor
-	info        interface{}
+	code   uint16
+	text   string
+	cursor Cursor
+	// custom field to store additional data
+	// info string format: key1=(value1) key2=(value2)
+	// example: path=(/tmp/new-data) code=(2000)
+	info string
+
 	displayMask uint16
 }
 
@@ -33,6 +37,11 @@ func (e *Error) SetCursor(cursor Cursor) {
 // GetCursor - get error cursor
 func (e *Error) GetCursor() Cursor {
 	return e.cursor
+}
+
+// GetErrorClass - get error class
+func (e *Error) GetErrorClass() int {
+	return int(e.code >> 8)
 }
 
 // Display - display detailed error info to user
@@ -179,8 +188,19 @@ var (
 	lexError errorClass
 	// 0x21 - ioError
 	// I/O related error (e.g. FileNotFound, OpenFileError, ReadFileError)
-	ioError     errorClass
+	ioError errorClass
+	// 0x22 - syntaxError
+	// show errors occured on parsing stage
+	syntaxError errorClass
+
 	errClassMap map[uint16]string
+)
+
+// define some error classes
+const (
+	LexErrorClass    = 0x20
+	IOErrorClass     = 0x21
+	SyntaxErrorClass = 0x22
 )
 
 // NewErrorSLOT - a tmp placeholder for adding errors quickly while the
@@ -197,9 +217,11 @@ func NewErrorSLOT(text string) *Error {
 func init() {
 	lexError = errorClass{0x20}
 	ioError = errorClass{0x21}
+	syntaxError = errorClass{0x22}
 
 	errClassMap = map[uint16]string{
-		0x0020: "语法错误",
+		0x0020: "语法错误", // from lex
 		0x0021: "I/O错误",
+		0x0022: "语法错误", // from parser
 	}
 }
