@@ -49,3 +49,20 @@ func ExprMustTypeID() *Error {
 		info: "cursor=(peek)",
 	})
 }
+
+// UnexpectedEOF - usually happens when parsing global block is done, but there're tokens
+// remain unparsed still.
+// e.g.
+//
+// $program.zn
+// 如果此代码为真：
+//     令甲为1
+//
+// （显示：甲）
+//     乙为2          <--- here is the additional part
+func UnexpectedEOF() *Error {
+	return syntaxError.NewError(0x54, Error{
+		text: "仍有语句在最后未被解析",
+		info: "cursor=(peek)",
+	})
+}
