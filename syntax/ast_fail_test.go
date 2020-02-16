@@ -153,6 +153,12 @@ code=2250 line=1 col=2
 code=2250 line=2 col=14
 `
 
+type astFailCase struct {
+	name     string
+	input    string
+	failInfo string
+}
+
 func TestAST_FAIL(t *testing.T) {
 	astCases := []astFailCase{}
 
