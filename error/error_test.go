@@ -3,6 +3,8 @@ package error
 import (
 	"strings"
 	"testing"
+
+	"reflect"
 )
 
 func TestError_DisplayMasks(t *testing.T) {
@@ -157,6 +159,58 @@ func TestError_CalcCursorOffset(t *testing.T) {
 
 			if got != tt.expect {
 				t.Errorf("expect cursor = %d, got = %d", tt.expect, got)
+			}
+		})
+	}
+}
+
+func TestError_GetInfo(t *testing.T) {
+	testcases := []struct {
+		name   string
+		info   string
+		expect map[string]string
+	}{
+		{
+			name: "single item",
+			info: "item=(100,200)",
+			expect: map[string]string{
+				"item": "100,200",
+			},
+		},
+		{
+			name: "multiple items",
+			info: "left=(LEFT_WING)  right=(RIGHT_WING)",
+			expect: map[string]string{
+				"left":  "LEFT_WING",
+				"right": "RIGHT_WING",
+			},
+		},
+		{
+			name: "ignore invalid syntax",
+			info: "invalid_syntax hello=(\"World)\")",
+			expect: map[string]string{
+				"hello": "\"World)\"",
+			},
+		},
+		{
+			name: "with numbers and underscores",
+			info: "wher123_49=((pig)(pot)) 2pig=(3pig)",
+			expect: map[string]string{
+				"wher123_49": "(pig)(pot)",
+				"2pig":       "3pig",
+			},
+		},
+	}
+
+	for _, tt := range testcases {
+		t.Run(tt.name, func(t *testing.T) {
+			e := Error{
+				info: tt.info,
+			}
+
+			got := e.GetInfo()
+			if !reflect.DeepEqual(tt.expect, got) {
+				t.Errorf("expect info ->\n     %v\n got ->\n     %v", tt.expect, got)
 			}
 		})
 	}

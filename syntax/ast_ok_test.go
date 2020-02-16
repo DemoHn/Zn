@@ -1,7 +1,6 @@
 package syntax
 
 import (
-	"fmt"
 	"regexp"
 	"strings"
 	"testing"
@@ -18,9 +17,9 @@ var testSuccessSuites = []string{
 	varDeclCasesOK,
 	whileLoopCasesOK,
 	logicExprCasesOK,
+	funcCallCasesOK,
+	branchStmtCasesOK,
 }
-
-var testFailSuites = []string{}
 
 const logicExprCasesOK = `
 ========
@@ -200,17 +199,207 @@ $PG($BK(
 	)
 ))
 `
+const funcCallCasesOK = `
+========
+1. success func call with no param
+--------
+（显示当前时间）
+--------
+$PG($BK(
+	$FN(name=($ID(显示当前时间)) params=())
+))
+
+========
+2. success func call with no param (varquote)
+--------
+（·显示当前之时间·）
+--------
+$PG($BK(
+	$FN(name=($ID(显示当前之时间)) params=())
+))
+
+========
+3. success func call with 1 parameter
+--------
+（显示当前时间：「今天」）
+--------
+$PG($BK(
+	$FN(name=($ID(显示当前时间)) params=($STR(今天)))
+))
+
+========
+4. success func call with 2 parameters
+--------
+（显示当前时间：「今天」，「15:30」）
+--------
+$PG($BK(
+	$FN(name=($ID(显示当前时间)) params=($STR(今天) $STR(15:30)))
+))
+
+========
+5. success func call with mutliple parameters
+--------
+（显示当前时间：「今天」，「15:30」，200，3000）
+--------
+$PG($BK(
+	$FN(name=($ID(显示当前时间)) params=($STR(今天) $STR(15:30) $NUM(200) $NUM(3000)))
+))
+
+========
+6. nested functions
+--------
+（显示当前时间：「今天」，「15:30」，（显示时刻））
+--------
+$PG($BK(
+	$FN(name=($ID(显示当前时间)) params=(
+		$STR(今天)
+		$STR(15:30) 
+		$FN(name=($ID(显示时刻)) params=())
+	))
+))
+`
+
+const branchStmtCasesOK = `
+========
+1. if-block only
+--------
+如果真：
+    （X+Y：20，30）
+--------
+$PG($BK(
+	$IF(
+		ifExpr=($ID(真))
+		ifBlock=($BK(
+			$FN(
+				name=($ID(X+Y))
+				params=($NUM(20) $NUM(30))
+			)
+		))
+	)
+))
+
+========
+2. if-block and else-block
+--------
+如果真：
+    （X+Y：20，30）
+否则：
+    （X-Y：20，30）
+--------
+$PG($BK(
+	$IF(
+		ifExpr=($ID(真))
+		ifBlock=($BK(			
+			$FN(
+				name=($ID(X+Y))
+				params=($NUM(20) $NUM(30))
+			)
+		))
+		elseBlock=($BK(			
+			$FN(
+				name=($ID(X-Y))
+				params=($NUM(20) $NUM(30))
+			)
+		))
+	)
+))
+
+========
+3. if-block & elseif blocks
+--------
+如果真：
+    （X+Y：20，30）
+再如A等于200：
+    （X-Y：20，30）
+再如A等于300：
+    B为10；
+注：「
+				‘这是一个多行注释’
+」
+如果此C不为真：
+    （ASDF）
+--------
+$PG($BK(
+	$IF(
+		ifExpr=($ID(真))
+		ifBlock=($BK(
+			$FN(
+				name=($ID(X+Y))
+				params=($NUM(20) $NUM(30))
+			)
+		))
+		otherExpr[]=($EQ(
+			L=($ID(A))
+			R=($NUM(200))
+		))
+		otherBlock[]=($BK(
+			$FN(
+				name=($ID(X-Y))
+				params=($NUM(20) $NUM(30))
+			)
+		))
+		otherExpr[]=($EQ(
+			L=($ID(A))
+			R=($NUM(300))
+		))
+		otherBlock[]=($BK(
+			$VA(
+				target=($ID(B))
+				assign=($NUM(10))
+			)
+		$))
+	)
+	$
+	$IF(
+		ifExpr=($ISN(L=($ID(C)) R=($ID(真))))
+		ifBlock=($BK(
+			$FN(name=($ID(ASDF)) params=())
+		))
+	)
+))
+
+========
+4. if-elseif-else block
+--------
+如果真：
+    （X+Y：20，30）
+再如此A为100：
+    （显示）
+否则：
+    （X-Y：20，30）
+--------
+$PG($BK(
+	$IF(
+		ifExpr=($ID(真))
+		ifBlock=($BK(			
+			$FN(
+				name=($ID(X+Y))
+				params=($NUM(20) $NUM(30))
+			)
+		))
+		elseBlock=($BK(			
+			$FN(
+				name=($ID(X-Y))
+				params=($NUM(20) $NUM(30))
+			)
+		))
+		otherExpr[]=(
+			$IS(L=($ID(A)) R=($NUM(100)))
+		)
+		otherBlock[]=($BK(
+			$FN(
+				name=($ID(显示))
+				params=()
+			)
+		))		
+	)
+))
+`
 
 type astSuccessCase struct {
 	name    string
 	input   string
 	astTree string
-}
-
-type astFailCase struct {
-	name     string
-	input    string
-	failInfo string
 }
 
 func TestAST_OK(t *testing.T) {
@@ -237,7 +426,7 @@ func TestAST_OK(t *testing.T) {
 
 			node, err := p.Parse()
 			if err != nil {
-				t.Errorf("expect no error, got error: %s", err.Error())
+				t.Errorf("expect no error, got error: %s", err.Display())
 			} else {
 				// compare with ast
 				expect := StringifyAST(node)
@@ -245,45 +434,6 @@ func TestAST_OK(t *testing.T) {
 
 				if expect != got {
 					t.Errorf("AST compare:\nexpect ->\n%s\ngot ->\n%s", expect, got)
-				}
-			}
-			//
-		})
-	}
-}
-
-func TestAST_FAIL(t *testing.T) {
-	astCases := []astFailCase{}
-
-	for _, suData := range testFailSuites {
-		suites := splitTestSuites(suData)
-		for _, suite := range suites {
-			astCases = append(astCases, astFailCase{
-				name:     suite[0],
-				input:    suite[1],
-				failInfo: suite[2],
-			})
-		}
-	}
-
-	// TODO: filter
-	// after filtering...
-	for _, tt := range astCases {
-		t.Run(tt.name, func(t *testing.T) {
-			in := lex.NewTextStream(tt.input)
-			l := lex.NewLexer(in)
-			p := NewParser(l)
-
-			_, err := p.Parse()
-
-			if err == nil {
-				t.Errorf("expect error, got no error found")
-			} else {
-				// compare with error code
-				cursor := err.GetCursor()
-				got := fmt.Sprintf("code=%d line=%d col=%d", err.GetCode(), cursor.LineNum, cursor.ColNum)
-				if tt.failInfo != got {
-					t.Errorf("failInfo compare:\nexpect ->\n%s\ngot ->\n%s", tt.failInfo, got)
 				}
 			}
 		})

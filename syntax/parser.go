@@ -26,23 +26,10 @@ func NewParser(l *lex.Lexer) *Parser {
 // Parse - parse all tokens into an AST (stored as ProgramNode)
 func (p *Parser) Parse() (pg *Program, err *error.Error) {
 	defer func() {
-		// recover error from next()
 		if r := recover(); r != nil {
 			err, _ = r.(*error.Error)
 		}
-		if err != nil {
-			// if subcode >= 0x50, that means this error is generated from
-			// parser, i.e. we have to set cursor manually by retrieving the start cursor
-			// of current() token
-			if (err.GetCode() & 0xff) >= uint16(0x50) {
-				if tk := p.current(); tk != nil {
-					line := tk.Range.StartLine
-					col := tk.Range.StartCol
-
-					p.moveAndSetCursor(line, col, err)
-				}
-			}
-		}
+		handleDeferError(p, err)
 	}()
 
 	// advance tokens TWICE
@@ -50,13 +37,19 @@ func (p *Parser) Parse() (pg *Program, err *error.Error) {
 	p.next()
 
 	pg = new(Program)
-	var block *BlockStmt
 
 	peekIndent := p.getPeekIndent()
-	block, err = ParseBlockStmt(p, peekIndent)
-	if err == nil {
-		pg.Content = block
+	// parse global block
+	pg.Content, err = ParseBlockStmt(p, peekIndent)
+	if err != nil {
+		return
 	}
+
+	// ensure there's no remaining token after parsing global block
+	if p.peek().Type != lex.TypeEOF {
+		err = error.UnexpectedEOF()
+	}
+
 	return
 }
 
@@ -114,7 +107,7 @@ func (p *Parser) validateLineMask(lastToken *lex.Token, newToken *lex.Token) *er
 	if line2 > line1 {
 		// for modeInline, all tokens should have no explicit newline (CRLF)
 		if (p.lineMask & modeInline) > 0 {
-			return error.NewErrorSLOT("prohibited newline! mostly because the statement doesn't finish yet!")
+			return error.IncompleteStmt()
 		}
 	}
 	return nil
@@ -172,7 +165,7 @@ func (p *Parser) getPeekIndent() int {
 }
 
 // similar to lexer's version, but with given line & col
-func (p *Parser) moveAndSetCursor(line int, col int, err *error.Error) {
+func moveAndSetCursor(p *Parser, line int, col int, err *error.Error) {
 	buf := p.GetLineBuffer()
 	cursor := error.Cursor{
 		File:    p.Lexer.InputStream.Scope,
@@ -190,4 +183,23 @@ func (p *Parser) moveAndSetCursor(line int, col int, err *error.Error) {
 	endCursor := p.SlideToLineEnd()
 	cursor.Text = string(buf[:endCursor+1])
 	err.SetCursor(cursor)
+}
+
+func handleDeferError(p *Parser, err *error.Error) {
+	var tk *lex.Token
+
+	if err != nil && err.GetErrorClass() == error.SyntaxErrorClass {
+		if cursorType, ok := err.GetInfo()["cursor"]; ok {
+			if cursorType == "peek" {
+				tk = p.peek()
+			} else if cursorType == "current" {
+				tk = p.current()
+			}
+			if tk != nil {
+				line := tk.Range.StartLine
+				col := tk.Range.StartCol
+				moveAndSetCursor(p, line, col, err)
+			}
+		}
+	}
 }
