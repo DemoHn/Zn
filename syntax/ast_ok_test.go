@@ -17,6 +17,7 @@ var testSuccessSuites = []string{
 	varDeclCasesOK,
 	whileLoopCasesOK,
 	logicExprCasesOK,
+	funcCallCasesOK,
 }
 
 const logicExprCasesOK = `
@@ -197,17 +198,70 @@ $PG($BK(
 	)
 ))
 `
+const funcCallCasesOK = `
+========
+1. success func call with no param
+--------
+（显示当前时间）
+--------
+$PG($BK(
+	$FN(name=($ID(显示当前时间)) params=())
+))
+
+========
+2. success func call with no param (varquote)
+--------
+（·显示当前之时间·）
+--------
+$PG($BK(
+	$FN(name=($ID(显示当前之时间)) params=())
+))
+
+========
+3. success func call with 1 parameter
+--------
+（显示当前时间：「今天」）
+--------
+$PG($BK(
+	$FN(name=($ID(显示当前时间)) params=($STR(今天)))
+))
+
+========
+4. success func call with 2 parameters
+--------
+（显示当前时间：「今天」，「15:30」）
+--------
+$PG($BK(
+	$FN(name=($ID(显示当前时间)) params=($STR(今天) $STR(15:30)))
+))
+
+========
+5. success func call with mutliple parameters
+--------
+（显示当前时间：「今天」，「15:30」，200，3000）
+--------
+$PG($BK(
+	$FN(name=($ID(显示当前时间)) params=($STR(今天) $STR(15:30) $NUM(200) $NUM(3000)))
+))
+
+========
+6. nested functions
+--------
+（显示当前时间：「今天」，「15:30」，（显示时刻））
+--------
+$PG($BK(
+	$FN(name=($ID(显示当前时间)) params=(
+		$STR(今天)
+		$STR(15:30) 
+		$FN(name=($ID(显示时刻)) params=())
+	))
+))
+`
 
 type astSuccessCase struct {
 	name    string
 	input   string
 	astTree string
-}
-
-type astFailCase struct {
-	name     string
-	input    string
-	failInfo string
 }
 
 func TestAST_OK(t *testing.T) {
