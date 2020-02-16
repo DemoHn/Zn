@@ -18,6 +18,7 @@ var testSuccessSuites = []string{
 	whileLoopCasesOK,
 	logicExprCasesOK,
 	funcCallCasesOK,
+	branchStmtCasesOK,
 }
 
 const logicExprCasesOK = `
@@ -258,6 +259,143 @@ $PG($BK(
 ))
 `
 
+const branchStmtCasesOK = `
+========
+1. if-block only
+--------
+如果真：
+    （X+Y：20，30）
+--------
+$PG($BK(
+	$IF(
+		ifExpr=($ID(真))
+		ifBlock=($BK(
+			$FN(
+				name=($ID(X+Y))
+				params=($NUM(20) $NUM(30))
+			)
+		))
+	)
+))
+
+========
+2. if-block and else-block
+--------
+如果真：
+    （X+Y：20，30）
+否则：
+    （X-Y：20，30）
+--------
+$PG($BK(
+	$IF(
+		ifExpr=($ID(真))
+		ifBlock=($BK(			
+			$FN(
+				name=($ID(X+Y))
+				params=($NUM(20) $NUM(30))
+			)
+		))
+		elseBlock=($BK(			
+			$FN(
+				name=($ID(X-Y))
+				params=($NUM(20) $NUM(30))
+			)
+		))
+	)
+))
+
+========
+3. if-block & elseif blocks
+--------
+如果真：
+    （X+Y：20，30）
+再如A等于200：
+    （X-Y：20，30）
+再如A等于300：
+    B为10；
+注：「
+				‘这是一个多行注释’
+」
+如果此C不为真：
+    （ASDF）
+--------
+$PG($BK(
+	$IF(
+		ifExpr=($ID(真))
+		ifBlock=($BK(
+			$FN(
+				name=($ID(X+Y))
+				params=($NUM(20) $NUM(30))
+			)
+		))
+		otherExpr[]=($EQ(
+			L=($ID(A))
+			R=($NUM(200))
+		))
+		otherBlock[]=($BK(
+			$FN(
+				name=($ID(X-Y))
+				params=($NUM(20) $NUM(30))
+			)
+		))
+		otherExpr[]=($EQ(
+			L=($ID(A))
+			R=($NUM(300))
+		))
+		otherBlock[]=($BK(
+			$VA(
+				target=($ID(B))
+				assign=($NUM(10))
+			)
+		$))
+	)
+	$
+	$IF(
+		ifExpr=($ISN(L=($ID(C)) R=($ID(真))))
+		ifBlock=($BK(
+			$FN(name=($ID(ASDF)) params=())
+		))
+	)
+))
+
+========
+4. if-elseif-else block
+--------
+如果真：
+    （X+Y：20，30）
+再如此A为100：
+    （显示）
+否则：
+    （X-Y：20，30）
+--------
+$PG($BK(
+	$IF(
+		ifExpr=($ID(真))
+		ifBlock=($BK(			
+			$FN(
+				name=($ID(X+Y))
+				params=($NUM(20) $NUM(30))
+			)
+		))
+		elseBlock=($BK(			
+			$FN(
+				name=($ID(X-Y))
+				params=($NUM(20) $NUM(30))
+			)
+		))
+		otherExpr[]=(
+			$IS(L=($ID(A)) R=($NUM(100)))
+		)
+		otherBlock[]=($BK(
+			$FN(
+				name=($ID(显示))
+				params=()
+			)
+		))		
+	)
+))
+`
+
 type astSuccessCase struct {
 	name    string
 	input   string
@@ -288,7 +426,7 @@ func TestAST_OK(t *testing.T) {
 
 			node, err := p.Parse()
 			if err != nil {
-				t.Errorf("expect no error, got error: %s", err.Error())
+				t.Errorf("expect no error, got error: %s", err.Display())
 			} else {
 				// compare with ast
 				expect := StringifyAST(node)
@@ -298,7 +436,6 @@ func TestAST_OK(t *testing.T) {
 					t.Errorf("AST compare:\nexpect ->\n%s\ngot ->\n%s", expect, got)
 				}
 			}
-			//
 		})
 	}
 }

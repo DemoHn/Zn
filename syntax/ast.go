@@ -377,8 +377,6 @@ func ParseBasicExpr(p *Parser) (Expression, *error.Error) {
 			return ParseFuncCallExpr(p)
 		case lex.TypeObjSelfW:
 			return ParseLogicISExpr(p)
-		case lex.TypeLogicNotW:
-			return ParseLogicISNExpr(p)
 		}
 	}
 	return nil, error.InvalidSyntax()
@@ -471,15 +469,29 @@ func ParseFuncCallExpr(p *Parser) (*FuncCallExpr, *error.Error) {
 // ParseLogicISExpr - logic IS 此 ... 为 ...
 // CFG:
 // LogicIS -> 此 BasicExpr 为 BasicExpr
+// LogicIS -> 此 BasicExpr 不为 BasicExpr
 func ParseLogicISExpr(p *Parser) (*LogicExpr, *error.Error) {
+	var judgeTypes = []lex.TokenType{
+		lex.TypeLogicYesW,
+		lex.TypeLogicNotW,
+	}
+
+	var logicType LogicType
 	// #1. parse expr1
 	expr1, err := ParseBasicExpr(p)
 	if err != nil {
 		return nil, err
 	}
-	// #2. consume LogicYes
-	if err := p.consume(lex.TypeLogicYesW); err != nil {
-		return nil, err
+	// #2. consume LogicYes or LogicNot
+	match, tk := p.tryConsume(judgeTypes)
+	if !match {
+		return nil, error.InvalidSyntax()
+	}
+	switch tk.Type {
+	case lex.TypeLogicYesW:
+		logicType = LogicIS
+	case lex.TypeLogicNotW:
+		logicType = LogicISN
 	}
 	// #3. parse expr2
 	expr2, err := ParseBasicExpr(p)
@@ -488,13 +500,13 @@ func ParseLogicISExpr(p *Parser) (*LogicExpr, *error.Error) {
 	}
 
 	return &LogicExpr{
-		Type:      LogicIS,
+		Type:      logicType,
 		LeftExpr:  expr1,
 		RightExpr: expr2,
 	}, nil
 }
 
-// ParseLogicISNExpr - logic IS 此 ... 不为 ...
+// ParseLogicISNExpr - logic ISN 此 ... 不为 ...
 // CFG:
 // LogicIS -> 此 BasicExpr 为 BasicExpr
 func ParseLogicISNExpr(p *Parser) (*LogicExpr, *error.Error) {

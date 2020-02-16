@@ -26,6 +26,7 @@ func StringifyAST(node Node) string {
 	case *LogicExpr:
 		var typeStrMap = map[LogicType]string{
 			LogicIS:  "$IS",
+			LogicISN: "$ISN",
 			LogicEQ:  "$EQ",
 			LogicNEQ: "$NEQ",
 			LogicAND: "$AND",
