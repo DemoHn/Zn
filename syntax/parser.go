@@ -37,13 +37,19 @@ func (p *Parser) Parse() (pg *Program, err *error.Error) {
 	p.next()
 
 	pg = new(Program)
-	var block *BlockStmt
 
 	peekIndent := p.getPeekIndent()
-	block, err = ParseBlockStmt(p, peekIndent)
-	if err == nil {
-		pg.Content = block
+	// parse global block
+	pg.Content, err = ParseBlockStmt(p, peekIndent)
+	if err != nil {
+		return
 	}
+
+	// ensure there's no remaining token after parsing global block
+	if p.peek().Type != lex.TypeEOF {
+		err = error.UnexpectedEOF()
+	}
+
 	return
 }
 

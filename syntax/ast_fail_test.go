@@ -51,6 +51,49 @@ code=2252 line=2 col=5
     
 --------
 code=2024 line=3 col=2
+
+========
+5. block indent unexpected
+--------
+    
+令：
+A为B，
+B为C
+    
+--------
+code=2250 line=3 col=0
+
+========
+6. block indent unexpected #2
+--------
+    
+令：
+        A为B，
+        B为C
+    
+--------
+code=2250 line=3 col=8
+
+========
+7. block var declare - additional comma
+--------
+    
+令：
+    A为B，
+    B为C，
+    
+--------
+code=2250 line=5 col=4
+
+========
+7. block var declare - missing comma
+--------
+    
+令：
+    A为B
+    B为C
+--------
+code=2254 line=4 col=4
 `
 
 func TestAST_FAIL(t *testing.T) {
