@@ -26,20 +26,10 @@ func NewParser(l *lex.Lexer) *Parser {
 // Parse - parse all tokens into an AST (stored as ProgramNode)
 func (p *Parser) Parse() (pg *Program, err *error.Error) {
 	defer func() {
-		// recover error from next()
 		if r := recover(); r != nil {
 			err, _ = r.(*error.Error)
 		}
-		if err != nil {
-			// if err class is syntaxError
-			if err.GetErrorClass() == error.SyntaxErrorClass {
-				if tk := p.peek(); tk != nil {
-					line := tk.Range.StartLine
-					col := tk.Range.StartCol
-					p.moveAndSetCursor(line, col, err)
-				}
-			}
-		}
+		handleDeferError(p, err)
 	}()
 
 	// advance tokens TWICE
@@ -169,7 +159,7 @@ func (p *Parser) getPeekIndent() int {
 }
 
 // similar to lexer's version, but with given line & col
-func (p *Parser) moveAndSetCursor(line int, col int, err *error.Error) {
+func moveAndSetCursor(p *Parser, line int, col int, err *error.Error) {
 	buf := p.GetLineBuffer()
 	cursor := error.Cursor{
 		File:    p.Lexer.InputStream.Scope,
@@ -187,4 +177,23 @@ func (p *Parser) moveAndSetCursor(line int, col int, err *error.Error) {
 	endCursor := p.SlideToLineEnd()
 	cursor.Text = string(buf[:endCursor+1])
 	err.SetCursor(cursor)
+}
+
+func handleDeferError(p *Parser, err *error.Error) {
+	var tk *lex.Token
+
+	if err != nil && err.GetErrorClass() == error.SyntaxErrorClass {
+		if cursorType, ok := err.GetInfo()["cursor"]; ok {
+			if cursorType == "peek" {
+				tk = p.peek()
+			} else if cursorType == "current" {
+				tk = p.current()
+			}
+			if tk != nil {
+				line := tk.Range.StartLine
+				col := tk.Range.StartCol
+				moveAndSetCursor(p, line, col, err)
+			}
+		}
+	}
 }

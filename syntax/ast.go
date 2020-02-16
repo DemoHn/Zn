@@ -626,7 +626,7 @@ func ParseVarDeclareStmt(p *Parser) (*VarDeclareStmt, *error.Error) {
 	}
 
 	if !completeAssignPair {
-		return nil, error.IncompleteStmt()
+		return nil, error.IncompleteStmtCurr()
 	}
 
 	return vNode, nil
