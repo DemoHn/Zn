@@ -1,7 +1,6 @@
 package syntax
 
 import (
-	"fmt"
 	"regexp"
 	"strings"
 	"testing"
@@ -19,8 +18,6 @@ var testSuccessSuites = []string{
 	whileLoopCasesOK,
 	logicExprCasesOK,
 }
-
-var testFailSuites = []string{}
 
 const logicExprCasesOK = `
 ========
@@ -248,44 +245,6 @@ func TestAST_OK(t *testing.T) {
 				}
 			}
 			//
-		})
-	}
-}
-
-func TestAST_FAIL(t *testing.T) {
-	astCases := []astFailCase{}
-
-	for _, suData := range testFailSuites {
-		suites := splitTestSuites(suData)
-		for _, suite := range suites {
-			astCases = append(astCases, astFailCase{
-				name:     suite[0],
-				input:    suite[1],
-				failInfo: suite[2],
-			})
-		}
-	}
-
-	// TODO: filter
-	// after filtering...
-	for _, tt := range astCases {
-		t.Run(tt.name, func(t *testing.T) {
-			in := lex.NewTextStream(tt.input)
-			l := lex.NewLexer(in)
-			p := NewParser(l)
-
-			_, err := p.Parse()
-
-			if err == nil {
-				t.Errorf("expect error, got no error found")
-			} else {
-				// compare with error code
-				cursor := err.GetCursor()
-				got := fmt.Sprintf("code=%d line=%d col=%d", err.GetCode(), cursor.LineNum, cursor.ColNum)
-				if tt.failInfo != got {
-					t.Errorf("failInfo compare:\nexpect ->\n%s\ngot ->\n%s", tt.failInfo, got)
-				}
-			}
 		})
 	}
 }

@@ -85,12 +85,3 @@ func InvalidChar(ch rune) *Error {
 		info: ch,
 	})
 }
-
-//// syntax part (> 0x49)
-
-// InvalidSyntax -
-func InvalidSyntax() *Error {
-	return lexError.NewError(0x50, Error{
-		text: fmt.Sprintf("语句无法被解析，请检查是否有语法错误"),
-	})
-}

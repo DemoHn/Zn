@@ -7,20 +7,19 @@ import (
 
 // FileNotFound - file not found
 func FileNotFound(path string) *Error {
+	info := fmt.Sprintf("path=(%s)", path)
 	return lexError.NewError(0x10, Error{
 		text: fmt.Sprintf("未能找到文件：%s，请检查它是否存在！", path),
-		info: path,
+		info: info,
 	})
 }
 
 // FileOpenError -
 func FileOpenError(filePath string, oriError error) *Error {
+	info := fmt.Sprintf("path=(%s) error=(%s)", filePath, oriError)
 	return lexError.NewError(0x11, Error{
 		text: fmt.Sprintf("未能读取文件：%s，请检查其是否存在及有无读取权限！", filePath),
-		info: struct {
-			path string
-			err  error
-		}{filePath, oriError},
+		info: info,
 	})
 }
 
@@ -39,6 +38,6 @@ func ReadFileError(e error) *Error {
 	}
 	return lexError.NewError(0x12, Error{
 		text: fmt.Sprintf("读取I/O流失败：%s！", errText),
-		info: e,
+		info: fmt.Sprintf("error=(%s)", errText),
 	})
 }
