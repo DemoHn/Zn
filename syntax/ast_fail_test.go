@@ -10,6 +10,7 @@ import (
 
 var testFailSuites = []string{
 	varDeclCasesFAIL,
+	whileLoopCasesFAIL,
 }
 
 const varDeclCasesFAIL = `
@@ -94,6 +95,62 @@ code=2250 line=5 col=4
     B为C
 --------
 code=2254 line=4 col=4
+
+========
+8. keyword only
+--------
+令
+--------
+code=2250 line=1 col=1
+`
+
+const whileLoopCasesFAIL = `
+========
+1. keyword only
+--------
+每当
+--------
+code=2250 line=1 col=2
+
+========
+2. keyword only #2
+--------
+每当：
+--------
+code=2250 line=1 col=2
+
+========
+3. missing true blocks
+--------
+每当真：
+--------
+code=2250 line=1 col=4
+
+========
+4. unexpected indents
+--------
+每当真：
+每当又是真：
+    （显示：「每当」）
+--------
+code=2250 line=2 col=0
+
+========
+5. trueExpr <- var declare stmt
+--------
+每当令变量为真：
+    （显示：「变量为真」）
+--------
+code=2250 line=1 col=2
+
+
+========
+6. block statement fail
+--------
+每当变量为真：
+    令数组为【【233】
+--------
+code=2250 line=2 col=14
 `
 
 func TestAST_FAIL(t *testing.T) {
