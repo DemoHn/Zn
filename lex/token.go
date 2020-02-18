@@ -284,7 +284,7 @@ const (
 	TypeArrayQuoteR  TokenType = 21
 	TypeFuncQuoteL   TokenType = 22 // （
 	TypeFuncQuoteR   TokenType = 23 // ）
-	TypeMapData      TokenType = 24
+	TypeMapData      TokenType = 24 // ==
 	TypeStmtQuoteL   TokenType = 25 // {
 	TypeStmtQuoteR   TokenType = 26 // }
 	TypeDeclareW     TokenType = 40 // 令
