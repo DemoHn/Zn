@@ -166,6 +166,7 @@ func EvalExpression(it *Interpreter, expr syntax.Expression) (ZnValue, *error.Er
 		}
 		return evalLogicComparator(it, e)
 	case *syntax.Number, *syntax.String, *syntax.ID, *syntax.ArrayExpr:
+		// TODO: add HashMapExpr
 		return evalPrimeExpr(it, e)
 	case *syntax.FuncCallExpr:
 		return evalFunctionCall(it, e)
