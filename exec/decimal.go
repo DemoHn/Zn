@@ -149,56 +149,29 @@ func (zd *ZnDecimal) setValue(raw string) *error.Error {
 	return nil
 }
 
-// implement ZnComparale method
+// Compare - ZnDecimal
+func (zd *ZnDecimal) Compare(val ZnValue, cmpType znCompareType) (*ZnBool, *error.Error) {
+	var valR *ZnDecimal
+	var targetRes = 0
+	switch v := val.(type) {
+	case *ZnDecimal:
+		valR = v
+	case *ZnNull:
+		return NewZnBool(false), nil
+	default:
+		return nil, error.InvalidExprType("decimal")
+	}
 
-// Equals -
-func (zd *ZnDecimal) Equals(val ZnComparable) (*ZnBool, *error.Error) {
-	// TODO: relief type
-	v, ok := val.(*ZnDecimal)
-	if !ok {
-		return nil, error.NewErrorSLOT("Right value must be ZnDecimal")
+	switch cmpType {
+	case compareTypeEq, compareTypeIs:
+		targetRes = 0
+	case compareTypeGt:
+		targetRes = 1
+	case compareTypeLt:
+		targetRes = -1
 	}
-	r1, r2 := rescalePair(zd, v)
-	if res := r1.co.Cmp(r2.co); res == 0 {
-		return NewZnBool(true), nil
-	}
-	return NewZnBool(false), nil
-}
-
-// Is -
-func (zd *ZnDecimal) Is(val ZnComparable) (*ZnBool, *error.Error) {
-	v, ok := val.(*ZnDecimal)
-	if !ok {
-		return nil, error.NewErrorSLOT("Right value must be ZnDecimal")
-	}
-	r1, r2 := rescalePair(zd, v)
-	if res := r1.co.Cmp(r2.co); res == 0 {
-		return NewZnBool(true), nil
-	}
-	return NewZnBool(false), nil
-}
-
-// LessThan -
-func (zd *ZnDecimal) LessThan(val ZnComparable) (*ZnBool, *error.Error) {
-	v, ok := val.(*ZnDecimal)
-	if !ok {
-		return nil, error.NewErrorSLOT("Right value must be ZnDecimal")
-	}
-	r1, r2 := rescalePair(zd, v)
-	if res := r1.co.Cmp(r2.co); res < 0 {
-		return NewZnBool(true), nil
-	}
-	return NewZnBool(false), nil
-}
-
-// GreaterThan -
-func (zd *ZnDecimal) GreaterThan(val ZnComparable) (*ZnBool, *error.Error) {
-	v, ok := val.(*ZnDecimal)
-	if !ok {
-		return nil, error.NewErrorSLOT("Right value must be ZnDecimal")
-	}
-	r1, r2 := rescalePair(zd, v)
-	if res := r1.co.Cmp(r2.co); res > 0 {
+	r1, r2 := rescalePair(zd, valR)
+	if res := r1.co.Cmp(r2.co); res == targetRes {
 		return NewZnBool(true), nil
 	}
 	return NewZnBool(false), nil
