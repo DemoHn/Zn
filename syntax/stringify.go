@@ -17,6 +17,12 @@ func StringifyAST(node Node) string {
 			exprs = append(exprs, StringifyAST(expr))
 		}
 		return fmt.Sprintf("$ARR(%s)", strings.Join(exprs, " "))
+	case *HashMapExpr:
+		var exprs = []string{}
+		for _, expr := range v.KVPair {
+			exprs = append(exprs, fmt.Sprintf("key[]=(%s) value[]=(%s)", StringifyAST(expr.Key), StringifyAST(expr.Value)))
+		}
+		return fmt.Sprintf("$HM(%s)", strings.Join(exprs, " "))
 	case *Number:
 		return fmt.Sprintf("$NUM(%s)", v.Literal)
 	case *String:

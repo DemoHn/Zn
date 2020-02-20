@@ -55,6 +55,18 @@ type ZnFunction struct {
 	Executor  funcExecutor
 }
 
+// ZnHashMap -
+type ZnHashMap struct {
+	// now only support string as key
+	Value map[string]ZnValue
+}
+
+// KVPair - key-value pair, used for ZnHashMap
+type KVPair struct {
+	Key   string
+	Value ZnValue
+}
+
 //////// Variable Type Implementation
 
 // String() - display those types
@@ -85,6 +97,14 @@ func (zn *ZnNull) String() string {
 
 func (zf *ZnFunction) String() string {
 	return fmt.Sprintf("‹方法 %s›", zf.FuncName)
+}
+
+func (zh *ZnHashMap) String() string {
+	strs := []string{}
+	for key, value := range zh.Value {
+		strs = append(strs, fmt.Sprintf("%s == %s", key, value.String()))
+	}
+	return fmt.Sprintf("【%s】", strings.Join(strs, "，"))
 }
 
 // Compare - compare data
@@ -196,6 +216,12 @@ func (zf *ZnFunction) Compare(val ZnValue, cmpType znCompareType) (*ZnBool, *err
 	return nil, error.NewErrorSLOT("function is incomparable!")
 }
 
+// Compare - ZnHashMap
+func (zh *ZnHashMap) Compare(val ZnValue, cmpType znCompareType) (*ZnBool, *error.Error) {
+	// TODO -
+	return nil, nil
+}
+
 // Rev - ZnBool
 func (zb *ZnBool) Rev() *ZnBool {
 	zb.Value = !zb.Value
@@ -243,4 +269,17 @@ func NewZnFunction(funcName string, execBlock *syntax.BlockStmt, executor funcEx
 		ExecBlock: execBlock,
 		Executor:  executor,
 	}
+}
+
+// NewZnHashMap -
+func NewZnHashMap(kvPairs []KVPair) *ZnHashMap {
+	hm := &ZnHashMap{
+		Value: map[string]ZnValue{},
+	}
+
+	for _, kvPair := range kvPairs {
+		hm.Value[kvPair.Key] = kvPair.Value
+	}
+
+	return hm
 }
