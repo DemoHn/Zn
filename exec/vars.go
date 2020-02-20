@@ -98,6 +98,9 @@ func (zs *ZnString) Compare(val ZnValue, cmpType znCompareType) (*ZnBool, *error
 	case *ZnNull:
 		return NewZnBool(false), nil
 	default:
+		if cmpType == compareTypeEq || cmpType == compareTypeIs {
+			return NewZnBool(false), nil
+		}
 		return nil, error.InvalidExprType("string")
 	}
 
@@ -125,6 +128,9 @@ func (zb *ZnBool) Compare(val ZnValue, cmpType znCompareType) (*ZnBool, *error.E
 	case *ZnNull:
 		return NewZnBool(false), nil
 	default:
+		if cmpType == compareTypeEq || cmpType == compareTypeIs {
+			return NewZnBool(false), nil
+		}
 		return nil, error.InvalidExprType("bool")
 	}
 
@@ -148,7 +154,10 @@ func (za *ZnArray) Compare(val ZnValue, cmpType znCompareType) (*ZnBool, *error.
 	case *ZnNull:
 		return NewZnBool(false), nil
 	default:
-		return nil, error.InvalidExprType("bool")
+		if cmpType == compareTypeEq || cmpType == compareTypeIs {
+			return NewZnBool(false), nil
+		}
+		return nil, error.InvalidExprType("array")
 	}
 
 	switch cmpType {

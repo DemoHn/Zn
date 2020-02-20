@@ -159,6 +159,9 @@ func (zd *ZnDecimal) Compare(val ZnValue, cmpType znCompareType) (*ZnBool, *erro
 	case *ZnNull:
 		return NewZnBool(false), nil
 	default:
+		if cmpType == compareTypeEq || cmpType == compareTypeIs {
+			return NewZnBool(false), nil
+		}
 		return nil, error.InvalidExprType("decimal")
 	}
 
