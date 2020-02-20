@@ -257,55 +257,45 @@ func evalLogicComparator(it *Interpreter, expr *syntax.LogicExpr) (*ZnBool, *err
 	if err != nil {
 		return nil, err
 	}
-	// #2. assert left to be comparable
-	vleft, ok := left.(ZnComparable)
-	if !ok {
-		return nil, error.NewErrorSLOT("must be comparable")
-	}
 	// #3. eval right
 	right, err := EvalExpression(it, expr.RightExpr)
 	if err != nil {
 		return nil, err
 	}
-	// #4. assert right to be comparable
-	vright, ok := right.(ZnComparable)
-	if !ok {
-		return nil, error.NewErrorSLOT("must be comparable")
-	}
 
 	// #5. evaluate
 	switch logicType {
 	case syntax.LogicEQ:
-		return vleft.Equals(vright)
+		return left.Compare(right, compareTypeEq)
 	case syntax.LogicNEQ:
-		zb, err := vleft.Equals(vright)
+		zb, err := left.Compare(right, compareTypeEq)
 		return zb.Rev(), err
 	case syntax.LogicIS:
-		return vleft.Is(vright)
+		return left.Compare(right, compareTypeIs)
 	case syntax.LogicISN:
-		zb, err := vleft.Is(vright)
+		zb, err := left.Compare(right, compareTypeIs)
 		return zb.Rev(), err
 	case syntax.LogicGT:
-		return vleft.GreaterThan(vright)
+		return left.Compare(right, compareTypeGt)
 	case syntax.LogicGTE:
-		zb1, err := vleft.GreaterThan(vright)
+		zb1, err := left.Compare(right, compareTypeGt)
 		if err != nil {
 			return nil, err
 		}
-		zb2, err := vleft.Equals(vright)
+		zb2, err := left.Compare(right, compareTypeEq)
 		if err != nil {
 			return nil, err
 		}
 
 		return NewZnBool(zb1.Value || zb2.Value), nil
 	case syntax.LogicLT:
-		return vleft.LessThan(vright)
+		return left.Compare(right, compareTypeLt)
 	case syntax.LogicLTE:
-		zb1, err := vleft.LessThan(vright)
+		zb1, err := left.Compare(right, compareTypeLt)
 		if err != nil {
 			return nil, err
 		}
-		zb2, err := vleft.Equals(vright)
+		zb2, err := left.Compare(right, compareTypeEq)
 		if err != nil {
 			return nil, err
 		}
