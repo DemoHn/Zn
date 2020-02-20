@@ -165,7 +165,7 @@ func EvalExpression(it *Interpreter, expr syntax.Expression) (ZnValue, *error.Er
 			return evalLogicCombiner(it, e)
 		}
 		return evalLogicComparator(it, e)
-	case *syntax.Number, *syntax.String, *syntax.ID, *syntax.ArrayExpr:
+	case *syntax.Number, *syntax.String, *syntax.ID, *syntax.ArrayExpr, *syntax.HashMapExpr:
 		// TODO: add HashMapExpr
 		return evalPrimeExpr(it, e)
 	case *syntax.FuncCallExpr:
@@ -327,6 +327,27 @@ func evalPrimeExpr(it *Interpreter, expr syntax.Expression) (ZnValue, *error.Err
 		}
 
 		return NewZnArray(znObjs), nil
+	case *syntax.HashMapExpr:
+		znPairs := []KVPair{}
+		for _, item := range e.KVPair {
+			expr, err := EvalExpression(it, item.Key)
+			if err != nil {
+				return nil, err
+			}
+			exprKey, ok := expr.(*ZnString)
+			if !ok {
+				return nil, error.NewErrorSLOT("key should be string")
+			}
+			exprVal, err := EvalExpression(it, item.Value)
+			if err != nil {
+				return nil, err
+			}
+			znPairs = append(znPairs, KVPair{
+				Key:   exprKey.Value,
+				Value: exprVal,
+			})
+		}
+		return NewZnHashMap(znPairs), nil
 	default:
 		// to be continued...
 		return nil, error.NewErrorSLOT("invalid type")
