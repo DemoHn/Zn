@@ -12,6 +12,7 @@ var testFailSuites = []string{
 	varDeclCasesFAIL,
 	whileLoopCasesFAIL,
 	funcCallCasesFAIL,
+	arrayListCasesFAIL,
 }
 
 const varDeclCasesFAIL = `
@@ -189,6 +190,43 @@ code=2250 line=1 col=13
 （显示时间：「2020」，，500）
 --------
 code=2250 line=1 col=13
+`
+
+const arrayListCasesFAIL = `
+========
+1. additional comma
+--------
+【10，】
+--------
+code=2250 line=1 col=4
+
+========
+2. missing right brancket
+--------
+【10，
+--------
+code=2250 line=1 col=4
+
+========
+3. incomplete map mark
+--------
+【「正定」 == 】
+--------
+code=2250 line=1 col=9
+
+========
+4. incomplete map mark #2
+--------
+【 == 「正定」 】
+--------
+code=2250 line=1 col=5
+
+========
+5. mixture of hashmap and array
+--------
+【 100，「正定」== 10 】
+--------
+code=2250 line=1 col=4
 `
 
 type astFailCase struct {
