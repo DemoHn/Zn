@@ -385,10 +385,10 @@ func ParseArrayListIndexExpr(p *Parser) (Expression, *error.Error) {
 		if !match {
 			return expr, nil
 		}
+		idxExpr.Root = expr
 
 		switch tk.Type {
 		case lex.TypeMapHash:
-			idxExpr.Root = expr
 			// parse Number or String
 			tkIdx := p.peek()
 			if tkIdx.Type == lex.TypeNumber {
