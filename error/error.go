@@ -210,6 +210,9 @@ var (
 	// 0x22 - syntaxError
 	// show errors occured on parsing stage
 	syntaxError errorClass
+	// 0x23 - typeError
+	// show errors of type validation
+	typeError errorClass
 
 	errClassMap map[uint16]string
 )
@@ -219,6 +222,7 @@ const (
 	LexErrorClass    = 0x20
 	IOErrorClass     = 0x21
 	SyntaxErrorClass = 0x22
+	TypeErrorClass   = 0x23
 )
 
 // NewErrorSLOT - a tmp placeholder for adding errors quickly while the
@@ -235,10 +239,12 @@ func init() {
 	lexError = errorClass{0x20}
 	ioError = errorClass{0x21}
 	syntaxError = errorClass{0x22}
+	typeError = errorClass{0x23}
 
 	errClassMap = map[uint16]string{
 		0x0020: "语法错误", // from lex
 		0x0021: "I/O错误",
 		0x0022: "语法错误", // from parser
+		0x0023: "类型错误",
 	}
 }

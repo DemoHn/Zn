@@ -284,9 +284,10 @@ const (
 	TypeArrayQuoteR  TokenType = 21
 	TypeFuncQuoteL   TokenType = 22 // （
 	TypeFuncQuoteR   TokenType = 23 // ）
-	TypeMapData      TokenType = 24
+	TypeMapData      TokenType = 24 // ==
 	TypeStmtQuoteL   TokenType = 25 // {
 	TypeStmtQuoteR   TokenType = 26 // }
+	TypeMapQHash     TokenType = 27 // #{
 	TypeDeclareW     TokenType = 40 // 令
 	TypeLogicYesW    TokenType = 41 // 为
 	TypeCondOtherW   TokenType = 43 // 再如
