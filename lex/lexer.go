@@ -554,6 +554,7 @@ func (l *Lexer) parseMarkers(ch rune) (*Token, *error.Error) {
 		return NewMarkToken(l.chBuffer, TypeAnnoT, startR, 1), nil
 	case HashMark:
 		if l.peek() == LeftCurlyBracket {
+			l.pushBuffer(l.next())
 			return NewMarkToken(l.chBuffer, TypeMapQHash, startR, 2), nil
 		}
 		return NewMarkToken(l.chBuffer, TypeMapHash, startR, 1), nil
