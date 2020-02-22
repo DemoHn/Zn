@@ -46,7 +46,11 @@ func StringifyAST(node Node) string {
 		lstr := StringifyAST(v.LeftExpr)
 		rstr := StringifyAST(v.RightExpr)
 		return fmt.Sprintf("%s(L=(%s) R=(%s))", typeStrMap[v.Type], lstr, rstr)
-	// var assign expressions
+	case *ArrayListIndexExpr:
+		lstr := StringifyAST(v.Root)
+		rstr := StringifyAST(v.Index)
+
+		return fmt.Sprintf("$ALI(root=(%s) index=(%s))", lstr, rstr)
 	case *EmptyStmt:
 		return "$"
 	case *VarDeclareStmt:
@@ -63,6 +67,7 @@ func StringifyAST(node Node) string {
 		}
 		// parse exprs
 		return fmt.Sprintf("$VD(%s)", strings.Join(items, " "))
+	// var assign expressions
 	case *VarAssignExpr:
 		var target, assign string
 		target = StringifyAST(v.TargetVar)

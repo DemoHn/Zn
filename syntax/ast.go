@@ -133,6 +133,12 @@ type HashMapKeyValuePair struct {
 	Value Expression
 }
 
+// ArrayListIndexExpr - root # index
+type ArrayListIndexExpr struct {
+	Root  Expression
+	Index Expression
+}
+
 // VarAssignExpr - variable assignment statement
 // assign <TargetExpr> from <AssignExpr>
 //
@@ -176,7 +182,7 @@ type LogicExpr struct {
 // implement expression interface
 
 // SetLiteral - set literal for primeExpr
-func (pe *PrimeExpr) SetLiteral(literal string) { pe.Literal = literal }
+func (pe *PrimeExpr) SetLiteral(literal []rune) { pe.Literal = string(literal) }
 
 // GetLiteral -
 func (pe *PrimeExpr) GetLiteral() string { return pe.Literal }
@@ -200,6 +206,9 @@ func (ar *ArrayExpr) mapList()  {} // belongs to unionMapList
 func (ar *HashMapExpr) exprNode() {}
 func (ar *HashMapExpr) stmtNode() {}
 func (ar *HashMapExpr) mapList()  {} // belongs to unionMapList
+
+func (ai *ArrayListIndexExpr) exprNode() {}
+func (ai *ArrayListIndexExpr) stmtNode() {}
 
 //////// Parse Methods
 
@@ -240,15 +249,15 @@ func ParseStatement(p *Parser) (Statement, *error.Error) {
 // ParseExpression - parse an expression, see the following CFG for details
 //
 // CFG:
-// E  -> AndE E'
-// E' -> 或 AndE E'
-//    ->
+// Expr  -> AndE Expr'
+// Expr' -> 或 AndE Expr'
+//       ->
 //
 // AndE  -> EqE AndE'
 // AndE' -> 且 EqE AndE'
 //       ->
 //
-// EqE   -> VaE
+// EqE   -> VaE EqE'
 // EqE'  -> 等于 VaE
 //       -> 不等于 VaE
 //       -> 小于 VaE
@@ -257,10 +266,18 @@ func ParseStatement(p *Parser) (Statement, *error.Error) {
 //       -> 不大于 VaE
 //       ->
 //
-// VaE   -> BsE VaE'
-// VaE'  -> 为 BsE
+// VaE   -> IdxE VaE'
+// VaE'  -> 为 IdxE
 //       ->
 //
+// IdxE  -> BsE IdxE'
+// IdxE' -> #  Number   IdxE'
+// IdxE' -> #  String   IdxE'
+//       -> #{  Expr  }  IdxE'
+//
+// precedences:
+//
+// # #{}  >  为  >  等于，大于，etc.  >  且  >  或
 func ParseExpression(p *Parser) (Expression, *error.Error) {
 	var logicItemParser func(int) (Expression, *error.Error)
 	var logicItemTailParser func(int, Expression) (Expression, *error.Error)
@@ -294,7 +311,7 @@ func ParseExpression(p *Parser) (Expression, *error.Error) {
 	//// anynomous function definition
 	logicItemParser = func(idx int) (Expression, *error.Error) {
 		if idx >= len(logicKeywords) {
-			return ParseBasicExpr(p)
+			return ParseArrayListIndexExpr(p)
 		}
 		// #1. match item
 		expr1, err := logicItemParser(idx + 1)
@@ -344,6 +361,74 @@ func ParseExpression(p *Parser) (Expression, *error.Error) {
 	return logicItemParser(0)
 }
 
+// ParseArrayListIndexExpr -
+//
+// CFG:
+//
+// IdxE  -> BsE IdxE'
+// IdxE' -> #  Number   IdxE'
+// IdxE' -> #  String   IdxE'
+//       -> #{  Expr  }  IdxE'
+//       ->
+func ParseArrayListIndexExpr(p *Parser) (Expression, *error.Error) {
+	var arrayListTailParser func(Expression) (Expression, *error.Error)
+	var hashTypes = []lex.TokenType{
+		lex.TypeMapHash,
+		lex.TypeMapQHash,
+	}
+
+	arrayListTailParser = func(expr Expression) (Expression, *error.Error) {
+		idxExpr := &ArrayListIndexExpr{}
+
+		// #1. match hash mark
+		match, tk := p.tryConsume(hashTypes)
+		if !match {
+			return expr, nil
+		}
+
+		switch tk.Type {
+		case lex.TypeMapHash:
+			idxExpr.Root = expr
+			// parse Number or String
+			tkIdx := p.peek()
+			if tkIdx.Type == lex.TypeNumber {
+				nexpr := new(Number)
+				nexpr.SetLiteral(tkIdx.Literal)
+				idxExpr.Index = nexpr
+				p.next()
+			} else if tkIdx.Type == lex.TypeString {
+				sexpr := new(String)
+				sexpr.SetLiteral(tkIdx.Literal)
+				idxExpr.Index = sexpr
+				p.next()
+			} else {
+				return nil, error.InvalidSyntax()
+			}
+			return arrayListTailParser(idxExpr)
+		default: // lex.TypeMapQHash
+			// #1. parse Expr
+			nexpr, err := ParseExpression(p)
+			if err != nil {
+				return nil, err
+			}
+			idxExpr.Index = nexpr
+			// #2. parse tail brace
+			if err := p.consume(lex.TypeStmtQuoteR); err != nil {
+				return nil, err
+			}
+			return arrayListTailParser(idxExpr)
+		}
+	}
+
+	// #1. parse BasicExpr
+	rootExpr, err := ParseBasicExpr(p)
+	if err != nil {
+		return nil, err
+	}
+	// #2. parse IdxE'
+	return arrayListTailParser(rootExpr)
+}
+
 // ParseBasicExpr - parse general basic expression
 //
 // CFG:
@@ -354,8 +439,7 @@ func ParseExpression(p *Parser) (Expression, *error.Error) {
 //       -> ID
 //       -> Number
 //       -> String
-//       -> 【 E，E，...】
-//       -> 【】                              (empty array)
+//       -> ArrayList
 func ParseBasicExpr(p *Parser) (Expression, *error.Error) {
 	var validTypes = []lex.TokenType{
 		lex.TypeIdentifier,
@@ -374,15 +458,15 @@ func ParseBasicExpr(p *Parser) (Expression, *error.Error) {
 		switch tk.Type {
 		case lex.TypeIdentifier, lex.TypeVarQuote:
 			expr := new(ID)
-			expr.SetLiteral(string(tk.Literal))
+			expr.SetLiteral(tk.Literal)
 			return expr, nil
 		case lex.TypeNumber:
 			expr := new(Number)
-			expr.SetLiteral(string(tk.Literal))
+			expr.SetLiteral(tk.Literal)
 			return expr, nil
 		case lex.TypeString:
 			expr := new(String)
-			expr.SetLiteral(string(tk.Literal))
+			expr.SetLiteral(tk.Literal)
 			return expr, nil
 		case lex.TypeArrayQuoteL:
 			return ParseArrayExpr(p)
@@ -541,7 +625,7 @@ func ParseFuncCallExpr(p *Parser) (*FuncCallExpr, *error.Error) {
 		return nil, error.InvalidSyntax()
 	}
 	idExpr := new(ID)
-	idExpr.SetLiteral(string(tk.Literal))
+	idExpr.SetLiteral(tk.Literal)
 	callExpr.FuncName = idExpr
 	// #2. parse colon (maybe there's no params)
 	match2, _ := p.tryConsume([]lex.TokenType{lex.TypeFuncCall})
@@ -668,7 +752,7 @@ func ParseVarDeclareStmt(p *Parser) (*VarDeclareStmt, *error.Error) {
 		// #1. consume ID first
 		if match, tk := p.tryConsume(idTypes); match {
 			idExpr = new(ID)
-			idExpr.SetLiteral(string(tk.Literal))
+			idExpr.SetLiteral(tk.Literal)
 		} else {
 			return nil, error.InvalidSyntax()
 		}
