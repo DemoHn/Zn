@@ -109,10 +109,28 @@ type String struct {
 	PrimeExpr
 }
 
+// unionMapList - HashMap or ArrayList, since they shares similar grammer.
+// e.g.  ArrayList  => 【1，2，3，4，5】
+//       HashMap    => 【A == 1，B == 2】
+type unionMapList interface {
+	Expression
+	mapList()
+}
+
 // ArrayExpr - array expression
 type ArrayExpr struct {
-	PrimeExpr
 	Items []Expression
+}
+
+// HashMapExpr - hashMap expression
+type HashMapExpr struct {
+	KVPair []HashMapKeyValuePair
+}
+
+// HashMapKeyValuePair -
+type HashMapKeyValuePair struct {
+	Key   Expression
+	Value Expression
 }
 
 // VarAssignExpr - variable assignment statement
@@ -174,6 +192,14 @@ func (va *VarAssignExpr) stmtNode() {}
 
 func (fc *FuncCallExpr) exprNode() {}
 func (fc *FuncCallExpr) stmtNode() {}
+
+func (ar *ArrayExpr) exprNode() {}
+func (ar *ArrayExpr) stmtNode() {}
+func (ar *ArrayExpr) mapList()  {} // belongs to unionMapList
+
+func (ar *HashMapExpr) exprNode() {}
+func (ar *HashMapExpr) stmtNode() {}
+func (ar *HashMapExpr) mapList()  {} // belongs to unionMapList
 
 //////// Parse Methods
 
@@ -241,9 +267,9 @@ func ParseExpression(p *Parser) (Expression, *error.Error) {
 	// logicKeywords, ordered by precedence asc
 	// that means, the very begin logicKeyword ([]lex.TokenType) has lowest precedence
 	var logicKeywords = [4][]lex.TokenType{
-		[]lex.TokenType{lex.TypeLogicOrW},
-		[]lex.TokenType{lex.TypeLogicAndW},
-		[]lex.TokenType{
+		{lex.TypeLogicOrW},
+		{lex.TypeLogicAndW},
+		{
 			lex.TypeLogicEqualW,
 			lex.TypeLogicNotEqW,
 			lex.TypeLogicGtW,
@@ -251,7 +277,7 @@ func ParseExpression(p *Parser) (Expression, *error.Error) {
 			lex.TypeLogicLtW,
 			lex.TypeLogicLteW,
 		},
-		[]lex.TokenType{lex.TypeLogicYesW}, // notice: this represents for Variable Assignment!
+		{lex.TypeLogicYesW}, // notice: this represents for Variable Assignment!
 	}
 	var logicTypeMap = map[lex.TokenType]LogicType{
 		lex.TypeLogicOrW:    LogicOR,
@@ -359,11 +385,7 @@ func ParseBasicExpr(p *Parser) (Expression, *error.Error) {
 			expr.SetLiteral(string(tk.Literal))
 			return expr, nil
 		case lex.TypeArrayQuoteL:
-			arrExpr, err := ParseArrayExpr(p)
-			if err != nil {
-				return nil, err
-			}
-			return arrExpr, nil
+			return ParseArrayExpr(p)
 		case lex.TypeStmtQuoteL:
 			expr, err := ParseExpression(p)
 			if err != nil {
@@ -382,41 +404,120 @@ func ParseBasicExpr(p *Parser) (Expression, *error.Error) {
 	return nil, error.InvalidSyntax()
 }
 
-// ParseArrayExpr - yield ArrayExpr node
+// ParseArrayExpr - yield ArrayExpr node (support both hashMap and arrayList)
 // CFG:
 // ArrayExpr -> 【 ItemList 】
 //           -> 【】
+//           -> 【 HashMapList 】
+//           -> 【 == 】
 // ItemList  -> Expr ExprTail
 //           ->
 // ExprTail  -> ， Expr ExprTail
 //           ->
-func ParseArrayExpr(p *Parser) (*ArrayExpr, *error.Error) {
-	ar := &ArrayExpr{
-		Items: []Expression{},
+// HashMapList -> Expr == Expr， Expr2 == Expr2， ...
+func ParseArrayExpr(p *Parser) (unionMapList, *error.Error) {
+	// #0. try to match if empty
+	match, emptyExpr, err := tryParseEmptyMapList(p)
+	if err != nil {
+		return nil, err
 	}
-	// #0. trying comsume right bracket to see if it's an empty array
-	if match, _ := p.tryConsume([]lex.TokenType{lex.TypeArrayQuoteR}); match {
-		return ar, nil
+	if match {
+		return emptyExpr, nil
 	}
+
+	const (
+		tagHashMap     = 11
+		subtypeUnknown = 0
+		subtypeArray   = 1
+		subtypeHashMap = 2
+	)
 	// #1. consume item list (comma list)
 	exprs, err := parseCommaList(p, func(idx int, nodes []Node) (Node, *error.Error) {
-		return ParseExpression(p)
+		expr, e1 := ParseExpression(p)
+		if e1 != nil {
+			return nil, e1
+		}
+		// parse if there's double equals, then cont'd parsing right expr for hashmap
+		if match, _ := p.tryConsume([]lex.TokenType{lex.TypeMapData}); match {
+			exprR, e2 := ParseExpression(p)
+			if e2 != nil {
+				return nil, e2
+			}
+			return &NodeList{
+				Tag:      tagHashMap,
+				Children: []Node{expr, exprR},
+			}, nil
+		}
+		return expr, nil
 	})
 	if err != nil {
 		return nil, err
 	}
 
 	// type cast (because there's no GENERIC TYPE in golang!!!)
+	var ar = &ArrayExpr{
+		Items: []Expression{},
+	}
+	var hm = &HashMapExpr{
+		KVPair: []HashMapKeyValuePair{},
+	}
+	var subtype = subtypeUnknown
 	for _, expr := range exprs {
-		exprT, _ := expr.(Expression)
-		ar.Items = append(ar.Items, exprT)
+		switch v := expr.(type) {
+		case Expression:
+			if subtype == subtypeUnknown {
+				subtype = subtypeArray
+			}
+			if subtype != subtypeArray {
+				return nil, error.NewErrorSLOT("inconsistent array item")
+			}
+			// add value
+			ar.Items = append(ar.Items, v)
+		case *NodeList: // tagHashMap
+			if subtype == subtypeUnknown {
+				subtype = subtypeHashMap
+			}
+			if subtype != subtypeHashMap {
+				return nil, error.NewErrorSLOT("inconsistent array item")
+			}
+			n0, _ := v.Children[0].(Expression)
+			n1, _ := v.Children[1].(Expression)
+			hm.KVPair = append(hm.KVPair, HashMapKeyValuePair{
+				Key:   n0,
+				Value: n1,
+			})
+		}
 	}
 
 	// #2. consume right brancket
 	if err := p.consume(lex.TypeArrayQuoteR); err != nil {
 		return nil, err
 	}
-	return ar, nil
+	// #3. return value
+	if subtype == subtypeArray {
+		return ar, nil
+	}
+	return hm, nil
+}
+
+func tryParseEmptyMapList(p *Parser) (bool, unionMapList, *error.Error) {
+	emptyTrialTypes := []lex.TokenType{
+		lex.TypeArrayQuoteR, // for empty array
+		lex.TypeMapData,     // for empty hashmap
+	}
+
+	if match, tk := p.tryConsume(emptyTrialTypes); match {
+		switch tk.Type {
+		case lex.TypeArrayQuoteR:
+			return true, &ArrayExpr{Items: []Expression{}}, nil
+		case lex.TypeMapData:
+			if err := p.consume(lex.TypeArrayQuoteR); err != nil {
+				return false, nil, err
+			}
+			return true, &HashMapExpr{KVPair: []HashMapKeyValuePair{}}, nil
+		}
+	}
+	return false, nil, nil
 }
 
 // ParseFuncCallExpr - yield FuncCallExpr node
