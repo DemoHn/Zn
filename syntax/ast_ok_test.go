@@ -17,6 +17,7 @@ var testSuccessSuites = []string{
 	varDeclCasesOK,
 	whileLoopCasesOK,
 	logicExprCasesOK,
+	arrayListCasesOK,
 	funcCallCasesOK,
 	branchStmtCasesOK,
 }
@@ -394,6 +395,108 @@ $PG($BK(
 		))		
 	)
 ))
+`
+
+const arrayListCasesOK = `
+========
+1. empty array
+--------
+【】
+--------
+$PG($BK($ARR()))
+
+========
+2. empty hashmap
+--------
+【==】
+--------
+$PG($BK($HM()))
+
+========
+3. mixed string and decimal array
+--------
+【「MacBook Air 12"」 ， 2080， 3000】
+--------
+$PG($BK($ARR($STR(MacBook Air 12") $NUM(2080) $NUM(3000))))
+
+========
+4. array with newline
+--------
+【
+    「MacBook Air 12"」，
+    2080， 
+		3000
+】
+--------
+$PG($BK($ARR($STR(MacBook Air 12") $NUM(2080) $NUM(3000))))
+
+========
+5. array nest with array
+--------
+【
+    「MacBook Air 12"」，
+    2080， 
+		【100，200，300】
+】
+--------
+$PG($BK($ARR(
+	$STR(MacBook Air 12") 
+	$NUM(2080) 
+	$ARR($NUM(100) $NUM(200) $NUM(300))
+)))
+
+========
+6. array nest with array nest with array
+--------
+【
+    「MacBook Air 12"」，
+    2080， 
+		【100，200，300，
+		    【
+		        10000
+		    】
+		】
+】
+--------
+$PG($BK($ARR(
+	$STR(MacBook Air 12") 
+	$NUM(2080) 
+	$ARR($NUM(100) $NUM(200) $NUM(300) $ARR($NUM(10000)))
+)))
+
+========
+7. a simple hashmap
+--------
+【
+		「数学」 == 80，
+		「语文」 == 90
+】
+--------
+$PG($BK($HM(
+	key[]=($STR(数学)) value[]=($NUM(80)) 
+	key[]=($STR(语文)) value[]=($NUM(90))
+)))
+
+========
+8. a hashmap nest with hashmap
+--------
+【
+		「数学」 == 80，
+		「语文」 == 【
+				「阅读」 == 20，
+				「听力」 == 30.5，
+				「比例」 == 0.12345
+		】
+】
+--------
+$PG($BK($HM(
+	key[]=($STR(数学)) value[]=($NUM(80)) 
+	key[]=($STR(语文)) value[]=($HM(
+		key[]=($STR(阅读)) value[]=($NUM(20))
+		key[]=($STR(听力)) value[]=($NUM(30.5))
+		key[]=($STR(比例)) value[]=($NUM(0.12345))
+	))
+)))
 `
 
 type astSuccessCase struct {
