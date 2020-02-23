@@ -215,7 +215,11 @@ var (
 	typeError errorClass
 	// 0x24 - indexError
 	// show errors when retrieving data by index from arrayList
-	indexError  errorClass
+	indexError errorClass
+	// 0x25 - nameError
+	// show errors while identifier not found or others related to identifiers.
+	nameError errorClass
+
 	errClassMap map[uint16]string
 )
 
@@ -226,6 +230,7 @@ const (
 	SyntaxErrorClass = 0x22
 	TypeErrorClass   = 0x23
 	IndexErrorClass  = 0x24
+	NameErrorClass   = 0x25
 )
 
 // NewErrorSLOT - a tmp placeholder for adding errors quickly while the
@@ -244,6 +249,7 @@ func init() {
 	syntaxError = errorClass{0x22}
 	typeError = errorClass{0x23}
 	indexError = errorClass{0x24}
+	nameError = errorClass{0x25}
 
 	errClassMap = map[uint16]string{
 		0x0020: "语法错误", // from lex
@@ -251,5 +257,6 @@ func init() {
 		0x0022: "语法错误", // from parser
 		0x0023: "类型错误",
 		0x0024: "索引错误",
+		0x0025: "标识错误",
 	}
 }
