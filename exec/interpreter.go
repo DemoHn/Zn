@@ -104,7 +104,7 @@ func evalWhileLoopStmt(it *Interpreter, loopStmt *syntax.WhileLoopStmt) *error.E
 		// #2. assert trueExpr to be ZnBool
 		vTrueExpr, ok := trueExpr.(*ZnBool)
 		if !ok {
-			return error.NewErrorSLOT("condition must be bool")
+			return error.InvalidExprType("bool")
 		}
 		// break the loop if expr yields not true
 		if vTrueExpr.Value == false {
@@ -125,7 +125,7 @@ func evalBranchStmt(it *Interpreter, branchStmt *syntax.BranchStmt) *error.Error
 	}
 	vIfExpr, ok := ifExpr.(*ZnBool)
 	if !ok {
-		return error.NewErrorSLOT("condition must be bool")
+		return error.InvalidExprType("bool")
 	}
 	// exec if-branch
 	if vIfExpr.Value == true {
@@ -139,7 +139,7 @@ func evalBranchStmt(it *Interpreter, branchStmt *syntax.BranchStmt) *error.Error
 		}
 		vOtherExprI, ok := otherExprI.(*ZnBool)
 		if !ok {
-			return error.NewErrorSLOT("condition must be bool")
+			return error.InvalidExprType("bool")
 		}
 		// exec else-if branch
 		if vOtherExprI.Value == true {
@@ -165,6 +165,8 @@ func EvalExpression(it *Interpreter, expr syntax.Expression) (ZnValue, *error.Er
 			return evalLogicCombiner(it, e)
 		}
 		return evalLogicComparator(it, e)
+	case *syntax.ArrayListIndexExpr:
+		return evalArrayListIndexExpr(it, e)
 	case *syntax.Number, *syntax.String, *syntax.ID, *syntax.ArrayExpr, *syntax.HashMapExpr:
 		// TODO: add HashMapExpr
 		return evalPrimeExpr(it, e)
@@ -214,7 +216,7 @@ func evalLogicCombiner(it *Interpreter, expr *syntax.LogicExpr) (*ZnBool, *error
 	// #2. assert left expr type to be ZnBool
 	vleft, ok := left.(*ZnBool)
 	if !ok {
-		return nil, error.NewErrorSLOT("参与的表达式须为「二象」类型")
+		return nil, error.InvalidExprType("bool")
 	}
 	// #3. check if the result could be retrieved earlier
 	//
@@ -235,16 +237,14 @@ func evalLogicCombiner(it *Interpreter, expr *syntax.LogicExpr) (*ZnBool, *error
 	}
 	vright, ok := right.(*ZnBool)
 	if !ok {
-		return nil, error.NewErrorSLOT("参与的表达式须为「二象」类型")
+		return nil, error.InvalidExprType("bool")
 	}
 	// then evalute data
 	switch logicType {
 	case syntax.LogicAND:
 		return NewZnBool(vleft.Value && vright.Value), nil
-	case syntax.LogicOR:
+	default: // logicOR
 		return NewZnBool(vleft.Value || vright.Value), nil
-	default:
-		return nil, error.NewErrorSLOT("不合法的类型") // 这个一般走不到
 	}
 }
 
@@ -364,4 +364,10 @@ func evalVarAssignExpr(it *Interpreter, expr *syntax.VarAssignExpr) (ZnValue, *e
 
 	err2 := it.SetData(vtag, val)
 	return val, err2
+}
+
+// eval A#n A#{ e }, etc.
+func evalArrayListIndexExpr(it *Interpreter, expr *syntax.ArrayListIndexExpr) (ZnValue, *error.Error) {
+	// TODO
+	return nil, nil
 }

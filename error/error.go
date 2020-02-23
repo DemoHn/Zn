@@ -213,7 +213,9 @@ var (
 	// 0x23 - typeError
 	// show errors of type validation
 	typeError errorClass
-
+	// 0x24 - indexError
+	// show errors when retrieving data by index from arrayList
+	indexError  errorClass
 	errClassMap map[uint16]string
 )
 
@@ -223,6 +225,7 @@ const (
 	IOErrorClass     = 0x21
 	SyntaxErrorClass = 0x22
 	TypeErrorClass   = 0x23
+	IndexErrorClass  = 0x24
 )
 
 // NewErrorSLOT - a tmp placeholder for adding errors quickly while the
@@ -240,11 +243,13 @@ func init() {
 	ioError = errorClass{0x21}
 	syntaxError = errorClass{0x22}
 	typeError = errorClass{0x23}
+	indexError = errorClass{0x24}
 
 	errClassMap = map[uint16]string{
 		0x0020: "语法错误", // from lex
 		0x0021: "I/O错误",
 		0x0022: "语法错误", // from parser
 		0x0023: "类型错误",
+		0x0024: "索引错误",
 	}
 }

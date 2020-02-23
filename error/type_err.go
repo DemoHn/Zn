@@ -20,6 +20,6 @@ func InvalidExprType(assertType string) *Error {
 		label = v
 	}
 	return typeError.NewError(0x01, Error{
-		text: fmt.Sprintf("表达式不符合指定「%s」之类型", label),
+		text: fmt.Sprintf("表达式不符合期望之「%s」类型", label),
 	})
 }
