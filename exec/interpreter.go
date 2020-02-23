@@ -166,7 +166,8 @@ func EvalExpression(it *Interpreter, expr syntax.Expression) (ZnValue, *error.Er
 		}
 		return evalLogicComparator(it, e)
 	case *syntax.ArrayListIndexExpr:
-		return evalArrayListIndexExpr(it, e)
+		// TODO: differ LHV & RHV
+		return evalArrayListIndexExprRHV(it, e)
 	case *syntax.Number, *syntax.String, *syntax.ID, *syntax.ArrayExpr, *syntax.HashMapExpr:
 		// TODO: add HashMapExpr
 		return evalPrimeExpr(it, e)
@@ -367,7 +368,48 @@ func evalVarAssignExpr(it *Interpreter, expr *syntax.VarAssignExpr) (ZnValue, *e
 }
 
 // eval A#n A#{ e }, etc.
-func evalArrayListIndexExpr(it *Interpreter, expr *syntax.ArrayListIndexExpr) (ZnValue, *error.Error) {
-	// TODO
+// NOTE: RHV stands for Right Hand Value, which means the expression will yield values directly
+// like what a RHV does.
+func evalArrayListIndexExprRHV(it *Interpreter, expr *syntax.ArrayListIndexExpr) (ZnValue, *error.Error) {
+	// #1. eval root expr
+	val, err := EvalExpression(it, expr.Root)
+	if err != nil {
+		return nil, err
+	}
+	valIdx, err := EvalExpression(it, expr.Index)
+	if err != nil {
+		return nil, err
+	}
+	// #2. assert types
+	switch vl := val.(type) {
+	case *ZnArray:
+		// assert valIdx data
+		vr, ok := valIdx.(*ZnDecimal)
+		if !ok {
+			return nil, error.InvalidExprType("integer")
+		}
+		idx, err := vr.asInteger()
+		if err != nil {
+			return nil, error.InvalidExprType("integer")
+		}
+		if idx < 0 || idx >= len(vl.Value) {
+			return nil, error.IndexOutOfRange()
+		}
+		return vl.Value[idx], nil
+	case *ZnHashMap:
+		vr, ok := valIdx.(*ZnString)
+		if !ok {
+			return nil, error.InvalidExprType("string")
+		}
+		// retrieve value by key
+		data, ok := vl.Value[vr.Value]
+		if !ok {
+			return nil, error.IndexKeyNotFound(vr.Value)
+		}
+		return data, nil
+	default:
+		return nil, error.InvalidExprType("array", "hashmap")
+	}
+
 	return nil, nil
 }

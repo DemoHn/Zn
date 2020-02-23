@@ -1,6 +1,9 @@
 package error
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
 
 var typeNameMap = map[string]string{
 	"string":   "文本",
@@ -14,12 +17,16 @@ var typeNameMap = map[string]string{
 }
 
 // InvalidExprType -
-func InvalidExprType(assertType string) *Error {
-	label := assertType
-	if v, ok := typeNameMap[assertType]; ok {
-		label = v
+func InvalidExprType(assertType ...string) *Error {
+	labels := []string{}
+	for _, at := range assertType {
+		label := at
+		if v, ok := typeNameMap[at]; ok {
+			label = v
+		}
+		labels = append(labels, fmt.Sprintf("「%s」", label))
 	}
 	return typeError.NewError(0x01, Error{
-		text: fmt.Sprintf("表达式不符合期望之「%s」类型", label),
+		text: fmt.Sprintf("表达式不符合期望之%s类型", strings.Join(labels, "，")),
 	})
 }
