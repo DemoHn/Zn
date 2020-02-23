@@ -66,3 +66,12 @@ func UnexpectedEOF() *Error {
 		info: "cursor=(peek)",
 	})
 }
+
+// MixArrayHashMap - inside 【】, an array element is mixed with a hashmap element
+// e.g. 【100，100 == 200，300】
+func MixArrayHashMap() *Error {
+	return syntaxError.NewError(0x55, Error{
+		text: "元组元素与列表元素混用",
+		info: "cursor=(current)",
+	})
+}

@@ -553,7 +553,7 @@ func ParseArrayExpr(p *Parser) (unionMapList, *error.Error) {
 				subtype = subtypeArray
 			}
 			if subtype != subtypeArray {
-				return nil, error.NewErrorSLOT("inconsistent array item")
+				return nil, error.MixArrayHashMap()
 			}
 			// add value
 			ar.Items = append(ar.Items, v)
@@ -562,7 +562,7 @@ func ParseArrayExpr(p *Parser) (unionMapList, *error.Error) {
 				subtype = subtypeHashMap
 			}
 			if subtype != subtypeHashMap {
-				return nil, error.NewErrorSLOT("inconsistent array item")
+				return nil, error.MixArrayHashMap()
 			}
 			n0, _ := v.Children[0].(Expression)
 			n1, _ := v.Children[1].(Expression)
