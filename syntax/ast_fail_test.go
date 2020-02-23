@@ -226,7 +226,7 @@ code=2250 line=1 col=5
 --------
 【 100，「正定」== 10 】
 --------
-code=2250 line=1 col=4
+code=2250 line=1 col=13
 `
 
 type astFailCase struct {
