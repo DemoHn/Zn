@@ -61,7 +61,7 @@ func (st *SymbolTable) Bind(id string, obj ZnValue, isConstant bool) *error.Erro
 
 	// check if there's variable re-declaration
 	if len(symArr) > 0 && symArr[0].nestLevel == st.nestLevel {
-		return error.NewErrorSLOT("variable re-declaration")
+		return error.NameRedeclared(id)
 	}
 
 	// prepend data
@@ -74,12 +74,12 @@ func (st *SymbolTable) Bind(id string, obj ZnValue, isConstant bool) *error.Erro
 func (st *SymbolTable) Lookup(id string) (ZnValue, *error.Error) {
 	symArr, ok := st.symbolMap[id]
 	if !ok {
-		return nil, error.NewErrorSLOT("no valid variable found")
+		return nil, error.NameNotDefined(id)
 	}
 
 	// find the nearest level of value
 	if symArr == nil || len(symArr) == 0 {
-		return nil, error.NewErrorSLOT("no valid variable found")
+		return nil, error.NameNotDefined(id)
 	}
 	return symArr[0].value, nil
 }
@@ -108,18 +108,18 @@ func (st *SymbolTable) ExitScope() {
 func (st *SymbolTable) SetData(id string, obj ZnValue) *error.Error {
 	symArr, ok := st.symbolMap[id]
 	if !ok {
-		return error.NewErrorSLOT("variable not defined!")
+		return error.NameNotDefined(id)
 	}
 
 	if symArr != nil && len(symArr) > 0 {
 		symArr[0].value = obj
 		if symArr[0].isConstant {
-			return error.NewErrorSLOT("assignment to constant variable!")
+			return error.AssignToConstant()
 		}
 		return nil
 	}
 
-	return error.NewErrorSLOT("variable not defined!")
+	return error.NameNotDefined(id)
 }
 
 func (st *SymbolTable) printSymbols() string {
