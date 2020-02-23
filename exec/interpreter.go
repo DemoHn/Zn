@@ -410,6 +410,4 @@ func evalArrayListIndexExprRHV(it *Interpreter, expr *syntax.ArrayListIndexExpr)
 	default:
 		return nil, error.InvalidExprType("array", "hashmap")
 	}
-
-	return nil, nil
 }
