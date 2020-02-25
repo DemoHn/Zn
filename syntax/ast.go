@@ -243,7 +243,8 @@ func ParseStatement(p *Parser) (Statement, *error.Error) {
 		}
 	}
 	// other case, parse expression
-	return ParseExpression(p)
+	expr := ParseExpression(p)
+	return expr, nil
 }
 
 // ParseExpression - parse an expression, see the following CFG for details
@@ -278,7 +279,7 @@ func ParseStatement(p *Parser) (Statement, *error.Error) {
 // precedences:
 //
 // # #{}  >  为  >  等于，大于，etc.  >  且  >  或
-func ParseExpression(p *Parser) (Expression, *error.Error) {
+func ParseExpression(p *Parser) Expression {
 	var logicItemParser func(int) (Expression, *error.Error)
 	var logicItemTailParser func(int, Expression) (Expression, *error.Error)
 	// logicKeywords, ordered by precedence asc
@@ -358,7 +359,11 @@ func ParseExpression(p *Parser) (Expression, *error.Error) {
 		return finalExpr, nil
 	}
 
-	return logicItemParser(0)
+	expr, err := logicItemParser(0)
+	if err != nil {
+		panic(err)
+	}
+	return expr
 }
 
 // ParseArrayListIndexExpr -
@@ -407,11 +412,8 @@ func ParseArrayListIndexExpr(p *Parser) (Expression, *error.Error) {
 			return arrayListTailParser(idxExpr)
 		default: // lex.TypeMapQHash
 			// #1. parse Expr
-			nexpr, err := ParseExpression(p)
-			if err != nil {
-				return nil, err
-			}
-			idxExpr.Index = nexpr
+			idxExpr.Index = ParseExpression(p)
+
 			// #2. parse tail brace
 			p.consume(lex.TypeStmtQuoteR)
 
@@ -470,10 +472,7 @@ func ParseBasicExpr(p *Parser) (Expression, *error.Error) {
 		case lex.TypeArrayQuoteL:
 			return ParseArrayExpr(p)
 		case lex.TypeStmtQuoteL:
-			expr, err := ParseExpression(p)
-			if err != nil {
-				return nil, err
-			}
+			expr := ParseExpression(p)
 			p.consume(lex.TypeStmtQuoteR)
 
 			return expr, nil
@@ -515,16 +514,12 @@ func ParseArrayExpr(p *Parser) (unionMapList, *error.Error) {
 	)
 	// #1. consume item list (comma list)
 	exprs, err := parseCommaList(p, func(idx int, nodes []Node) (Node, *error.Error) {
-		expr, e1 := ParseExpression(p)
-		if e1 != nil {
-			return nil, e1
-		}
+		expr := ParseExpression(p)
+
 		// parse if there's double equals, then cont'd parsing right expr for hashmap
 		if match, _ := p.tryConsume([]lex.TokenType{lex.TypeMapData}); match {
-			exprR, e2 := ParseExpression(p)
-			if e2 != nil {
-				return nil, e2
-			}
+			exprR := ParseExpression(p)
+
 			return &NodeList{
 				Tag:      tagHashMap,
 				Children: []Node{expr, exprR},
@@ -628,7 +623,8 @@ func ParseFuncCallExpr(p *Parser) (*FuncCallExpr, *error.Error) {
 	if match2 {
 		// #2.1 parse comma list
 		nodes, err := parseCommaList(p, func(idx int, nodes []Node) (Node, *error.Error) {
-			return ParseExpression(p)
+			expr := ParseExpression(p)
+			return expr, nil
 		})
 		if err != nil {
 			return nil, err
@@ -732,10 +728,8 @@ func ParseVarDeclareStmt(p *Parser) (*VarDeclareStmt, *error.Error) {
 		}
 
 		// #3. consume expr
-		assignExpr, err2 := ParseExpression(p)
-		if err2 != nil {
-			return nil, err2
-		}
+		assignExpr := ParseExpression(p)
+
 		return &NodeList{
 			Tag:      tagWithAssignExpr,
 			Children: []Node{idExpr, assignExpr},
@@ -804,10 +798,8 @@ func ParseVarDeclareStmt(p *Parser) (*VarDeclareStmt, *error.Error) {
 //               ..     Block
 func ParseWhileLoopStmt(p *Parser) (*WhileLoopStmt, *error.Error) {
 	// #1. consume expr
-	trueExpr, err := ParseExpression(p)
-	if err != nil {
-		return nil, err
-	}
+	trueExpr := ParseExpression(p)
+
 	// #2. parse colon
 	p.consume(lex.TypeFuncCall)
 
@@ -918,9 +910,7 @@ func ParseBranchStmt(p *Parser, mainIndent int) (*BranchStmt, *error.Error) {
 		p.setLineMask(modeInline)
 		// #1. parse expr
 		if hState != stateElseBranch {
-			if condExpr, err = ParseExpression(p); err != nil {
-				return nil, err
-			}
+			condExpr = ParseExpression(p)
 		}
 
 		// #2. parse colon
