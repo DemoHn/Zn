@@ -115,15 +115,16 @@ func (p *Parser) validateLineMask(lastToken *lex.Token, newToken *lex.Token) *er
 
 // consume one token with denoted validTypes
 // if not, return syntaxError
-func (p *Parser) consume(validTypes ...lex.TokenType) *error.Error {
+func (p *Parser) consume(validTypes ...lex.TokenType) {
 	tkType := p.peek().Type
 	for _, item := range validTypes {
 		if item == tkType {
 			p.next()
-			return nil
+			return
 		}
 	}
-	return error.InvalidSyntax()
+	err := error.InvalidSyntax()
+	panic(err)
 }
 
 // trying to consume one token. if the token is valid in the given range of tokenTypes,
