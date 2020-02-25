@@ -413,9 +413,8 @@ func ParseArrayListIndexExpr(p *Parser) (Expression, *error.Error) {
 			}
 			idxExpr.Index = nexpr
 			// #2. parse tail brace
-			if err := p.consume(lex.TypeStmtQuoteR); err != nil {
-				return nil, err
-			}
+			p.consume(lex.TypeStmtQuoteR)
+
 			return arrayListTailParser(idxExpr)
 		}
 	}
@@ -475,9 +474,8 @@ func ParseBasicExpr(p *Parser) (Expression, *error.Error) {
 			if err != nil {
 				return nil, err
 			}
-			if err := p.consume(lex.TypeStmtQuoteR); err != nil {
-				return nil, err
-			}
+			p.consume(lex.TypeStmtQuoteR)
+
 			return expr, nil
 		case lex.TypeFuncQuoteL:
 			return ParseFuncCallExpr(p)
@@ -574,9 +572,8 @@ func ParseArrayExpr(p *Parser) (unionMapList, *error.Error) {
 	}
 
 	// #2. consume right brancket
-	if err := p.consume(lex.TypeArrayQuoteR); err != nil {
-		return nil, err
-	}
+	p.consume(lex.TypeArrayQuoteR)
+
 	// #3. return value
 	if subtype == subtypeArray {
 		return ar, nil
@@ -595,9 +592,8 @@ func tryParseEmptyMapList(p *Parser) (bool, unionMapList, *error.Error) {
 		case lex.TypeArrayQuoteR:
 			return true, &ArrayExpr{Items: []Expression{}}, nil
 		case lex.TypeMapData:
-			if err := p.consume(lex.TypeArrayQuoteR); err != nil {
-				return false, nil, err
-			}
+			p.consume(lex.TypeArrayQuoteR)
+
 			return true, &HashMapExpr{KVPair: []HashMapKeyValuePair{}}, nil
 		}
 	}
@@ -645,9 +641,8 @@ func ParseFuncCallExpr(p *Parser) (*FuncCallExpr, *error.Error) {
 	}
 
 	// #3. parse right quote
-	if err := p.consume(lex.TypeFuncQuoteR); err != nil {
-		return nil, err
-	}
+	p.consume(lex.TypeFuncQuoteR)
+
 	return callExpr, nil
 }
 
@@ -686,32 +681,6 @@ func ParseLogicISExpr(p *Parser) (*LogicExpr, *error.Error) {
 
 	return &LogicExpr{
 		Type:      logicType,
-		LeftExpr:  expr1,
-		RightExpr: expr2,
-	}, nil
-}
-
-// ParseLogicISNExpr - logic ISN 此 ... 不为 ...
-// CFG:
-// LogicIS -> 此 BasicExpr 为 BasicExpr
-func ParseLogicISNExpr(p *Parser) (*LogicExpr, *error.Error) {
-	// #1. parse expr1
-	expr1, err := ParseBasicExpr(p)
-	if err != nil {
-		return nil, err
-	}
-	// #2. consume LogicNot
-	if err := p.consume(lex.TypeLogicNotW); err != nil {
-		return nil, err
-	}
-	// #3. parse expr2
-	expr2, err := ParseBasicExpr(p)
-	if err != nil {
-		return nil, err
-	}
-
-	return &LogicExpr{
-		Type:      LogicISN,
 		LeftExpr:  expr1,
 		RightExpr: expr2,
 	}, nil
@@ -840,9 +809,8 @@ func ParseWhileLoopStmt(p *Parser) (*WhileLoopStmt, *error.Error) {
 		return nil, err
 	}
 	// #2. parse colon
-	if err := p.consume(lex.TypeFuncCall); err != nil {
-		return nil, err
-	}
+	p.consume(lex.TypeFuncCall)
+
 	// #3. parse block
 	expected, blockIndent := p.expectBlockIndent()
 	if !expected {
@@ -956,9 +924,7 @@ func ParseBranchStmt(p *Parser, mainIndent int) (*BranchStmt, *error.Error) {
 		}
 
 		// #2. parse colon
-		if err = p.consume(lex.TypeFuncCall); err != nil {
-			return nil, err
-		}
+		p.consume(lex.TypeFuncCall)
 		p.unsetLineMask(modeInline)
 
 		// #3. parse block statements

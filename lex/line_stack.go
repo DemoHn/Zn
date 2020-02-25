@@ -47,11 +47,13 @@ const (
 //
 // [ IDENTS ] [ TEXT TEXT TEXT ] [ CR LF ]
 // ^         ^                  ^
-// 1         1                  2
+// 0         1                  2
 //
+// 0: scanInit
 // 1: scanIndent
 // 2: scanEnd
 const (
+	scanInit   scanState = 0
 	scanIndent scanState = 1
 	scanEnd    scanState = 2
 )
@@ -99,6 +101,7 @@ func (ls *LineStack) SetIndent(count int, t IndentType) *error.Error {
 
 	// set scanCursor
 	ls.scanCursor.indents = indentNum
+	ls.scanCursor.scanState = scanIndent
 
 	return nil
 }
@@ -128,17 +131,16 @@ func (ls *LineStack) NewLine(index int) {
 	ls.lineBuffer = ls.lineBuffer[index:]
 	ls.scanCursor = scanCursor{
 		indents:   0,
-		scanState: scanIndent,
+		scanState: scanInit,
 	}
 	// add CurrentLine
 	ls.CurrentLine++
 }
 
-// HasScanIndent - determines if indents has been scanned properly
-// If so, further SPs and TABs would be regarded as normal whitespaces and will
-// be neglacted as usual.
-func (ls *LineStack) HasScanIndent() bool {
-	return ls.scanState == scanIndent && ls.indents != 0
+// onIndentStage - if the incoming SPACE/TAB should be regarded as indents
+// or normal spaces.
+func (ls *LineStack) onIndentStage() bool {
+	return ls.scanState == scanInit
 }
 
 // AppendLineBuffer - push data to lineBuffer

@@ -17,6 +17,7 @@ type Lexer struct {
 	chBuffer     []rune // the buffer for parsing & generating tokens
 	cursor       int
 	blockSize    int
+	beginLex     bool //
 }
 
 // NewLexer - new lexer
@@ -28,6 +29,7 @@ func NewLexer(in *InputStream) *Lexer {
 		chBuffer:    []rune{},
 		cursor:      -1,
 		blockSize:   defBlockSize,
+		beginLex:    true,
 	}
 }
 
@@ -89,6 +91,14 @@ func (l *Lexer) NextToken() (tok *Token, err *error.Error) {
 		handleDeferError(l, err)
 	}()
 
+	// For the first line, we use some tricks to determine if this line
+	// contains indents
+	if l.beginLex {
+		l.beginLex = false
+		if !util.Contains(l.peek(), []rune{SP, TAB, EOF}) {
+			l.SetIndent(0, IdetUnknown)
+		}
+	}
 head:
 	var ch = l.next()
 	switch ch {
@@ -99,7 +109,7 @@ head:
 	case SP, TAB:
 		// if indent has been scanned, it should be regarded as whitespaces
 		// (it's totally ignored)
-		if !l.HasScanIndent() {
+		if l.onIndentStage() {
 			l.parseIndents(ch)
 		} else {
 			l.consumeWhiteSpace(ch)
@@ -211,6 +221,10 @@ func (l *Lexer) parseCRLF(ch rune) []rune {
 	l.NewLine(l.cursor + 1)
 	l.cursor = -1
 
+	// to see if next line contains (potential) indents
+	if !util.Contains(l.peek(), []rune{SP, TAB, EOF}) {
+		l.SetIndent(0, IdetUnknown)
+	}
 	return rtn
 }
 
