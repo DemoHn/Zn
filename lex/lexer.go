@@ -42,7 +42,7 @@ func (l *Lexer) next() rune {
 			} else {
 				// throw the error globally
 				// it will be handled (recovered) in NextToken(),
-				// similiar with try-catch statement.
+				// similiar with C++'s try-catch statement.
 				panic(err)
 			}
 		}
@@ -84,21 +84,9 @@ func (l *Lexer) SetBlockSize(size int) {
 func (l *Lexer) NextToken() (tok *Token, err *error.Error) {
 	defer func() {
 		if r := recover(); r != nil {
-			if verr, ok := r.(*error.Error); ok {
-				err = verr
-				err.SetCursor(error.Cursor{
-					File:    l.InputStream.Scope,
-					LineNum: l.CurrentLine,
-					Text:    string(l.GetLineBuffer()),
-					ColNum:  0,
-				})
-			}
-		} else {
-			if err != nil {
-				// move and set cursor for the incoming error
-				l.moveAndSetCursor(err)
-			}
+			err, _ = r.(*error.Error)
 		}
+		handleDeferError(l, err)
 	}()
 
 head:
@@ -164,8 +152,25 @@ head:
 	return
 }
 
+func handleDeferError(l *Lexer, err *error.Error) {
+	if err != nil {
+		if err.GetErrorClass() == error.IOErrorClass {
+			// For I/O error, load current line buffer directly
+			// instead of moving cursor to line end (since it's impossible to retrieve line end)
+			err.SetCursor(error.Cursor{
+				File:    l.InputStream.Scope,
+				LineNum: l.CurrentLine,
+				Text:    string(l.GetLineBuffer()),
+				ColNum:  0,
+			})
+		} else {
+			l.moveAndSetCursor(err)
+		}
+	}
+}
+
 //// parsing logics
-func (l *Lexer) parseIndents(ch rune) *error.Error {
+func (l *Lexer) parseIndents(ch rune) {
 	count := 1
 	for l.peek() == ch {
 		count++
@@ -179,7 +184,9 @@ func (l *Lexer) parseIndents(ch rune) *error.Error {
 	case SP:
 		indentType = IdetSpace
 	}
-	return l.SetIndent(count, indentType)
+	if err := l.SetIndent(count, indentType); err != nil {
+		panic(err)
+	}
 }
 
 // parseCRLF and return the newline chars by the way
