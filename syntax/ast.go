@@ -80,12 +80,20 @@ type BlockStmt struct {
 	Children []Statement
 }
 
+// FunctionDeclareStmt - function declaration
+type FunctionDeclareStmt struct {
+	FuncName  *ID
+	ParamList []*ID
+	ExecBlock []lex.Token
+}
+
 // implement statement inteface
-func (vn *VarDeclareStmt) stmtNode() {}
-func (bk *BlockStmt) stmtNode()      {}
-func (bs *BranchStmt) stmtNode()     {}
-func (es *EmptyStmt) stmtNode()      {}
-func (wl *WhileLoopStmt) stmtNode()  {}
+func (vn *VarDeclareStmt) stmtNode()      {}
+func (bk *BlockStmt) stmtNode()           {}
+func (bs *BranchStmt) stmtNode()          {}
+func (es *EmptyStmt) stmtNode()           {}
+func (wl *WhileLoopStmt) stmtNode()       {}
+func (fn *FunctionDeclareStmt) stmtNode() {}
 
 //// Expressions (struct)
 
@@ -230,7 +238,7 @@ func ParseStatement(p *Parser) Statement {
 		lex.TypeCondW,
 		lex.TypeWhileLoopW,
 	}
-	match, tk := p.tryConsume(validTypes)
+	match, tk := p.tryConsume(validTypes...)
 	if match {
 		switch tk.Type {
 		case lex.TypeStmtSep, lex.TypeComment:
@@ -326,7 +334,7 @@ func ParseExpression(p *Parser) Expression {
 	logicItemTailParser = func(idx int, leftExpr Expression) Expression {
 		var finalExpr Expression
 		// #1. consume keyword
-		match, tk := p.tryConsume(logicKeywords[idx])
+		match, tk := p.tryConsume(logicKeywords[idx]...)
 		if !match {
 			return leftExpr
 		}
@@ -371,16 +379,12 @@ func ParseExpression(p *Parser) Expression {
 //       ->
 func ParseArrayListIndexExpr(p *Parser) Expression {
 	var arrayListTailParser func(Expression) Expression
-	var hashTypes = []lex.TokenType{
-		lex.TypeMapHash,
-		lex.TypeMapQHash,
-	}
 
 	arrayListTailParser = func(expr Expression) Expression {
 		idxExpr := &ArrayListIndexExpr{}
 
 		// #1. match hash mark
-		match, tk := p.tryConsume(hashTypes)
+		match, tk := p.tryConsume(lex.TypeMapHash, lex.TypeMapQHash)
 		if !match {
 			return expr
 		}
@@ -446,7 +450,7 @@ func ParseBasicExpr(p *Parser) Expression {
 		lex.TypeLogicNotW,
 	}
 
-	match, tk := p.tryConsume(validTypes)
+	match, tk := p.tryConsume(validTypes...)
 	if match {
 		switch tk.Type {
 		case lex.TypeIdentifier, lex.TypeVarQuote:
@@ -505,7 +509,7 @@ func ParseArrayExpr(p *Parser) unionMapList {
 		expr := ParseExpression(p)
 
 		// parse if there's double equals, then cont'd parsing right expr for hashmap
-		if match, _ := p.tryConsume([]lex.TokenType{lex.TypeMapData}); match {
+		if match, _ := p.tryConsume(lex.TypeMapData); match {
 			exprR := ParseExpression(p)
 
 			return &NodeList{
@@ -567,7 +571,7 @@ func tryParseEmptyMapList(p *Parser) (bool, unionMapList) {
 		lex.TypeMapData,     // for empty hashmap
 	}
 
-	if match, tk := p.tryConsume(emptyTrialTypes); match {
+	if match, tk := p.tryConsume(emptyTrialTypes...); match {
 		switch tk.Type {
 		case lex.TypeArrayQuoteR:
 			return true, &ArrayExpr{Items: []Expression{}}
@@ -591,12 +595,8 @@ func ParseFuncCallExpr(p *Parser) *FuncCallExpr {
 	var callExpr = &FuncCallExpr{
 		Params: []Expression{},
 	}
-	var validIDKeywords = []lex.TokenType{
-		lex.TypeVarQuote,
-		lex.TypeIdentifier,
-	}
 	// #1. parse ID
-	match, tk := p.tryConsume(validIDKeywords)
+	match, tk := p.tryConsume(lex.TypeVarQuote, lex.TypeIdentifier)
 	if !match {
 		panic(error.InvalidSyntax())
 	}
@@ -604,7 +604,7 @@ func ParseFuncCallExpr(p *Parser) *FuncCallExpr {
 	idExpr.SetLiteral(tk.Literal)
 	callExpr.FuncName = idExpr
 	// #2. parse colon (maybe there's no params)
-	match2, _ := p.tryConsume([]lex.TokenType{lex.TypeFuncCall})
+	match2, _ := p.tryConsume(lex.TypeFuncCall)
 	if match2 {
 		// #2.1 parse comma list
 		nodes := parseCommaList(p, func(idx int, nodes []Node) Node {
@@ -628,17 +628,12 @@ func ParseFuncCallExpr(p *Parser) *FuncCallExpr {
 // LogicIS -> 此 BasicExpr 为 BasicExpr
 // LogicIS -> 此 BasicExpr 不为 BasicExpr
 func ParseLogicISExpr(p *Parser) *LogicExpr {
-	var judgeTypes = []lex.TokenType{
-		lex.TypeLogicYesW,
-		lex.TypeLogicNotW,
-	}
-
 	var logicType LogicType
 	// #1. parse expr1
 	expr1 := ParseBasicExpr(p)
 
 	// #2. consume LogicYes or LogicNot
-	match, tk := p.tryConsume(judgeTypes)
+	match, tk := p.tryConsume(lex.TypeLogicYesW, lex.TypeLogicNotW)
 	if !match {
 		panic(error.InvalidSyntax())
 	}
@@ -675,11 +670,6 @@ func ParseVarDeclareStmt(p *Parser) *VarDeclareStmt {
 		AssignPair: []VDAssignPair{},
 	}
 
-	idTypes := []lex.TokenType{
-		lex.TypeVarQuote,
-		lex.TypeIdentifier,
-	}
-
 	const (
 		tagWithAssignExpr = 10
 	)
@@ -690,7 +680,7 @@ func ParseVarDeclareStmt(p *Parser) *VarDeclareStmt {
 		//         -> ID 为 expr
 		var idExpr *ID
 		// #1. consume ID first
-		if match, tk := p.tryConsume(idTypes); match {
+		if match, tk := p.tryConsume(lex.TypeVarQuote, lex.TypeIdentifier); match {
 			idExpr = new(ID)
 			idExpr.SetLiteral(tk.Literal)
 		} else {
@@ -698,7 +688,7 @@ func ParseVarDeclareStmt(p *Parser) *VarDeclareStmt {
 		}
 
 		// #2. consume LogicYes - if not, return ID directly
-		if match2, _ := p.tryConsume([]lex.TokenType{lex.TypeLogicYesW}); !match2 {
+		if match2, _ := p.tryConsume(lex.TypeLogicYesW); !match2 {
 			return idExpr
 		}
 
@@ -713,7 +703,7 @@ func ParseVarDeclareStmt(p *Parser) *VarDeclareStmt {
 	// #01. try to read colon
 	// if colon exists -> parse comma list by block
 	// if colon not exists -> parse comma list inline
-	if match, _ := p.tryConsume([]lex.TokenType{lex.TypeFuncCall}); match {
+	if match, _ := p.tryConsume(lex.TypeFuncCall); match {
 		expected, blockIndent := p.expectBlockIndent()
 		if !expected {
 			panic(error.InvalidSyntax())
@@ -853,7 +843,7 @@ func ParseBranchStmt(p *Parser, mainIndent int) *BranchStmt {
 				return stmt
 			}
 			// parse related keywords (如果 expr： , 再如 expr：, 否则：)
-			if match, tk := p.tryConsume(condKeywords); match {
+			if match, tk := p.tryConsume(condKeywords...); match {
 				if tk.Type == lex.TypeCondOtherW {
 					hState = stateOtherBranch
 				} else {
@@ -866,7 +856,7 @@ func ParseBranchStmt(p *Parser, mainIndent int) *BranchStmt {
 			if p.getPeekIndent() != mainIndent {
 				return stmt
 			}
-			if match, _ := p.tryConsume([]lex.TokenType{lex.TypeCondElseW}); !match {
+			if match, _ := p.tryConsume(lex.TypeCondElseW); !match {
 				return stmt
 			}
 		}
@@ -906,15 +896,33 @@ func ParseBranchStmt(p *Parser, mainIndent int) *BranchStmt {
 	return stmt
 }
 
+// ParseFunctionDeclareStmt - yield FunctionDeclareStmt node
+// CFG:
+// FDStmt -> 如何 FuncName ？
+//       ...     已知 ID1， ID2， ...
+//       ...     ExecBlock
+//       ...     ....
+//
+// FDStmt -> 如何 FuncName ？
+//       ...     ExecBlock
+//       ...     ....
+//
+func ParseFunctionDeclareStmt(p *Parser) *FunctionDeclareStmt {
+	var fdStmt = &FunctionDeclareStmt{
+		ParamList: []*ID{},
+		ExecBlock: []lex.Token{},
+	}
+
+	// #1. try to parse
+	// TODO
+	return fdStmt
+}
+
 // parse helpers
 func parseCommaList(p *Parser, consumer consumerFunc) []Node {
 	var node Node
-	//
 	list := []Node{}
 
-	var sepTypes = []lex.TokenType{
-		lex.TypeCommaSep,
-	}
 	// first item MUST be consumed!
 	node = consumer(0, list)
 	list = append(list, node)
@@ -922,7 +930,7 @@ func parseCommaList(p *Parser, consumer consumerFunc) []Node {
 	// iterate to get value
 	for {
 		// consume comma
-		if match, _ := p.tryConsume(sepTypes); !match {
+		if match, _ := p.tryConsume(lex.TypeCommaSep); !match {
 			// stop parsing immediately
 			return list
 		}
@@ -936,9 +944,6 @@ func parseCommaListBlock(p *Parser, blockIndent int, consumer consumerFunc) []No
 	//
 	list := []Node{}
 
-	var sepTypes = []lex.TokenType{
-		lex.TypeCommaSep,
-	}
 	// first token MUST be exactly on the indent
 	if p.getPeekIndent() != blockIndent {
 		panic(error.UnexpectedIndent())
@@ -953,7 +958,7 @@ func parseCommaListBlock(p *Parser, blockIndent int, consumer consumerFunc) []No
 			return list
 		}
 		// consume comma
-		if match, _ := p.tryConsume(sepTypes); !match {
+		if match, _ := p.tryConsume(lex.TypeCommaSep); !match {
 			// stop parsing immediately
 			return list
 		}
