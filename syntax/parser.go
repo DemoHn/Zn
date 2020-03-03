@@ -128,7 +128,7 @@ func (p *Parser) consume(validTypes ...lex.TokenType) {
 // will return its tokenType; if not, then nothing will happen.
 //
 // returns (matched, tokenType)
-func (p *Parser) tryConsume(validTypes []lex.TokenType) (bool, *lex.Token) {
+func (p *Parser) tryConsume(validTypes ...lex.TokenType) (bool, *lex.Token) {
 	tk := p.peek()
 	for _, vt := range validTypes {
 		if vt == tk.Type {
