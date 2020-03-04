@@ -395,14 +395,10 @@ func ParseArrayListIndexExpr(p *Parser) Expression {
 			// parse Number or String
 			tkIdx := p.peek()
 			if tkIdx.Type == lex.TypeNumber {
-				nexpr := new(Number)
-				nexpr.SetLiteral(tkIdx.Literal)
-				idxExpr.Index = nexpr
+				idxExpr.Index = newNumber(tkIdx)
 				p.next()
 			} else if tkIdx.Type == lex.TypeString {
-				sexpr := new(String)
-				sexpr.SetLiteral(tkIdx.Literal)
-				idxExpr.Index = sexpr
+				idxExpr.Index = newString(tkIdx)
 				p.next()
 			} else {
 				panic(error.InvalidSyntax())
@@ -454,17 +450,11 @@ func ParseBasicExpr(p *Parser) Expression {
 	if match {
 		switch tk.Type {
 		case lex.TypeIdentifier, lex.TypeVarQuote:
-			expr := new(ID)
-			expr.SetLiteral(tk.Literal)
-			return expr
+			return newID(tk)
 		case lex.TypeNumber:
-			expr := new(Number)
-			expr.SetLiteral(tk.Literal)
-			return expr
+			return newNumber(tk)
 		case lex.TypeString:
-			expr := new(String)
-			expr.SetLiteral(tk.Literal)
-			return expr
+			return newString(tk)
 		case lex.TypeArrayQuoteL:
 			return ParseArrayExpr(p)
 		case lex.TypeStmtQuoteL:
@@ -598,7 +588,7 @@ func ParseFuncCallExpr(p *Parser) *FuncCallExpr {
 	// #1. parse ID
 	match, tk := p.tryConsume(lex.TypeVarQuote, lex.TypeIdentifier)
 	if !match {
-		panic(error.InvalidSyntax())
+		panic(error.InvalidSyntaxCurr())
 	}
 	idExpr := new(ID)
 	idExpr.SetLiteral(tk.Literal)
@@ -635,7 +625,7 @@ func ParseLogicISExpr(p *Parser) *LogicExpr {
 	// #2. consume LogicYes or LogicNot
 	match, tk := p.tryConsume(lex.TypeLogicYesW, lex.TypeLogicNotW)
 	if !match {
-		panic(error.InvalidSyntax())
+		panic(error.InvalidSyntaxCurr())
 	}
 	switch tk.Type {
 	case lex.TypeLogicYesW:
@@ -684,7 +674,7 @@ func ParseVarDeclareStmt(p *Parser) *VarDeclareStmt {
 			idExpr = new(ID)
 			idExpr.SetLiteral(tk.Literal)
 		} else {
-			panic(error.InvalidSyntax())
+			panic(error.InvalidSyntaxCurr())
 		}
 
 		// #2. consume LogicYes - if not, return ID directly
@@ -706,7 +696,7 @@ func ParseVarDeclareStmt(p *Parser) *VarDeclareStmt {
 	if match, _ := p.tryConsume(lex.TypeFuncCall); match {
 		expected, blockIndent := p.expectBlockIndent()
 		if !expected {
-			panic(error.InvalidSyntax())
+			panic(error.InvalidSyntaxCurr())
 		}
 		nodes = parseCommaListBlock(p, blockIndent, consumer)
 	} else {
@@ -861,7 +851,6 @@ func ParseBranchStmt(p *Parser, mainIndent int) *BranchStmt {
 			}
 		}
 
-		p.setLineMask(modeInline)
 		// #1. parse expr
 		if hState != stateElseBranch {
 			condExpr = ParseExpression(p)
@@ -869,7 +858,6 @@ func ParseBranchStmt(p *Parser, mainIndent int) *BranchStmt {
 
 		// #2. parse colon
 		p.consume(lex.TypeFuncCall)
-		p.unsetLineMask(modeInline)
 
 		// #3. parse block statements
 		ok, blockIndent := p.expectBlockIndent()
@@ -913,12 +901,31 @@ func ParseFunctionDeclareStmt(p *Parser) *FunctionDeclareStmt {
 		ExecBlock: []lex.Token{},
 	}
 
-	// #1. try to parse
+	// #1. try to parse ID
+	match, tk := p.tryConsume(lex.TypeIdentifier, lex.TypeVarQuote)
+	if !match {
+		panic(error.InvalidSyntaxCurr())
+	}
+
+	fdStmt.FuncName = newID(tk)
+	// #2. try to parse question mark
+	p.consume(lex.TypeFuncDeclare)
+
+	// #3. parse block manually
+	ok, blockIndent := p.expectBlockIndent()
+	if !ok {
+		panic(error.UnexpectedIndent())
+	}
+
+	for (p.peek().Type != lex.TypeEOF) && p.getPeekIndent() == blockIndent {
+
+	}
+
 	// TODO
 	return fdStmt
 }
 
-// parse helpers
+//// parse helpers
 func parseCommaList(p *Parser, consumer consumerFunc) []Node {
 	var node Node
 	list := []Node{}
@@ -965,4 +972,22 @@ func parseCommaListBlock(p *Parser, blockIndent int, consumer consumerFunc) []No
 		node = consumer(len(list), list)
 		list = append(list, node)
 	}
+}
+
+func newID(tk *lex.Token) *ID {
+	id := new(ID)
+	id.SetLiteral(tk.Literal)
+	return id
+}
+
+func newNumber(tk *lex.Token) *Number {
+	num := new(Number)
+	num.SetLiteral(tk.Literal)
+	return num
+}
+
+func newString(tk *lex.Token) *String {
+	str := new(String)
+	str.SetLiteral(tk.Literal)
+	return str
 }
