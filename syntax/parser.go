@@ -8,7 +8,8 @@ import (
 // Parser - parse all nodes
 type Parser struct {
 	*lex.Lexer
-	tokens [3]*lex.Token
+	tokens       [3]*lex.Token
+	lineTermFlag bool
 }
 
 const (
@@ -18,7 +19,8 @@ const (
 // NewParser -
 func NewParser(l *lex.Lexer) *Parser {
 	return &Parser{
-		Lexer: l,
+		Lexer:        l,
+		lineTermFlag: false,
 	}
 }
 
@@ -168,16 +170,25 @@ func (p *Parser) meetStmtLineBreak() bool {
 	return false
 }
 
+func (p *Parser) resetLineTermFlag() {
+	p.lineTermFlag = false
+}
+
+func (p *Parser) setLineTermFlag() {
+	p.lineTermFlag = true
+}
+
 // consume one token with denoted validTypes
 // if not, return syntaxError
 func (p *Parser) consume(validTypes ...lex.TokenType) {
-	if p.meetStmtLineBreak() {
+	if p.meetStmtLineBreak() && p.lineTermFlag {
 		panic(error.InvalidSyntaxCurr())
 	}
 
 	tkType := p.peek().Type
 	for _, item := range validTypes {
 		if item == tkType {
+			p.setLineTermFlag()
 			p.next()
 			return
 		}
@@ -191,13 +202,13 @@ func (p *Parser) consume(validTypes ...lex.TokenType) {
 //
 // returns (matched, tokenType)
 func (p *Parser) tryConsume(validTypes ...lex.TokenType) (bool, *lex.Token) {
-	if p.meetStmtLineBreak() {
+	if p.meetStmtLineBreak() && p.lineTermFlag {
 		return false, nil
 	}
-
 	tk := p.peek()
 	for _, vt := range validTypes {
 		if vt == tk.Type {
+			p.setLineTermFlag()
 			p.next()
 			return true, tk
 		}

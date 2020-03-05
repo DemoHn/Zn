@@ -231,6 +231,8 @@ func (ai *ArrayListIndexExpr) stmtNode() {}
 //           -> Expr
 //           -> ；
 func ParseStatement(p *Parser) Statement {
+	defer p.resetLineTermFlag()
+
 	var validTypes = []lex.TokenType{
 		lex.TypeStmtSep,
 		lex.TypeComment,
