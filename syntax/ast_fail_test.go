@@ -23,7 +23,7 @@ const varDeclCasesFAIL = `
 
 令某变量，另一变量，1240为1000
 --------
-code=2250 line=3 col=10
+code=2250 line=3 col=9
 
 ========
 2. incomplete statement (additional comma) (InvalidSyntax)
@@ -33,7 +33,7 @@ code=2250 line=3 col=10
 【A，B】为1
     
 --------
-code=2250 line=3 col=0
+code=2250 line=2 col=9
 
 ========
 3. incomplete statement (InvalidSyntax)
@@ -64,7 +64,7 @@ A为B，
 B为C
     
 --------
-code=2250 line=3 col=0
+code=2250 line=2 col=1
 
 ========
 6. block indent unexpected #2
@@ -75,7 +75,7 @@ code=2250 line=3 col=0
         B为C
     
 --------
-code=2250 line=3 col=8
+code=2250 line=2 col=1
 
 ========
 7. block var declare - additional comma
@@ -86,7 +86,7 @@ code=2250 line=3 col=8
     B为C，
     
 --------
-code=2250 line=5 col=4
+code=2250 line=4 col=7
 
 ========
 7. block var declare - missing comma
@@ -103,7 +103,7 @@ code=2254 line=4 col=4
 --------
 令
 --------
-code=2250 line=1 col=1
+code=2250 line=1 col=0
 `
 
 const whileLoopCasesFAIL = `
@@ -168,7 +168,7 @@ code=2250 line=1 col=7
 --------
 （80000）
 --------
-code=2250 line=1 col=1
+code=2250 line=1 col=0
 
 ========
 3. without colon
