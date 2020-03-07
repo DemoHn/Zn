@@ -84,7 +84,7 @@ type BlockStmt struct {
 type FunctionDeclareStmt struct {
 	FuncName  *ID
 	ParamList []*ID
-	ExecBlock []lex.Token
+	ExecBlock []*lex.Token
 }
 
 // implement statement inteface
@@ -238,6 +238,7 @@ func ParseStatement(p *Parser) Statement {
 		lex.TypeComment,
 		lex.TypeDeclareW,
 		lex.TypeCondW,
+		lex.TypeFuncW,
 		lex.TypeWhileLoopW,
 	}
 	match, tk := p.tryConsume(validTypes...)
@@ -251,6 +252,8 @@ func ParseStatement(p *Parser) Statement {
 		case lex.TypeCondW:
 			mainIndent := p.getPeekIndent()
 			return ParseBranchStmt(p, mainIndent)
+		case lex.TypeFuncW:
+			return ParseFunctionDeclareStmt(p)
 		case lex.TypeWhileLoopW:
 			return ParseWhileLoopStmt(p)
 		}
@@ -900,7 +903,7 @@ func ParseBranchStmt(p *Parser, mainIndent int) *BranchStmt {
 func ParseFunctionDeclareStmt(p *Parser) *FunctionDeclareStmt {
 	var fdStmt = &FunctionDeclareStmt{
 		ParamList: []*ID{},
-		ExecBlock: []lex.Token{},
+		ExecBlock: []*lex.Token{},
 	}
 
 	// #1. try to parse ID
@@ -908,8 +911,8 @@ func ParseFunctionDeclareStmt(p *Parser) *FunctionDeclareStmt {
 	if !match {
 		panic(error.InvalidSyntaxCurr())
 	}
-
 	fdStmt.FuncName = newID(tk)
+
 	// #2. try to parse question mark
 	p.consume(lex.TypeFuncDeclare)
 
@@ -919,12 +922,42 @@ func ParseFunctionDeclareStmt(p *Parser) *FunctionDeclareStmt {
 		panic(error.UnexpectedIndent())
 	}
 
-	for (p.peek().Type != lex.TypeEOF) && p.getPeekIndent() == blockIndent {
-
+	paramListParsed := false
+	for (p.peek().Type != lex.TypeEOF) && p.getPeekIndent() >= blockIndent {
+		if !paramListParsed {
+			tryParseParamList(p, fdStmt)
+			paramListParsed = true
+		}
+		fdStmt.ExecBlock = append(fdStmt.ExecBlock, p.next())
 	}
 
-	// TODO
 	return fdStmt
+}
+
+// tryParseParamList - try to parse line
+func tryParseParamList(p *Parser, fdStmt *FunctionDeclareStmt) bool {
+	// #1. parse 已知
+	if match, _ := p.tryConsume(lex.TypeParamAssignW); !match {
+		return false
+	}
+	// #2. parse param list (ID or VarQuote)
+	nodes := parseCommaList(p, func(i int, n []Node) Node {
+		// parse ID or VarQuote
+		match, tk := p.tryConsume(lex.TypeVarQuote, lex.TypeIdentifier)
+		if !match {
+			panic(error.InvalidSyntaxCurr())
+		}
+
+		return newID(tk)
+	})
+
+	// transform nodes to actual identifiers
+	for _, node := range nodes {
+		// make sure node must be *ID type
+		v, _ := node.(*ID)
+		fdStmt.ParamList = append(fdStmt.ParamList, v)
+	}
+	return true
 }
 
 //// parse helpers
