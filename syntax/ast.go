@@ -82,9 +82,10 @@ type BlockStmt struct {
 
 // FunctionDeclareStmt - function declaration
 type FunctionDeclareStmt struct {
-	FuncName  *ID
-	ParamList []*ID
-	ExecBlock []*lex.Token
+	FuncName       *ID
+	ParamList      []*ID
+	ExecBaseIndent int
+	ExecBlock      []*lex.Token
 }
 
 // implement statement inteface
@@ -432,6 +433,7 @@ func ParseArrayListIndexExpr(p *Parser) Expression {
 // CFG:
 // BsE   -> { E }
 //       -> （ ID ： E，E，...）
+//       -> 以 ID （ ID ： E，E，...）
 //       -> 此 BsE 为 BsE
 //       -> 此 BsE 不为 BsE
 //       -> ID
@@ -449,6 +451,7 @@ func ParseBasicExpr(p *Parser) Expression {
 		lex.TypeFuncQuoteL,
 		lex.TypeObjSelfW,
 		lex.TypeLogicNotW,
+		lex.TypeVarOneW,
 	}
 
 	match, tk := p.tryConsume(validTypes...)
@@ -469,6 +472,8 @@ func ParseBasicExpr(p *Parser) Expression {
 			return expr
 		case lex.TypeFuncQuoteL:
 			return ParseFuncCallExpr(p)
+		case lex.TypeVarOneW:
+			return ParseVarOneExpr(p)
 		case lex.TypeObjSelfW:
 			return ParseLogicISExpr(p)
 		}
@@ -616,6 +621,32 @@ func ParseFuncCallExpr(p *Parser) *FuncCallExpr {
 	p.consume(lex.TypeFuncQuoteR)
 
 	return callExpr
+}
+
+// ParseVarOneExpr - 以 ... （‹方法名›）
+// CFG:
+//
+// FuncExpr -> 以 ID RawFuncExpr
+// RawFuncExpr -> （ ID ： commaList ）
+func ParseVarOneExpr(p *Parser) Expression {
+	// #1. parse ID
+	match, tk := p.tryConsume(lex.TypeVarQuote, lex.TypeIdentifier)
+	if !match {
+		panic(error.InvalidSyntaxCurr())
+	}
+
+	// #2. parse FuncExpr (maybe)
+	match2, _ := p.tryConsume(lex.TypeFuncQuoteL)
+	if !match2 {
+		// TODO: there may have other expressions
+		panic(error.InvalidSyntaxCurr())
+	}
+
+	// then suppose it's a funcCall expr
+	funcCallExpr := ParseFuncCallExpr(p)
+	// insert first ID into funcCall list
+	funcCallExpr.Params = append([]Expression{newID(tk)}, (funcCallExpr.Params)...)
+	return funcCallExpr
 }
 
 // ParseLogicISExpr - logic IS 此 ... 为 ...
@@ -918,6 +949,7 @@ func ParseFunctionDeclareStmt(p *Parser) *FunctionDeclareStmt {
 
 	// #3. parse block manually
 	ok, blockIndent := p.expectBlockIndent()
+	fdStmt.ExecBaseIndent = blockIndent
 	if !ok {
 		panic(error.UnexpectedIndent())
 	}
