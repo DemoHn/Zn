@@ -212,7 +212,7 @@ func evalFunctionCall(ctx *Context, expr *syntax.FuncCallExpr) (ZnValue, *error.
 		params = append(params, pval)
 	}
 	// exec function
-	return vval.Exec(params, ctx.SymbolTable)
+	return vval.Exec(params, ctx)
 }
 
 // evaluate logic combination expressions
