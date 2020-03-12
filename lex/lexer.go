@@ -797,8 +797,6 @@ func (l *Lexer) parseKeyword(ch rune, moveForward bool) (bool, *Token) {
 		tk = NewKeywordToken(TypeLogicAndW)
 	case GlyphZHI:
 		tk = NewKeywordToken(TypeObjDotW)
-	case GlyphDEo:
-		tk = NewKeywordToken(TypeObjDotIIW)
 	}
 
 	if tk != nil {
