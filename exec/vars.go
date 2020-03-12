@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/DemoHn/Zn/error"
+	"github.com/DemoHn/Zn/lex"
 	"github.com/DemoHn/Zn/syntax"
 )
 
@@ -236,7 +237,32 @@ func (zf *ZnFunction) Exec(params []ZnValue, ctx *Context) (ZnValue, *error.Erro
 		ctx.EnterScope()
 		defer ctx.ExitScope()
 		// check param length
-		//if len(params) != len(zf.)
+		if len(params) != len(zf.Node.ParamList) {
+			return nil, error.NewErrorSLOT("param list length mismatch!")
+		}
+
+		// set id
+		for idx, param := range params {
+			paramID := zf.Node.ParamList[idx]
+			ctx.SetData(paramID.GetLiteral(), param)
+		}
+
+		// parse and execute function template
+		l := lex.NewPreTokenLexer(ctx.Lexer.LineStack, zf.Node.ExecBlock)
+		p := syntax.NewParser(l)
+		prog, err := p.Parse()
+		if err != nil {
+			return nil, err
+		}
+
+		// exec function template content
+		if prog.Content == nil {
+			return NewZnNull(), nil
+		}
+		err = evalBlockStatement(ctx, prog.Content, true)
+		if err != nil {
+			return nil, err
+		}
 		return NewZnNull(), nil
 	}
 
