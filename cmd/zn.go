@@ -7,36 +7,25 @@ import (
 	"github.com/DemoHn/Zn/error"
 	"github.com/DemoHn/Zn/exec"
 	"github.com/DemoHn/Zn/lex"
-	"github.com/DemoHn/Zn/syntax"
 	"github.com/peterh/liner"
 )
 
 const version = "rv1"
 
 // ExecuteProgram - read file and execute
-func execProgram(stream *lex.InputStream, inpt *exec.Interpreter) (string, *error.Error) {
-	var nInpt *exec.Interpreter = inpt
-	if inpt == nil {
-		nInpt = exec.NewInterpreter()
-	}
+func execProgram(stream *lex.InputStream) (string, *error.Error) {
+	var ctx = new(exec.Context)
 
-	p := syntax.NewParser(lex.NewLexer(stream))
-	programNode, err := p.Parse()
-	if err != nil {
-		return "", err
-	}
-	fmt.Printf("node = \x1b[33m%s\x1b[0m\n", syntax.StringifyAST(programNode))
+	//fmt.Printf("node = \x1b[33m%s\x1b[0m\n", syntax.StringifyAST(programNode))
 
 	// return with green color
-	return fmt.Sprintf("\x1b[32m%s\x1b[0m\n", nInpt.Execute(programNode)), nil
+	return fmt.Sprintf("\x1b[32m%s\x1b[0m\n", ctx.Exec(stream)), nil
 }
 
 // EnterREPL - enter REPL to handle data
 func EnterREPL() {
 	linerR := liner.NewLiner()
 	linerR.SetCtrlCAborts(true)
-
-	inpt := exec.NewInterpreter()
 
 	for {
 		text, err := linerR.Prompt("Zn> ")
@@ -54,7 +43,7 @@ func EnterREPL() {
 		// append history
 		linerR.AppendHistory(text)
 
-		rtn, errE := execProgram(lex.NewTextStream(text), inpt)
+		rtn, errE := execProgram(lex.NewTextStream(text))
 		if errE != nil {
 			fmt.Printf("%s\n", errE.Display())
 			continue
@@ -74,7 +63,7 @@ func ExecProgram(file string) {
 	}
 	s.AddStream(in)
 
-	rtn, errE := execProgram(s.Streams[0], nil)
+	rtn, errE := execProgram(s.Streams[0])
 	if errE != nil {
 		fmt.Println(errE.Display())
 		return
