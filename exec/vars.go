@@ -231,6 +231,11 @@ func (zb *ZnBool) Rev() *ZnBool {
 // Exec - ZnFunction exec function
 func (zf *ZnFunction) Exec(params []ZnValue, st *SymbolTable) (ZnValue, *error.Error) {
 	// st -> global symbol table
+	// if executor = nil, then use default function executor
+	if zf.Executor == nil {
+		// TODO
+	}
+
 	return zf.Executor(params, zf.ExecBlock, st)
 }
 
