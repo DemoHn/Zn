@@ -25,7 +25,7 @@ func NewParser(l *lex.Lexer) *Parser {
 }
 
 // Parse - parse all tokens into an AST (stored as ProgramNode)
-func (p *Parser) Parse() (pg *Program, err *error.Error) {
+func (p *Parser) Parse() (block *BlockStmt, err *error.Error) {
 	defer func() {
 		if r := recover(); r != nil {
 			err, _ = r.(*error.Error)
@@ -37,17 +37,14 @@ func (p *Parser) Parse() (pg *Program, err *error.Error) {
 	p.next()
 	p.next()
 
-	pg = new(Program)
-
 	peekIndent := p.getPeekIndent()
 	// parse global block
-	pg.Content = ParseBlockStmt(p, peekIndent)
+	block = ParseBlockStmt(p, peekIndent)
 
 	// ensure there's no remaining token after parsing global block
 	if p.peek().Type != lex.TypeEOF {
 		err = error.UnexpectedEOF()
 	}
-
 	return
 }
 

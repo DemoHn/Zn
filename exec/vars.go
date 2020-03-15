@@ -250,16 +250,12 @@ func (zf *ZnFunction) Exec(params []ZnValue, ctx *Context) (ZnValue, *error.Erro
 		// parse and execute function template
 		l := lex.NewPreTokenLexer(ctx.Lexer.LineStack, zf.Node.ExecBlock)
 		p := syntax.NewParser(l)
-		prog, err := p.Parse()
+		block, err := p.Parse()
 		if err != nil {
 			return nil, err
 		}
 
-		// exec function template content
-		if prog.Content == nil {
-			return NewZnNull(), nil
-		}
-		err = evalBlockStatement(ctx, prog.Content, true)
+		err = evalBlockStatement(ctx, block, true)
 		if err != nil {
 			return nil, err
 		}
@@ -298,10 +294,10 @@ func NewZnNull() *ZnNull {
 }
 
 // NewZnFunction -
-func NewZnFunction(node *syntax.FunctionDeclareStmt, executor funcExecutor) *ZnFunction {
+func NewZnFunction(node *syntax.FunctionDeclareStmt) *ZnFunction {
 	return &ZnFunction{
 		Node:     node,
-		Executor: executor,
+		Executor: nil,
 	}
 }
 
