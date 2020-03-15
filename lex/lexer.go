@@ -112,8 +112,16 @@ func (l *Lexer) NextToken() (tok *Token, err *error.Error) {
 
 	// fetch token directly from
 	if l.usePreToken {
+		// for preTokenList = 0 (i.e. no token stored in tokenList)
+		if len(l.preTokenList) == 0 {
+			tok = NewTokenEOF(1, 0)
+			return
+		}
+		lastPreToken := l.preTokenList[len(l.preTokenList)-1]
 		if l.preTokenCursor >= len(l.preTokenList) {
-			err = error.NewErrorSLOT("exceed preToken range")
+			// get range from the last token
+			lastTkRange := lastPreToken.Range
+			tok = NewTokenEOF(lastTkRange.EndLine, lastTkRange.EndCol)
 			return
 		}
 		tok = l.preTokenList[l.preTokenCursor]

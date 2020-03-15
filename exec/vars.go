@@ -244,7 +244,10 @@ func (zf *ZnFunction) Exec(params []ZnValue, ctx *Context) (ZnValue, *error.Erro
 		// set id
 		for idx, param := range params {
 			paramID := zf.Node.ParamList[idx]
-			ctx.SetData(paramID.GetLiteral(), param)
+			err := ctx.Bind(paramID.GetLiteral(), param, false)
+			if err != nil {
+				return nil, err
+			}
 		}
 
 		// parse and execute function template

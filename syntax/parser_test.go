@@ -17,8 +17,13 @@ func TestPreTokenParser_OK(t *testing.T) {
 	cases := []preTokenCase{
 		{
 			name:    "preToken test #1",
-			input:   "（显示：120，《字符串》）",
-			astTree: "",
+			input:   "1024",
+			astTree: "$BK($NUM(1024))",
+		},
+		{
+			name:    "preToken test #2 (var-decl stmt)",
+			input:   "令A为B",
+			astTree: "$BK($VD(vars[]=($ID(A)) expr[]=($ID(B))))",
 		},
 	}
 
