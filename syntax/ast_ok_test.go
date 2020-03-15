@@ -566,12 +566,14 @@ func TestAST_OK(t *testing.T) {
 			l := lex.NewLexer(in)
 			p := NewParser(l)
 
-			node, err := p.Parse()
+			block, err := p.Parse()
+			pg := new(Program)
+			pg.Content = block
 			if err != nil {
 				t.Errorf("expect no error, got error: %s", err.Display())
 			} else {
 				// compare with ast
-				expect := StringifyAST(node)
+				expect := StringifyAST(pg)
 				got := formatASTstr(tt.astTree)
 
 				if expect != got {

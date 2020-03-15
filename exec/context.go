@@ -27,30 +27,34 @@ func (ctx *Context) Exec(in *lex.InputStream) string {
 	ctx.Parser = syntax.NewParser(ctx.Lexer)
 
 	// go
-	prog, err := ctx.Parser.Parse()
+	block, err := ctx.Parser.Parse()
 	if err != nil {
 		return err.Display()
 	}
-
-	if prog.Content == nil {
-		return ""
+	// execute program node
+	program := &syntax.Program{
+		Content: block,
 	}
-	err = evalBlockStatement(ctx, prog.Content, true)
 
-	// yield result
+	err = EvalProgram(ctx, program)
 	return ctx.print(err)
 }
 
 // print - print result
 func (ctx *Context) print(err *error.Error) string {
 	if err != nil {
-		return err.Error()
+		return err.Display()
 	}
 
 	return ctx.printSymbols()
 }
 
 //// Execute (Evaluate) statements
+
+// EvalProgram - evaluate global program (root node)
+func EvalProgram(ctx *Context, program *syntax.Program) *error.Error {
+	return evalBlockStatement(ctx, program.Content, true)
+}
 
 // EvalStatement - eval statement
 func EvalStatement(ctx *Context, stmt syntax.Statement) *error.Error {
@@ -63,6 +67,9 @@ func EvalStatement(ctx *Context, stmt syntax.Statement) *error.Error {
 		return evalBranchStmt(ctx, v)
 	case *syntax.EmptyStmt:
 		return nil
+	case *syntax.FunctionDeclareStmt:
+		fn := NewZnFunction(v)
+		return ctx.Bind(v.FuncName.GetLiteral(), fn, false)
 	case syntax.Expression:
 		_, err := EvalExpression(ctx, v)
 		return err
