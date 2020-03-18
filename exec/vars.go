@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	"github.com/DemoHn/Zn/error"
-	"github.com/DemoHn/Zn/lex"
 	"github.com/DemoHn/Zn/syntax"
 )
 
@@ -250,16 +249,8 @@ func (zf *ZnFunction) Exec(params []ZnValue, ctx *Context) (ZnValue, *error.Erro
 			}
 		}
 
-		// parse and execute function template
-		l := lex.NewPreTokenLexer(ctx.Lexer.LineStack, zf.Node.ExecBlock)
-		p := syntax.NewParser(l)
-		block, err := p.Parse()
-		if err != nil {
-			return nil, err
-		}
-
-		err = evalBlockStatement(ctx, block, true)
-		if err != nil {
+		// execute function template
+		if err := evalBlockStatement(ctx, zf.Node.ExecBlock, true); err != nil {
 			return nil, err
 		}
 		return NewZnNull(), nil

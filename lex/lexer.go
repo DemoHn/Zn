@@ -12,15 +12,12 @@ const (
 // Lexer is a structure that pe provides a set of tools to help tokenizing the code.
 type Lexer struct {
 	*LineStack
-	quoteStack     *util.RuneStack
-	*InputStream          // input stream
-	chBuffer       []rune // the buffer for parsing & generating tokens
-	cursor         int
-	blockSize      int
-	beginLex       bool //
-	usePreToken    bool
-	preTokenList   []*Token
-	preTokenCursor int
+	quoteStack   *util.RuneStack
+	*InputStream        // input stream
+	chBuffer     []rune // the buffer for parsing & generating tokens
+	cursor       int
+	blockSize    int
+	beginLex     bool
 }
 
 // NewLexer - new lexer
@@ -33,22 +30,6 @@ func NewLexer(in *InputStream) *Lexer {
 		cursor:      -1,
 		blockSize:   defBlockSize,
 		beginLex:    true,
-		usePreToken: false,
-	}
-}
-
-// NewPreTokenLexer fetches next token from a pre-defined (i.e. parsed)
-// token list instead of an unparsed source file. Usually used in parsing
-// function templates where its inner content has been parsed on first round.
-//
-// Therefore, when lexing via l.NextToken(), it will directly returns nth number
-// of preTokenList, and move forward preTokenCursor until its end.
-func NewPreTokenLexer(ls *LineStack, tokens []*Token) *Lexer {
-	return &Lexer{
-		LineStack:      ls,
-		usePreToken:    true,
-		preTokenList:   tokens,
-		preTokenCursor: 0,
 	}
 }
 
@@ -109,25 +90,6 @@ func (l *Lexer) NextToken() (tok *Token, err *error.Error) {
 		}
 		handleDeferError(l, err)
 	}()
-
-	// fetch token directly from
-	if l.usePreToken {
-		// for preTokenList = 0 (i.e. no token stored in tokenList)
-		if len(l.preTokenList) == 0 {
-			tok = NewTokenEOF(1, 0)
-			return
-		}
-		lastPreToken := l.preTokenList[len(l.preTokenList)-1]
-		if l.preTokenCursor >= len(l.preTokenList) {
-			// get range from the last token
-			lastTkRange := lastPreToken.Range
-			tok = NewTokenEOF(lastTkRange.EndLine, lastTkRange.EndCol)
-			return
-		}
-		tok = l.preTokenList[l.preTokenCursor]
-		l.preTokenCursor++
-		return
-	}
 
 	// For the first line, we use some tricks to determine if this line
 	// contains indents
