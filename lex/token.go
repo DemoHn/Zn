@@ -315,7 +315,6 @@ const (
 	TypeLogicOrW      TokenType = 69 // 或
 	TypeLogicAndW     TokenType = 70 // 且
 	TypeObjDotW       TokenType = 71 // 之
-	TypeObjDotIIW     TokenType = 72 // 的
 	TypeObjConstructW TokenType = 73 // 是为
 	TypeLogicEqualW   TokenType = 74 // 等于
 	TypeStaticSelfW   TokenType = 75 // 此之
