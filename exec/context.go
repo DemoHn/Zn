@@ -13,9 +13,12 @@ import (
 // gradually obselete this tree-walk based interperter.
 type Context struct {
 	*SymbolTable
+	*ArithInstance
 	// lastValue is set during the execution, usually stands for 'the return value' of a function.
 	lastValue ZnValue
 }
+
+const defaultPrecision = 8
 
 // Result - context execution result structure
 // NOTICE: when HasError = true, Value = nil, while execution yields error
@@ -32,6 +35,7 @@ type Result struct {
 func NewContext() *Context {
 	ctx := new(Context)
 	ctx.SymbolTable = NewSymbolTable()
+	ctx.ArithInstance = NewArithInstance(defaultPrecision)
 	ctx.lastValue = NewZnNull()
 	return ctx
 }
