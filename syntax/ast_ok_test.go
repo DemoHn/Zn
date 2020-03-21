@@ -20,6 +20,7 @@ var testSuccessSuites = []string{
 	arrayListCasesOK,
 	funcCallCasesOK,
 	branchStmtCasesOK,
+	stmtLineBreakCasesOK,
 }
 
 const logicExprCasesOK = `
@@ -499,6 +500,44 @@ $PG($BK($HM(
 )))
 `
 
+const stmtLineBreakCasesOK = `
+========
+1. a statement in oneline
+--------
+令香港记者为记者名为「张宝华」
+--------
+$PG($BK($VD(vars[]=($ID(香港记者)) expr[]=($VA(target=($ID(记者名)) assign=($STR(张宝华)))))))
+
+========
+2. a complete statement with comma list - 3 lines
+--------
+令树叶为「绿」，鲜花为「红」，
+    雪花为「白」，
+        墨水为「黑」
+--------
+$PG($BK($VD(vars[]=($ID(树叶)) expr[]=($STR(绿)) vars[]=($ID(鲜花)) expr[]=($STR(红)) vars[]=($ID(雪花)) expr[]=($STR(白)) vars[]=($ID(墨水)) expr[]=($STR(黑)))))
+
+========
+3. nested function calls with multiple lines
+--------
+（显示：
+    「1」，（调用参数：200，300，
+        4000，5000））
+--------
+$PG($BK($FN(name=($ID(显示)) params=($STR(1) $FN(name=($ID(调用参数)) params=($NUM(200) $NUM(300) $NUM(4000) $NUM(5000)))))))
+
+========
+4. multi-line hashmap
+--------
+令对象表为【
+		1 == 「象」，
+		2 == 「士」，
+		3 == 「车」
+】
+--------
+$PG($BK($VD(vars[]=($ID(对象表)) expr[]=($HM(key[]=($NUM(1)) value[]=($STR(象)) key[]=($NUM(2)) value[]=($STR(士)) key[]=($NUM(3)) value[]=($STR(车)))))))
+`
+
 type astSuccessCase struct {
 	name    string
 	input   string
@@ -527,12 +566,14 @@ func TestAST_OK(t *testing.T) {
 			l := lex.NewLexer(in)
 			p := NewParser(l)
 
-			node, err := p.Parse()
+			block, err := p.Parse()
+			pg := new(Program)
+			pg.Content = block
 			if err != nil {
 				t.Errorf("expect no error, got error: %s", err.Display())
 			} else {
 				// compare with ast
-				expect := StringifyAST(node)
+				expect := StringifyAST(pg)
 				got := formatASTstr(tt.astTree)
 
 				if expect != got {

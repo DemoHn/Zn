@@ -2,43 +2,25 @@ package cmd
 
 import (
 	"fmt"
+	"io"
 	"os"
 
-	"github.com/DemoHn/Zn/error"
 	"github.com/DemoHn/Zn/exec"
 	"github.com/DemoHn/Zn/lex"
-	"github.com/DemoHn/Zn/syntax"
 	"github.com/peterh/liner"
 )
 
-const version = "rv1"
-
-// ExecuteProgram - read file and execute
-func execProgram(stream *lex.InputStream, inpt *exec.Interpreter) (string, *error.Error) {
-	var nInpt *exec.Interpreter = inpt
-	if inpt == nil {
-		nInpt = exec.NewInterpreter()
-	}
-
-	p := syntax.NewParser(lex.NewLexer(stream))
-	programNode, err := p.Parse()
-	if err != nil {
-		return "", err
-	}
-	fmt.Printf("node = \x1b[33m%s\x1b[0m\n", syntax.StringifyAST(programNode))
-
-	// return with green color
-	return fmt.Sprintf("\x1b[32m%s\x1b[0m\n", nInpt.Execute(programNode)), nil
-}
+const version = "rv2"
 
 // EnterREPL - enter REPL to handle data
 func EnterREPL() {
 	linerR := liner.NewLiner()
 	linerR.SetCtrlCAborts(true)
+	ctx := exec.NewContext()
 
-	inpt := exec.NewInterpreter()
-
+	// REPL loop
 	for {
+		ctx.ResetLastValue()
 		text, err := linerR.Prompt("Zn> ")
 		if err != nil {
 			if err == liner.ErrPromptAborted {
@@ -50,40 +32,62 @@ func EnterREPL() {
 				os.Exit(0)
 			}
 		}
-
 		// append history
 		linerR.AppendHistory(text)
 
-		rtn, errE := execProgram(lex.NewTextStream(text), inpt)
-		if errE != nil {
-			fmt.Printf("%s\n", errE.Display())
-			continue
+		// execute program
+		in := lex.NewTextStream(text)
+		result := ctx.ExecuteCode(in)
+		if !result.HasError {
+			if result.Value != nil {
+				prettyDisplayValue(result.Value, os.Stdout)
+			}
+		} else {
+			fmt.Println(result.Error.Display())
 		}
-
-		fmt.Println(rtn)
 	}
 }
 
-// ExecProgram -
+// ExecProgram - exec program from file directly
 func ExecProgram(file string) {
-	s := lex.Source{}
+	ctx := exec.NewContext()
 	in, errF := lex.NewFileStream(file)
 	if errF != nil {
 		fmt.Println(errF.Display())
 		return
 	}
-	s.AddStream(in)
 
-	rtn, errE := execProgram(s.Streams[0], nil)
-	if errE != nil {
-		fmt.Println(errE.Display())
-		return
+	result := ctx.ExecuteCode(in)
+	// when exec program, unlike REPL, it's not necessary to print last executed value
+	if result.HasError {
+		fmt.Println(result.Error.Display())
 	}
-
-	fmt.Println(rtn)
 }
 
 // ShowVersion - show version
 func ShowVersion() {
 	fmt.Printf("Zn语言版本：%s\n", version)
+}
+
+//// display helpers
+func prettyDisplayValue(val exec.ZnValue, w io.Writer) {
+	var displayData = ""
+
+	switch v := val.(type) {
+	case *exec.ZnDecimal:
+		// FG color: Cyan (lightblue)
+		displayData = fmt.Sprintf("\x1b[38;5;147m%s\x1b[0m\n", v.String())
+	case *exec.ZnString:
+		// FG color: Green
+		displayData = fmt.Sprintf("\x1b[38;5;184m%s\x1b[0m\n", v.String())
+	case *exec.ZnBool:
+		// FG color: White
+		displayData = fmt.Sprintf("\x1b[38;5;231m%s\x1b[0m\n", v.String())
+	case *exec.ZnNull, *exec.ZnFunction:
+		displayData = fmt.Sprintf("‹\x1b[38;5;80m%s\x1b[0m›\n", v.String())
+	default:
+		displayData = fmt.Sprintf("%s\n", v.String())
+	}
+
+	w.Write([]byte(displayData))
 }

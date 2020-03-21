@@ -12,7 +12,7 @@ import (
 var predefinedValues map[string]ZnValue
 
 // （显示） 方法的执行逻辑
-var displayExecutor = func(params []ZnValue, execBlock *syntax.BlockStmt, st *SymbolTable) (ZnValue, *error.Error) {
+var displayExecutor = func(params []ZnValue, template *syntax.FunctionDeclareStmt, ctx *Context) (ZnValue, *error.Error) {
 	// display format string
 	var items = []string{}
 
@@ -24,7 +24,7 @@ var displayExecutor = func(params []ZnValue, execBlock *syntax.BlockStmt, st *Sy
 }
 
 // （递增）方法的执行逻辑
-var addValueExecutor = func(params []ZnValue, execBlock *syntax.BlockStmt, st *SymbolTable) (ZnValue, *error.Error) {
+var addValueExecutor = func(params []ZnValue, template *syntax.FunctionDeclareStmt, ctx *Context) (ZnValue, *error.Error) {
 	var decimals = []*ZnDecimal{}
 	// validate types
 	for _, param := range params {
@@ -48,7 +48,7 @@ var addValueExecutor = func(params []ZnValue, execBlock *syntax.BlockStmt, st *S
 }
 
 // （递减）方法的执行逻辑
-var subValueExecutor = func(params []ZnValue, execBlock *syntax.BlockStmt, st *SymbolTable) (ZnValue, *error.Error) {
+var subValueExecutor = func(params []ZnValue, template *syntax.FunctionDeclareStmt, ctx *Context) (ZnValue, *error.Error) {
 	var decimals = []*ZnDecimal{}
 	// validate types
 	for _, param := range params {
@@ -81,9 +81,9 @@ func init() {
 		"真":  NewZnBool(true),
 		"假":  NewZnBool(false),
 		"空":  NewZnNull(),
-		"显示": NewZnFunction("显示", nil, displayExecutor),
-		"递增": NewZnFunction("递增", nil, addValueExecutor),
-		"递加": NewZnFunction("递增", nil, addValueExecutor),
-		"递减": NewZnFunction("递减", nil, subValueExecutor),
+		"显示": NewZnNativeFunction("显示", displayExecutor),
+		"递增": NewZnNativeFunction("递增", addValueExecutor),
+		"递加": NewZnNativeFunction("递增", addValueExecutor),
+		"递减": NewZnNativeFunction("递减", subValueExecutor),
 	}
 }
