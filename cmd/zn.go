@@ -20,6 +20,7 @@ func EnterREPL() {
 
 	// REPL loop
 	for {
+		ctx.ResetLastValue()
 		text, err := linerR.Prompt("Zn> ")
 		if err != nil {
 			if err == liner.ErrPromptAborted {
@@ -57,11 +58,8 @@ func ExecProgram(file string) {
 	}
 
 	result := ctx.ExecuteCode(in)
-	if !result.HasError {
-		if result.Value != nil {
-			prettyDisplayValue(result.Value, os.Stdout)
-		}
-	} else {
+	// when exec program, unlike REPL, it's not necessary to print last executed value
+	if result.HasError {
 		fmt.Println(result.Error.Display())
 	}
 }
@@ -77,8 +75,8 @@ func prettyDisplayValue(val exec.ZnValue, w io.Writer) {
 
 	switch v := val.(type) {
 	case *exec.ZnDecimal:
-		// FG color: Magenta
-		displayData = fmt.Sprintf("\x1b[35m%s\x1b[0m\n", v.String())
+		// FG color: Cyan
+		displayData = fmt.Sprintf("\x1b[38;5;129 m%s\x1b[0m\n", v.String())
 	case *exec.ZnString:
 		// FG color: Green
 		displayData = fmt.Sprintf("\x1b[32m%s\x1b[0m\n", v.String())
