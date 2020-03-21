@@ -19,6 +19,16 @@ type Error struct {
 	displayMask uint16
 }
 
+// RawError <--> builtin 'error' type
+// this is to resolve naming confliction.
+//
+// usage:
+// OLD:    func A(int) error
+// NEW:    func A(int) RawError
+type RawError interface {
+	Error() string
+}
+
 // Error - display error text
 func (e *Error) Error() string {
 	return e.text

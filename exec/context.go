@@ -13,40 +13,45 @@ import (
 // gradually obselete this tree-walk based interperter.
 type Context struct {
 	*SymbolTable
-	*syntax.Parser
-	*lex.Lexer
+	// LastValue is set during the execution, usually stands for 'the return value' of a function.
+	LastValue ZnValue
 }
 
-// Exec -
-func (ctx *Context) Exec(in *lex.InputStream) string {
-	if ctx.SymbolTable == nil {
-		ctx.SymbolTable = NewSymbolTable()
-	}
-
-	ctx.Lexer = lex.NewLexer(in)
-	ctx.Parser = syntax.NewParser(ctx.Lexer)
-
-	// go
-	block, err := ctx.Parser.Parse()
-	if err != nil {
-		return err.Display()
-	}
-	// execute program node
-	program := &syntax.Program{
-		Content: block,
-	}
-
-	err = EvalProgram(ctx, program)
-	return ctx.print(err)
+// Result - context execution result structure
+// NOTICE: when HasError = true, Value = nil, while execution yields error
+//         when HasError = false, Error = nil, Value = <result Value>
+//
+// Currently only one value is supported as return argument.
+type Result struct {
+	HasError bool
+	Value    ZnValue
+	Error    *error.Error
 }
 
-// print - print result
-func (ctx *Context) print(err *error.Error) string {
-	if err != nil {
-		return err.Display()
-	}
+// NewContext - create new Zn Context for furthur execution
+func NewContext() *Context {
+	ctx := new(Context)
+	ctx.SymbolTable = NewSymbolTable()
+	ctx.LastValue = NewZnNull()
+	return ctx
+}
 
-	return ctx.printSymbols()
+// ExecuteCode - execute program from input Zn code (whether from file or REPL)
+func (ctx *Context) ExecuteCode(in *lex.InputStream) Result {
+	l := lex.NewLexer(in)
+	p := syntax.NewParser(l)
+	// start
+	block, err := p.Parse()
+	if err != nil {
+		return Result{true, nil, err}
+	}
+	// construct root (program) node
+	program := syntax.NewProgramNode(block)
+
+	if err := EvalProgram(ctx, program); err != nil {
+		return Result{true, nil, err}
+	}
+	return Result{false, ctx.LastValue, nil}
 }
 
 //// Execute (Evaluate) statements
@@ -71,8 +76,13 @@ func EvalStatement(ctx *Context, stmt syntax.Statement) *error.Error {
 		fn := NewZnFunction(v)
 		return ctx.Bind(v.FuncName.GetLiteral(), fn, false)
 	case syntax.Expression:
-		_, err := EvalExpression(ctx, v)
-		return err
+		res, err := EvalExpression(ctx, v)
+		if err != nil {
+			return err
+		}
+		// set LastValue
+		ctx.LastValue = res
+		return nil
 	default:
 		return error.NewErrorSLOT("invalid statement type")
 	}

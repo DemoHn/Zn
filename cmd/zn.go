@@ -2,31 +2,23 @@ package cmd
 
 import (
 	"fmt"
+	"io"
 	"os"
 
-	"github.com/DemoHn/Zn/error"
 	"github.com/DemoHn/Zn/exec"
 	"github.com/DemoHn/Zn/lex"
 	"github.com/peterh/liner"
 )
 
-const version = "rv1"
-
-// ExecuteProgram - read file and execute
-func execProgram(stream *lex.InputStream) (string, *error.Error) {
-	var ctx = new(exec.Context)
-
-	//fmt.Printf("node = \x1b[33m%s\x1b[0m\n", syntax.StringifyAST(programNode))
-
-	// return with green color
-	return fmt.Sprintf("\x1b[32m%s\x1b[0m\n", ctx.Exec(stream)), nil
-}
+const version = "rv2"
 
 // EnterREPL - enter REPL to handle data
 func EnterREPL() {
 	linerR := liner.NewLiner()
 	linerR.SetCtrlCAborts(true)
+	ctx := exec.NewContext()
 
+	// REPL loop
 	for {
 		text, err := linerR.Prompt("Zn> ")
 		if err != nil {
@@ -39,40 +31,65 @@ func EnterREPL() {
 				os.Exit(0)
 			}
 		}
-
 		// append history
 		linerR.AppendHistory(text)
 
-		rtn, errE := execProgram(lex.NewTextStream(text))
-		if errE != nil {
-			fmt.Printf("%s\n", errE.Display())
-			continue
+		// execute program
+		in := lex.NewTextStream(text)
+		result := ctx.ExecuteCode(in)
+		if !result.HasError {
+			if result.Value != nil {
+				prettyDisplayValue(result.Value, os.Stdout)
+			}
+		} else {
+			fmt.Println(result.Error.Display())
 		}
-
-		fmt.Println(rtn)
 	}
 }
 
-// ExecProgram -
+// ExecProgram - exec program from file directly
 func ExecProgram(file string) {
-	s := lex.Source{}
+	ctx := exec.NewContext()
 	in, errF := lex.NewFileStream(file)
 	if errF != nil {
 		fmt.Println(errF.Display())
 		return
 	}
-	s.AddStream(in)
 
-	rtn, errE := execProgram(s.Streams[0])
-	if errE != nil {
-		fmt.Println(errE.Display())
-		return
+	result := ctx.ExecuteCode(in)
+	if !result.HasError {
+		if result.Value != nil {
+			prettyDisplayValue(result.Value, os.Stdout)
+		}
+	} else {
+		fmt.Println(result.Error.Display())
 	}
-
-	fmt.Println(rtn)
 }
 
 // ShowVersion - show version
 func ShowVersion() {
 	fmt.Printf("Zn语言版本：%s\n", version)
+}
+
+//// display helpers
+func prettyDisplayValue(val exec.ZnValue, w io.Writer) {
+	var displayData = ""
+
+	switch v := val.(type) {
+	case *exec.ZnDecimal:
+		// FG color: Magenta
+		displayData = fmt.Sprintf("\x1b[35m%s\x1b[0m\n", v.String())
+	case *exec.ZnString:
+		// FG color: Green
+		displayData = fmt.Sprintf("\x1b[32m%s\x1b[0m\n", v.String())
+	case *exec.ZnBool:
+		// FG color: White
+		displayData = fmt.Sprintf("\x1b[37m%s\x1b[0m\n", v.String())
+	case *exec.ZnNull, *exec.ZnFunction:
+		displayData = fmt.Sprintf("‹\x1b[37m%s\x1b[0m›\n", v.String())
+	default:
+		displayData = fmt.Sprintf("%s\n", v.String())
+	}
+
+	w.Write([]byte(displayData))
 }
