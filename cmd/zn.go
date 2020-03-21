@@ -75,16 +75,16 @@ func prettyDisplayValue(val exec.ZnValue, w io.Writer) {
 
 	switch v := val.(type) {
 	case *exec.ZnDecimal:
-		// FG color: Cyan
-		displayData = fmt.Sprintf("\x1b[38;5;129 m%s\x1b[0m\n", v.String())
+		// FG color: Cyan (lightblue)
+		displayData = fmt.Sprintf("\x1b[38;5;147m%s\x1b[0m\n", v.String())
 	case *exec.ZnString:
 		// FG color: Green
-		displayData = fmt.Sprintf("\x1b[32m%s\x1b[0m\n", v.String())
+		displayData = fmt.Sprintf("\x1b[38;5;184m%s\x1b[0m\n", v.String())
 	case *exec.ZnBool:
 		// FG color: White
-		displayData = fmt.Sprintf("\x1b[37m%s\x1b[0m\n", v.String())
+		displayData = fmt.Sprintf("\x1b[38;5;231m%s\x1b[0m\n", v.String())
 	case *exec.ZnNull, *exec.ZnFunction:
-		displayData = fmt.Sprintf("‹\x1b[37m%s\x1b[0m›\n", v.String())
+		displayData = fmt.Sprintf("‹\x1b[38;5;80m%s\x1b[0m›\n", v.String())
 	default:
 		displayData = fmt.Sprintf("%s\n", v.String())
 	}
