@@ -19,6 +19,16 @@ type Error struct {
 	displayMask uint16
 }
 
+// RawError <--> builtin 'error' type
+// this is to resolve naming confliction.
+//
+// usage:
+// OLD:    func A(int) error
+// NEW:    func A(int) RawError
+type RawError interface {
+	Error() string
+}
+
 // Error - display error text
 func (e *Error) Error() string {
 	return e.text
@@ -219,6 +229,18 @@ var (
 	// 0x25 - nameError
 	// show errors while identifier not found or others related to identifiers.
 	nameError errorClass
+	// 0xFE - interrupts
+	// strictly, interrupts is NOT an error.
+	// we use interrupts to stop execution immediately.
+	// (like
+	//   ...
+	//   if err != nil {
+	//     return err
+	//   }
+	//   ...
+	// )
+	//
+	interrupts errorClass
 
 	errClassMap map[uint16]string
 )
@@ -231,6 +253,7 @@ const (
 	TypeErrorClass   = 0x23
 	IndexErrorClass  = 0x24
 	NameErrorClass   = 0x25
+	InterruptsClass  = 0xFE
 )
 
 // NewErrorSLOT - a tmp placeholder for adding errors quickly while the
@@ -250,6 +273,7 @@ func init() {
 	typeError = errorClass{0x23}
 	indexError = errorClass{0x24}
 	nameError = errorClass{0x25}
+	interrupts = errorClass{0xFE}
 
 	errClassMap = map[uint16]string{
 		0x0020: "语法错误", // from lex
@@ -258,5 +282,6 @@ func init() {
 		0x0023: "类型错误",
 		0x0024: "索引错误",
 		0x0025: "标识错误",
+		0x00FE: "数据中断（不应见到此消息显示）",
 	}
 }

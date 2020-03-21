@@ -185,3 +185,19 @@ func (ls *LineStack) GetLineIndent(lineNum int) int {
 
 	return -1
 }
+
+// GetParsedLineText - get line content of parsed lines (ie. not including current line)
+// NOTICE: when lineNum >= $currentLine, this will return an empty string!
+//
+func (ls *LineStack) GetParsedLineText(lineNum int) []rune {
+	if lineNum >= ls.CurrentLine {
+		return []rune{}
+	}
+
+	if lineNum > 0 {
+		lineInfo := ls.lines[lineNum-1]
+		return lineInfo.Source
+	}
+
+	return []rune{}
+}

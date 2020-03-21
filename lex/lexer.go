@@ -17,7 +17,7 @@ type Lexer struct {
 	chBuffer     []rune // the buffer for parsing & generating tokens
 	cursor       int
 	blockSize    int
-	beginLex     bool //
+	beginLex     bool
 }
 
 // NewLexer - new lexer
@@ -797,8 +797,6 @@ func (l *Lexer) parseKeyword(ch rune, moveForward bool) (bool, *Token) {
 		tk = NewKeywordToken(TypeLogicAndW)
 	case GlyphZHI:
 		tk = NewKeywordToken(TypeObjDotW)
-	case GlyphDEo:
-		tk = NewKeywordToken(TypeObjDotIIW)
 	}
 
 	if tk != nil {
