@@ -94,7 +94,7 @@ const (
 	GlyphBI rune = 0x6BD4
 	// GlyphQI - 其 - 其
 	GlyphQI rune = 0x5176
-	// GlyphCI - 此 - 此，止之
+	// GlyphCI - 此 - 此，此之
 	GlyphCI rune = 0x6B64
 	// GlyphZHU - 注 - 注
 	GlyphZHU rune = 0x6CE8
@@ -106,8 +106,6 @@ const (
 	GlyphQIE rune = 0x4E14
 	// GlyphZHI - 之 - 之
 	GlyphZHI rune = 0x4E4B
-	// GlyphDEo - 的 - 的
-	GlyphDEo rune = 0x7684
 	// GlyphZAI - 再 - 再如
 	GlyphZAI rune = 0x518D
 )
@@ -120,7 +118,7 @@ var KeywordLeads = []rune{
 	GlyphDE, GlyphFOU, GlyphMEI,
 	GlyphCHENG, GlyphZUO, GlyphDING, GlyphLEI,
 	GlyphQI, GlyphCI, GlyphHE, GlyphHUO, GlyphQIE,
-	GlyphDUI, GlyphZHI, GlyphDEo, GlyphZAI,
+	GlyphDUI, GlyphZHI, GlyphZAI,
 }
 
 //// 2. markers
@@ -317,7 +315,6 @@ const (
 	TypeLogicOrW      TokenType = 69 // 或
 	TypeLogicAndW     TokenType = 70 // 且
 	TypeObjDotW       TokenType = 71 // 之
-	TypeObjDotIIW     TokenType = 72 // 的
 	TypeObjConstructW TokenType = 73 // 是为
 	TypeLogicEqualW   TokenType = 74 // 等于
 	TypeStaticSelfW   TokenType = 75 // 此之
@@ -356,7 +353,6 @@ var KeywordTypeMap = map[TokenType][]rune{
 	TypeLogicOrW:      []rune{GlyphHUO},
 	TypeLogicAndW:     []rune{GlyphQIE},
 	TypeObjDotW:       []rune{GlyphZHI},
-	TypeObjDotIIW:     []rune{GlyphDEo},
 	TypeObjConstructW: []rune{GlyphSHI, GlyphWEI},
 	TypeLogicEqualW:   []rune{GlyphDENG, GlyphYU},
 	TypeStaticSelfW:   []rune{GlyphCI, GlyphZHI},
