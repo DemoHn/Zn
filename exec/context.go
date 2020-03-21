@@ -54,6 +54,23 @@ func (ctx *Context) ExecuteCode(in *lex.InputStream) Result {
 	return Result{false, ctx.lastValue, nil}
 }
 
+// ExecuteBlockAST - execute blockStmt AST
+// usually for executing function template
+func (ctx *Context) ExecuteBlockAST(block *syntax.BlockStmt) Result {
+	if err := EvalStmtBlock(ctx, block, true); err != nil {
+		// handle returnValue Interrupts
+		if err.GetErrorClass() != error.InterruptsClass {
+			return Result{true, nil, err}
+		}
+	}
+
+	lastValue := ctx.lastValue
+	if ctx.lastValue == nil {
+		lastValue = NewZnNull()
+	}
+	return Result{false, lastValue, nil}
+}
+
 // ResetLastValue - set ctx.lastValue -> nil
 func (ctx *Context) ResetLastValue() {
 	ctx.lastValue = nil
@@ -63,7 +80,7 @@ func (ctx *Context) ResetLastValue() {
 
 // EvalProgram - evaluate global program (root node)
 func EvalProgram(ctx *Context, program *syntax.Program) *error.Error {
-	return evalBlockStatement(ctx, program.Content, true)
+	return EvalStmtBlock(ctx, program.Content, true)
 }
 
 // EvalStatement - eval statement
@@ -80,6 +97,14 @@ func EvalStatement(ctx *Context, stmt syntax.Statement) *error.Error {
 	case *syntax.FunctionDeclareStmt:
 		fn := NewZnFunction(v)
 		return ctx.Bind(v.FuncName.GetLiteral(), fn, false)
+	case *syntax.FunctionReturnStmt:
+		res, err := EvalExpression(ctx, v.ReturnExpr)
+		if err != nil {
+			return err
+		}
+		ctx.lastValue = res
+		// send interrupt (NOT AN ACTUAL ERROR)
+		return error.ReturnValueInterrupt()
 	case syntax.Expression:
 		res, err := EvalExpression(ctx, v)
 		if err != nil {
@@ -112,8 +137,9 @@ func evalVarDeclareStmt(ctx *Context, stmt *syntax.VarDeclareStmt) *error.Error 
 	return nil
 }
 
-func evalBlockStatement(ctx *Context, block *syntax.BlockStmt, globalScope bool) *error.Error {
-	if !globalScope {
+// EvalStmtBlock -
+func EvalStmtBlock(ctx *Context, block *syntax.BlockStmt, sameScope bool) *error.Error {
+	if !sameScope {
 		ctx.EnterScope()
 		defer ctx.ExitScope()
 	}
@@ -144,7 +170,7 @@ func evalWhileLoopStmt(ctx *Context, loopStmt *syntax.WhileLoopStmt) *error.Erro
 			return nil
 		}
 		// #3. stmt block
-		if err := evalBlockStatement(ctx, loopStmt.LoopBlock, false); err != nil {
+		if err := EvalStmtBlock(ctx, loopStmt.LoopBlock, false); err != nil {
 			return nil
 		}
 	}
@@ -162,7 +188,7 @@ func evalBranchStmt(ctx *Context, branchStmt *syntax.BranchStmt) *error.Error {
 	}
 	// exec if-branch
 	if vIfExpr.Value == true {
-		return evalBlockStatement(ctx, branchStmt.IfTrueBlock, false)
+		return EvalStmtBlock(ctx, branchStmt.IfTrueBlock, false)
 	}
 	// exec else-if branches
 	for idx, otherExpr := range branchStmt.OtherExprs {
@@ -176,12 +202,12 @@ func evalBranchStmt(ctx *Context, branchStmt *syntax.BranchStmt) *error.Error {
 		}
 		// exec else-if branch
 		if vOtherExprI.Value == true {
-			return evalBlockStatement(ctx, branchStmt.OtherBlocks[idx], false)
+			return EvalStmtBlock(ctx, branchStmt.OtherBlocks[idx], false)
 		}
 	}
 	// exec else branch if possible
 	if branchStmt.HasElse == true {
-		return evalBlockStatement(ctx, branchStmt.IfFalseBlock, false)
+		return EvalStmtBlock(ctx, branchStmt.IfFalseBlock, false)
 	}
 	return nil
 }

@@ -249,11 +249,11 @@ func (zf *ZnFunction) Exec(params []ZnValue, ctx *Context) (ZnValue, *error.Erro
 			}
 		}
 
-		// execute function template
-		if err := evalBlockStatement(ctx, zf.Node.ExecBlock, true); err != nil {
-			return nil, err
+		result := ctx.ExecuteBlockAST(zf.Node.ExecBlock)
+		if result.HasError {
+			return nil, result.Error
 		}
-		return NewZnNull(), nil
+		return result.Value, nil
 	}
 
 	return zf.Executor(params, zf.Node, ctx)
