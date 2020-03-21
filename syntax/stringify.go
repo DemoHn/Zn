@@ -107,6 +107,16 @@ func StringifyAST(node Node) string {
 		return fmt.Sprintf("$IF(%s)", strings.Join(conds, " "))
 	case *WhileLoopStmt:
 		return fmt.Sprintf("$WL(expr=(%s) block=(%s))", StringifyAST(v.TrueExpr), StringifyAST(v.LoopBlock))
+	case *FunctionDeclareStmt:
+		paramsStr := []string{}
+		for _, p := range v.ParamList {
+			paramsStr = append(paramsStr, StringifyAST(p))
+		}
+
+		return fmt.Sprintf("$FN(name=(%s) params=(%s) blockTokens=(%s))",
+			StringifyAST(v.FuncName),
+			strings.Join(paramsStr, " "),
+			StringifyAST(v.ExecBlock))
 	case *BlockStmt:
 		var statements = []string{}
 		for _, stmt := range v.Children {

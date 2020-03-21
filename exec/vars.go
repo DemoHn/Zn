@@ -25,7 +25,7 @@ const (
 	compareTypeGt = 4
 )
 
-type funcExecutor func(params []ZnValue, execBlock *syntax.BlockStmt, st *SymbolTable) (ZnValue, *error.Error)
+type funcExecutor func(params []ZnValue, template *syntax.FunctionDeclareStmt, ctx *Context) (ZnValue, *error.Error)
 
 //////// Primitive Types Definition
 
@@ -50,9 +50,8 @@ type ZnNull struct{}
 
 // ZnFunction -
 type ZnFunction struct {
-	FuncName  string
-	ExecBlock *syntax.BlockStmt
-	Executor  funcExecutor
+	Node     *syntax.FunctionDeclareStmt
+	Executor funcExecutor
 }
 
 // ZnHashMap -
@@ -92,11 +91,11 @@ func (za *ZnArray) String() string {
 }
 
 func (zn *ZnNull) String() string {
-	return "‹空›"
+	return "空"
 }
 
 func (zf *ZnFunction) String() string {
-	return fmt.Sprintf("‹方法 %s›", zf.FuncName)
+	return fmt.Sprintf("方法： %s", zf.Node.FuncName.GetLiteral())
 }
 
 func (zh *ZnHashMap) String() string {
@@ -229,9 +228,35 @@ func (zb *ZnBool) Rev() *ZnBool {
 }
 
 // Exec - ZnFunction exec function
-func (zf *ZnFunction) Exec(params []ZnValue, st *SymbolTable) (ZnValue, *error.Error) {
+func (zf *ZnFunction) Exec(params []ZnValue, ctx *Context) (ZnValue, *error.Error) {
 	// st -> global symbol table
-	return zf.Executor(params, zf.ExecBlock, st)
+	// if executor = nil, then use default function executor
+	if zf.Executor == nil {
+		// enter scope to add values
+		ctx.EnterScope()
+		defer ctx.ExitScope()
+		// check param length
+		if len(params) != len(zf.Node.ParamList) {
+			return nil, error.NewErrorSLOT("param list length mismatch!")
+		}
+
+		// set id
+		for idx, param := range params {
+			paramID := zf.Node.ParamList[idx]
+			err := ctx.Bind(paramID.GetLiteral(), param, false)
+			if err != nil {
+				return nil, err
+			}
+		}
+
+		result := ctx.ExecuteBlockAST(zf.Node.ExecBlock)
+		if result.HasError {
+			return nil, result.Error
+		}
+		return result.Value, nil
+	}
+
+	return zf.Executor(params, zf.Node, ctx)
 }
 
 //////// New[Type] Constructors
@@ -263,11 +288,23 @@ func NewZnNull() *ZnNull {
 }
 
 // NewZnFunction -
-func NewZnFunction(funcName string, execBlock *syntax.BlockStmt, executor funcExecutor) *ZnFunction {
+func NewZnFunction(node *syntax.FunctionDeclareStmt) *ZnFunction {
 	return &ZnFunction{
-		FuncName:  funcName,
-		ExecBlock: execBlock,
-		Executor:  executor,
+		Node:     node,
+		Executor: nil,
+	}
+}
+
+// NewZnNativeFunction - new Zn native function
+func NewZnNativeFunction(name string, executor funcExecutor) *ZnFunction {
+	id := new(syntax.ID)
+	id.SetLiteral([]rune(name))
+
+	return &ZnFunction{
+		Node: &syntax.FunctionDeclareStmt{
+			FuncName: id,
+		},
+		Executor: executor,
 	}
 }
 
