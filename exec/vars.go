@@ -91,11 +91,11 @@ func (za *ZnArray) String() string {
 }
 
 func (zn *ZnNull) String() string {
-	return "‹空›"
+	return "空"
 }
 
 func (zf *ZnFunction) String() string {
-	return fmt.Sprintf("‹方法 %s›", zf.Node.FuncName)
+	return fmt.Sprintf("方法： %s", zf.Node.FuncName.GetLiteral())
 }
 
 func (zh *ZnHashMap) String() string {

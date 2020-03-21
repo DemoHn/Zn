@@ -1107,3 +1107,27 @@ func newString(tk *lex.Token) *String {
 	str.SetLiteral(tk.Literal)
 	return str
 }
+
+// public helpers
+
+// NewProgramNode -
+func NewProgramNode(block *BlockStmt) *Program {
+	return &Program{
+		Content: block,
+	}
+}
+
+// NewIDNode -
+func NewIDNode(tk *lex.Token) *ID {
+	return newID(tk)
+}
+
+// NewNumberNode - 
+func NewNumberNode(tk *lex.Token) *Number {
+	return newNumber(tk)
+}
+
+// NewStringNode -
+func NewStringNode(tk *lex.Token) *String {
+	return newString(tk)
+}
