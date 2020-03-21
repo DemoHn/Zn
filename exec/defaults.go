@@ -2,7 +2,6 @@ package exec
 
 import (
 	"fmt"
-	"math/big"
 	"strings"
 
 	"github.com/DemoHn/Zn/error"
@@ -35,15 +34,7 @@ var addValueExecutor = func(params []ZnValue, template *syntax.FunctionDeclareSt
 		decimals = append(decimals, vparam)
 	}
 
-	sum, _ := NewZnDecimal("0")
-	for _, decimal := range decimals {
-		r1, r2 := rescalePair(sum, decimal)
-		newco := new(big.Int).Add(r1.co, r2.co)
-
-		sum.co = newco
-		sum.exp = r1.exp
-	}
-
+	sum := ctx.ArithInstance.Add(decimals...)
 	return sum, nil
 }
 
@@ -59,16 +50,7 @@ var subValueExecutor = func(params []ZnValue, template *syntax.FunctionDeclareSt
 		decimals = append(decimals, vparam)
 	}
 
-	sum, _ := NewZnDecimal("0")
-	for _, decimal := range decimals {
-		r1, r2 := rescalePair(sum, decimal)
-		negco := new(big.Int).Neg(r2.co)
-		newco := new(big.Int).Add(r1.co, negco)
-
-		sum.co = newco
-		sum.exp = r1.exp
-	}
-
+	sum := ctx.ArithInstance.Sub(decimals...)
 	return sum, nil
 }
 
@@ -78,12 +60,13 @@ func init() {
 	//// any execution procedure.
 	//// NOTICE: those variables are all constants!
 	predefinedValues = map[string]ZnValue{
-		"真":  NewZnBool(true),
-		"假":  NewZnBool(false),
-		"空":  NewZnNull(),
-		"显示": NewZnNativeFunction("显示", displayExecutor),
-		"递增": NewZnNativeFunction("递增", addValueExecutor),
-		"递加": NewZnNativeFunction("递增", addValueExecutor),
-		"递减": NewZnNativeFunction("递减", subValueExecutor),
+		"真":   NewZnBool(true),
+		"假":   NewZnBool(false),
+		"空":   NewZnNull(),
+		"显示":  NewZnNativeFunction("显示", displayExecutor),
+		"X+Y": NewZnNativeFunction("X+Y", addValueExecutor),
+		"求和":  NewZnNativeFunction("X+Y", addValueExecutor),
+		"X-Y": NewZnNativeFunction("X-Y", subValueExecutor),
+		"求差":  NewZnNativeFunction("X-Y", subValueExecutor),
 	}
 }
