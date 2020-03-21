@@ -13,8 +13,8 @@ import (
 // gradually obselete this tree-walk based interperter.
 type Context struct {
 	*SymbolTable
-	// LastValue is set during the execution, usually stands for 'the return value' of a function.
-	LastValue ZnValue
+	// lastValue is set during the execution, usually stands for 'the return value' of a function.
+	lastValue ZnValue
 }
 
 // Result - context execution result structure
@@ -32,7 +32,7 @@ type Result struct {
 func NewContext() *Context {
 	ctx := new(Context)
 	ctx.SymbolTable = NewSymbolTable()
-	ctx.LastValue = NewZnNull()
+	ctx.lastValue = NewZnNull()
 	return ctx
 }
 
@@ -51,7 +51,12 @@ func (ctx *Context) ExecuteCode(in *lex.InputStream) Result {
 	if err := EvalProgram(ctx, program); err != nil {
 		return Result{true, nil, err}
 	}
-	return Result{false, ctx.LastValue, nil}
+	return Result{false, ctx.lastValue, nil}
+}
+
+// ResetLastValue - set ctx.lastValue -> nil
+func (ctx *Context) ResetLastValue() {
+	ctx.lastValue = nil
 }
 
 //// Execute (Evaluate) statements
@@ -80,8 +85,8 @@ func EvalStatement(ctx *Context, stmt syntax.Statement) *error.Error {
 		if err != nil {
 			return err
 		}
-		// set LastValue
-		ctx.LastValue = res
+		// set lastValue
+		ctx.lastValue = res
 		return nil
 	default:
 		return error.NewErrorSLOT("invalid statement type")
