@@ -80,18 +80,25 @@ func NewLineStack() *LineStack {
 // 1. inconsist indentType
 // 2. when IndentType = SPACE, the count is not 4 * N chars
 func (ls *LineStack) SetIndent(count int, t IndentType) *error.Error {
-	if t == IdetSpace && count%4 != 0 {
-		return error.InvalidIndentSpaceCount(count)
-	}
-
-	if ls.IndentType == IdetUnknown && t != IdetUnknown {
-		ls.IndentType = t
-	} else {
+	switch t {
+	case IdetUnknown:
+		if count > 0 && ls.IndentType != t {
+			return error.InvalidIndentType(ls.IndentType, t)
+		}
+	case IdetSpace, IdetTab:
+		// init ls.IndentType
+		if ls.IndentType == IdetUnknown {
+			ls.IndentType = t
+		}
+		// when t = space, the character count must be 4 * N
+		if t == IdetSpace && count%4 != 0 {
+			return error.InvalidIndentSpaceCount(count)
+		}
+		// when t does not match indentType, throw error
 		if ls.IndentType != t {
 			return error.InvalidIndentType(ls.IndentType, t)
 		}
 	}
-
 	// when indentType = TAB, count = indents
 	// otherwise, count = indents * 4
 	indentNum := count
