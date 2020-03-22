@@ -103,11 +103,15 @@ func (ai *ArithInstance) Div(decimal1 *ZnDecimal, others ...*ZnDecimal) (*ZnDeci
 		}
 
 		// exp10x = 10^(precision)
+		var precFactor = ai.precision - 1
+		if adjust < 0 {
+			precFactor = ai.precision
+		}
 		var exp10x *big.Int
 		if ai.precision >= 18 {
-			exp10x = new(big.Int).Exp(num10, num10, big.NewInt(int64(ai.precision-1)))
+			exp10x = new(big.Int).Exp(num10, num10, big.NewInt(int64(precFactor-1)))
 		} else {
-			exp10x = big.NewInt(int64(math.Pow10(ai.precision)))
+			exp10x = big.NewInt(int64(math.Pow10(precFactor)))
 		}
 
 		// do div
@@ -122,7 +126,7 @@ func (ai *ArithInstance) Div(decimal1 *ZnDecimal, others ...*ZnDecimal) (*ZnDeci
 
 		// get final result
 		result.co = xq
-		result.exp = result.exp - item.exp - adjust - ai.precision
+		result.exp = result.exp - item.exp - adjust - precFactor
 	}
 	return result, nil
 }
