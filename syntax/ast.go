@@ -1122,7 +1122,7 @@ func NewIDNode(tk *lex.Token) *ID {
 	return newID(tk)
 }
 
-// NewNumberNode - 
+// NewNumberNode -
 func NewNumberNode(tk *lex.Token) *Number {
 	return newNumber(tk)
 }

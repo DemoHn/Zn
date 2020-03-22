@@ -191,35 +191,3 @@ func (zd *ZnDecimal) asInteger() (int, *error.Error) {
 	}
 	return int(zd.co.Int64()), nil
 }
-
-//// decimal helpers
-
-// rescalePair - make exps to be same
-func rescalePair(d1 *ZnDecimal, d2 *ZnDecimal) (*ZnDecimal, *ZnDecimal) {
-	intTen := big.NewInt(10)
-
-	if d1.exp == d2.exp {
-		return d1, d2
-	}
-	if d1.exp > d2.exp {
-		// return new d1
-		diff := d1.exp - d2.exp
-
-		expVal := new(big.Int).Exp(intTen, big.NewInt(int64(diff)), nil)
-		nD1 := &ZnDecimal{
-			co:  new(big.Int).Mul(d1.co, expVal),
-			exp: d2.exp,
-		}
-		return nD1, d2
-	}
-	// d1.exp < d2.exp
-	// return new d2
-	diff := d2.exp - d1.exp
-
-	expVal := new(big.Int).Exp(intTen, big.NewInt(int64(diff)), nil)
-	nD2 := &ZnDecimal{
-		co:  new(big.Int).Mul(d2.co, expVal),
-		exp: d1.exp,
-	}
-	return d1, nD2
-}
