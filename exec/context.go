@@ -147,7 +147,6 @@ func EvalStmtBlock(ctx *Context, block *syntax.BlockStmt, sameScope bool) *error
 		ctx.EnterScope()
 		defer ctx.ExitScope()
 	}
-
 	for _, stmt := range block.Children {
 		err := EvalStatement(ctx, stmt)
 		if err != nil {

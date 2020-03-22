@@ -78,6 +78,23 @@ var mulValueExecutor = func(params []ZnValue, template *syntax.FunctionDeclareSt
 	return sum, nil
 }
 
+var divValueExecutor = func(params []ZnValue, template *syntax.FunctionDeclareStmt, ctx *Context) (ZnValue, *error.Error) {
+	var decimals = []*ZnDecimal{}
+	if len(params) == 0 {
+		return nil, error.NewErrorSLOT("参数长度应大于0")
+	}
+	// validate types
+	for _, param := range params {
+		vparam, ok := param.(*ZnDecimal)
+		if !ok {
+			return nil, error.NewErrorSLOT("入参皆须为「数值」类型")
+		}
+		decimals = append(decimals, vparam)
+	}
+
+	return ctx.ArithInstance.Div(decimals[0], decimals[1:]...)
+}
+
 // init function
 func init() {
 	//// predefined values - those variables (symbols) are defined before
@@ -94,5 +111,7 @@ func init() {
 		"求差":  NewZnNativeFunction("X-Y", subValueExecutor),
 		"X*Y": NewZnNativeFunction("X*Y", mulValueExecutor),
 		"求积":  NewZnNativeFunction("X*Y", mulValueExecutor),
+		"X/Y": NewZnNativeFunction("X/Y", divValueExecutor),
+		"求商":  NewZnNativeFunction("X/Y", divValueExecutor),
 	}
 }

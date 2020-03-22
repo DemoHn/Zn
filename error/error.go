@@ -229,6 +229,10 @@ var (
 	// 0x25 - nameError
 	// show errors while identifier not found or others related to identifiers.
 	nameError errorClass
+	// 0x26 - arithError
+	// trigger error happened on arithmetic operation (such as div)
+	arithError errorClass
+
 	// 0xFE - interrupts
 	// strictly, interrupts is NOT an error.
 	// we use interrupts to stop execution immediately.
@@ -253,6 +257,7 @@ const (
 	TypeErrorClass   = 0x23
 	IndexErrorClass  = 0x24
 	NameErrorClass   = 0x25
+	ArithErrorClass  = 0x26
 	InterruptsClass  = 0xFE
 )
 
@@ -273,15 +278,17 @@ func init() {
 	typeError = errorClass{0x23}
 	indexError = errorClass{0x24}
 	nameError = errorClass{0x25}
+	arithError = errorClass{0x26}
 	interrupts = errorClass{0xFE}
 
 	errClassMap = map[uint16]string{
-		0x0020: "语法错误", // from lex
-		0x0021: "I/O错误",
-		0x0022: "语法错误", // from parser
-		0x0023: "类型错误",
-		0x0024: "索引错误",
-		0x0025: "标识错误",
-		0x00FE: "数据中断（不应见到此消息显示）",
+		0x20: "语法错误", // from lex
+		0x21: "I/O错误",
+		0x22: "语法错误", // from parser
+		0x23: "类型错误",
+		0x24: "索引错误",
+		0x25: "标识错误",
+		0x26: "算术错误",
+		0xFE: "数据中断（不应见到此消息显示）",
 	}
 }
