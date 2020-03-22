@@ -25,6 +25,9 @@ var displayExecutor = func(params []ZnValue, template *syntax.FunctionDeclareStm
 // （递增）方法的执行逻辑
 var addValueExecutor = func(params []ZnValue, template *syntax.FunctionDeclareStmt, ctx *Context) (ZnValue, *error.Error) {
 	var decimals = []*ZnDecimal{}
+	if len(params) == 0 {
+		return nil, error.NewErrorSLOT("参数长度应大于0")
+	}
 	// validate types
 	for _, param := range params {
 		vparam, ok := param.(*ZnDecimal)
@@ -34,13 +37,16 @@ var addValueExecutor = func(params []ZnValue, template *syntax.FunctionDeclareSt
 		decimals = append(decimals, vparam)
 	}
 
-	sum := ctx.ArithInstance.Add(decimals...)
+	sum := ctx.ArithInstance.Add(decimals[0], decimals[1:]...)
 	return sum, nil
 }
 
 // （递减）方法的执行逻辑
 var subValueExecutor = func(params []ZnValue, template *syntax.FunctionDeclareStmt, ctx *Context) (ZnValue, *error.Error) {
 	var decimals = []*ZnDecimal{}
+	if len(params) == 0 {
+		return nil, error.NewErrorSLOT("参数长度应大于0")
+	}
 	// validate types
 	for _, param := range params {
 		vparam, ok := param.(*ZnDecimal)
@@ -50,7 +56,25 @@ var subValueExecutor = func(params []ZnValue, template *syntax.FunctionDeclareSt
 		decimals = append(decimals, vparam)
 	}
 
-	sum := ctx.ArithInstance.Sub(decimals...)
+	sum := ctx.ArithInstance.Sub(decimals[0], decimals[1:]...)
+	return sum, nil
+}
+
+var mulValueExecutor = func(params []ZnValue, template *syntax.FunctionDeclareStmt, ctx *Context) (ZnValue, *error.Error) {
+	var decimals = []*ZnDecimal{}
+	if len(params) == 0 {
+		return nil, error.NewErrorSLOT("参数长度应大于0")
+	}
+	// validate types
+	for _, param := range params {
+		vparam, ok := param.(*ZnDecimal)
+		if !ok {
+			return nil, error.NewErrorSLOT("入参皆须为「数值」类型")
+		}
+		decimals = append(decimals, vparam)
+	}
+
+	sum := ctx.ArithInstance.Mul(decimals[0], decimals[1:]...)
 	return sum, nil
 }
 
@@ -68,5 +92,7 @@ func init() {
 		"求和":  NewZnNativeFunction("X+Y", addValueExecutor),
 		"X-Y": NewZnNativeFunction("X-Y", subValueExecutor),
 		"求差":  NewZnNativeFunction("X-Y", subValueExecutor),
+		"X*Y": NewZnNativeFunction("X*Y", mulValueExecutor),
+		"求积":  NewZnNativeFunction("X*Y", mulValueExecutor),
 	}
 }

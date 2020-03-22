@@ -13,32 +13,49 @@ func NewArithInstance(precision int) *ArithInstance {
 }
 
 // Add - A + B + C + D + ... = ?
-func (ai *ArithInstance) Add(decimals ...*ZnDecimal) *ZnDecimal {
-	sum, _ := NewZnDecimal("0")
-	for _, decimal := range decimals {
-		r1, r2 := rescalePair(sum, decimal)
-		newco := new(big.Int).Add(r1.co, r2.co)
-
-		sum.co = newco
-		sum.exp = r1.exp
+func (ai *ArithInstance) Add(decimal1 *ZnDecimal, others ...*ZnDecimal) *ZnDecimal {
+	var result = copyZnDecimal(decimal1)
+	if len(others) == 0 {
+		return result
 	}
 
-	return sum
+	for _, item := range others {
+		r1, r2 := rescalePair(result, item)
+		result.co.Add(r1.co, r2.co)
+		result.exp = r1.exp
+	}
+	return result
 }
 
 // Sub - A - B - C - D - ... = ?
-func (ai *ArithInstance) Sub(decimals ...*ZnDecimal) *ZnDecimal {
-	sum, _ := NewZnDecimal("0")
-	for _, decimal := range decimals {
-		r1, r2 := rescalePair(sum, decimal)
-		negco := new(big.Int).Neg(r2.co)
-		newco := new(big.Int).Add(r1.co, negco)
-
-		sum.co = newco
-		sum.exp = r1.exp
+func (ai *ArithInstance) Sub(decimal1 *ZnDecimal, others ...*ZnDecimal) *ZnDecimal {
+	var result = copyZnDecimal(decimal1)
+	if len(others) == 0 {
+		return result
 	}
 
-	return sum
+	for _, item := range others {
+		r1, r2 := rescalePair(result, item)
+		result.co.Sub(r1.co, r2.co)
+		result.exp = r1.exp
+	}
+	return result
+}
+
+// Mul - A * B * C * D * ... = ?, ZnDeicmal value will be copied
+func (ai *ArithInstance) Mul(decimal1 *ZnDecimal, others ...*ZnDecimal) *ZnDecimal {
+	// init result from decimal1
+	var result = copyZnDecimal(decimal1)
+	if len(others) == 0 {
+		return result
+	}
+
+	for _, item := range others {
+		result.co.Mul(result.co, item.co)
+		result.exp = result.exp + item.exp
+	}
+
+	return result
 }
 
 //// arith helper
@@ -71,4 +88,15 @@ func rescalePair(d1 *ZnDecimal, d2 *ZnDecimal) (*ZnDecimal, *ZnDecimal) {
 		exp: d1.exp,
 	}
 	return d1, nD2
+}
+
+// copyDecimal - duplicate deicmal value to a new variable
+func copyZnDecimal(old *ZnDecimal) *ZnDecimal {
+	var result ZnDecimal
+	var newco big.Int
+	result.exp = old.exp
+	newco = *(old.co)
+	result.co = &newco
+
+	return &result
 }
