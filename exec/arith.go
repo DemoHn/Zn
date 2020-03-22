@@ -1,6 +1,11 @@
 package exec
 
-import "math/big"
+import (
+	"math"
+	"math/big"
+
+	"github.com/DemoHn/Zn/error"
+)
 
 // ArithInstance - arithmetic calculation (including + - * /) instance
 type ArithInstance struct {
@@ -56,6 +61,70 @@ func (ai *ArithInstance) Mul(decimal1 *ZnDecimal, others ...*ZnDecimal) *ZnDecim
 	}
 
 	return result
+}
+
+// Div - A / B / C / D / ... = ?, ZnDecimal value will be copied
+// notice , when one of the dividends are 0, an ArithDivZeroError will be yield
+func (ai *ArithInstance) Div(decimal1 *ZnDecimal, others ...*ZnDecimal) (*ZnDecimal, *error.Error) {
+	var result = copyZnDecimal(decimal1)
+	var num10 = big.NewInt(10)
+	if len(others) == 0 {
+		return result, nil
+	}
+
+	for _, item := range others {
+		// check if zero
+		if item.co.Cmp(big.NewInt(0)) == 0 {
+			return nil, error.ArithDivZeroError()
+		}
+		adjust := 0
+		// adjust bits
+		// C1 < C2
+		if result.co.Cmp(item.co) < 0 {
+			var c2_10x = new(big.Int).Mul(item.co, num10)
+			for {
+				if result.co.Cmp(item.co) >= 0 && result.co.Cmp(c2_10x) < 0 {
+					break
+				}
+				// else, C1 = C1 * 10
+				result.co.Mul(result.co, num10)
+				adjust = adjust + 1
+			}
+		} else {
+			var c1_10x = new(big.Int).Mul(result.co, num10)
+			for {
+				if item.co.Cmp(result.co) >= 0 && item.co.Cmp(c1_10x) < 0 {
+					break
+				}
+
+				item.co.Mul(item.co, num10)
+				adjust = adjust - 1
+			}
+		}
+
+		// exp10x = 10^(precision)
+		var exp10x *big.Int
+		if ai.precision >= 18 {
+			exp10x = new(big.Int).Exp(num10, num10, big.NewInt(int64(ai.precision-1)))
+		} else {
+			exp10x = big.NewInt(int64(math.Pow10(ai.precision)))
+		}
+
+		// do div
+		var mul10x = exp10x.Mul(result.co, exp10x)
+		var xr = new(big.Int)
+		var xq, _ = result.co.DivMod(mul10x, item.co, xr) // don't use QuoRem here!
+
+		// rounding
+		if xr.Mul(xr, big.NewInt(2)).Cmp(item.co) > 0 {
+			xq = xq.Add(xq, big.NewInt(1))
+		}
+
+		// get final result
+		result.co = xq
+		result.exp = result.exp - item.exp - adjust - ai.precision
+	}
+	return result, nil
 }
 
 //// arith helper
