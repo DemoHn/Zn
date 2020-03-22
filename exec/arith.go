@@ -68,13 +68,18 @@ func (ai *ArithInstance) Mul(decimal1 *ZnDecimal, others ...*ZnDecimal) *ZnDecim
 func (ai *ArithInstance) Div(decimal1 *ZnDecimal, others ...*ZnDecimal) (*ZnDecimal, *error.Error) {
 	var result = copyZnDecimal(decimal1)
 	var num10 = big.NewInt(10)
+	var num0 = big.NewInt(0)
 	if len(others) == 0 {
 		return result, nil
 	}
 
+	// if divisor is zero, return 0 directly
+	if decimal1.co.Cmp(num0) == 0 {
+		return result, nil
+	}
 	for _, item := range others {
-		// check if zero
-		if item.co.Cmp(big.NewInt(0)) == 0 {
+		// check if divident is zero
+		if item.co.Cmp(num0) == 0 {
 			return nil, error.ArithDivZeroError()
 		}
 		adjust := 0
