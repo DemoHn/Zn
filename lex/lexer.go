@@ -96,7 +96,9 @@ func (l *Lexer) NextToken() (tok *Token, err *error.Error) {
 	if l.beginLex {
 		l.beginLex = false
 		if !util.Contains(l.peek(), []rune{SP, TAB, EOF}) {
-			l.SetIndent(0, IdetUnknown)
+			if err := l.SetIndent(0, IdetUnknown); err != nil {
+				return nil, err
+			}
 		}
 	}
 head:
@@ -223,7 +225,9 @@ func (l *Lexer) parseCRLF(ch rune) []rune {
 
 	// to see if next line contains (potential) indents
 	if !util.Contains(l.peek(), []rune{SP, TAB, EOF}) {
-		l.SetIndent(0, IdetUnknown)
+		if err := l.SetIndent(0, IdetUnknown); err != nil {
+			panic(err)
+		}
 	}
 	return rtn
 }
@@ -295,7 +299,9 @@ func (l *Lexer) parseComment(ch rune, isMultiLine bool) (*Token, *error.Error) {
 			l.pushBuffer(nl...)
 
 			// manually set no indents
-			l.SetIndent(0, IdetUnknown)
+			if err := l.SetIndent(0, IdetUnknown); err != nil {
+				return nil, err
+			}
 		default:
 			// for mutli-line comment, calculate quotes is necessary.
 			if isMultiLine {
@@ -368,7 +374,9 @@ func (l *Lexer) parseString(ch rune) (*Token, *error.Error) {
 			nl := l.parseCRLF(ch)
 			// push buffer & mark new line
 			l.pushBuffer(nl...)
-			l.SetIndent(0, IdetUnknown)
+			if err := l.SetIndent(0, IdetUnknown); err != nil {
+				return nil, err
+			}
 		default:
 			l.pushBuffer(ch)
 		}
