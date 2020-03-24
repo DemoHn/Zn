@@ -14,6 +14,7 @@ var typeNameMap = map[string]string{
 	"null":     "空",
 	"array":    "元组",
 	"hashmap":  "列表",
+	"id":       "标识",
 }
 
 // InvalidExprType -

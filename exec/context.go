@@ -228,8 +228,12 @@ func EvalExpression(ctx *Context, expr syntax.Expression) (ZnValue, *error.Error
 		}
 		return evalLogicComparator(ctx, e)
 	case *syntax.ArrayListIndexExpr:
-		// TODO: differ LHV & RHV
-		return evalArrayListIndexExprRHV(ctx, e)
+		iv, err := getArrayListIV(ctx, e)
+		if err != nil {
+			return nil, err
+		}
+		// regard iv as a RHS value
+		return iv.Reduce(nil, false)
 	case *syntax.Number, *syntax.String, *syntax.ID, *syntax.ArrayExpr, *syntax.HashMapExpr:
 		// TODO: add HashMapExpr
 		return evalPrimeExpr(ctx, e)
@@ -419,20 +423,35 @@ func evalPrimeExpr(ctx *Context, expr syntax.Expression) (ZnValue, *error.Error)
 
 // eval var assign
 func evalVarAssignExpr(ctx *Context, expr *syntax.VarAssignExpr) (ZnValue, *error.Error) {
+	// Right Side
 	val, err := EvalExpression(ctx, expr.AssignExpr)
 	if err != nil {
 		return nil, err
 	}
-	vtag := expr.TargetVar.GetLiteral()
 
-	err2 := ctx.SetData(vtag, val)
-	return val, err2
+	// Left Side
+	switch v := expr.TargetVar.(type) {
+	case *syntax.ID:
+		// set ID
+		vtag := v.GetLiteral()
+		err2 := ctx.SetData(vtag, val)
+		return val, err2
+	case *syntax.ArrayListIndexExpr:
+		iv, err := getArrayListIV(ctx, v)
+		if err != nil {
+			return nil, err
+		}
+		return iv.Reduce(val, true)
+	default:
+		return nil, error.NewErrorSLOT("invalid type")
+	}
 }
 
 // eval A#n A#{ e }, etc.
 // NOTE: RHV stands for Right Hand Value, which means the expression will yield values directly
 // like what a RHV does.
-func evalArrayListIndexExprRHV(ctx *Context, expr *syntax.ArrayListIndexExpr) (ZnValue, *error.Error) {
+/**
+func evalArrayListIndexExpr(ctx *Context, expr *syntax.ArrayListIndexExpr) (ZnValue, *error.Error) {
 	// #1. eval root expr
 	val, err := EvalExpression(ctx, expr.Root)
 	if err != nil {
@@ -457,18 +476,56 @@ func evalArrayListIndexExprRHV(ctx *Context, expr *syntax.ArrayListIndexExpr) (Z
 		if idx < 0 || idx >= len(vl.Value) {
 			return nil, error.IndexOutOfRange()
 		}
-		return vl.Value[idx], nil
+		return &ZnArrayIV{vl, vr}, nil
 	case *ZnHashMap:
 		vr, ok := valIdx.(*ZnString)
 		if !ok {
 			return nil, error.InvalidExprType("string")
 		}
 		// retrieve value by key
-		data, ok := vl.Value[vr.Value]
+		_, ok = vl.Value[vr.Value]
 		if !ok {
 			return nil, error.IndexKeyNotFound(vr.Value)
 		}
-		return data, nil
+		return &ZnHashMapIV{vl, vr}, nil
+	default:
+		return nil, error.InvalidExprType("array", "hashmap")
+	}
+}
+*/
+
+func getArrayListIV(ctx *Context, expr *syntax.ArrayListIndexExpr) (ZnIV, *error.Error) {
+	val, err := EvalExpression(ctx, expr.Root)
+	if err != nil {
+		return nil, err
+	}
+	idx, err := EvalExpression(ctx, expr.Index)
+	if err != nil {
+		return nil, err
+	}
+	switch v := val.(type) {
+	case *ZnArray:
+		vr, ok := idx.(*ZnDecimal)
+		if !ok {
+			return nil, error.InvalidExprType("integer")
+		}
+		return &ZnArrayIV{v, vr}, nil
+	case *ZnHashMap:
+		var s *ZnString = nil
+		switch x := idx.(type) {
+		case *ZnDecimal:
+			// transform decimal value to string
+			// x.exp < 0 express that its a decimal value with point mark, not an integer
+			if x.exp < 0 {
+				return nil, error.InvalidExprType("integer", "string")
+			}
+			s = NewZnString(x.String())
+		case *ZnString:
+			s = x
+		default:
+			return nil, error.InvalidExprType("integer", "string")
+		}
+		return &ZnHashMapIV{v, s}, nil
 	default:
 		return nil, error.InvalidExprType("array", "hashmap")
 	}
