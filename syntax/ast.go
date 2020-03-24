@@ -7,7 +7,9 @@ import (
 
 //////// Node types
 
-// Node -
+//// interfaces
+
+// Node-
 type Node interface{}
 
 type consumerFunc func(idx int, nodes []Node) Node
@@ -22,6 +24,25 @@ type Statement interface {
 type Expression interface {
 	Statement
 	exprNode()
+}
+
+// Assignable - a special type of expression - that is, it could be assigned as
+// a value.
+//
+// Example:
+// ID 为 Expr   --> (ID) is an assignable node
+// Array # index 为 Expr    --> (Array # index) is an assignable node
+type Assignable interface {
+	Expression
+	assignable()
+}
+
+// UnionMapList - HashMap or ArrayList, since they shares similar grammer.
+// e.g.  ArrayList  => 【1，2，3，4，5】
+//       HashMap    => 【A == 1，B == 2】
+type UnionMapList interface {
+	Expression
+	mapList()
 }
 
 //// program (struct)
@@ -123,14 +144,6 @@ type String struct {
 	PrimeExpr
 }
 
-// UnionMapList - HashMap or ArrayList, since they shares similar grammer.
-// e.g.  ArrayList  => 【1，2，3，4，5】
-//       HashMap    => 【A == 1，B == 2】
-type UnionMapList interface {
-	Expression
-	mapList()
-}
-
 // ArrayExpr - array expression
 type ArrayExpr struct {
 	Items []Expression
@@ -159,7 +172,7 @@ type ArrayListIndexExpr struct {
 // i.e.
 // TargetExpr := AssignExpr
 type VarAssignExpr struct {
-	TargetVar  *ID
+	TargetVar  Assignable
 	AssignExpr Expression
 }
 
@@ -221,8 +234,11 @@ func (ar *HashMapExpr) exprNode() {}
 func (ar *HashMapExpr) stmtNode() {}
 func (ar *HashMapExpr) mapList()  {} // belongs to unionMapList
 
-func (ai *ArrayListIndexExpr) exprNode() {}
-func (ai *ArrayListIndexExpr) stmtNode() {}
+func (ai *ArrayListIndexExpr) exprNode()   {}
+func (ai *ArrayListIndexExpr) stmtNode()   {}
+func (ai *ArrayListIndexExpr) assignable() {}
+
+func (id *ID) assignable() {}
 
 //////// Parse Methods
 
@@ -357,7 +373,7 @@ func ParseExpression(p *Parser) Expression {
 
 		// compose logic expr
 		if tk.Type == lex.TypeLogicYesW {
-			vid, ok := leftExpr.(*ID)
+			vid, ok := leftExpr.(Assignable)
 			if !ok {
 				panic(error.ExprMustTypeID())
 			}
