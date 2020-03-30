@@ -16,6 +16,8 @@ type Context struct {
 	*ArithInstance
 	// lastValue is set during the execution, usually stands for 'the return value' of a function.
 	lastValue ZnValue
+	// currentLine shows current executing line, usually for error displaying
+	currentLine int
 }
 
 const defaultPrecision = 8
@@ -78,6 +80,15 @@ func (ctx *Context) ExecuteBlockAST(block *syntax.BlockStmt) Result {
 // ResetLastValue - set ctx.lastValue -> nil
 func (ctx *Context) ResetLastValue() {
 	ctx.lastValue = nil
+}
+
+// ResetCurrentLine -
+func (ctx *Context) ResetCurrentLine() {
+	ctx.setCurrentLine(0)
+}
+
+func (ctx *Context) setCurrentLine(line int) {
+	ctx.currentLine = line
 }
 
 //// Execute (Evaluate) statements
