@@ -22,11 +22,12 @@ type Statement interface {
 }
 
 // StmtBase - Statement Base
-type StmtBase strct {
+type StmtBase struct {
 	currentLine int
 }
 
 func (b *StmtBase) stmtNode() {}
+
 // GetCurrentLine -
 func (b *StmtBase) GetCurrentLine() int { return b.currentLine }
 
@@ -645,7 +646,7 @@ func ParseFuncCallExpr(p *Parser) *FuncCallExpr {
 	match, tk := p.tryConsume(lex.TypeVarQuote, lex.TypeIdentifier)
 	if !match {
 		panic(error.InvalidSyntaxCurr())
-	}	
+	}
 	callExpr.FuncName = newID(tk)
 	// #2. parse colon (maybe there's no params)
 	match2, _ := p.tryConsume(lex.TypeFuncCall)
