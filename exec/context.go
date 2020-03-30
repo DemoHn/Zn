@@ -55,6 +55,7 @@ func (ctx *Context) ExecuteCode(in *lex.InputStream) Result {
 	program := syntax.NewProgramNode(block)
 
 	if err := EvalProgram(ctx, program); err != nil {
+		wrapError(ctx, err)
 		return Result{true, nil, err}
 	}
 	return Result{false, ctx.lastValue, nil}
@@ -66,6 +67,7 @@ func (ctx *Context) ExecuteBlockAST(block *syntax.BlockStmt) Result {
 	if err := EvalStmtBlock(ctx, block, true); err != nil {
 		// handle returnValue Interrupts
 		if err.GetErrorClass() != error.InterruptsClass {
+			wrapError(ctx, err)
 			return Result{true, nil, err}
 		}
 	}
@@ -100,6 +102,7 @@ func EvalProgram(ctx *Context, program *syntax.Program) *error.Error {
 
 // EvalStatement - eval statement
 func EvalStatement(ctx *Context, stmt syntax.Statement) *error.Error {
+	ctx.setCurrentLine(stmt.GetCurrentLine())
 	switch v := stmt.(type) {
 	case *syntax.VarDeclareStmt:
 		return evalVarDeclareStmt(ctx, v)
@@ -230,6 +233,7 @@ func evalBranchStmt(ctx *Context, branchStmt *syntax.BranchStmt) *error.Error {
 
 // EvalExpression - execute expression
 func EvalExpression(ctx *Context, expr syntax.Expression) (ZnValue, *error.Error) {
+	ctx.setCurrentLine(expr.GetCurrentLine())
 	switch e := expr.(type) {
 	case *syntax.VarAssignExpr:
 		return evalVarAssignExpr(ctx, e)
@@ -458,53 +462,6 @@ func evalVarAssignExpr(ctx *Context, expr *syntax.VarAssignExpr) (ZnValue, *erro
 	}
 }
 
-// eval A#n A#{ e }, etc.
-// NOTE: RHV stands for Right Hand Value, which means the expression will yield values directly
-// like what a RHV does.
-/**
-func evalArrayListIndexExpr(ctx *Context, expr *syntax.ArrayListIndexExpr) (ZnValue, *error.Error) {
-	// #1. eval root expr
-	val, err := EvalExpression(ctx, expr.Root)
-	if err != nil {
-		return nil, err
-	}
-	valIdx, err := EvalExpression(ctx, expr.Index)
-	if err != nil {
-		return nil, err
-	}
-	// #2. assert types
-	switch vl := val.(type) {
-	case *ZnArray:
-		// assert valIdx data
-		vr, ok := valIdx.(*ZnDecimal)
-		if !ok {
-			return nil, error.InvalidExprType("integer")
-		}
-		idx, err := vr.asInteger()
-		if err != nil {
-			return nil, error.InvalidExprType("integer")
-		}
-		if idx < 0 || idx >= len(vl.Value) {
-			return nil, error.IndexOutOfRange()
-		}
-		return &ZnArrayIV{vl, vr}, nil
-	case *ZnHashMap:
-		vr, ok := valIdx.(*ZnString)
-		if !ok {
-			return nil, error.InvalidExprType("string")
-		}
-		// retrieve value by key
-		_, ok = vl.Value[vr.Value]
-		if !ok {
-			return nil, error.IndexKeyNotFound(vr.Value)
-		}
-		return &ZnHashMapIV{vl, vr}, nil
-	default:
-		return nil, error.InvalidExprType("array", "hashmap")
-	}
-}
-*/
-
 func getArrayListIV(ctx *Context, expr *syntax.ArrayListIndexExpr) (ZnIV, *error.Error) {
 	val, err := EvalExpression(ctx, expr.Root)
 	if err != nil {
@@ -539,5 +496,20 @@ func getArrayListIV(ctx *Context, expr *syntax.ArrayListIndexExpr) (ZnIV, *error
 		return &ZnHashMapIV{v, s}, nil
 	default:
 		return nil, error.InvalidExprType("array", "hashmap")
+	}
+}
+
+// wrapError if lineInfo is missing (mostly for non-syntax errors)
+// If lineInfo missing, then we will add current execution line and hide some part to
+// display errors properly.
+func wrapError(ctx *Context, err *error.Error) {
+	cursor := err.GetCursor()
+	if cursor.LineNum == 0 {
+		newCursor := error.Cursor{
+			LineNum: ctx.currentLine,
+			// TODO - set text
+			// Text: ctx.
+		}
+		err.SetCursor(newCursor)
 	}
 }
