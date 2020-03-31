@@ -46,6 +46,7 @@ func NewContext() *Context {
 func (ctx *Context) ExecuteCode(in *lex.InputStream) Result {
 	l := lex.NewLexer(in)
 	p := syntax.NewParser(l)
+	env := NewEnv(l.LineStack)
 	// start
 	block, err := p.Parse()
 	if err != nil {
@@ -54,7 +55,7 @@ func (ctx *Context) ExecuteCode(in *lex.InputStream) Result {
 	// construct root (program) node
 	program := syntax.NewProgramNode(block)
 
-	if err := EvalProgram(ctx, program); err != nil {
+	if err := EvalProgram(ctx, program, env); err != nil {
 		wrapError(ctx, err)
 		return Result{true, nil, err}
 	}
@@ -63,8 +64,8 @@ func (ctx *Context) ExecuteCode(in *lex.InputStream) Result {
 
 // ExecuteBlockAST - execute blockStmt AST
 // usually for executing function template
-func (ctx *Context) ExecuteBlockAST(block *syntax.BlockStmt) Result {
-	if err := EvalStmtBlock(ctx, block, true); err != nil {
+func (ctx *Context) ExecuteBlockAST(block *syntax.BlockStmt, env *Env) Result {
+	if err := EvalStmtBlockNS(ctx, block, env); err != nil {
 		// handle returnValue Interrupts
 		if err.GetErrorClass() != error.InterruptsClass {
 			wrapError(ctx, err)
@@ -84,11 +85,6 @@ func (ctx *Context) ResetLastValue() {
 	ctx.lastValue = nil
 }
 
-// ResetCurrentLine -
-func (ctx *Context) ResetCurrentLine() {
-	ctx.setCurrentLine(0)
-}
-
 func (ctx *Context) setCurrentLine(line int) {
 	ctx.currentLine = line
 }
@@ -96,27 +92,27 @@ func (ctx *Context) setCurrentLine(line int) {
 //// Execute (Evaluate) statements
 
 // EvalProgram - evaluate global program (root node)
-func EvalProgram(ctx *Context, program *syntax.Program) *error.Error {
-	return EvalStmtBlock(ctx, program.Content, true)
+func EvalProgram(ctx *Context, program *syntax.Program, env *Env) *error.Error {
+	return EvalStmtBlock(ctx, program.Content, env)
 }
 
 // EvalStatement - eval statement
-func EvalStatement(ctx *Context, stmt syntax.Statement) *error.Error {
+func EvalStatement(ctx *Context, stmt syntax.Statement, env *Env) *error.Error {
 	ctx.setCurrentLine(stmt.GetCurrentLine())
 	switch v := stmt.(type) {
 	case *syntax.VarDeclareStmt:
-		return evalVarDeclareStmt(ctx, v)
+		return evalVarDeclareStmt(ctx, v, env)
 	case *syntax.WhileLoopStmt:
-		return evalWhileLoopStmt(ctx, v)
+		return evalWhileLoopStmt(ctx, v, env)
 	case *syntax.BranchStmt:
-		return evalBranchStmt(ctx, v)
+		return evalBranchStmt(ctx, v, env)
 	case *syntax.EmptyStmt:
 		return nil
 	case *syntax.FunctionDeclareStmt:
 		fn := NewZnFunction(v)
 		return ctx.Bind(v.FuncName.GetLiteral(), fn, false)
 	case *syntax.FunctionReturnStmt:
-		res, err := EvalExpression(ctx, v.ReturnExpr)
+		res, err := EvalExpression(ctx, v.ReturnExpr, env)
 		if err != nil {
 			return err
 		}
@@ -124,7 +120,7 @@ func EvalStatement(ctx *Context, stmt syntax.Statement) *error.Error {
 		// send interrupt (NOT AN ACTUAL ERROR)
 		return error.ReturnValueInterrupt()
 	case syntax.Expression:
-		res, err := EvalExpression(ctx, v)
+		res, err := EvalExpression(ctx, v, env)
 		if err != nil {
 			return err
 		}
@@ -136,9 +132,9 @@ func EvalStatement(ctx *Context, stmt syntax.Statement) *error.Error {
 	}
 }
 
-func evalVarDeclareStmt(ctx *Context, stmt *syntax.VarDeclareStmt) *error.Error {
+func evalVarDeclareStmt(ctx *Context, stmt *syntax.VarDeclareStmt, env *Env) *error.Error {
 	for _, vpair := range stmt.AssignPair {
-		obj, err := EvalExpression(ctx, vpair.AssignExpr)
+		obj, err := EvalExpression(ctx, vpair.AssignExpr, env)
 		if err != nil {
 			return err
 		}
@@ -156,13 +152,12 @@ func evalVarDeclareStmt(ctx *Context, stmt *syntax.VarDeclareStmt) *error.Error 
 }
 
 // EvalStmtBlock -
-func EvalStmtBlock(ctx *Context, block *syntax.BlockStmt, sameScope bool) *error.Error {
-	if !sameScope {
-		ctx.EnterScope()
-		defer ctx.ExitScope()
-	}
+func EvalStmtBlock(ctx *Context, block *syntax.BlockStmt, env *Env) *error.Error {
+	ctx.EnterScope()
+	defer ctx.ExitScope()
+
 	for _, stmt := range block.Children {
-		err := EvalStatement(ctx, stmt)
+		err := EvalStatement(ctx, stmt, env)
 		if err != nil {
 			return err
 		}
@@ -170,10 +165,22 @@ func EvalStmtBlock(ctx *Context, block *syntax.BlockStmt, sameScope bool) *error
 	return nil
 }
 
-func evalWhileLoopStmt(ctx *Context, loopStmt *syntax.WhileLoopStmt) *error.Error {
+// EvalStmtBlockNS - eval statement block without shifting scope
+func EvalStmtBlockNS(ctx *Context, block *syntax.BlockStmt, env *Env) *error.Error {
+	for _, stmt := range block.Children {
+		err := EvalStatement(ctx, stmt, env)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func evalWhileLoopStmt(ctx *Context, loopStmt *syntax.WhileLoopStmt, env *Env) *error.Error {
+	nEnv := env.Dup(BlockWHILE)
 	for {
 		// #1. first execute expr
-		trueExpr, err := EvalExpression(ctx, loopStmt.TrueExpr)
+		trueExpr, err := EvalExpression(ctx, loopStmt.TrueExpr, nEnv)
 		if err != nil {
 			return err
 		}
@@ -187,15 +194,15 @@ func evalWhileLoopStmt(ctx *Context, loopStmt *syntax.WhileLoopStmt) *error.Erro
 			return nil
 		}
 		// #3. stmt block
-		if err := EvalStmtBlock(ctx, loopStmt.LoopBlock, false); err != nil {
+		if err := EvalStmtBlock(ctx, loopStmt.LoopBlock, nEnv); err != nil {
 			return nil
 		}
 	}
 }
 
-func evalBranchStmt(ctx *Context, branchStmt *syntax.BranchStmt) *error.Error {
+func evalBranchStmt(ctx *Context, branchStmt *syntax.BranchStmt, env *Env) *error.Error {
 	// #1. if branch
-	ifExpr, err := EvalExpression(ctx, branchStmt.IfTrueExpr)
+	ifExpr, err := EvalExpression(ctx, branchStmt.IfTrueExpr, env)
 	if err != nil {
 		return err
 	}
@@ -205,11 +212,11 @@ func evalBranchStmt(ctx *Context, branchStmt *syntax.BranchStmt) *error.Error {
 	}
 	// exec if-branch
 	if vIfExpr.Value == true {
-		return EvalStmtBlock(ctx, branchStmt.IfTrueBlock, false)
+		return EvalStmtBlock(ctx, branchStmt.IfTrueBlock, env)
 	}
 	// exec else-if branches
 	for idx, otherExpr := range branchStmt.OtherExprs {
-		otherExprI, err := EvalExpression(ctx, otherExpr)
+		otherExprI, err := EvalExpression(ctx, otherExpr, env)
 		if err != nil {
 			return err
 		}
@@ -219,12 +226,12 @@ func evalBranchStmt(ctx *Context, branchStmt *syntax.BranchStmt) *error.Error {
 		}
 		// exec else-if branch
 		if vOtherExprI.Value == true {
-			return EvalStmtBlock(ctx, branchStmt.OtherBlocks[idx], false)
+			return EvalStmtBlock(ctx, branchStmt.OtherBlocks[idx], env)
 		}
 	}
 	// exec else branch if possible
 	if branchStmt.HasElse == true {
-		return EvalStmtBlock(ctx, branchStmt.IfFalseBlock, false)
+		return EvalStmtBlock(ctx, branchStmt.IfFalseBlock, env)
 	}
 	return nil
 }
@@ -232,18 +239,18 @@ func evalBranchStmt(ctx *Context, branchStmt *syntax.BranchStmt) *error.Error {
 //// Execute (Evaluate) expressions
 
 // EvalExpression - execute expression
-func EvalExpression(ctx *Context, expr syntax.Expression) (ZnValue, *error.Error) {
+func EvalExpression(ctx *Context, expr syntax.Expression, env *Env) (ZnValue, *error.Error) {
 	ctx.setCurrentLine(expr.GetCurrentLine())
 	switch e := expr.(type) {
 	case *syntax.VarAssignExpr:
-		return evalVarAssignExpr(ctx, e)
+		return evalVarAssignExpr(ctx, e, env)
 	case *syntax.LogicExpr:
 		if e.Type == syntax.LogicAND || e.Type == syntax.LogicOR {
-			return evalLogicCombiner(ctx, e)
+			return evalLogicCombiner(ctx, e, env)
 		}
-		return evalLogicComparator(ctx, e)
+		return evalLogicComparator(ctx, e, env)
 	case *syntax.ArrayListIndexExpr:
-		iv, err := getArrayListIV(ctx, e)
+		iv, err := getArrayListIV(ctx, e, env)
 		if err != nil {
 			return nil, err
 		}
@@ -251,16 +258,16 @@ func EvalExpression(ctx *Context, expr syntax.Expression) (ZnValue, *error.Error
 		return iv.Reduce(nil, false)
 	case *syntax.Number, *syntax.String, *syntax.ID, *syntax.ArrayExpr, *syntax.HashMapExpr:
 		// TODO: add HashMapExpr
-		return evalPrimeExpr(ctx, e)
+		return evalPrimeExpr(ctx, e, env)
 	case *syntax.FuncCallExpr:
-		return evalFunctionCall(ctx, e)
+		return evalFunctionCall(ctx, e, env)
 	default:
 		return nil, error.NewErrorSLOT("unrecognized type")
 	}
 }
 
 // （显示：A，B，C）
-func evalFunctionCall(ctx *Context, expr *syntax.FuncCallExpr) (ZnValue, *error.Error) {
+func evalFunctionCall(ctx *Context, expr *syntax.FuncCallExpr, env *Env) (ZnValue, *error.Error) {
 	vtag := expr.FuncName.GetLiteral()
 	// find function definctxion
 	val, err := ctx.Lookup(vtag)
@@ -275,23 +282,23 @@ func evalFunctionCall(ctx *Context, expr *syntax.FuncCallExpr) (ZnValue, *error.
 	// exec params
 	params := []ZnValue{}
 	for _, paramExpr := range expr.Params {
-		pval, err := EvalExpression(ctx, paramExpr)
+		pval, err := EvalExpression(ctx, paramExpr, env)
 		if err != nil {
 			return nil, err
 		}
 		params = append(params, pval)
 	}
 	// exec function
-	return vval.Exec(params, ctx)
+	return vval.Exec(params, ctx, env)
 }
 
 // evaluate logic combination expressions
 // such as A 且 B
 // or A 或 B
-func evalLogicCombiner(ctx *Context, expr *syntax.LogicExpr) (*ZnBool, *error.Error) {
+func evalLogicCombiner(ctx *Context, expr *syntax.LogicExpr, env *Env) (*ZnBool, *error.Error) {
 	logicType := expr.Type
 	// #1. eval left
-	left, err := EvalExpression(ctx, expr.LeftExpr)
+	left, err := EvalExpression(ctx, expr.LeftExpr, env)
 	if err != nil {
 		return nil, err
 	}
@@ -313,7 +320,7 @@ func evalLogicCombiner(ctx *Context, expr *syntax.LogicExpr) (*ZnBool, *error.Er
 		return NewZnBool(true), nil
 	}
 	// #4. eval right
-	right, err := EvalExpression(ctx, expr.RightExpr)
+	right, err := EvalExpression(ctx, expr.RightExpr, env)
 	if err != nil {
 		return nil, err
 	}
@@ -332,15 +339,15 @@ func evalLogicCombiner(ctx *Context, expr *syntax.LogicExpr) (*ZnBool, *error.Er
 
 // evaluate logic comparator
 // ensure both expressions are comparable (i.e. subtype of ZnComparable)
-func evalLogicComparator(ctx *Context, expr *syntax.LogicExpr) (*ZnBool, *error.Error) {
+func evalLogicComparator(ctx *Context, expr *syntax.LogicExpr, env *Env) (*ZnBool, *error.Error) {
 	logicType := expr.Type
 	// #1. eval left
-	left, err := EvalExpression(ctx, expr.LeftExpr)
+	left, err := EvalExpression(ctx, expr.LeftExpr, env)
 	if err != nil {
 		return nil, err
 	}
 	// #3. eval right
-	right, err := EvalExpression(ctx, expr.RightExpr)
+	right, err := EvalExpression(ctx, expr.RightExpr, env)
 	if err != nil {
 		return nil, err
 	}
@@ -389,7 +396,7 @@ func evalLogicComparator(ctx *Context, expr *syntax.LogicExpr) (*ZnBool, *error.
 }
 
 // eval prime expr
-func evalPrimeExpr(ctx *Context, expr syntax.Expression) (ZnValue, *error.Error) {
+func evalPrimeExpr(ctx *Context, expr syntax.Expression, env *Env) (ZnValue, *error.Error) {
 	switch e := expr.(type) {
 	case *syntax.Number:
 		return NewZnDecimal(e.GetLiteral())
@@ -400,8 +407,8 @@ func evalPrimeExpr(ctx *Context, expr syntax.Expression) (ZnValue, *error.Error)
 		return ctx.Lookup(vtag)
 	case *syntax.ArrayExpr:
 		znObjs := []ZnValue{}
-		for _, ctxem := range e.Items {
-			expr, err := EvalExpression(ctx, ctxem)
+		for _, item := range e.Items {
+			expr, err := EvalExpression(ctx, item, env)
 			if err != nil {
 				return nil, err
 			}
@@ -411,8 +418,8 @@ func evalPrimeExpr(ctx *Context, expr syntax.Expression) (ZnValue, *error.Error)
 		return NewZnArray(znObjs), nil
 	case *syntax.HashMapExpr:
 		znPairs := []KVPair{}
-		for _, ctxem := range e.KVPair {
-			expr, err := EvalExpression(ctx, ctxem.Key)
+		for _, item := range e.KVPair {
+			expr, err := EvalExpression(ctx, item.Key, env)
 			if err != nil {
 				return nil, err
 			}
@@ -420,7 +427,7 @@ func evalPrimeExpr(ctx *Context, expr syntax.Expression) (ZnValue, *error.Error)
 			if !ok {
 				return nil, error.NewErrorSLOT("key should be string")
 			}
-			exprVal, err := EvalExpression(ctx, ctxem.Value)
+			exprVal, err := EvalExpression(ctx, item.Value, env)
 			if err != nil {
 				return nil, err
 			}
@@ -437,9 +444,9 @@ func evalPrimeExpr(ctx *Context, expr syntax.Expression) (ZnValue, *error.Error)
 }
 
 // eval var assign
-func evalVarAssignExpr(ctx *Context, expr *syntax.VarAssignExpr) (ZnValue, *error.Error) {
+func evalVarAssignExpr(ctx *Context, expr *syntax.VarAssignExpr, env *Env) (ZnValue, *error.Error) {
 	// Right Side
-	val, err := EvalExpression(ctx, expr.AssignExpr)
+	val, err := EvalExpression(ctx, expr.AssignExpr, env)
 	if err != nil {
 		return nil, err
 	}
@@ -452,7 +459,7 @@ func evalVarAssignExpr(ctx *Context, expr *syntax.VarAssignExpr) (ZnValue, *erro
 		err2 := ctx.SetData(vtag, val)
 		return val, err2
 	case *syntax.ArrayListIndexExpr:
-		iv, err := getArrayListIV(ctx, v)
+		iv, err := getArrayListIV(ctx, v, env)
 		if err != nil {
 			return nil, err
 		}
@@ -462,12 +469,12 @@ func evalVarAssignExpr(ctx *Context, expr *syntax.VarAssignExpr) (ZnValue, *erro
 	}
 }
 
-func getArrayListIV(ctx *Context, expr *syntax.ArrayListIndexExpr) (ZnIV, *error.Error) {
-	val, err := EvalExpression(ctx, expr.Root)
+func getArrayListIV(ctx *Context, expr *syntax.ArrayListIndexExpr, env *Env) (ZnIV, *error.Error) {
+	val, err := EvalExpression(ctx, expr.Root, env)
 	if err != nil {
 		return nil, err
 	}
-	idx, err := EvalExpression(ctx, expr.Index)
+	idx, err := EvalExpression(ctx, expr.Index, env)
 	if err != nil {
 		return nil, err
 	}
@@ -479,7 +486,7 @@ func getArrayListIV(ctx *Context, expr *syntax.ArrayListIndexExpr) (ZnIV, *error
 		}
 		return &ZnArrayIV{v, vr}, nil
 	case *ZnHashMap:
-		var s *ZnString = nil
+		var s *ZnString
 		switch x := idx.(type) {
 		case *ZnDecimal:
 			// transform decimal value to string
