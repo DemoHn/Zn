@@ -26,7 +26,7 @@ var displayExecutor = func(params []ZnValue, template *syntax.FunctionDeclareStm
 var addValueExecutor = func(params []ZnValue, template *syntax.FunctionDeclareStmt, ctx *Context) (ZnValue, *error.Error) {
 	var decimals = []*ZnDecimal{}
 	if len(params) == 0 {
-		return nil, error.NewErrorSLOT("参数长度应大于0")
+		return nil, error.LeastParamsError(1)
 	}
 	// validate types
 	for _, param := range params {
@@ -45,7 +45,7 @@ var addValueExecutor = func(params []ZnValue, template *syntax.FunctionDeclareSt
 var subValueExecutor = func(params []ZnValue, template *syntax.FunctionDeclareStmt, ctx *Context) (ZnValue, *error.Error) {
 	var decimals = []*ZnDecimal{}
 	if len(params) == 0 {
-		return nil, error.NewErrorSLOT("参数长度应大于0")
+		return nil, error.LeastParamsError(1)
 	}
 	// validate types
 	for _, param := range params {
@@ -63,7 +63,7 @@ var subValueExecutor = func(params []ZnValue, template *syntax.FunctionDeclareSt
 var mulValueExecutor = func(params []ZnValue, template *syntax.FunctionDeclareStmt, ctx *Context) (ZnValue, *error.Error) {
 	var decimals = []*ZnDecimal{}
 	if len(params) == 0 {
-		return nil, error.NewErrorSLOT("参数长度应大于0")
+		return nil, error.LeastParamsError(1)
 	}
 	// validate types
 	for _, param := range params {
@@ -81,7 +81,7 @@ var mulValueExecutor = func(params []ZnValue, template *syntax.FunctionDeclareSt
 var divValueExecutor = func(params []ZnValue, template *syntax.FunctionDeclareStmt, ctx *Context) (ZnValue, *error.Error) {
 	var decimals = []*ZnDecimal{}
 	if len(params) == 0 {
-		return nil, error.NewErrorSLOT("参数长度应大于0")
+		return nil, error.LeastParamsError(1)
 	}
 	// validate types
 	for _, param := range params {
