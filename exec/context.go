@@ -1,8 +1,6 @@
 package exec
 
 import (
-	"fmt"
-
 	"github.com/DemoHn/Zn/error"
 	"github.com/DemoHn/Zn/lex"
 	"github.com/DemoHn/Zn/syntax"
@@ -163,7 +161,7 @@ func EvalStatement(ctx *Context, stmt syntax.Statement, env Env) *error.Error {
 		ctx.lastValue = res
 		return nil
 	default:
-		return error.NewErrorSLOT("invalid statement type")
+		return error.InvalidCaseType()
 	}
 }
 
@@ -297,7 +295,7 @@ func EvalExpression(ctx *Context, expr syntax.Expression, env Env) (ZnValue, *er
 	case *syntax.FuncCallExpr:
 		return evalFunctionCall(ctx, e, env)
 	default:
-		return nil, error.NewErrorSLOT("unrecognized type")
+		return nil, error.InvalidExprType()
 	}
 }
 
@@ -312,7 +310,7 @@ func evalFunctionCall(ctx *Context, expr *syntax.FuncCallExpr, env Env) (ZnValue
 	// assert value
 	vval, ok := val.(*ZnFunction)
 	if !ok {
-		return nil, error.NewErrorSLOT(fmt.Sprintf("「%s」须为一个方法", vtag))
+		return nil, error.InvalidFuncVariable(vtag)
 	}
 	// exec params
 	params := []ZnValue{}
@@ -426,7 +424,7 @@ func evalLogicComparator(ctx *Context, expr *syntax.LogicExpr, env Env) (*ZnBool
 
 		return NewZnBool(zb1.Value || zb2.Value), nil
 	default:
-		return nil, error.NewErrorSLOT("invalid logic type")
+		return nil, error.InvalidCaseType()
 	}
 }
 
@@ -460,7 +458,7 @@ func evalPrimeExpr(ctx *Context, expr syntax.Expression, env Env) (ZnValue, *err
 			}
 			exprKey, ok := expr.(*ZnString)
 			if !ok {
-				return nil, error.NewErrorSLOT("key should be string")
+				return nil, error.InvalidExprType("string", "integer")
 			}
 			exprVal, err := EvalExpression(ctx, item.Value, env)
 			if err != nil {
@@ -473,8 +471,7 @@ func evalPrimeExpr(ctx *Context, expr syntax.Expression, env Env) (ZnValue, *err
 		}
 		return NewZnHashMap(znPairs), nil
 	default:
-		// to be continued...
-		return nil, error.NewErrorSLOT("invalid type")
+		return nil, error.InvalidCaseType()
 	}
 }
 
@@ -500,7 +497,7 @@ func evalVarAssignExpr(ctx *Context, expr *syntax.VarAssignExpr, env Env) (ZnVal
 		}
 		return iv.Reduce(val, true)
 	default:
-		return nil, error.NewErrorSLOT("invalid type")
+		return nil, error.InvalidCaseType()
 	}
 }
 
