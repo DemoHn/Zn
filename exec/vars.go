@@ -238,7 +238,7 @@ func (zf *ZnFunction) Exec(params []ZnValue, ctx *Context, env Env) (ZnValue, *e
 		defer ctx.ExitScope()
 		// check param length
 		if len(params) != len(zf.Node.ParamList) {
-			return nil, error.NewErrorSLOT("param list length mismatch!")
+			return nil, error.MismatchParamLengthError(len(zf.Node.ParamList), len(params))
 		}
 
 		// set id

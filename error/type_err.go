@@ -31,3 +31,19 @@ func InvalidExprType(assertType ...string) *Error {
 		text: fmt.Sprintf("表达式不符合期望之%s类型", strings.Join(labels, "，")),
 	})
 }
+
+// InvalidFuncVariable -
+func InvalidFuncVariable(tag string) *Error {
+	return typeError.NewError(0x02, Error{
+		text: fmt.Sprintf("「%s」须为一个方法", tag),
+		info: fmt.Sprintf("tag=(%s)", tag),
+	})
+}
+
+// InvalidCaseType - general error for default branch of switch
+// Theoratically, it should NOT be triggered at all!
+func InvalidCaseType() *Error {
+	return typeError.NewError(0x03, Error{
+		text: "不符合期望之类型",
+	})
+}

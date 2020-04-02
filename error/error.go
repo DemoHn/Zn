@@ -220,6 +220,7 @@ const (
 	IndexErrorClass  = 0x24
 	NameErrorClass   = 0x25
 	ArithErrorClass  = 0x26
+	ParamErrorClass  = 0x27
 	InterruptsClass  = 0xFE
 )
 
@@ -259,6 +260,9 @@ var (
 	// 0x26 - arithError
 	// trigger error happened on arithmetic operation (such as div)
 	arithError = errorClass{ArithErrorClass, dpHideLineCursor}
+	// 0x27 - paramError
+	// trigger error when input parameters doesn't satisfy the requirements
+	paramError = errorClass{ParamErrorClass, dpHideLineCursor}
 
 	// 0xFE - interrupts
 	// strictly, interrupts is NOT an error.
@@ -274,13 +278,14 @@ var (
 	interrupts = errorClass{InterruptsClass, dpHideLineCursor}
 
 	errClassMap = map[uint16]string{
-		0x20: "语法错误", // from lex
-		0x21: "I/O错误",
-		0x22: "语法错误", // from parser
-		0x23: "类型错误",
-		0x24: "索引错误",
-		0x25: "标识错误",
-		0x26: "算术错误",
-		0xFE: "数据中断（不应见到此消息显示）",
+		LexErrorClass:    "语法错误", // from lex
+		IOErrorClass:     "I/O错误",
+		SyntaxErrorClass: "语法错误", // from parser
+		TypeErrorClass:   "类型错误",
+		IndexErrorClass:  "索引错误",
+		NameErrorClass:   "标识错误",
+		ArithErrorClass:  "算术错误",
+		ParamErrorClass:  "参数错误",
+		InterruptsClass:  "数据中断（不应见到此消息显示）",
 	}
 )
