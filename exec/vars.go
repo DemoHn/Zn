@@ -228,7 +228,8 @@ func (zb *ZnBool) Rev() *ZnBool {
 }
 
 // Exec - ZnFunction exec function
-func (zf *ZnFunction) Exec(params []ZnValue, ctx *Context) (ZnValue, *error.Error) {
+func (zf *ZnFunction) Exec(params []ZnValue, ctx *Context, env Env) (ZnValue, *error.Error) {
+	// TODO1: add new env
 	// st -> global symbol table
 	// if executor = nil, then use default function executor
 	if zf.Executor == nil {
@@ -237,7 +238,7 @@ func (zf *ZnFunction) Exec(params []ZnValue, ctx *Context) (ZnValue, *error.Erro
 		defer ctx.ExitScope()
 		// check param length
 		if len(params) != len(zf.Node.ParamList) {
-			return nil, error.NewErrorSLOT("param list length mismatch!")
+			return nil, error.MismatchParamLengthError(len(zf.Node.ParamList), len(params))
 		}
 
 		// set id
@@ -249,7 +250,7 @@ func (zf *ZnFunction) Exec(params []ZnValue, ctx *Context) (ZnValue, *error.Erro
 			}
 		}
 
-		result := ctx.ExecuteBlockAST(zf.Node.ExecBlock)
+		result := ctx.ExecuteBlockAST(zf.Node.ExecBlock, env)
 		if result.HasError {
 			return nil, result.Error
 		}

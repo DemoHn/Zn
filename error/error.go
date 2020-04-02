@@ -195,7 +195,8 @@ type Cursor struct {
 
 // ErrorClass defines the prefix of error code
 type errorClass struct {
-	prefix uint16
+	prefix   uint16
+	baseMask uint16
 }
 
 // NewError - new error with subcode
@@ -206,48 +207,9 @@ func (ec *errorClass) NewError(subcode uint16, model Error) *Error {
 	code = code*256 + subcode
 
 	model.code = code
+	model.displayMask = model.displayMask | ec.baseMask
 	return &model
 }
-
-// definitions of all error classes inside the Zn Programming language
-var (
-	// 0x20 - lexError
-	// this error class displays all errors occur during lexing stage. (including input data)
-	lexError errorClass
-	// 0x21 - ioError
-	// I/O related error (e.g. FileNotFound, OpenFileError, ReadFileError)
-	ioError errorClass
-	// 0x22 - syntaxError
-	// show errors occured on parsing stage
-	syntaxError errorClass
-	// 0x23 - typeError
-	// show errors of type validation
-	typeError errorClass
-	// 0x24 - indexError
-	// show errors when retrieving data by index from arrayList
-	indexError errorClass
-	// 0x25 - nameError
-	// show errors while identifier not found or others related to identifiers.
-	nameError errorClass
-	// 0x26 - arithError
-	// trigger error happened on arithmetic operation (such as div)
-	arithError errorClass
-
-	// 0xFE - interrupts
-	// strictly, interrupts is NOT an error.
-	// we use interrupts to stop execution immediately.
-	// (like
-	//   ...
-	//   if err != nil {
-	//     return err
-	//   }
-	//   ...
-	// )
-	//
-	interrupts errorClass
-
-	errClassMap map[uint16]string
-)
 
 // define some error classes
 const (
@@ -258,6 +220,7 @@ const (
 	IndexErrorClass  = 0x24
 	NameErrorClass   = 0x25
 	ArithErrorClass  = 0x26
+	ParamErrorClass  = 0x27
 	InterruptsClass  = 0xFE
 )
 
@@ -271,24 +234,58 @@ func NewErrorSLOT(text string) *Error {
 	}
 }
 
-func init() {
-	lexError = errorClass{0x20}
-	ioError = errorClass{0x21}
-	syntaxError = errorClass{0x22}
-	typeError = errorClass{0x23}
-	indexError = errorClass{0x24}
-	nameError = errorClass{0x25}
-	arithError = errorClass{0x26}
-	interrupts = errorClass{0xFE}
+// definitions of all error classes inside the Zn Programming language
+var (
+	// 0x20 - lexError
+	// this error class displays all errors occur during lexing stage. (including input data)
+	lexError = errorClass{LexErrorClass, 0}
+	// 0x21 - ioError
+	// I/O related error (e.g. FileNotFound, OpenFileError, ReadFileError)
+	ioError = errorClass{
+		IOErrorClass,
+		dpHideLineText | dpHideFileName | dpHideLineCursor | dpHideLineNum,
+	}
+	// 0x22 - syntaxError
+	// show errors occured on parsing stage
+	syntaxError = errorClass{SyntaxErrorClass, 0}
+	// 0x23 - typeError
+	// show errors of type validation
+	typeError = errorClass{TypeErrorClass, dpHideLineCursor}
+	// 0x24 - indexError
+	// show errors when retrieving data by index from arrayList
+	indexError = errorClass{IndexErrorClass, dpHideLineCursor}
+	// 0x25 - nameError
+	// show errors while identifier not found or others related to identifiers.
+	nameError = errorClass{NameErrorClass, dpHideLineCursor}
+	// 0x26 - arithError
+	// trigger error happened on arithmetic operation (such as div)
+	arithError = errorClass{ArithErrorClass, dpHideLineCursor}
+	// 0x27 - paramError
+	// trigger error when input parameters doesn't satisfy the requirements
+	paramError = errorClass{ParamErrorClass, dpHideLineCursor}
+
+	// 0xFE - interrupts
+	// strictly, interrupts is NOT an error.
+	// we use interrupts to stop execution immediately.
+	// (like
+	//   ...
+	//   if err != nil {
+	//     return err
+	//   }
+	//   ...
+	// )
+	//
+	interrupts = errorClass{InterruptsClass, dpHideLineCursor}
 
 	errClassMap = map[uint16]string{
-		0x20: "语法错误", // from lex
-		0x21: "I/O错误",
-		0x22: "语法错误", // from parser
-		0x23: "类型错误",
-		0x24: "索引错误",
-		0x25: "标识错误",
-		0x26: "算术错误",
-		0xFE: "数据中断（不应见到此消息显示）",
+		LexErrorClass:    "语法错误", // from lex
+		IOErrorClass:     "I/O错误",
+		SyntaxErrorClass: "语法错误", // from parser
+		TypeErrorClass:   "类型错误",
+		IndexErrorClass:  "索引错误",
+		NameErrorClass:   "标识错误",
+		ArithErrorClass:  "算术错误",
+		ParamErrorClass:  "参数错误",
+		InterruptsClass:  "数据中断（不应见到此消息显示）",
 	}
-}
+)
