@@ -16,8 +16,17 @@ type Context struct {
 	*ArithInstance
 	// lastValue is set during the execution, usually stands for 'the return value' of a function.
 	lastValue ZnValue
-	// currentLine shows current executing line, usually for error displaying
+	lexScope
+}
+
+// lexScope defines current lex info of context.
+// NOTICE: a Context is eligible to call ExecuteCode() many times, which means lexScope may
+// varies from different input stream even in same context!
+type lexScope struct {
+	file string
+	// current execution line - it's continuously changing within the execution process
 	currentLine int
+	lineStack   *lex.LineStack
 }
 
 const defaultPrecision = 8
@@ -43,20 +52,23 @@ func NewContext() *Context {
 }
 
 // ExecuteCode - execute program from input Zn code (whether from file or REPL)
-func (ctx *Context) ExecuteCode(in *lex.InputStream) Result {
+func (ctx *Context) ExecuteCode(in *lex.InputStream, env Env) Result {
 	l := lex.NewLexer(in)
 	p := syntax.NewParser(l)
-	env := NewEnv(l.LineStack)
 	// start
 	block, err := p.Parse()
 	if err != nil {
 		return Result{true, nil, err}
 	}
+	// After parsing, lines are split & cached completely.
+	// It's time to initialize lexScope
+	ctx.initLexScope(l)
+
 	// construct root (program) node
 	program := syntax.NewProgramNode(block)
 
 	if err := EvalProgram(ctx, program, env); err != nil {
-		wrapError(ctx, err)
+		wrapError(ctx, err, env)
 		return Result{true, nil, err}
 	}
 	return Result{false, ctx.lastValue, nil}
@@ -64,11 +76,11 @@ func (ctx *Context) ExecuteCode(in *lex.InputStream) Result {
 
 // ExecuteBlockAST - execute blockStmt AST
 // usually for executing function template
-func (ctx *Context) ExecuteBlockAST(block *syntax.BlockStmt, env *Env) Result {
+func (ctx *Context) ExecuteBlockAST(block *syntax.BlockStmt, env Env) Result {
 	if err := EvalStmtBlockNS(ctx, block, env); err != nil {
 		// handle returnValue Interrupts
 		if err.GetErrorClass() != error.InterruptsClass {
-			wrapError(ctx, err)
+			wrapError(ctx, err, env)
 			return Result{true, nil, err}
 		}
 	}
@@ -85,19 +97,42 @@ func (ctx *Context) ResetLastValue() {
 	ctx.lastValue = nil
 }
 
+// lexScope helpers
+func (ctx *Context) initLexScope(l *lex.Lexer) {
+	ctx.lexScope = lexScope{
+		file:        l.InputStream.Scope,
+		currentLine: 0,
+		lineStack:   l.LineStack,
+	}
+}
+
 func (ctx *Context) setCurrentLine(line int) {
-	ctx.currentLine = line
+	ctx.lexScope.currentLine = line
+}
+
+func (ctx *Context) getFile() string {
+	return ctx.lexScope.file
+}
+
+func (ctx *Context) getCurrentLine() int {
+	return ctx.lexScope.currentLine
+}
+
+func (ctx *Context) getCurrentLineText() string {
+	ls := ctx.lexScope
+	txt := ls.lineStack.GetParsedLineText(ctx.currentLine)
+	return string(txt)
 }
 
 //// Execute (Evaluate) statements
 
 // EvalProgram - evaluate global program (root node)
-func EvalProgram(ctx *Context, program *syntax.Program, env *Env) *error.Error {
+func EvalProgram(ctx *Context, program *syntax.Program, env Env) *error.Error {
 	return EvalStmtBlock(ctx, program.Content, env)
 }
 
 // EvalStatement - eval statement
-func EvalStatement(ctx *Context, stmt syntax.Statement, env *Env) *error.Error {
+func EvalStatement(ctx *Context, stmt syntax.Statement, env Env) *error.Error {
 	ctx.setCurrentLine(stmt.GetCurrentLine())
 	switch v := stmt.(type) {
 	case *syntax.VarDeclareStmt:
@@ -132,7 +167,7 @@ func EvalStatement(ctx *Context, stmt syntax.Statement, env *Env) *error.Error {
 	}
 }
 
-func evalVarDeclareStmt(ctx *Context, stmt *syntax.VarDeclareStmt, env *Env) *error.Error {
+func evalVarDeclareStmt(ctx *Context, stmt *syntax.VarDeclareStmt, env Env) *error.Error {
 	for _, vpair := range stmt.AssignPair {
 		obj, err := EvalExpression(ctx, vpair.AssignExpr, env)
 		if err != nil {
@@ -152,7 +187,7 @@ func evalVarDeclareStmt(ctx *Context, stmt *syntax.VarDeclareStmt, env *Env) *er
 }
 
 // EvalStmtBlock -
-func EvalStmtBlock(ctx *Context, block *syntax.BlockStmt, env *Env) *error.Error {
+func EvalStmtBlock(ctx *Context, block *syntax.BlockStmt, env Env) *error.Error {
 	ctx.EnterScope()
 	defer ctx.ExitScope()
 
@@ -166,7 +201,7 @@ func EvalStmtBlock(ctx *Context, block *syntax.BlockStmt, env *Env) *error.Error
 }
 
 // EvalStmtBlockNS - eval statement block without shifting scope
-func EvalStmtBlockNS(ctx *Context, block *syntax.BlockStmt, env *Env) *error.Error {
+func EvalStmtBlockNS(ctx *Context, block *syntax.BlockStmt, env Env) *error.Error {
 	for _, stmt := range block.Children {
 		err := EvalStatement(ctx, stmt, env)
 		if err != nil {
@@ -176,8 +211,8 @@ func EvalStmtBlockNS(ctx *Context, block *syntax.BlockStmt, env *Env) *error.Err
 	return nil
 }
 
-func evalWhileLoopStmt(ctx *Context, loopStmt *syntax.WhileLoopStmt, env *Env) *error.Error {
-	nEnv := env.Dup(BlockWHILE)
+func evalWhileLoopStmt(ctx *Context, loopStmt *syntax.WhileLoopStmt, env Env) *error.Error {
+	nEnv := DupLoopEnv(env)
 	for {
 		// #1. first execute expr
 		trueExpr, err := EvalExpression(ctx, loopStmt.TrueExpr, nEnv)
@@ -200,7 +235,7 @@ func evalWhileLoopStmt(ctx *Context, loopStmt *syntax.WhileLoopStmt, env *Env) *
 	}
 }
 
-func evalBranchStmt(ctx *Context, branchStmt *syntax.BranchStmt, env *Env) *error.Error {
+func evalBranchStmt(ctx *Context, branchStmt *syntax.BranchStmt, env Env) *error.Error {
 	// #1. if branch
 	ifExpr, err := EvalExpression(ctx, branchStmt.IfTrueExpr, env)
 	if err != nil {
@@ -239,7 +274,7 @@ func evalBranchStmt(ctx *Context, branchStmt *syntax.BranchStmt, env *Env) *erro
 //// Execute (Evaluate) expressions
 
 // EvalExpression - execute expression
-func EvalExpression(ctx *Context, expr syntax.Expression, env *Env) (ZnValue, *error.Error) {
+func EvalExpression(ctx *Context, expr syntax.Expression, env Env) (ZnValue, *error.Error) {
 	ctx.setCurrentLine(expr.GetCurrentLine())
 	switch e := expr.(type) {
 	case *syntax.VarAssignExpr:
@@ -267,7 +302,7 @@ func EvalExpression(ctx *Context, expr syntax.Expression, env *Env) (ZnValue, *e
 }
 
 // （显示：A，B，C）
-func evalFunctionCall(ctx *Context, expr *syntax.FuncCallExpr, env *Env) (ZnValue, *error.Error) {
+func evalFunctionCall(ctx *Context, expr *syntax.FuncCallExpr, env Env) (ZnValue, *error.Error) {
 	vtag := expr.FuncName.GetLiteral()
 	// find function definctxion
 	val, err := ctx.Lookup(vtag)
@@ -295,7 +330,7 @@ func evalFunctionCall(ctx *Context, expr *syntax.FuncCallExpr, env *Env) (ZnValu
 // evaluate logic combination expressions
 // such as A 且 B
 // or A 或 B
-func evalLogicCombiner(ctx *Context, expr *syntax.LogicExpr, env *Env) (*ZnBool, *error.Error) {
+func evalLogicCombiner(ctx *Context, expr *syntax.LogicExpr, env Env) (*ZnBool, *error.Error) {
 	logicType := expr.Type
 	// #1. eval left
 	left, err := EvalExpression(ctx, expr.LeftExpr, env)
@@ -339,7 +374,7 @@ func evalLogicCombiner(ctx *Context, expr *syntax.LogicExpr, env *Env) (*ZnBool,
 
 // evaluate logic comparator
 // ensure both expressions are comparable (i.e. subtype of ZnComparable)
-func evalLogicComparator(ctx *Context, expr *syntax.LogicExpr, env *Env) (*ZnBool, *error.Error) {
+func evalLogicComparator(ctx *Context, expr *syntax.LogicExpr, env Env) (*ZnBool, *error.Error) {
 	logicType := expr.Type
 	// #1. eval left
 	left, err := EvalExpression(ctx, expr.LeftExpr, env)
@@ -396,7 +431,7 @@ func evalLogicComparator(ctx *Context, expr *syntax.LogicExpr, env *Env) (*ZnBoo
 }
 
 // eval prime expr
-func evalPrimeExpr(ctx *Context, expr syntax.Expression, env *Env) (ZnValue, *error.Error) {
+func evalPrimeExpr(ctx *Context, expr syntax.Expression, env Env) (ZnValue, *error.Error) {
 	switch e := expr.(type) {
 	case *syntax.Number:
 		return NewZnDecimal(e.GetLiteral())
@@ -444,7 +479,7 @@ func evalPrimeExpr(ctx *Context, expr syntax.Expression, env *Env) (ZnValue, *er
 }
 
 // eval var assign
-func evalVarAssignExpr(ctx *Context, expr *syntax.VarAssignExpr, env *Env) (ZnValue, *error.Error) {
+func evalVarAssignExpr(ctx *Context, expr *syntax.VarAssignExpr, env Env) (ZnValue, *error.Error) {
 	// Right Side
 	val, err := EvalExpression(ctx, expr.AssignExpr, env)
 	if err != nil {
@@ -469,7 +504,7 @@ func evalVarAssignExpr(ctx *Context, expr *syntax.VarAssignExpr, env *Env) (ZnVa
 	}
 }
 
-func getArrayListIV(ctx *Context, expr *syntax.ArrayListIndexExpr, env *Env) (ZnIV, *error.Error) {
+func getArrayListIV(ctx *Context, expr *syntax.ArrayListIndexExpr, env Env) (ZnIV, *error.Error) {
 	val, err := EvalExpression(ctx, expr.Root, env)
 	if err != nil {
 		return nil, err
@@ -509,13 +544,13 @@ func getArrayListIV(ctx *Context, expr *syntax.ArrayListIndexExpr, env *Env) (Zn
 // wrapError if lineInfo is missing (mostly for non-syntax errors)
 // If lineInfo missing, then we will add current execution line and hide some part to
 // display errors properly.
-func wrapError(ctx *Context, err *error.Error) {
+func wrapError(ctx *Context, err *error.Error, env Env) {
 	cursor := err.GetCursor()
 	if cursor.LineNum == 0 {
 		newCursor := error.Cursor{
-			LineNum: ctx.currentLine,
-			// TODO - set text
-			// Text: ctx.
+			File:    ctx.getFile(),
+			LineNum: ctx.getCurrentLine(),
+			Text:    ctx.getCurrentLineText(),
 		}
 		err.SetCursor(newCursor)
 	}
