@@ -37,7 +37,8 @@ func EnterREPL() {
 
 		// execute program
 		in := lex.NewTextStream(text)
-		result := ctx.ExecuteCode(in)
+		env := exec.NewProgramEnv()
+		result := ctx.ExecuteCode(in, env)
 		if !result.HasError {
 			if result.Value != nil {
 				prettyDisplayValue(result.Value, os.Stdout)
@@ -51,13 +52,14 @@ func EnterREPL() {
 // ExecProgram - exec program from file directly
 func ExecProgram(file string) {
 	ctx := exec.NewContext()
+	env := exec.NewProgramEnv()
 	in, errF := lex.NewFileStream(file)
 	if errF != nil {
 		fmt.Println(errF.Display())
 		return
 	}
 
-	result := ctx.ExecuteCode(in)
+	result := ctx.ExecuteCode(in, env)
 	// when exec program, unlike REPL, it's not necessary to print last executed value
 	if result.HasError {
 		fmt.Println(result.Error.Display())
