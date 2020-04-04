@@ -107,6 +107,8 @@ func StringifyAST(node Node) string {
 		return fmt.Sprintf("$IF(%s)", strings.Join(conds, " "))
 	case *WhileLoopStmt:
 		return fmt.Sprintf("$WL(expr=(%s) block=(%s))", StringifyAST(v.TrueExpr), StringifyAST(v.LoopBlock))
+	case *FunctionReturnStmt:
+		return fmt.Sprintf("$RT(%s)", StringifyAST(v.ReturnExpr))
 	case *FunctionDeclareStmt:
 		paramsStr := []string{}
 		for _, p := range v.ParamList {
