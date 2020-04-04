@@ -27,8 +27,13 @@ func NewParser(l *lex.Lexer) *Parser {
 // Parse - parse all tokens into an AST (stored as ProgramNode)
 func (p *Parser) Parse() (block *BlockStmt, err *error.Error) {
 	defer func() {
+		var ok bool
 		if r := recover(); r != nil {
-			err, _ = r.(*error.Error)
+			err, ok = r.(*error.Error)
+			// for other kinds of error (e.g. runtime error), panic it directly
+			if !ok {
+				panic(r)
+			}
 		}
 		handleDeferError(p, err)
 	}()

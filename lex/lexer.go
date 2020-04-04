@@ -85,8 +85,13 @@ func (l *Lexer) SetBlockSize(size int) {
 // NextToken - parse and generate the next token (including comments)
 func (l *Lexer) NextToken() (tok *Token, err *error.Error) {
 	defer func() {
+		var ok bool
 		if r := recover(); r != nil {
-			err, _ = r.(*error.Error)
+			err, ok = r.(*error.Error)
+			// for other kinds of error (e.g. runtime error), panic it directly
+			if !ok {
+				panic(r)
+			}
 		}
 		handleDeferError(l, err)
 	}()
