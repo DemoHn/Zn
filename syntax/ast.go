@@ -379,6 +379,8 @@ func ParseExpression(p *Parser) Expression {
 	//// anynomous function definition
 	logicItemTailParser = func(idx int, leftExpr Expression) Expression {
 		var finalExpr Expression
+		// TEST FAIL CODE - SHOULD BE REMOVED AFTER TESTING
+		finalExpr.SetCurrentLine(100)
 		// #1. consume keyword
 		match, tk := p.tryConsume(logicKeywords[idx]...)
 		if !match {
