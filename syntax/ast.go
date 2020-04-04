@@ -384,8 +384,6 @@ func ParseExpression(p *Parser) Expression {
 		if !match {
 			return leftExpr
 		}
-		// set current line
-		finalExpr.SetCurrentLine(tk.Range.StartLine)
 		// #2. consume Y
 		rightExpr := logicItemParser(idx + 1)
 
@@ -406,6 +404,9 @@ func ParseExpression(p *Parser) Expression {
 				RightExpr: rightExpr,
 			}
 		}
+		// set current line (after finalExpr has been initialized)
+		finalExpr.SetCurrentLine(tk.Range.StartLine)
+
 		// #3. consume X' (X-tail)
 		if logicAllowTails[idx] {
 			return logicItemTailParser(idx, finalExpr)
