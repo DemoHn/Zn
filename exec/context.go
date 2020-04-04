@@ -126,7 +126,7 @@ func (ctx *Context) getCurrentLineText() string {
 
 // EvalProgram - evaluate global program (root node)
 func EvalProgram(ctx *Context, program *syntax.Program, env Env) *error.Error {
-	return EvalStmtBlock(ctx, program.Content, env)
+	return EvalStmtBlockNS(ctx, program.Content, env)
 }
 
 // EvalStatement - eval statement
@@ -189,6 +189,10 @@ func EvalStmtBlock(ctx *Context, block *syntax.BlockStmt, env Env) *error.Error 
 	ctx.EnterScope()
 	defer ctx.ExitScope()
 
+	if block == nil || block.Children == nil {
+		return error.NewErrorSLOT("stmt block empty")
+	}
+
 	for _, stmt := range block.Children {
 		err := EvalStatement(ctx, stmt, env)
 		if err != nil {
@@ -200,6 +204,10 @@ func EvalStmtBlock(ctx *Context, block *syntax.BlockStmt, env Env) *error.Error 
 
 // EvalStmtBlockNS - eval statement block without shifting scope
 func EvalStmtBlockNS(ctx *Context, block *syntax.BlockStmt, env Env) *error.Error {
+	// assert block != nil
+	if block == nil || block.Children == nil {
+		return error.NewErrorSLOT("stmt block empty")
+	}
 	for _, stmt := range block.Children {
 		err := EvalStatement(ctx, stmt, env)
 		if err != nil {
