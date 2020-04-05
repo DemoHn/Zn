@@ -6,18 +6,18 @@ import (
 )
 
 const (
-	defBlockSize int = 256
+	defaultBlockSize int = 256
 )
 
 // Lexer is a structure that pe provides a set of tools to help tokenizing the code.
 type Lexer struct {
+	*InputStream // input stream
 	*LineStack
-	quoteStack   *util.RuneStack
-	*InputStream        // input stream
-	chBuffer     []rune // the buffer for parsing & generating tokens
-	cursor       int
-	blockSize    int
-	beginLex     bool
+	quoteStack *util.RuneStack
+	chBuffer   []rune // the buffer for parsing & generating tokens
+	cursor     int
+	blockSize  int
+	beginLex   bool
 }
 
 // NewLexer - new lexer
@@ -28,7 +28,7 @@ func NewLexer(in *InputStream) *Lexer {
 		InputStream: in,
 		chBuffer:    []rune{},
 		cursor:      -1,
-		blockSize:   defBlockSize,
+		blockSize:   defaultBlockSize,
 		beginLex:    true,
 	}
 }
@@ -37,7 +37,7 @@ func NewLexer(in *InputStream) *Lexer {
 func (l *Lexer) next() rune {
 	l.cursor++
 
-	if l.cursor+2 >= l.GetLineBufferSize() {
+	if l.cursor+2 >= l.getLineBufferSize() {
 		if !l.End() {
 			if b, err := l.Read(l.blockSize); err == nil {
 				l.AppendLineBuffer(b)
@@ -226,7 +226,6 @@ func (l *Lexer) parseCRLF(ch rune) []rune {
 
 	// new line and reset cursor
 	l.NewLine(l.cursor + 1)
-	l.cursor = -1
 
 	// to see if next line contains (potential) indents
 	if !util.Contains(l.peek(), []rune{SP, TAB, EOF}) {

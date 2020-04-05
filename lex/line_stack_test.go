@@ -25,11 +25,8 @@ func TestLineStack_SetIndent(t *testing.T) {
 				count:    0,
 				idetType: IdetUnknown,
 			},
-			expectError: false,
-			expectCursor: scanCursor{
-				indents:   0,
-				scanState: scanIndent,
-			},
+			expectError:      false,
+			expectCursor:     scanCursor{0, 0, scanIndent},
 			expectIndentType: IdetUnknown,
 		},
 		{
@@ -38,11 +35,8 @@ func TestLineStack_SetIndent(t *testing.T) {
 				count:    4,
 				idetType: IdetSpace,
 			},
-			expectError: false,
-			expectCursor: scanCursor{
-				indents:   1,
-				scanState: scanIndent,
-			},
+			expectError:      false,
+			expectCursor:     scanCursor{0, 1, scanIndent},
 			expectIndentType: IdetSpace,
 		},
 		{
@@ -51,11 +45,8 @@ func TestLineStack_SetIndent(t *testing.T) {
 				count:    2,
 				idetType: IdetTab,
 			},
-			expectError: false,
-			expectCursor: scanCursor{
-				indents:   2,
-				scanState: scanIndent,
-			},
+			expectError:      false,
+			expectCursor:     scanCursor{0, 2, scanIndent},
 			expectIndentType: IdetTab,
 		},
 		{
@@ -187,18 +178,12 @@ func TestLineStack_LineStackSnapshot(t *testing.T) {
 				{
 					opstr: "lines",
 					lines: []LineInfo{
-						{
-							Indents: 0,
-							Source:  []rune("如果它是真的："),
-						},
+						{0, 0, 6},
 					},
 				},
 				{
-					opstr: "scanCursor",
-					cursor: scanCursor{
-						indents:   0,
-						scanState: scanEnd,
-					},
+					opstr:  "scanCursor",
+					cursor: scanCursor{0, 0, scanEnd},
 				},
 			},
 		},
@@ -214,11 +199,8 @@ func TestLineStack_LineStackSnapshot(t *testing.T) {
 					r1:    []rune("    "),
 				},
 				{
-					opstr: "cursor",
-					cursor: scanCursor{
-						indents:   0,
-						scanState: scanIndent,
-					},
+					opstr:  "cursor",
+					cursor: scanCursor{9, 0, scanIndent},
 				},
 			},
 		},
@@ -264,14 +246,8 @@ func TestLineStack_LineStackSnapshot(t *testing.T) {
 				{
 					opstr: "lines",
 					lines: []LineInfo{
-						{
-							Indents: 0,
-							Source:  []rune("如果它是真的："),
-						},
-						{
-							Indents: 1,
-							Source:  []rune("搞个大新闻"),
-						},
+						{0, 0, 6},
+						{1, 9, 13},
 					},
 				},
 			},
@@ -299,18 +275,9 @@ func TestLineStack_LineStackSnapshot(t *testing.T) {
 				{
 					opstr: "lines",
 					lines: []LineInfo{
-						{
-							Indents: 0,
-							Source:  []rune("如果它是真的："),
-						},
-						{
-							Indents: 1,
-							Source:  []rune("搞个大新闻"),
-						},
-						{
-							Indents: 0,
-							Source:  []rune{},
-						},
+						{0, 0, 6},
+						{1, 9, 13},
+						{0, 16, 16},
 					},
 				},
 				{
@@ -355,26 +322,11 @@ func TestLineStack_LineStackSnapshot(t *testing.T) {
 				{
 					opstr: "lines",
 					lines: []LineInfo{
-						{
-							Indents: 0,
-							Source:  []rune("如果它是真的："),
-						},
-						{
-							Indents: 1,
-							Source:  []rune("搞个大新闻"),
-						},
-						{
-							Indents: 0,
-							Source:  []rune{},
-						},
-						{
-							Indents: 0,
-							Source:  []rune("否则："),
-						},
-						{
-							Indents: 2,
-							Source:  []rune("不搞大新闻"),
-						},
+						{0, 0, 6},
+						{1, 9, 13},
+						{0, 16, 16},
+						{0, 19, 21},
+						{2, 20, 20},
 					},
 				},
 			},

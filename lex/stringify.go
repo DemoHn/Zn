@@ -71,12 +71,12 @@ func StringifyLines(ls *LineStack) string {
 		indentChar = "T"
 	}
 
-	for _, line := range ls.lines {
-		if len(line.Source) == 0 {
-			ss = append(ss, fmt.Sprintf("E<%d>", line.Indents))
+	for i, line := range ls.lines {
+		if line.startIdx == line.endIdx {
+			ss = append(ss, fmt.Sprintf("E<%d>", line.indents))
 		} else {
 			ss = append(ss,
-				fmt.Sprintf("%s<%d>[%s]", indentChar, line.Indents, string(line.Source)))
+				fmt.Sprintf("%s<%d>[%s]", indentChar, line.indents, string(ls.GetParsedLineText(i+1))))
 		}
 	}
 	return strings.Join(ss, " ")
