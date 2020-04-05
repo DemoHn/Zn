@@ -342,7 +342,7 @@ func TestLineStack_LineStackSnapshot(t *testing.T) {
 	}
 }
 
-// test AppendLineBuffer, GetColIndex, GetLineBufferSize
+// test AppendLineBuffer, getChar, GetLineBufferSize
 func TestLineStack_LineBuffer(t *testing.T) {
 	ls := NewLineStack()
 
@@ -354,12 +354,12 @@ func TestLineStack_LineBuffer(t *testing.T) {
 		t.Errorf("buffer length should be %d, got %d", 21, got)
 	}
 
-	c1 := ls.GetColIndex(4)
+	c1 := ls.getChar(4)
 	if c1 != '5' {
 		t.Errorf("c1 should be %v, got %v", '5', c1)
 	}
 
-	c2 := ls.GetColIndex(100)
+	c2 := ls.getChar(100)
 	if c2 != EOF {
 		t.Errorf("c2 should be %v, got %v", EOF, c1)
 	}

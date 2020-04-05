@@ -153,14 +153,6 @@ func (ls *LineStack) AppendLineBuffer(data []rune) {
 	ls.lineBuffer = append(ls.lineBuffer, data...)
 }
 
-// GetColIndex - get value from lineBuffer
-func (ls *LineStack) GetColIndex(idx int) rune {
-	if idx >= len(ls.lineBuffer) {
-		return EOF
-	}
-	return ls.lineBuffer[idx]
-}
-
 // GetLineBufferSize -
 func (ls *LineStack) GetLineBufferSize() int {
 	return ls.getLineBufferSize()
@@ -212,4 +204,12 @@ func (ls *LineStack) GetParsedLineText(lineNum int) []rune {
 //// private helpers
 func (ls *LineStack) getLineBufferSize() int {
 	return len(ls.lineBuffer)
+}
+
+// getChar - get value from lineBuffer
+func (ls *LineStack) getChar(idx int) rune {
+	if idx >= len(ls.lineBuffer) {
+		return EOF
+	}
+	return ls.lineBuffer[idx]
 }

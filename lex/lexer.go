@@ -51,17 +51,17 @@ func (l *Lexer) next() rune {
 	}
 
 	// still no data, return EOF directly
-	return l.GetColIndex(l.cursor)
+	return l.getChar(l.cursor)
 }
 
 // peek - get the character of the cursor
 func (l *Lexer) peek() rune {
-	return l.GetColIndex(l.cursor + 1)
+	return l.getChar(l.cursor + 1)
 }
 
 // peek2 - get the next next character without moving the cursor
 func (l *Lexer) peek2() rune {
-	return l.GetColIndex(l.cursor + 2)
+	return l.getChar(l.cursor + 2)
 }
 
 // rebase - rebase cursor within the same line
@@ -131,7 +131,7 @@ head:
 		cursor := l.cursor
 		isComment, isMultiLine := l.validateComment(ch)
 		if isComment {
-			tok, err = l.parseComment(l.GetColIndex(l.cursor), isMultiLine)
+			tok, err = l.parseComment(l.getChar(l.cursor), isMultiLine)
 			return
 		}
 
