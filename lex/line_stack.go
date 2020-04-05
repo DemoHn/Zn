@@ -2,7 +2,6 @@ package lex
 
 import (
 	"github.com/DemoHn/Zn/error"
-	"github.com/DemoHn/Zn/util"
 )
 
 // LineStack - store line source and its indent info
@@ -19,13 +18,16 @@ type LineStack struct {
 type LineInfo struct {
 	// the indent number (at the beginning) of this line.
 	// all lines should have indents to differentiate scopes.
-	Indents int
-	// source data of the line (without indentation chars)
-	Source []rune
+	indents int
+	// startIdx - start index of lineBuffer
+	startIdx int
+	// endIdx - end index of lineBuffer
+	endIdx int
 }
 
 type scanCursor struct {
-	indents int
+	startIdx int
+	indents  int
 	scanState
 }
 
@@ -64,11 +66,8 @@ func NewLineStack() *LineStack {
 		IndentType:  IdetUnknown,
 		lines:       []LineInfo{},
 		CurrentLine: 1,
-		scanCursor: scanCursor{
-			indents:   0,
-			scanState: scanIndent,
-		},
-		lineBuffer: []rune{},
+		scanCursor:  scanCursor{0, 0, scanIndent},
+		lineBuffer:  []rune{},
 	}
 }
 
@@ -124,8 +123,9 @@ func (ls *LineStack) PushLine(lastIndex int) {
 
 	// push index
 	line := LineInfo{
-		Indents: idets,
-		Source:  util.Copy(ls.lineBuffer[count : lastIndex+1]),
+		indents:  idets,
+		startIdx: ls.scanCursor.startIdx + count,
+		endIdx:   lastIndex,
 	}
 
 	ls.lines = append(ls.lines, line)
@@ -136,11 +136,8 @@ func (ls *LineStack) PushLine(lastIndex int) {
 // change scanState from 2 -> 0
 func (ls *LineStack) NewLine(index int) {
 	// reset start index
-	ls.lineBuffer = ls.lineBuffer[index:]
-	ls.scanCursor = scanCursor{
-		indents:   0,
-		scanState: scanInit,
-	}
+	ls.scanCursor = scanCursor{index, 0, scanInit}
+
 	// add CurrentLine
 	ls.CurrentLine++
 }
@@ -166,7 +163,7 @@ func (ls *LineStack) GetColIndex(idx int) rune {
 
 // GetLineBufferSize -
 func (ls *LineStack) GetLineBufferSize() int {
-	return len(ls.lineBuffer)
+	return ls.getLineBufferSize()
 }
 
 // GetLineBuffer -
@@ -188,7 +185,7 @@ func (ls *LineStack) GetLineIndent(lineNum int) int {
 
 	if lineNum > 0 {
 		lineInfo := ls.lines[lineNum-1]
-		return lineInfo.Indents
+		return lineInfo.indents
 	}
 
 	return -1
@@ -204,8 +201,15 @@ func (ls *LineStack) GetParsedLineText(lineNum int) []rune {
 
 	if lineNum > 0 {
 		lineInfo := ls.lines[lineNum-1]
-		return lineInfo.Source
+		sIdx := lineInfo.startIdx
+		eIdx := lineInfo.endIdx + 1
+		return ls.lineBuffer[sIdx : eIdx+1]
 	}
 
 	return []rune{}
+}
+
+//// private helpers
+func (ls *LineStack) getLineBufferSize() int {
+	return len(ls.lineBuffer)
 }
