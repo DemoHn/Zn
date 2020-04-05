@@ -110,7 +110,7 @@ head:
 	var ch = l.next()
 	switch ch {
 	case EOF:
-		l.PushLine(l.cursor - 1)
+		l.PushLine(l.cursor)
 		tok = NewTokenEOF(l.CurrentLine, l.cursor)
 		return
 	case SP, TAB:
@@ -214,13 +214,13 @@ func (l *Lexer) parseCRLF(ch rune) []rune {
 	if (ch == CR && p == LF) || (ch == LF && p == CR) {
 		// skip one char since we have judge two chars
 		l.next()
-		l.PushLine(l.cursor - 2)
+		l.PushLine(l.cursor - 1)
 
 		rtn = []rune{ch, p}
 	} else {
 		// for LF or CR only
 		// LF: <linux>, CR:<old mac>
-		l.PushLine(l.cursor - 1)
+		l.PushLine(l.cursor)
 		rtn = []rune{ch}
 	}
 

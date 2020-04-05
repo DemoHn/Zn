@@ -22,6 +22,8 @@ type LineInfo struct {
 	// startIdx - start index of lineBuffer
 	startIdx int
 	// endIdx - end index of lineBuffer
+	// NOTE: endIdx value IS DIFFERENT FROM the index of last char of that line.
+	// usually, endIdx = lastChar + 1
 	endIdx int
 }
 
@@ -192,10 +194,8 @@ func (ls *LineStack) GetParsedLineText(lineNum int) []rune {
 	}
 
 	if lineNum > 0 {
-		lineInfo := ls.lines[lineNum-1]
-		sIdx := lineInfo.startIdx
-		eIdx := lineInfo.endIdx + 1
-		return ls.lineBuffer[sIdx : eIdx+1]
+		info := ls.lines[lineNum-1]
+		return ls.getTextFromIdx(info.startIdx, info.endIdx)
 	}
 
 	return []rune{}
@@ -212,4 +212,9 @@ func (ls *LineStack) getChar(idx int) rune {
 		return EOF
 	}
 	return ls.lineBuffer[idx]
+}
+
+// getTextFromIdx - get text from absolute index range of line buffer
+func (ls *LineStack) getTextFromIdx(startIdx int, endIdx int) []rune {
+	return ls.lineBuffer[startIdx:endIdx]
 }

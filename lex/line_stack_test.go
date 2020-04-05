@@ -161,24 +161,21 @@ func TestLineStack_LineStackSnapshot(t *testing.T) {
 			},
 			snapshot: []lineStackChangeOp{
 				{
-					opstr: "scanCursor",
-					cursor: scanCursor{
-						indents:   0,
-						scanState: scanIndent,
-					},
+					opstr:  "scanCursor",
+					cursor: scanCursor{0, 0, scanIndent},
 				},
 			},
 		},
 		{
 			op: lineStackOp{
 				opstr: "pushLine",
-				num1:  6,
+				num1:  7,
 			},
 			snapshot: []lineStackChangeOp{
 				{
 					opstr: "lines",
 					lines: []LineInfo{
-						{0, 0, 6},
+						{0, 0, 7},
 					},
 				},
 				{
@@ -196,7 +193,7 @@ func TestLineStack_LineStackSnapshot(t *testing.T) {
 			snapshot: []lineStackChangeOp{
 				{
 					opstr: "lineBuffer",
-					r1:    []rune("    "),
+					r1:    []rune("如果它是真的：\r\n    "),
 				},
 				{
 					opstr:  "cursor",
@@ -212,7 +209,7 @@ func TestLineStack_LineStackSnapshot(t *testing.T) {
 			snapshot: []lineStackChangeOp{
 				{
 					opstr: "lineBuffer",
-					r1:    []rune("    搞个大新闻\n\n否则：\n\r        不搞大新闻"),
+					r1:    []rune("如果它是真的：\r\n    搞个大新闻\n\n否则：\n\r        不搞大新闻"),
 				},
 			},
 		},
@@ -233,21 +230,21 @@ func TestLineStack_LineStackSnapshot(t *testing.T) {
 		{
 			op: lineStackOp{
 				opstr: "pushLine",
-				num1:  8,
+				num1:  18,
 			},
 		},
 		// line 3
 		{
 			op: lineStackOp{
 				opstr: "newLine",
-				num1:  10,
+				num1:  19,
 			},
 			snapshot: []lineStackChangeOp{
 				{
 					opstr: "lines",
 					lines: []LineInfo{
-						{0, 0, 6},
-						{1, 9, 13},
+						{0, 0, 7},
+						{1, 13, 18},
 					},
 				},
 			},
@@ -262,27 +259,27 @@ func TestLineStack_LineStackSnapshot(t *testing.T) {
 		{
 			op: lineStackOp{
 				opstr: "pushLine",
-				num1:  -1,
+				num1:  19,
 			},
 		},
 		// line 4
 		{
 			op: lineStackOp{
 				opstr: "newLine",
-				num1:  1,
+				num1:  20,
 			},
 			snapshot: []lineStackChangeOp{
 				{
 					opstr: "lines",
 					lines: []LineInfo{
-						{0, 0, 6},
-						{1, 9, 13},
-						{0, 16, 16},
+						{0, 0, 7},
+						{1, 13, 18},
+						{0, 19, 19},
 					},
 				},
 				{
 					opstr: "lineBuffer",
-					r1:    []rune("否则：\n\r        不搞大新闻"),
+					r1:    []rune("如果它是真的：\r\n    搞个大新闻\n\n否则：\n\r        不搞大新闻"),
 				},
 			},
 		},
@@ -296,14 +293,14 @@ func TestLineStack_LineStackSnapshot(t *testing.T) {
 		{
 			op: lineStackOp{
 				opstr: "pushLine",
-				num1:  2,
+				num1:  23,
 			},
 		},
 		// line 5
 		{
 			op: lineStackOp{
 				opstr: "newLine",
-				num1:  5,
+				num1:  24,
 			},
 		},
 		{
@@ -316,17 +313,17 @@ func TestLineStack_LineStackSnapshot(t *testing.T) {
 		{
 			op: lineStackOp{
 				opstr: "pushLine",
-				num1:  12,
+				num1:  37,
 			},
 			snapshot: []lineStackChangeOp{
 				{
 					opstr: "lines",
 					lines: []LineInfo{
-						{0, 0, 6},
-						{1, 9, 13},
-						{0, 16, 16},
-						{0, 19, 21},
-						{2, 20, 20},
+						{0, 0, 7},
+						{1, 13, 18},
+						{0, 19, 19},
+						{0, 20, 23},
+						{2, 32, 37},
 					},
 				},
 			},
