@@ -75,8 +75,14 @@ func StringifyLines(ls *LineStack) string {
 		if line.startIdx == line.endIdx {
 			ss = append(ss, fmt.Sprintf("E<%d>", line.indents))
 		} else {
+			var text = []rune{}
+			if i == ls.CurrentLine-1 {
+				text = ls.getTextFromIdx(ls.scanCursor.startIdx, line.endIdx)
+			} else {
+				text = ls.GetParsedLineText(i + 1)
+			}
 			ss = append(ss,
-				fmt.Sprintf("%s<%d>[%s]", indentChar, line.indents, string(ls.GetParsedLineText(i+1))))
+				fmt.Sprintf("%s<%d>[%s]", indentChar, line.indents, string(text)))
 		}
 	}
 	return strings.Join(ss, " ")
