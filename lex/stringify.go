@@ -77,7 +77,7 @@ func StringifyLines(ls *LineStack) string {
 		} else {
 			var text = []rune{}
 			if i == ls.CurrentLine-1 {
-				text = ls.getTextFromIdx(ls.scanCursor.startIdx, line.endIdx)
+				text = ls.getTextFromIdx(line.startIdx, line.endIdx)
 			} else {
 				text = ls.GetParsedLineText(i + 1)
 			}
