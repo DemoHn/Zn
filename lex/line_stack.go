@@ -127,6 +127,7 @@ func (ls *LineStack) PushLine(lastIndex int) {
 		Indents: idets,
 		Source:  util.Copy(ls.lineBuffer[count : lastIndex+1]),
 	}
+
 	ls.lines = append(ls.lines, line)
 	ls.scanCursor.scanState = scanEnd
 }
