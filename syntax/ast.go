@@ -33,7 +33,7 @@ func (b *StmtBase) GetCurrentLine() int { return b.currentLine }
 
 // SetCurrentLine -
 func (b *StmtBase) SetCurrentLine(tk *lex.Token) {
-	b.currentLine = tk.Range.GetStartLine()
+	b.currentLine = tk.Range.StartLine
 }
 
 // Expression - a speical type of statement - that yields value after execution
@@ -51,7 +51,7 @@ type ExprBase struct {
 func (e *ExprBase) GetCurrentLine() int { return e.currentLine }
 
 // SetCurrentLine -
-func (e *ExprBase) SetCurrentLine(tk *lex.Token) { e.currentLine = tk.Range.GetStartLine() }
+func (e *ExprBase) SetCurrentLine(tk *lex.Token) { e.currentLine = tk.Range.StartLine }
 func (e *ExprBase) stmtNode()                    {}
 func (e *ExprBase) exprNode()                    {}
 

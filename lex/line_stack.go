@@ -113,7 +113,7 @@ func (ls *LineStack) SetIndent(count int, t IndentType) *error.Error {
 	// set scanCursor
 	ls.scanCursor.indents = indentNum
 	ls.scanCursor.scanState = scanIndent
-
+	ls.scanCursor.startIdx += count
 	return nil
 }
 
@@ -121,15 +121,11 @@ func (ls *LineStack) SetIndent(count int, t IndentType) *error.Error {
 // change scanState from 1 -> 2
 func (ls *LineStack) PushLine(lastIndex int) {
 	idets := ls.scanCursor.indents
-	count := idets
-	if ls.IndentType == IdetSpace {
-		count = idets * 4
-	}
 
 	// push index
 	line := LineInfo{
 		indents:  idets,
-		startIdx: ls.scanCursor.startIdx + count,
+		startIdx: ls.scanCursor.startIdx,
 		endIdx:   lastIndex,
 	}
 
@@ -137,7 +133,7 @@ func (ls *LineStack) PushLine(lastIndex int) {
 	ls.scanCursor.scanState = scanEnd
 }
 
-// NewLine - reset scanCurosr
+// NewLine - reset scanCursor
 // change scanState from 2 -> 0
 func (ls *LineStack) NewLine(index int) {
 	// reset start index
@@ -147,20 +143,9 @@ func (ls *LineStack) NewLine(index int) {
 	ls.CurrentLine++
 }
 
-// onIndentStage - if the incoming SPACE/TAB should be regarded as indents
-// or normal spaces.
-func (ls *LineStack) onIndentStage() bool {
-	return ls.scanState == scanInit
-}
-
 // AppendLineBuffer - push data to lineBuffer
 func (ls *LineStack) AppendLineBuffer(data []rune) {
 	ls.lineBuffer = append(ls.lineBuffer, data...)
-}
-
-// GetLineBuffer -
-func (ls *LineStack) GetLineBuffer() []rune {
-	return ls.lineBuffer
 }
 
 // GetLineIndent - get current lineNum indent
@@ -181,23 +166,6 @@ func (ls *LineStack) GetLineIndent(lineNum int) int {
 	}
 }
 
-// GetParsedLineText - get line content of parsed lines (ie. not including current line)
-// NOTICE: when lineNum >= $currentLine, this will return an empty string!
-//
-// [[ DEPRECATED ]]
-func (ls *LineStack) GetParsedLineText(lineNum int) []rune {
-	if lineNum >= ls.CurrentLine {
-		return []rune{}
-	}
-
-	if lineNum > 0 {
-		info := ls.lines[lineNum-1]
-		return ls.getTextFromIdx(info.startIdx, info.endIdx)
-	}
-
-	return []rune{}
-}
-
 // GetLineText -
 func (ls *LineStack) GetLineText(lineNum int, slideToLineEnd bool) string {
 	return string(ls.getLineRune(lineNum, slideToLineEnd))
@@ -206,6 +174,11 @@ func (ls *LineStack) GetLineText(lineNum int, slideToLineEnd bool) string {
 // GetLineRune -
 func (ls *LineStack) GetLineRune(lineNum int, slideToLineEnd bool) []rune {
 	return ls.getLineRune(lineNum, slideToLineEnd)
+}
+
+// GetLineColumn -
+func (ls *LineStack) GetLineColumn(lineNum int, cursor int) int {
+	return ls.getLineColumn(lineNum, cursor)
 }
 
 //// private helpers
@@ -275,4 +248,31 @@ func (ls *LineStack) getLineRune(lineNum int, slideToLineEnd bool) []rune {
 		}
 		return []rune{}
 	}
+}
+
+func (ls *LineStack) getLineColumn(lineNum int, cursor int) int {
+	countIndentChars := func(indent int) int {
+		if ls.IndentType == IdetSpace {
+			return indent * 4
+		}
+		return indent
+	}
+	switch util.Compare(lineNum, ls.CurrentLine) {
+	case -1: // a < b
+		if lineNum > 0 {
+			line := ls.lines[lineNum-1]
+			return cursor - line.startIdx + countIndentChars(line.indents)
+		}
+		return -1
+	case 0:
+		return cursor - ls.scanCursor.startIdx + countIndentChars(ls.scanCursor.indents)
+	default:
+		return -1
+	}
+}
+
+// onIndentStage - if the incoming SPACE/TAB should be regarded as indents
+// or normal spaces.
+func (ls *LineStack) onIndentStage() bool {
+	return ls.scanState == scanInit
 }
