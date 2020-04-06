@@ -12,17 +12,28 @@ type Token struct {
 	Range   TokenRange
 }
 
-// TokenRange - actual occupation range of a token
+// TokenRange locates the absolute position of a token
 type TokenRange struct {
-	StartLine int
-	StartCol  int
-	EndLine   int
-	EndCol    int
+	// startLine - line num (start from 1) of first char
+	startLine int
+	startIdx  int
+	// endLine - line num (start from 1) of last char
+	endLine int
+	endIdx  int
 }
 
-// SetTokenRange -
-func (tk *Token) SetTokenRange(rg TokenRange) {
-	tk.Range = rg
+// newTokenRange creates new TokenRange struct
+// with startLine & startIdx initialized.
+func newTokenRange(l *Lexer) TokenRange {
+	return TokenRange{
+		startLine: l.getCurrentLine(),
+		startIdx:  l.cursor,
+	}
+}
+
+func (r *TokenRange) setRangeEnd(l *Lexer) {
+	r.endLine = l.CurrentLine
+	r.endIdx = l.cursor + 1
 }
 
 //// 0. EOF
@@ -412,8 +423,8 @@ func NewNumberToken(buf []rune, rg TokenRange) *Token {
 // NewMarkToken -
 func NewMarkToken(buf []rune, t TokenType, startR TokenRange, num int) *Token {
 	rg := startR
-	rg.EndLine = startR.StartLine
-	rg.EndCol = startR.EndCol + num - 1
+	rg.endLine = startR.startLine
+	rg.endIdx = startR.startIdx + num
 	return &Token{
 		Type:    t,
 		Literal: util.Copy(buf),

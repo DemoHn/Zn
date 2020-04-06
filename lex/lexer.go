@@ -278,25 +278,20 @@ func (l *Lexer) parseComment(ch rune, isMultiLine bool) (*Token, *error.Error) {
 			return nil, error.QuoteStackFull(l.quoteStack.GetMaxSize())
 		}
 	}
-	rg := TokenRange{
-		StartLine: l.CurrentLine,
-		StartCol:  l.cursor,
-	}
+	rg := newTokenRange(l)
 	// iterate
 	for {
 		ch = l.next()
 		switch ch {
 		case EOF:
 			l.rebase(l.cursor - 1)
-			rg.EndLine = l.CurrentLine
-			rg.EndCol = l.cursor
+			rg.setRangeEnd(l)
 			return NewCommentToken(l.chBuffer, isMultiLine, rg), nil
 		case CR, LF:
 			// parse CR,LF first
 			nl := l.parseCRLF(ch)
 			if !isMultiLine {
-				rg.EndLine = l.CurrentLine
-				rg.EndCol = l.cursor
+				rg.setRangeEnd(l)
 				return NewCommentToken(l.chBuffer, isMultiLine, rg), nil
 			}
 			// for multi-line comment blocks, CRLF is also included
@@ -323,8 +318,7 @@ func (l *Lexer) parseComment(ch rune, isMultiLine bool) (*Token, *error.Error) {
 					}
 					// stop quoting
 					if l.quoteStack.IsEmpty() {
-						rg.EndLine = l.CurrentLine
-						rg.EndCol = l.cursor
+						rg.setRangeEnd(l)
 						return NewCommentToken(l.chBuffer, isMultiLine, rg), nil
 					}
 				}
@@ -340,10 +334,8 @@ func (l *Lexer) parseString(ch rune) (*Token, *error.Error) {
 	l.clearBuffer()
 	l.quoteStack.Push(ch)
 	firstChar := ch
-	rg := TokenRange{
-		StartLine: l.CurrentLine,
-		StartCol:  l.cursor,
-	}
+	rg := newTokenRange(l)
+
 	// iterate
 	for {
 		ch := l.next()
@@ -351,8 +343,7 @@ func (l *Lexer) parseString(ch rune) (*Token, *error.Error) {
 		case EOF:
 			l.rebase(l.cursor - 1)
 			// after meeting with EOF
-			rg.EndLine = l.CurrentLine
-			rg.EndCol = l.cursor
+			rg.setRangeEnd(l)
 			return NewStringToken(l.chBuffer, firstChar, rg), nil
 		// push quotes
 		case LeftQuoteI, LeftQuoteII, LeftQuoteIII, LeftQuoteIV, LeftQuoteV:
@@ -368,8 +359,7 @@ func (l *Lexer) parseString(ch rune) (*Token, *error.Error) {
 			}
 			// stop quoting
 			if l.quoteStack.IsEmpty() {
-				rg.EndLine = l.CurrentLine
-				rg.EndCol = l.cursor
+				rg.setRangeEnd(l)
 				return NewStringToken(l.chBuffer, firstChar, rg), nil
 			}
 			l.pushBuffer(ch)
@@ -390,10 +380,7 @@ func (l *Lexer) parseString(ch rune) (*Token, *error.Error) {
 func (l *Lexer) parseVarQuote(ch rune) (*Token, *error.Error) {
 	// setup
 	l.clearBuffer()
-	rg := TokenRange{
-		StartLine: l.CurrentLine,
-		EndLine:   l.cursor,
-	}
+	rg := newTokenRange(l)
 	// iterate
 	count := 0
 	for {
@@ -403,12 +390,10 @@ func (l *Lexer) parseVarQuote(ch rune) (*Token, *error.Error) {
 		switch ch {
 		case EOF:
 			l.rebase(l.cursor - 1)
-			rg.EndLine = l.CurrentLine
-			rg.EndCol = l.cursor
+			rg.setRangeEnd(l)
 			return NewVarQuoteToken(l.chBuffer, rg), nil
 		case MiddleDot:
-			rg.EndLine = l.CurrentLine
-			rg.EndCol = l.cursor
+			rg.setRangeEnd(l)
 			return NewVarQuoteToken(l.chBuffer, rg), nil
 		default:
 			// ignore white-spaces!
@@ -433,10 +418,7 @@ func (l *Lexer) parseVarQuote(ch rune) (*Token, *error.Error) {
 func (l *Lexer) parseNumber(ch rune) (*Token, *error.Error) {
 	// setup
 	l.clearBuffer()
-	rg := TokenRange{
-		StartLine: l.CurrentLine,
-		StartCol:  l.cursor,
-	}
+	rg := newTokenRange(l)
 
 	// hand-written regex parser
 	// ref: https://cyberzhg.github.io/toolbox/min_dfa?regex=Rj9QP0QqLj9EKygoKEVQKXwocygxMCk/dVA/KSlEKyk/
@@ -552,8 +534,7 @@ end:
 	if util.ContainsInt(state, endStates) {
 		// back to last available char
 		l.rebase(l.cursor - 1)
-		rg.EndLine = l.CurrentLine
-		rg.EndCol = l.cursor
+		rg.setRangeEnd(l)
 		return NewNumberToken(l.chBuffer, rg), nil
 	}
 	return nil, error.InvalidChar(ch)
@@ -565,10 +546,7 @@ func (l *Lexer) parseMarkers(ch rune) (*Token, *error.Error) {
 	l.clearBuffer()
 	l.pushBuffer(ch)
 
-	startR := TokenRange{
-		StartLine: l.CurrentLine,
-		StartCol:  l.cursor,
-	}
+	startR := newTokenRange(l)
 	// switch
 	switch ch {
 	case Comma:
@@ -632,10 +610,7 @@ func (l *Lexer) parseKeyword(ch rune, moveForward bool) (bool, *Token) {
 	var tk *Token
 	var wordLen = 1
 
-	rg := TokenRange{
-		StartLine: l.CurrentLine,
-		StartCol:  l.cursor,
-	}
+	rg := newTokenRange(l)
 	// manual matching one or consecutive keywords
 	switch ch {
 	case GlyphLING:
@@ -823,9 +798,11 @@ func (l *Lexer) parseKeyword(ch rune, moveForward bool) (bool, *Token) {
 			}
 		}
 
-		rg.EndLine = rg.StartLine
-		rg.EndCol = rg.StartCol + wordLen - 1
-		tk.SetTokenRange(rg)
+		//rg.EndLine = rg.StartLine
+		//rg.EndCol = rg.StartCol + wordLen - 1
+		rg.endLine = rg.startLine
+		rg.endIdx = rg.startIdx + wordLen
+		tk.Range = rg
 		return true, tk
 	}
 	return false, nil
@@ -852,10 +829,7 @@ func (l *Lexer) parseIdentifier(ch rune) (*Token, *error.Error) {
 		return nil, error.InvalidIdentifier()
 	}
 
-	rg := TokenRange{
-		StartLine: l.CurrentLine,
-		StartCol:  l.cursor,
-	}
+	rg := newTokenRange(l)
 	// push first char
 	l.pushBuffer(ch)
 	count++
@@ -871,16 +845,14 @@ func (l *Lexer) parseIdentifier(ch rune) (*Token, *error.Error) {
 		// then terminate the identifier parsing process.
 		if isKeyword, _ := l.parseKeyword(ch, false); isKeyword {
 			l.rebase(prev)
-			rg.EndLine = l.CurrentLine
-			rg.EndCol = l.cursor
+			rg.setRangeEnd(l)
 			return NewIdentifierToken(l.chBuffer, rg), nil
 		}
 		// parse 注
 		if ch == GlyphZHU {
 			if validComment, _ := l.validateComment(ch); validComment {
 				l.rebase(prev)
-				rg.EndLine = l.CurrentLine
-				rg.EndCol = l.cursor
+				rg.setRangeEnd(l)
 				return NewIdentifierToken(l.chBuffer, rg), nil
 			}
 			l.rebase(prev + 1)
@@ -888,8 +860,7 @@ func (l *Lexer) parseIdentifier(ch rune) (*Token, *error.Error) {
 		// other char as terminator
 		if util.Contains(ch, terminators) {
 			l.rebase(prev)
-			rg.EndLine = l.CurrentLine
-			rg.EndCol = l.cursor
+			rg.setRangeEnd(l)
 			return NewIdentifierToken(l.chBuffer, rg), nil
 		}
 
