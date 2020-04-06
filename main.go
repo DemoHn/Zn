@@ -1,35 +1,44 @@
 package main
 
 import (
-	"flag"
+	"fmt"
 	"os"
 
 	"github.com/DemoHn/Zn/cmd"
+	"github.com/spf13/cobra"
 )
 
-// version
 var (
-	versionFlag = false
+	versionFlag bool
+	rootCmd     = &cobra.Command{
+		Use:   "Zn",
+		Short: "Zn语言解释器",
+		Long:  "Zn语言解释器",
+		Run: func(c *cobra.Command, args []string) {
+			// -v, --version
+			if versionFlag {
+				cmd.ShowVersion()
+				return
+			}
+			// if len(args) > 0, execute file
+			if len(args) > 0 {
+				filename := args[0]
+				cmd.ExecProgram(filename)
+				return
+			}
+			// by default, enter REPL
+			cmd.EnterREPL()
+		},
+	}
 )
 
 func main() {
-	flag.Parse()
-
-	args := flag.Args()
-	// show flags
-	if versionFlag {
-		cmd.ShowVersion()
-		os.Exit(0)
+	if err := rootCmd.Execute(); err != nil {
+		fmt.Println(err)
+		os.Exit(1)
 	}
-
-	if len(args) > 0 {
-		cmd.ExecProgram(args[0])
-	} else {
-		cmd.EnterREPL()
-	}
-	os.Exit(0)
 }
 
 func init() {
-	flag.BoolVar(&versionFlag, "v", false, "显示Zn语言当前版本")
+	rootCmd.Flags().BoolVarP(&versionFlag, "version", "v", false, "显示Zn语言版本")
 }
