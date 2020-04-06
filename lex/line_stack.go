@@ -202,6 +202,10 @@ func (ls *LineStack) GetParsedLineText(lineNum int) []rune {
 }
 
 //// private helpers
+func (ls *LineStack) getCurrentLine() int {
+	return ls.CurrentLine
+}
+
 func (ls *LineStack) getLineBufferSize() int {
 	return len(ls.lineBuffer)
 }
