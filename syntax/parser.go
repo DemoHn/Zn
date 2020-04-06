@@ -154,7 +154,7 @@ func (p *Parser) meetStmtLineBreak() bool {
 	}
 
 	// current token is at line end
-	if peek.Range.StartLine > current.Range.EndLine {
+	if peek.Range.GetStartLine() > current.Range.GetEndLine() {
 		// exception rule 1
 		for _, currTk := range exceptCurrentTokenTypes {
 			if currTk == current.Type {
@@ -222,8 +222,8 @@ func (p *Parser) tryConsume(validTypes ...lex.TokenType) (bool, *lex.Token) {
 // expectBlockIndent - detect if the Indent(peek) == Indent(current) + 1
 // returns (validBlockIndent, newIndent)
 func (p *Parser) expectBlockIndent() (bool, int) {
-	var peekLine = p.peek().Range.StartLine
-	var currLine = p.current().Range.StartLine
+	var peekLine = p.peek().Range.GetStartLine()
+	var currLine = p.current().Range.GetStartLine()
 
 	var peekIndent = p.GetLineIndent(peekLine)
 	var currIndent = p.GetLineIndent(currLine)
@@ -236,7 +236,7 @@ func (p *Parser) expectBlockIndent() (bool, int) {
 
 // getPeekIndent -
 func (p *Parser) getPeekIndent() int {
-	var peekLine = p.peek().Range.StartLine
+	var peekLine = p.peek().Range.GetStartLine()
 
 	return p.GetLineIndent(peekLine)
 }
@@ -244,27 +244,15 @@ func (p *Parser) getPeekIndent() int {
 //// helper functions
 
 // similar to lexer's version, but with given line & col
-func moveAndSetCursor(p *Parser, line int, col int, err *error.Error) {
-	buf := p.GetLineBuffer()
+func moveAndSetCursor(p *Parser, tk *lex.Token, err *error.Error) {
+	line := tk.Range.GetStartLine()
 	cursor := error.Cursor{
 		File:    p.Lexer.InputStream.Scope,
-		ColNum:  col,
-		LineNum: line,
-		Text:    string(buf),
+		ColNum:  1,
+		LineNum: tk.Range.GetStartLine(),
+		Text:    p.GetLineText(line, true),
 	}
 
-	defer func() {
-		// recover but not handle it
-		recover()
-		err.SetCursor(cursor)
-	}()
-
-	endCursor := p.SlideToLineEnd()
-	if line < p.CurrentLine {
-		cursor.Text = string(p.GetParsedLineText(line))
-	} else {
-		cursor.Text = string(buf[:endCursor+1])
-	}
 	err.SetCursor(cursor)
 }
 
@@ -279,9 +267,7 @@ func handleDeferError(p *Parser, err *error.Error) {
 				tk = p.current()
 			}
 			if tk != nil {
-				line := tk.Range.StartLine
-				col := tk.Range.StartCol
-				moveAndSetCursor(p, line, col, err)
+				moveAndSetCursor(p, tk, err)
 			}
 		}
 	}
