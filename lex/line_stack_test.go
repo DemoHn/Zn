@@ -36,7 +36,7 @@ func TestLineStack_SetIndent(t *testing.T) {
 				idetType: IdetSpace,
 			},
 			expectError:      false,
-			expectCursor:     scanCursor{0, 1, scanIndent},
+			expectCursor:     scanCursor{4, 1, scanIndent},
 			expectIndentType: IdetSpace,
 		},
 		{
@@ -46,7 +46,7 @@ func TestLineStack_SetIndent(t *testing.T) {
 				idetType: IdetTab,
 			},
 			expectError:      false,
-			expectCursor:     scanCursor{0, 2, scanIndent},
+			expectCursor:     scanCursor{2, 2, scanIndent},
 			expectIndentType: IdetTab,
 		},
 		{

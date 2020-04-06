@@ -800,8 +800,8 @@ func (l *Lexer) parseKeyword(ch rune, moveForward bool) (bool, *Token) {
 
 		//rg.EndLine = rg.StartLine
 		//rg.EndCol = rg.StartCol + wordLen - 1
-		rg.endLine = rg.startLine
-		rg.endIdx = rg.startIdx + wordLen
+		rg.EndLine = rg.StartLine
+		rg.EndIdx = rg.StartIdx + wordLen
 		tk.Range = rg
 		return true, tk
 	}
@@ -883,21 +883,7 @@ func (l *Lexer) moveAndSetCursor(err *error.Error) {
 		File:    l.InputStream.Scope,
 		ColNum:  l.cursor - l.scanCursor.startIdx,
 		LineNum: l.CurrentLine,
-		Text:    string(l.GetLineText(l.CurrentLine, true)),
+		Text:    l.GetLineText(l.CurrentLine, true),
 	}
 	err.SetCursor(cursor)
-}
-
-// SlideToLineEnd - slide cursor to the end of line
-// usually used to show the full text of current line while handling error
-// @return colNum of last char
-//
-// [[ DEPRECATED ]]
-func (l *Lexer) SlideToLineEnd() int {
-	// move on util to the line end
-	for !util.Contains(l.peek(), []rune{CR, LF, EOF}) {
-		l.next()
-	}
-
-	return l.cursor
 }

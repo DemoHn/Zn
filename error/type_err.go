@@ -28,7 +28,7 @@ func InvalidExprType(assertType ...string) *Error {
 		labels = append(labels, fmt.Sprintf("「%s」", label))
 	}
 	return typeError.NewError(0x01, Error{
-		text: fmt.Sprintf("表达式不符合期望之%s类型", strings.Join(labels, "，")),
+		text: fmt.Sprintf("表达式不符合期望之%s类型", strings.Join(labels, "、")),
 	})
 }
 

@@ -154,7 +154,7 @@ func (p *Parser) meetStmtLineBreak() bool {
 	}
 
 	// current token is at line end
-	if peek.Range.GetStartLine() > current.Range.GetEndLine() {
+	if peek.Range.StartLine > current.Range.EndLine {
 		// exception rule 1
 		for _, currTk := range exceptCurrentTokenTypes {
 			if currTk == current.Type {
@@ -222,8 +222,8 @@ func (p *Parser) tryConsume(validTypes ...lex.TokenType) (bool, *lex.Token) {
 // expectBlockIndent - detect if the Indent(peek) == Indent(current) + 1
 // returns (validBlockIndent, newIndent)
 func (p *Parser) expectBlockIndent() (bool, int) {
-	var peekLine = p.peek().Range.GetStartLine()
-	var currLine = p.current().Range.GetStartLine()
+	var peekLine = p.peek().Range.StartLine
+	var currLine = p.current().Range.StartLine
 
 	var peekIndent = p.GetLineIndent(peekLine)
 	var currIndent = p.GetLineIndent(currLine)
@@ -236,7 +236,7 @@ func (p *Parser) expectBlockIndent() (bool, int) {
 
 // getPeekIndent -
 func (p *Parser) getPeekIndent() int {
-	var peekLine = p.peek().Range.GetStartLine()
+	var peekLine = p.peek().Range.StartLine
 
 	return p.GetLineIndent(peekLine)
 }
@@ -245,11 +245,11 @@ func (p *Parser) getPeekIndent() int {
 
 // similar to lexer's version, but with given line & col
 func moveAndSetCursor(p *Parser, tk *lex.Token, err *error.Error) {
-	line := tk.Range.GetStartLine()
+	line := tk.Range.StartLine
 	cursor := error.Cursor{
 		File:    p.Lexer.InputStream.Scope,
-		ColNum:  1,
-		LineNum: tk.Range.GetStartLine(),
+		ColNum:  p.GetLineColumn(line, tk.Range.StartIdx),
+		LineNum: tk.Range.StartLine,
 		Text:    p.GetLineText(line, true),
 	}
 

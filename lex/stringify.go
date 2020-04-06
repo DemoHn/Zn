@@ -37,10 +37,10 @@ func ParseTokenStr(str string) []Token {
 			Type:    TokenType(n),
 			Literal: l,
 			Range: TokenRange{
-				startLine: lineCursor,
-				startIdx:  colCursor,
-				endLine:   lineCursor,
-				endIdx:    colCursor + len(l) + 1,
+				StartLine: lineCursor,
+				StartIdx:  colCursor,
+				EndLine:   lineCursor,
+				EndIdx:    colCursor + len(l) + 1,
 			},
 		})
 

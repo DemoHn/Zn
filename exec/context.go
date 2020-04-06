@@ -118,8 +118,8 @@ func (ctx *Context) getCurrentLine() int {
 
 func (ctx *Context) getCurrentLineText() string {
 	ls := ctx.lexScope
-	txt := ls.lineStack.GetParsedLineText(ctx.currentLine)
-	return string(txt)
+	txt := ls.lineStack.GetLineText(ctx.currentLine, false)
+	return txt
 }
 
 //// Execute (Evaluate) statements
