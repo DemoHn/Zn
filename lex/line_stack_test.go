@@ -60,7 +60,7 @@ func TestLineStack_SetIndent(t *testing.T) {
 	}
 
 	for _, tt := range cases {
-		ls := NewLineStack()
+		ls := NewLineStack(nil)
 		t.Run(tt.name, func(t *testing.T) {
 			err := ls.SetIndent(tt.args.count, tt.args.idetType)
 
@@ -134,7 +134,7 @@ func TestLineStack_LineStackSnapshot(t *testing.T) {
 	ls.SetIndent(8, IdetSpace)
 	ls.PushLine(12)
 	*/
-	ls := NewLineStack()
+	ls := NewLineStack(nil)
 
 	flows := []struct {
 		op       lineStackOp
@@ -339,14 +339,14 @@ func TestLineStack_LineStackSnapshot(t *testing.T) {
 	}
 }
 
-// test AppendLineBuffer, getChar, GetLineBufferSize
+// test AppendLineBuffer, getChar, getLineBufferSize
 func TestLineStack_LineBuffer(t *testing.T) {
-	ls := NewLineStack()
+	ls := NewLineStack(nil)
 
 	ls.AppendLineBuffer([]rune("123456789"))
 	ls.AppendLineBuffer([]rune("ABCD    EFGH"))
 
-	got := ls.GetLineBufferSize()
+	got := ls.getLineBufferSize()
 	if got != 21 {
 		t.Errorf("buffer length should be %d, got %d", 21, got)
 	}

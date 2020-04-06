@@ -18,7 +18,7 @@ type consumerFunc func(idx int, nodes []Node) Node
 type Statement interface {
 	Node
 	GetCurrentLine() int
-	SetCurrentLine(line int)
+	SetCurrentLine(tk *lex.Token)
 }
 
 // StmtBase - Statement Base
@@ -32,7 +32,9 @@ func (b *StmtBase) stmtNode() {}
 func (b *StmtBase) GetCurrentLine() int { return b.currentLine }
 
 // SetCurrentLine -
-func (b *StmtBase) SetCurrentLine(line int) { b.currentLine = line }
+func (b *StmtBase) SetCurrentLine(tk *lex.Token) {
+	b.currentLine = tk.Range.GetStartLine()
+}
 
 // Expression - a speical type of statement - that yields value after execution
 type Expression interface {
@@ -49,9 +51,9 @@ type ExprBase struct {
 func (e *ExprBase) GetCurrentLine() int { return e.currentLine }
 
 // SetCurrentLine -
-func (e *ExprBase) SetCurrentLine(line int) { e.currentLine = line }
-func (e *ExprBase) stmtNode()               {}
-func (e *ExprBase) exprNode()               {}
+func (e *ExprBase) SetCurrentLine(tk *lex.Token) { e.currentLine = tk.Range.GetStartLine() }
+func (e *ExprBase) stmtNode()                    {}
+func (e *ExprBase) exprNode()                    {}
 
 // Assignable - a special type of expression - that is, it could be assigned as
 // a value.
@@ -296,7 +298,7 @@ func ParseStatement(p *Parser) Statement {
 		case lex.TypeWhileLoopW:
 			s = ParseWhileLoopStmt(p)
 		}
-		s.SetCurrentLine(tk.Range.StartLine)
+		s.SetCurrentLine(tk)
 		return s
 	}
 	// other case, parse expression
@@ -405,7 +407,7 @@ func ParseExpression(p *Parser) Expression {
 			}
 		}
 		// set current line (after finalExpr has been initialized)
-		finalExpr.SetCurrentLine(tk.Range.StartLine)
+		finalExpr.SetCurrentLine(tk)
 
 		// #3. consume X' (X-tail)
 		if logicAllowTails[idx] {
@@ -437,7 +439,7 @@ func ParseArrayListIndexExpr(p *Parser) Expression {
 		if !match {
 			return expr
 		}
-		idxExpr.SetCurrentLine(tk.Range.StartLine)
+		idxExpr.SetCurrentLine(tk)
 		idxExpr.Root = expr
 
 		switch tk.Type {
@@ -520,7 +522,7 @@ func ParseBasicExpr(p *Parser) Expression {
 		case lex.TypeObjSelfW:
 			e = ParseLogicISExpr(p)
 		}
-		e.SetCurrentLine(tk.Range.StartLine)
+		e.SetCurrentLine(tk)
 		return e
 	}
 	panic(error.InvalidSyntax())
@@ -620,12 +622,12 @@ func tryParseEmptyMapList(p *Parser) (bool, UnionMapList) {
 		switch tk.Type {
 		case lex.TypeArrayQuoteR:
 			e := &ArrayExpr{Items: []Expression{}}
-			e.SetCurrentLine(tk.Range.StartLine)
+			e.SetCurrentLine(tk)
 			return true, e
 		case lex.TypeMapData:
 			p.consume(lex.TypeArrayQuoteR)
 			e := &HashMapExpr{KVPair: []HashMapKeyValuePair{}}
-			e.SetCurrentLine(tk.Range.StartLine)
+			e.SetCurrentLine(tk)
 			return true, e
 		}
 	}
@@ -693,7 +695,7 @@ func ParseVarOneExpr(p *Parser) Expression {
 	funcCallExpr := ParseFuncCallExpr(p)
 	// insert first ID into funcCall list
 	funcCallExpr.Params = append([]Expression{newID(tk)}, (funcCallExpr.Params)...)
-	funcCallExpr.SetCurrentLine(tk.Range.StartLine)
+	funcCallExpr.SetCurrentLine(tk)
 	return funcCallExpr
 }
 
@@ -725,7 +727,7 @@ func ParseLogicISExpr(p *Parser) *LogicExpr {
 		LeftExpr:  expr1,
 		RightExpr: expr2,
 	}
-	e.SetCurrentLine(tk.Range.StartLine)
+	e.SetCurrentLine(tk)
 	return e
 }
 
@@ -1134,21 +1136,21 @@ func parseCommaListBlock(p *Parser, blockIndent int, consumer consumerFunc) []No
 func newID(tk *lex.Token) *ID {
 	id := new(ID)
 	id.SetLiteral(tk.Literal)
-	id.SetCurrentLine(tk.Range.StartLine)
+	id.SetCurrentLine(tk)
 	return id
 }
 
 func newNumber(tk *lex.Token) *Number {
 	num := new(Number)
 	num.SetLiteral(tk.Literal)
-	num.SetCurrentLine(tk.Range.StartLine)
+	num.SetCurrentLine(tk)
 	return num
 }
 
 func newString(tk *lex.Token) *String {
 	str := new(String)
 	str.SetLiteral(tk.Literal)
-	str.SetCurrentLine(tk.Range.StartLine)
+	str.SetCurrentLine(tk)
 	return str
 }
 

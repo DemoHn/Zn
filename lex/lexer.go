@@ -6,7 +6,7 @@ import (
 )
 
 const (
-	defaultBlockSize int = 256
+	defaultBlockSize int = 512
 )
 
 // Lexer is a structure that pe provides a set of tools to help tokenizing the code.
@@ -23,7 +23,7 @@ type Lexer struct {
 // NewLexer - new lexer
 func NewLexer(in *InputStream) *Lexer {
 	return &Lexer{
-		LineStack:   NewLineStack(),
+		LineStack:   NewLineStack(in),
 		quoteStack:  util.NewRuneStack(32),
 		InputStream: in,
 		chBuffer:    []rune{},
@@ -177,7 +177,7 @@ func handleDeferError(l *Lexer, err *error.Error) {
 			err.SetCursor(error.Cursor{
 				File:    l.InputStream.Scope,
 				LineNum: l.CurrentLine,
-				Text:    string(l.GetLineBuffer()),
+				Text:    l.GetLineText(l.CurrentLine, false),
 				ColNum:  0,
 			})
 		} else {
@@ -879,30 +879,20 @@ func (l *Lexer) parseIdentifier(ch rune) (*Token, *error.Error) {
 // moveAndSetCursor - retrieve full text of the line and set the current cursor
 // to display errors
 func (l *Lexer) moveAndSetCursor(err *error.Error) {
-	curr := l.cursor
-	// default show all buffer
-	buf := l.GetLineBuffer()
 	cursor := error.Cursor{
 		File:    l.InputStream.Scope,
-		ColNum:  curr,
+		ColNum:  l.cursor - l.scanCursor.startIdx,
 		LineNum: l.CurrentLine,
-		Text:    string(buf),
+		Text:    string(l.GetLineText(l.CurrentLine, true)),
 	}
-
-	defer func() {
-		// recover but not handle it
-		recover()
-		err.SetCursor(cursor)
-	}()
-
-	endCursor := l.SlideToLineEnd()
-	cursor.Text = string(buf[:endCursor+1])
 	err.SetCursor(cursor)
 }
 
 // SlideToLineEnd - slide cursor to the end of line
 // usually used to show the full text of current line while handling error
 // @return colNum of last char
+//
+// [[ DEPRECATED ]]
 func (l *Lexer) SlideToLineEnd() int {
 	// move on util to the line end
 	for !util.Contains(l.peek(), []rune{CR, LF, EOF}) {

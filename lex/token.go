@@ -36,6 +36,16 @@ func (r *TokenRange) setRangeEnd(l *Lexer) {
 	r.endIdx = l.cursor + 1
 }
 
+// GetStartLine -
+func (r *TokenRange) GetStartLine() int {
+	return r.startLine
+}
+
+// GetEndLine -
+func (r *TokenRange) GetEndLine() int {
+	return r.endLine
+}
+
 //// 0. EOF
 
 // EOF - mark as end of file, should only exists at the end of sequence
@@ -376,10 +386,10 @@ func NewTokenEOF(line int, col int) *Token {
 		Type:    TypeEOF,
 		Literal: []rune{},
 		Range: TokenRange{
-			StartLine: line,
-			StartCol:  col,
-			EndLine:   line,
-			EndCol:    col,
+			startLine: line,
+			startIdx:  col,
+			endLine:   line,
+			endIdx:    col,
 		},
 	}
 }
