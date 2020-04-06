@@ -1,8 +1,6 @@
-<div align="center">
-  <div style="font-size: 32px;margin-bottom: 4px;">Zn</div>  
-  <div style="color: #666">千里之行，始于足下。</div>
-  <hr />
-</div>
+# Zn
+_千里之行，始于足下。_
+
 
 ## 简介
 
