@@ -854,14 +854,12 @@ func (l *Lexer) parseIdentifier(ch rune) (*Token, *error.Error) {
 		// then terminate the identifier parsing process.
 		if isKeyword, _ := l.parseKeyword(ch, false); isKeyword {
 			l.rebase(prev)
-			rg.setRangeEnd(l)
 			return NewIdentifierToken(l.chBuffer, rg), nil
 		}
 		// parse 注
 		if ch == GlyphZHU {
 			if validComment, _, _ := l.validateComment(ch); validComment {
 				l.rebase(prev)
-				rg.setRangeEnd(l)
 				return NewIdentifierToken(l.chBuffer, rg), nil
 			}
 			l.rebase(prev + 1)
@@ -869,7 +867,6 @@ func (l *Lexer) parseIdentifier(ch rune) (*Token, *error.Error) {
 		// other char as terminator
 		if util.Contains(ch, terminators) {
 			l.rebase(prev)
-			rg.setRangeEnd(l)
 			return NewIdentifierToken(l.chBuffer, rg), nil
 		}
 
@@ -878,6 +875,7 @@ func (l *Lexer) parseIdentifier(ch rune) (*Token, *error.Error) {
 				return nil, error.IdentifierExceedLength(maxIdentifierLength)
 			}
 			l.pushBuffer(ch)
+			rg.setRangeEnd(l)
 			count++
 			continue
 		}
