@@ -147,7 +147,7 @@ func TestNextToken_StringONLY(t *testing.T) {
 			expectError: false,
 			token: Token{
 				Type:    TypeString,
-				Literal: []rune("LSK"),
+				Literal: []rune("“LSK”"),
 			},
 		},
 		{
@@ -156,7 +156,7 @@ func TestNextToken_StringONLY(t *testing.T) {
 			expectError: false,
 			token: Token{
 				Type:    TypeString,
-				Literal: []rune("这 是 一 个 字 符 串"),
+				Literal: []rune("“这 是 一 个 字 符 串”"),
 			},
 		},
 		{
@@ -165,7 +165,7 @@ func TestNextToken_StringONLY(t *testing.T) {
 			expectError: false,
 			token: Token{
 				Type:    TypeString,
-				Literal: []rune("「233」 ‘456’ 《〈who〉》『『is』』"),
+				Literal: []rune("“「233」 ‘456’ 《〈who〉》『『is』』”"),
 			},
 		},
 		{
@@ -174,7 +174,7 @@ func TestNextToken_StringONLY(t *testing.T) {
 			expectError: false,
 			token: Token{
 				Type:    TypeString,
-				Literal: []rune("233\n    456\r\n7  "),
+				Literal: []rune("『233\n    456\r\n7  』"),
 			},
 		},
 	}
