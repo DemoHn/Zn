@@ -854,6 +854,7 @@ func (l *Lexer) parseIdentifier(ch rune) (*Token, *error.Error) {
 		// then terminate the identifier parsing process.
 		if isKeyword, _ := l.parseKeyword(ch, false); isKeyword {
 			l.rebase(prev)
+			rg.setRangeEnd(l)
 			return NewIdentifierToken(l.chBuffer, rg), nil
 		}
 		// parse 注
