@@ -294,7 +294,6 @@ func (l *Lexer) parseComment(ch rune, isMultiLine bool, note []rune) (*Token, *e
 			// parse CR,LF first
 			nl := l.parseCRLF(ch)
 			if !isMultiLine {
-				rg.setRangeEnd(l)
 				return NewCommentToken(l.chBuffer, note, rg), nil
 			}
 			// for multi-line comment blocks, CRLF is also included
@@ -328,6 +327,12 @@ func (l *Lexer) parseComment(ch rune, isMultiLine bool, note []rune) (*Token, *e
 				}
 			}
 			l.pushBuffer(ch)
+			// cache rangeEnd location as the position of last char
+			// Example: (for single-line comment token)
+			// 注： ABCDEFG \r\n
+			//
+			// Here, the rangeEnd should be on char `G`, but it will stop iff the following `\r\n` is parsed!
+			rg.setRangeEnd(l)
 		}
 	}
 }
