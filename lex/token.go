@@ -1,6 +1,10 @@
 package lex
 
-import "github.com/DemoHn/Zn/util"
+import (
+	"fmt"
+
+	"github.com/DemoHn/Zn/util"
+)
 
 // TokenType - general token type
 type TokenType int
@@ -426,10 +430,12 @@ func NewVarQuoteToken(buf []rune, rg TokenRange) *Token {
 }
 
 // NewCommentToken -
-func NewCommentToken(buf []rune, isMultiLine bool, rg TokenRange) *Token {
+func NewCommentToken(buf []rune, note []rune, rg TokenRange) *Token {
+	prefix := fmt.Sprintf("注%s：", string(note))
+	literal := append([]rune(prefix), util.Copy(buf)...)
 	return &Token{
 		Type:    TypeComment,
-		Literal: util.Copy(buf),
+		Literal: literal,
 		Range:   rg,
 	}
 }

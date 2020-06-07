@@ -279,6 +279,7 @@ func (l *Lexer) parseComment(ch rune, isMultiLine bool, note []rune) (*Token, *e
 		if !l.quoteStack.Push(ch) {
 			return nil, error.QuoteStackFull(l.quoteStack.GetMaxSize())
 		}
+		l.pushBuffer(ch)
 	}
 	rg := newTokenRange(l)
 	// iterate
@@ -288,13 +289,13 @@ func (l *Lexer) parseComment(ch rune, isMultiLine bool, note []rune) (*Token, *e
 		case EOF:
 			l.rebase(l.cursor - 1)
 			rg.setRangeEnd(l)
-			return NewCommentToken(l.chBuffer, isMultiLine, rg), nil
+			return NewCommentToken(l.chBuffer, note, rg), nil
 		case CR, LF:
 			// parse CR,LF first
 			nl := l.parseCRLF(ch)
 			if !isMultiLine {
 				rg.setRangeEnd(l)
-				return NewCommentToken(l.chBuffer, isMultiLine, rg), nil
+				return NewCommentToken(l.chBuffer, note, rg), nil
 			}
 			// for multi-line comment blocks, CRLF is also included
 			l.pushBuffer(nl...)
@@ -321,7 +322,8 @@ func (l *Lexer) parseComment(ch rune, isMultiLine bool, note []rune) (*Token, *e
 					// stop quoting
 					if l.quoteStack.IsEmpty() {
 						rg.setRangeEnd(l)
-						return NewCommentToken(l.chBuffer, isMultiLine, rg), nil
+						l.pushBuffer(ch)
+						return NewCommentToken(l.chBuffer, note, rg), nil
 					}
 				}
 			}
