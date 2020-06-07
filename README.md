@@ -46,7 +46,7 @@ Zn> （显示：鹅厂）
 
 - 将以下内容输入到「计算均值.zn」文件中：
 
-![code#1.png](/doc/images/code#1.png)
+![code#1.png](./doc/images/code#1.png)
 
 以文件名 `计算均值.zn` 做为 `Zn` 的第一个参数执行命令，并得到结果：
 
@@ -59,26 +59,26 @@ $ Zn 计算均值.zn
 
 1. 声明变量：`令 〔变量名〕 为 〔值〕`
 
-![code#2.png](/doc/images/code#2.png)
+![code#2.png](./doc/images/code#2.png)
 
 变量须先声明，方可继续使用。
 
 2. 对变量赋值：`〔变量名〕 为 〔值〕`
 
-![code#3.png](/doc/images/code#3.png)
+![code#3.png](./doc/images/code#3.png)
 
 `进站人次-累计` 为变量名（`-`也是变量名的一部分）， `1284500` 为值。相当于 `进站人次-累计 := 1284500`
 
 3. 调用方法：`（〔变量名〕：〔参数1〕，...）`
 
-![code#4.png](/doc/images/code#4.png)
+![code#4.png](./doc/images/code#4.png)
 
 Zn 内置了 `显示` 方法，类似于 `console.log` 或者 `print`。  
 `X+Y` 表示对所有参数求和；类似地还有 `X-Y`， `X*Y`， `X/Y`。
 
 4. 流程控制：`如果 〔表达式〕：` 及 `每当 〔表达式〕：`
 
-![code#5.png](/doc/images/code#5.png)
+![code#5.png](./doc/images/code#5.png)
 
 Zn 采用类似 Python 的方式，即是以缩进表示语法块。一个单位缩进为 `4个空格` 或者 `1个TAB`。同一个文件里的缩进类型要么都是空格，要么都是TAB，不能混用。
 
@@ -88,7 +88,7 @@ Zn 采用类似 Python 的方式，即是以缩进表示语法块。一个单位
 
 5. 定义方法：`如何 〔方法名〕 ？`
 
-![code#6.png](/doc/images/code#6.png)
+![code#6.png](./doc/images/code#6.png)
 
 定义一个方法（又称函数）以 `如何` 开始，后面跟着要定义的方法名。而后在子语句块的第一项中定义参数列表：`已知 〔参数1〕，〔参数2〕，...`。 `返回`语句定义了执行方法之后所需的返回值。
 
