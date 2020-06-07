@@ -62,7 +62,7 @@ Zn> （显示：鹅厂）
 注3：执行方法
 （显示：「此数据源之均值为」，（计算均值：数据源，7））</pre>
 <pre class='zn-source-ySWxJfAs' style='font-family: Sarasa Mono SC, Microsoft YaHei, monospace'><span></span><span style='color: #6a737d'>注1：定义变量</span>
-<span></span><span style='color: #d73a49'>令</span>数据源<span style='color: #d73a49'>为</span>【<span style='color: #005cc5'>1.24*10^2</span>，<span>&nbsp;</span><span style='color: #005cc5'>125.75</span>，<span>&nbsp;</span><span style='color: #005cc5'>225</span>，<span>&nbsp;</span><span style='color: #005cc5'>3.25e+2</span>，<span>&nbsp;</span><span style='color: #005cc5'>425</span>，<span>&nbsp;</span><span style='color: #005cc5'>525</span>，<span>&nbsp;</span><span style='color: #005cc5'>625.8</span>】
+<span></span><span style='color: #d73a49' class='pl-c1'>令</span>数据源<span style='color: #d73a49'>为</span>【<span style='color: #005cc5'>1.24*10^2</span>，<span>&nbsp;</span><span style='color: #005cc5'>125.75</span>，<span>&nbsp;</span><span style='color: #005cc5'>225</span>，<span>&nbsp;</span><span style='color: #005cc5'>3.25e+2</span>，<span>&nbsp;</span><span style='color: #005cc5'>425</span>，<span>&nbsp;</span><span style='color: #005cc5'>525</span>，<span>&nbsp;</span><span style='color: #005cc5'>625.8</span>】
 
 <span></span><span style='color: #6a737d'>注2：定义方法（也就是函数），通过「已知」语句指定其参数</span>
 <span></span><span style='color: #d73a49'>如何</span>计算均值<span style='color: #6f42c1'>？</span>
