@@ -396,9 +396,22 @@ func NewTokenEOF(line int, col int) *Token {
 
 // NewStringToken -
 func NewStringToken(buf []rune, quoteType rune, rg TokenRange) *Token {
+	literal := append([]rune{quoteType}, util.Copy(buf)...)
+	switch quoteType {
+	case LeftQuoteI:
+		literal = append(literal, RightQuoteI)
+	case LeftQuoteII:
+		literal = append(literal, RightQuoteII)
+	case LeftQuoteIII:
+		literal = append(literal, RightQuoteIII)
+	case LeftQuoteIV:
+		literal = append(literal, RightQuoteIV)
+	case LeftQuoteV:
+		literal = append(literal, RightQuoteV)
+	}
 	return &Token{
 		Type:    TypeString,
-		Literal: util.Copy(buf),
+		Literal: literal,
 		Range:   rg,
 	}
 }

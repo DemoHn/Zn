@@ -129,9 +129,9 @@ head:
 	// notice: it would also be a normal identifer (if 注[number]：) does not satisfy.
 	case GlyphZHU:
 		cursor := l.cursor
-		isComment, isMultiLine := l.validateComment(ch)
+		isComment, isMultiLine, note := l.validateComment(ch)
 		if isComment {
-			tok, err = l.parseComment(l.getChar(l.cursor), isMultiLine)
+			tok, err = l.parseComment(l.getChar(l.cursor), isMultiLine, note)
 			return
 		}
 
@@ -248,7 +248,8 @@ func (l *Lexer) parseCRLF(ch rune) []rune {
 // 4. 注123456：“
 //
 // @returns (isValid, isMultiLine)
-func (l *Lexer) validateComment(ch rune) (bool, bool) {
+func (l *Lexer) validateComment(ch rune) (bool, bool, []rune) {
+	note := []rune{}
 	// “ or 「
 	lquotes := []rune{LeftQuoteIV, LeftQuoteII}
 	for {
@@ -258,19 +259,20 @@ func (l *Lexer) validateComment(ch rune) (bool, bool) {
 			// match pattern 3, 4
 			if util.Contains(l.peek(), lquotes) {
 				l.next()
-				return true, true
+				return true, true, note
 			}
-			return true, false
+			return true, false, note
 		}
 		if isNumber(ch) || isWhiteSpace(ch) {
+			note = append(note, ch)
 			continue
 		}
-		return false, false
+		return false, false, note
 	}
 }
 
 // parseComment until its end
-func (l *Lexer) parseComment(ch rune, isMultiLine bool) (*Token, *error.Error) {
+func (l *Lexer) parseComment(ch rune, isMultiLine bool, note []rune) (*Token, *error.Error) {
 	// setup
 	l.clearBuffer()
 	if isMultiLine {
@@ -850,7 +852,7 @@ func (l *Lexer) parseIdentifier(ch rune) (*Token, *error.Error) {
 		}
 		// parse 注
 		if ch == GlyphZHU {
-			if validComment, _ := l.validateComment(ch); validComment {
+			if validComment, _, _ := l.validateComment(ch); validComment {
 				l.rebase(prev)
 				rg.setRangeEnd(l)
 				return NewIdentifierToken(l.chBuffer, rg), nil
