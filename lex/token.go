@@ -32,6 +32,8 @@ func newTokenRange(l *Lexer) TokenRange {
 	return TokenRange{
 		StartLine: l.getCurrentLine(),
 		StartIdx:  l.cursor,
+		EndLine:   l.getCurrentLine(),
+		EndIdx:    l.cursor,
 	}
 }
 
