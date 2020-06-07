@@ -37,14 +37,14 @@ func TestNextToken_MixedText(t *testing.T) {
 			name:        "1 identifier with 1 inline comment",
 			input:       `标识符名注：这是一个标识符啊 `,
 			expectError: false,
-			tokens:      `$101[标识符名] $10[这是一个标识符啊 ]`,
+			tokens:      `$101[标识符名] $10[注：这是一个标识符啊 ]`,
 			lines:       "U<0>[标识符名注：这是一个标识符啊 ]",
 		},
 		{
 			name:        "1 identifier (mixed number) with 1 inline comment",
 			input:       `标识符名12注：这是一个标识符啊 `,
 			expectError: false,
-			tokens:      `$101[标识符名12] $10[这是一个标识符啊 ]`,
+			tokens:      `$101[标识符名12] $10[注：这是一个标识符啊 ]`,
 			lines:       "U<0>[标识符名12注：这是一个标识符啊 ]",
 		},
 		{
@@ -72,7 +72,7 @@ func TestNextToken_MixedText(t *testing.T) {
 			name:        "comment 2 lines, one string",
 			input:       "注：“可是都 \n  不为空”“是为”《淮南子》",
 			expectError: false,
-			tokens:      "$10[可是都 \n  不为空] $90[“是为”] $90[《淮南子》]",
+			tokens:      "$10[注：“可是都 \n  不为空”] $90[“是为”] $90[《淮南子》]",
 			lines:       "U<0>[注：“可是都 ] U<0>[  不为空”“是为”《淮南子》]",
 		},
 		{
@@ -107,7 +107,7 @@ func TestNextToken_MixedText(t *testing.T) {
 			name:        "multi line string with var quote inside",
 			input:       "“搞\n个\n    大新闻”《·焦点在哪里·》\n\t注：“又是一年\n    春来到”",
 			expectError: false,
-			tokens:      "$90[“搞\n个\n    大新闻”] $90[《·焦点在哪里·》] $10[又是一年\n    春来到]",
+			tokens:      "$90[“搞\n个\n    大新闻”] $90[《·焦点在哪里·》] $10[注：“又是一年\n    春来到”]",
 			lines:       "T<0>[“搞] T<0>[个] T<0>[    大新闻”《·焦点在哪里·》] T<1>[注：“又是一年] T<0>[    春来到”]",
 		},
 		{

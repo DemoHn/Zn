@@ -23,7 +23,7 @@ func TestNextToken_CommentsONLY(t *testing.T) {
 			expectError: false,
 			token: Token{
 				Type:    TypeComment,
-				Literal: []rune("这是一个长 长 的单行注释comment"),
+				Literal: []rune("注：这是一个长 长 的单行注释comment"),
 			},
 		},
 		{
@@ -32,7 +32,7 @@ func TestNextToken_CommentsONLY(t *testing.T) {
 			expectError: false,
 			token: Token{
 				Type:    TypeComment,
-				Literal: []rune(""),
+				Literal: []rune("注："),
 			},
 		},
 		{
@@ -41,7 +41,7 @@ func TestNextToken_CommentsONLY(t *testing.T) {
 			expectError: false,
 			token: Token{
 				Type:    TypeComment,
-				Literal: []rune(" “"),
+				Literal: []rune("注： “"),
 			},
 		},
 		{
@@ -50,7 +50,7 @@ func TestNextToken_CommentsONLY(t *testing.T) {
 			expectError: false,
 			token: Token{
 				Type:    TypeComment,
-				Literal: []rune(""),
+				Literal: []rune("注 1024 2048 ："),
 			},
 		},
 		{
@@ -59,7 +59,7 @@ func TestNextToken_CommentsONLY(t *testing.T) {
 			expectError: false,
 			token: Token{
 				Type:    TypeComment,
-				Literal: []rune("注：注：nach nach"),
+				Literal: []rune("注：注：注：nach nach"),
 			},
 		},
 		//// multi-line comment
@@ -69,7 +69,7 @@ func TestNextToken_CommentsONLY(t *testing.T) {
 			expectError: false,
 			token: Token{
 				Type:    TypeComment,
-				Literal: []rune("假设这是一个注"),
+				Literal: []rune("注：“假设这是一个注”"),
 			},
 		},
 		{
@@ -78,7 +78,7 @@ func TestNextToken_CommentsONLY(t *testing.T) {
 			expectError: false,
 			token: Token{
 				Type:    TypeComment,
-				Literal: []rune("假设这又是一个注"),
+				Literal: []rune("注：“假设这又是一个注”"),
 			},
 		},
 		{
@@ -87,7 +87,7 @@ func TestNextToken_CommentsONLY(t *testing.T) {
 			expectError: false,
 			token: Token{
 				Type:    TypeComment,
-				Literal: []rune("假设这又是一个注"),
+				Literal: []rune("注 1234 5678 ：“假设这又是一个注”"),
 			},
 		},
 		{
@@ -96,7 +96,7 @@ func TestNextToken_CommentsONLY(t *testing.T) {
 			expectError: false,
 			token: Token{
 				Type:    TypeComment,
-				Literal: []rune(""),
+				Literal: []rune("注：“”"),
 			},
 		},
 		{
@@ -105,7 +105,7 @@ func TestNextToken_CommentsONLY(t *testing.T) {
 			expectError: false,
 			token: Token{
 				Type:    TypeComment,
-				Literal: []rune("一一\r\n    二二\n三三\n四四"),
+				Literal: []rune("注：“一一\r\n    二二\n三三\n四四”"),
 			},
 		},
 		{
@@ -114,7 +114,7 @@ func TestNextToken_CommentsONLY(t *testing.T) {
 			expectError: false,
 			token: Token{
 				Type:    TypeComment,
-				Literal: []rune("一一「2233」《某本书》注：“”二二\n     "),
+				Literal: []rune("注：“一一「2233」《某本书》注：“”二二\n     ”"),
 			},
 		},
 		{
@@ -123,7 +123,7 @@ func TestNextToken_CommentsONLY(t *testing.T) {
 			expectError: false,
 			token: Token{
 				Type:    TypeComment,
-				Literal: []rune("PK"),
+				Literal: []rune("注：「PK」"),
 			},
 		},
 		{
@@ -132,7 +132,7 @@ func TestNextToken_CommentsONLY(t *testing.T) {
 			expectError: false,
 			token: Token{
 				Type:    TypeComment,
-				Literal: []rune("PKG“”"),
+				Literal: []rune("注：「PKG“”"),
 			},
 		},
 	}
