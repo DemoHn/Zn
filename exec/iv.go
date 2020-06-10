@@ -16,8 +16,8 @@ type ZnIV interface {
 // is whether on the left side or right side.
 //
 // For example:
-// 令 B 为 【10，20，30】#0  => when IV is RHS, it will assign the value (10) to variable B;
-// 【10，20，30】#0 为 75   => when IV is LHS, set the 0-th slot of array to 75
+// 令 B 为 【10，20，30】#0  => when IV is on RHS, it will assign the value (10) to variable B;
+// 【10，20，30】#0 为 75   => when IV is on LHS, set the 0-th slot of array to 75
 //
 type ZnArrayIV struct {
 	List  *ZnArray
