@@ -165,25 +165,6 @@ func EvalStatement(ctx *Context, stmt syntax.Statement, env Env) *error.Error {
 	}
 }
 
-func evalVarDeclareStmt(ctx *Context, stmt *syntax.VarDeclareStmt, env Env) *error.Error {
-	for _, vpair := range stmt.AssignPair {
-		obj, err := EvalExpression(ctx, vpair.AssignExpr, env)
-		if err != nil {
-			return err
-		}
-		for _, v := range vpair.Variables {
-			vtag := v.GetLiteral()
-			// TODO: need copy object!
-			if err := ctx.Bind(vtag, obj, false); err != nil {
-				return err
-			}
-		}
-
-	}
-
-	return nil
-}
-
 // EvalStmtBlock -
 func EvalStmtBlock(ctx *Context, block *syntax.BlockStmt, env Env) *error.Error {
 	ctx.EnterScope()
@@ -498,43 +479,6 @@ func evalVarAssignExpr(ctx *Context, expr *syntax.VarAssignExpr, env Env) (ZnVal
 		return iv.Reduce(val, true)
 	default:
 		return nil, error.InvalidCaseType()
-	}
-}
-
-func getArrayListIV(ctx *Context, expr *syntax.ArrayListIndexExpr, env Env) (ZnIV, *error.Error) {
-	val, err := EvalExpression(ctx, expr.Root, env)
-	if err != nil {
-		return nil, err
-	}
-	idx, err := EvalExpression(ctx, expr.Index, env)
-	if err != nil {
-		return nil, err
-	}
-	switch v := val.(type) {
-	case *ZnArray:
-		vr, ok := idx.(*ZnDecimal)
-		if !ok {
-			return nil, error.InvalidExprType("integer")
-		}
-		return &ZnArrayIV{v, vr}, nil
-	case *ZnHashMap:
-		var s *ZnString
-		switch x := idx.(type) {
-		case *ZnDecimal:
-			// transform decimal value to string
-			// x.exp < 0 express that its a decimal value with point mark, not an integer
-			if x.exp < 0 {
-				return nil, error.InvalidExprType("integer", "string")
-			}
-			s = NewZnString(x.String())
-		case *ZnString:
-			s = x
-		default:
-			return nil, error.InvalidExprType("integer", "string")
-		}
-		return &ZnHashMapIV{v, s}, nil
-	default:
-		return nil, error.InvalidExprType("array", "hashmap")
 	}
 }
 
