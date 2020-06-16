@@ -228,7 +228,7 @@ func (zb *ZnBool) Rev() *ZnBool {
 }
 
 // Exec - ZnFunction exec function
-func (zf *ZnFunction) Exec(params []ZnValue, ctx *Context, env Env) (ZnValue, *error.Error) {
+func (zf *ZnFunction) Exec(ctx *Context, scope Scope, params []ZnValue) (ZnValue, *error.Error) {
 	// TODO1: add new env
 	// st -> global symbol table
 	// if executor = nil, then use default function executor
@@ -250,7 +250,7 @@ func (zf *ZnFunction) Exec(params []ZnValue, ctx *Context, env Env) (ZnValue, *e
 			}
 		}
 
-		result := ctx.ExecuteBlockAST(zf.Node.ExecBlock, env)
+		result := ctx.ExecuteBlockAST(scope, zf.Node.ExecBlock)
 		if result.HasError {
 			return nil, result.Error
 		}
