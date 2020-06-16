@@ -2,9 +2,9 @@
 _build/
 draft/
 Zn.exe
-Zn
+/Zn
 zn.exe
-zn
+/zn
 znt.exe
-znt
+/znt
 coverage.out
