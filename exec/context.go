@@ -6,13 +6,18 @@ import (
 	"github.com/DemoHn/Zn/syntax"
 )
 
-// Context - code lifecycle management
-// TODO: this is a tmp solution. in the future, we will
-// gradually obselete this tree-walk based interperter.
+// SymbolInfo - symbol info
+type SymbolInfo struct {
+	nestLevel  int
+	value      ZnValue
+	isConstant bool // if isConstant = true, the value of this symbol is prohibited from any modification.
+}
+
+// Context - GLOBAL execution context, usually create only once in one program.
 type Context struct {
 	symbols map[string][]SymbolInfo
 	globals map[string]ZnValue
-	arith Arith
+	arith *Arith
 	// lastValue is set during the execution, usually stands for 'the return value' of a function.
 	lastValue ZnValue
 	lexScope
@@ -43,10 +48,88 @@ type Result struct {
 
 // NewContext - create new Zn Context for furthur execution
 func NewContext() *Context {
-	ctx := new(Context)
-	ctx.SymbolTable = NewSymbolTable()
-	ctx.ArithInstance = NewArith(defaultPrecision)	
-	return ctx
+	return &Context{
+		symbols: map[string][]SymbolInfo{},
+		globals: predefinedValues,
+		arith: NewArith(defaultPrecision),
+	}
+}
+
+
+// BindSymbol - add value to symbol table
+func (ctx *SymbolTable) BindSymbol(nestLevel int, id string, obj ZnValue, isConstant bool) *error.Error {
+	newInfo := SymbolInfo{
+		nestLevel:  nestLevel,
+		value:      obj,
+		isConstant: isConstant,
+	}
+
+	symArr, ok := ctx.symbols[id]
+	if !ok {
+		// init symbolInfo array
+		ctx.symbols[id] = []SymbolInfo{newInfo}
+		return nil
+	}
+
+	// check if there's variable re-declaration
+	if len(symArr) > 0 && symArr[0].nestLevel == nestLevel {
+		return error.NameRedeclared(id)
+	}
+
+	// prepend data
+	ctx.symbols[id] = append([]SymbolInfo{newInfo}, ctx.symbols[id]...)
+	return nil
+}
+
+// LookupSymbol - find the corresponded value from ID,
+// if nothing found, return error
+func (ctx *SymbolTable) LookupSymbol(id string) (ZnValue, *error.Error) {
+	symArr, ok := ctx.symbols[id]
+	if !ok {
+		return nil, error.NameNotDefined(id)
+	}
+
+	// find the nearest level of value
+	if symArr == nil || len(symArr) == 0 {
+		return nil, error.NameNotDefined(id)
+	}
+	return symArr[0].value, nil
+}
+
+// SetSymbolValue - after variable is defined, set the value
+func (ctx *Context) SetSymbolValue(id string, obj ZnValue) *error.Error {
+	symArr, ok := ctx.symbols[id]
+	if !ok {
+		return error.NameNotDefined(id)
+	}
+
+	if symArr != nil && len(symArr) > 0 {
+		symArr[0].value = obj
+		if symArr[0].isConstant {
+			return error.AssignToConstant()
+		}
+		return nil
+	}
+
+	return error.NameNotDefined(id)
+}
+
+func printSymbols(ctx *Context) string {
+	strs := []string{}
+	for k, symArr := range ctx.symbols {
+		if symArr != nil {
+			for _, symItem := range symArr {
+				symStr := "ε"
+				if symItem.value != nil {
+					symStr = symItem.value.String()
+				}
+				strs = append(strs, fmt.Sprintf("‹%s, %d› => %s", k, symItem.nestLevel, symStr))
+			}
+		}
+
+	}
+
+	return strings.Join(strs, "\n")
 }
 
 // ExecuteCode - execute program from input Zn code (whether from file or REPL)
