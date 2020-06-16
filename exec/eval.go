@@ -219,7 +219,6 @@ func evalFunctionCall(ctx *Context, scope Scope, expr *syntax.FuncCallExpr) (ZnV
 	return vval.Exec(ctx, fScope, params)
 }
 
-
 // evaluate logic combination expressions
 // such as A 且 B
 // or A 或 B
