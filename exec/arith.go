@@ -7,18 +7,18 @@ import (
 	"github.com/DemoHn/Zn/error"
 )
 
-// ArithInstance - arithmetic calculation (including + - * /) instance
-type ArithInstance struct {
+// Arith - arithmetic calculation (including + - * /) instance
+type Arith struct {
 	precision int
 }
 
-// NewArithInstance -
-func NewArithInstance(precision int) *ArithInstance {
-	return &ArithInstance{precision}
+// NewArith -
+func NewArith(precision int) *Arith {
+	return &Arith{precision}
 }
 
 // Add - A + B + C + D + ... = ?
-func (ai *ArithInstance) Add(decimal1 *ZnDecimal, others ...*ZnDecimal) *ZnDecimal {
+func (ai *Arith) Add(decimal1 *ZnDecimal, others ...*ZnDecimal) *ZnDecimal {
 	var result = copyZnDecimal(decimal1)
 	if len(others) == 0 {
 		return result
@@ -33,7 +33,7 @@ func (ai *ArithInstance) Add(decimal1 *ZnDecimal, others ...*ZnDecimal) *ZnDecim
 }
 
 // Sub - A - B - C - D - ... = ?
-func (ai *ArithInstance) Sub(decimal1 *ZnDecimal, others ...*ZnDecimal) *ZnDecimal {
+func (ai *Arith) Sub(decimal1 *ZnDecimal, others ...*ZnDecimal) *ZnDecimal {
 	var result = copyZnDecimal(decimal1)
 	if len(others) == 0 {
 		return result
@@ -48,7 +48,7 @@ func (ai *ArithInstance) Sub(decimal1 *ZnDecimal, others ...*ZnDecimal) *ZnDecim
 }
 
 // Mul - A * B * C * D * ... = ?, ZnDeicmal value will be copied
-func (ai *ArithInstance) Mul(decimal1 *ZnDecimal, others ...*ZnDecimal) *ZnDecimal {
+func (ai *Arith) Mul(decimal1 *ZnDecimal, others ...*ZnDecimal) *ZnDecimal {
 	// init result from decimal1
 	var result = copyZnDecimal(decimal1)
 	if len(others) == 0 {
@@ -65,7 +65,7 @@ func (ai *ArithInstance) Mul(decimal1 *ZnDecimal, others ...*ZnDecimal) *ZnDecim
 
 // Div - A / B / C / D / ... = ?, ZnDecimal value will be copied
 // notice , when one of the dividends are 0, an ArithDivZeroError will be yield
-func (ai *ArithInstance) Div(decimal1 *ZnDecimal, others ...*ZnDecimal) (*ZnDecimal, *error.Error) {
+func (ai *Arith) Div(decimal1 *ZnDecimal, others ...*ZnDecimal) (*ZnDecimal, *error.Error) {
 	var result = copyZnDecimal(decimal1)
 	var num10 = big.NewInt(10)
 	var num0 = big.NewInt(0)

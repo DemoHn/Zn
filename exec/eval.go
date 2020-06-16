@@ -40,7 +40,7 @@ func duplicateValue(in ZnValue) ZnValue {
 
 // EvalStatement - eval statement
 func evalStatement(ctx *Context, scope Scope, stmt syntax.Statement) *error.Error {
-	scope.setCurrentLine(stmt.GetCurrentLine())
+	scope.SetCurrentLine(stmt.GetCurrentLine())
 	switch v := stmt.(type) {
 	case *syntax.VarDeclareStmt:
 		return evalVarDeclareStmt(ctx, scope, v)
@@ -54,7 +54,7 @@ func evalStatement(ctx *Context, scope Scope, stmt syntax.Statement) *error.Erro
 		fn := NewZnFunction(v)
 		return ctx.Bind(v.FuncName.GetLiteral(), fn, false)
 	case *syntax.FunctionReturnStmt:
-		res, err := EvalExpression(ctx, scope, v.ReturnExpr)
+		res, err := evalExpression(ctx, scope, v.ReturnExpr)
 		if err != nil {
 			return err
 		}
@@ -62,7 +62,7 @@ func evalStatement(ctx *Context, scope Scope, stmt syntax.Statement) *error.Erro
 		// send interrupt (NOT AN ACTUAL ERROR)
 		return error.ReturnValueInterrupt()
 	case syntax.Expression:
-		res, err := EvalExpression(ctx, scope, v)
+		res, err := evalExpression(ctx, scope, v)
 		if err != nil {
 			return err
 		}
@@ -119,7 +119,7 @@ func evalWhileLoopStmt(ctx *Context, scope Scope, node *syntax.WhileLoopStmt) *e
 // EvalStmtBlock -
 func evalStmtBlock(ctx *Context, scope Scope, block *syntax.BlockStmt) *error.Error {
 	for _, stmt := range block.Children {
-		err := EvalStatement(ctx, scope, stmt)
+		err := evalStatement(ctx, scope, stmt)
 		if err != nil {
 			return err
 		}
@@ -142,7 +142,7 @@ func evalBranchStmt(ctx *Context, scope Scope, node *syntax.BranchStmt) *error.E
 		return evalStmtBlock(ctx, scope, node.IfTrueBlock)
 	}
 	// exec else-if branches
-	for idx, otherExpr := range branchStmt.OtherExprs {
+	for idx, otherExpr := range node.OtherExprs {
 		otherExprI, err := evalExpression(ctx, scope, otherExpr)
 		if err != nil {
 			return err
@@ -165,8 +165,8 @@ func evalBranchStmt(ctx *Context, scope Scope, node *syntax.BranchStmt) *error.E
 
 //// execute expressions 
 
-func evalExpression(ctx *Context, scope Scope, node syntax.Expression) (ZnValue, *error.Error) {	
-	scope.setCurrentLine(expr.GetCurrentLine())
+func evalExpression(ctx *Context, scope Scope, expr syntax.Expression) (ZnValue, *error.Error) {
+	scope.SetCurrentLine(expr.GetCurrentLine())
 	switch e := expr.(type) {
 	case *syntax.VarAssignExpr:
 		return evalVarAssignExpr(ctx, scope, e)
@@ -216,7 +216,7 @@ func evalFunctionCall(ctx *Context, scope Scope, expr *syntax.FuncCallExpr) (ZnV
 		params = append(params, pval)
 	}
 	// exec function
-	return vval.Exec(ctx, scope, params)
+	return vval.Exec(ctx, fScope, params)
 }
 
 

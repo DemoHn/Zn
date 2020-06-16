@@ -10,8 +10,9 @@ import (
 // TODO: this is a tmp solution. in the future, we will
 // gradually obselete this tree-walk based interperter.
 type Context struct {
-	*SymbolTable
-	*ArithInstance
+	symbols map[string][]SymbolInfo
+	globals map[string]ZnValue
+	arith Arith
 	// lastValue is set during the execution, usually stands for 'the return value' of a function.
 	lastValue ZnValue
 	lexScope
@@ -44,8 +45,7 @@ type Result struct {
 func NewContext() *Context {
 	ctx := new(Context)
 	ctx.SymbolTable = NewSymbolTable()
-	ctx.ArithInstance = NewArithInstance(defaultPrecision)
-	ctx.lastValue = NewZnNull()
+	ctx.ArithInstance = NewArith(defaultPrecision)	
 	return ctx
 }
 
@@ -102,10 +102,6 @@ func (ctx *Context) initLexScope(l *lex.Lexer) {
 		currentLine: 0,
 		lineStack:   l.LineStack,
 	}
-}
-
-func (ctx *Context) setCurrentLine(line int) {
-	ctx.lexScope.currentLine = line
 }
 
 func (ctx *Context) getFile() string {
