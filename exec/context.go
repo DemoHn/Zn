@@ -131,7 +131,8 @@ func (ctx *Context) ExecuteCode(in *lex.InputStream, scope *RootScope) Result {
 	// construct root (program) node
 	program := syntax.NewProgramNode(block)
 
-	if err := EvalProgram(ctx, scope, program); err != nil {
+	// eval program
+	if err := evalProgram(ctx, scope, program); err != nil {
 		wrapError(ctx, err)
 		return Result{true, nil, err}
 	}
@@ -150,13 +151,6 @@ func (ctx *Context) ExecuteBlockAST(scope Scope, block *syntax.BlockStmt) Result
 	}
 
 	return Result{false, NewZnNull(), nil}
-}
-
-//// Execute (Evaluate) statements
-
-// EvalProgram - evaluate global program (root node)
-func EvalProgram(ctx *Context, scope Scope, program *syntax.Program) *error.Error {
-	return evalStmtBlock(ctx, scope, program.Content)
 }
 
 // wrapError if lineInfo is missing (mostly for non-syntax errors)

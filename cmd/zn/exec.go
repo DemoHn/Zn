@@ -44,7 +44,6 @@ func EnterREPL() {
 
 		// execute program
 		in := lex.NewTextStream(text)
-
 		result := ctx.ExecuteCode(in, scope)
 		if !result.HasError {
 			if result.Value != nil {

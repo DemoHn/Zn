@@ -23,6 +23,11 @@ func duplicateValue(in ZnValue) ZnValue {
 	return in
 }
 
+//// eval program
+func evalProgram(ctx *Context, scope *RootScope, program *syntax.Program) *error.Error {
+	return evalStmtBlock(ctx, scope, program.Content)
+}
+
 //// eval statements
 
 // EvalStatement - eval statement
