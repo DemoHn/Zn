@@ -37,7 +37,7 @@ var addValueExecutor = func(params []ZnValue, template *syntax.FunctionDeclareSt
 		decimals = append(decimals, vparam)
 	}
 
-	sum := ctx.ArithInstance.Add(decimals[0], decimals[1:]...)
+	sum := ctx.arith.Add(decimals[0], decimals[1:]...)
 	return sum, nil
 }
 
@@ -56,7 +56,7 @@ var subValueExecutor = func(params []ZnValue, template *syntax.FunctionDeclareSt
 		decimals = append(decimals, vparam)
 	}
 
-	sum := ctx.ArithInstance.Sub(decimals[0], decimals[1:]...)
+	sum := ctx.arith.Sub(decimals[0], decimals[1:]...)
 	return sum, nil
 }
 
@@ -74,7 +74,7 @@ var mulValueExecutor = func(params []ZnValue, template *syntax.FunctionDeclareSt
 		decimals = append(decimals, vparam)
 	}
 
-	sum := ctx.ArithInstance.Mul(decimals[0], decimals[1:]...)
+	sum := ctx.arith.Mul(decimals[0], decimals[1:]...)
 	return sum, nil
 }
 
@@ -92,7 +92,7 @@ var divValueExecutor = func(params []ZnValue, template *syntax.FunctionDeclareSt
 		decimals = append(decimals, vparam)
 	}
 
-	return ctx.ArithInstance.Div(decimals[0], decimals[1:]...)
+	return ctx.arith.Div(decimals[0], decimals[1:]...)
 }
 
 // init function

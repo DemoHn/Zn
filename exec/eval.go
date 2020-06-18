@@ -18,21 +18,6 @@ import (
 // `evalXXXXStmt` will change the value of its corresponding scope; However, `evalXXXXExpr` will export
 // a ZnValue object and mostly won't change scopes (but search a variable from scope is frequently used)
 
-// Scope - tmp Scope solution TODO: will move in the future!
-type Scope interface {
-	// GetValue - get variable name from current scope
-	GetValue(ctx *Context, name string) (ZnValue, *error.Error)
-	// SetValue - set variable value from current scope
-	SetValue(ctx *Context, name string, value ZnValue) *error.Error
-	// BindValue - bind value to current scope
-	BindValue(ctx *Context, name string, value ZnValue) *error.Error
-	// create new (nested) scope from current scope
-	// fails if return scope is nil
-	NewScope(ctx *Context, sType string) Scope
-	// set current execution line
-	SetCurrentLine(line int)
-}
-
 // TODO: find a better way to handle this
 func duplicateValue(in ZnValue) ZnValue {
 	return in
@@ -56,20 +41,17 @@ func evalStatement(ctx *Context, scope Scope, stmt syntax.Statement) *error.Erro
 		fn := NewZnFunction(v)
 		return scope.BindValue(ctx, v.FuncName.GetLiteral(), fn)
 	case *syntax.FunctionReturnStmt:
-		res, err := evalExpression(ctx, scope, v.ReturnExpr)
+		_, err := evalExpression(ctx, scope, v.ReturnExpr)
 		if err != nil {
 			return err
 		}
-		ctx.lastValue = res
 		// send interrupt (NOT AN ACTUAL ERROR)
 		return error.ReturnValueInterrupt()
 	case syntax.Expression:
-		res, err := evalExpression(ctx, scope, v)
+		_, err := evalExpression(ctx, scope, v)
 		if err != nil {
 			return err
 		}
-		// set lastValue
-		ctx.lastValue = res
 		return nil
 	default:
 		return error.InvalidCaseType()
@@ -94,7 +76,7 @@ func evalVarDeclareStmt(ctx *Context, scope Scope, node *syntax.VarDeclareStmt) 
 }
 
 func evalWhileLoopStmt(ctx *Context, scope Scope, node *syntax.WhileLoopStmt) *error.Error {
-	loopScope := scope.NewScope(ctx, "while")	
+	loopScope := scope.NewScope(ctx, "while")
 	// TODO: more handler on scope
 	for {
 		// #1. first execute expr
@@ -165,7 +147,7 @@ func evalBranchStmt(ctx *Context, scope Scope, node *syntax.BranchStmt) *error.E
 	return nil
 }
 
-//// execute expressions 
+//// execute expressions
 
 func evalExpression(ctx *Context, scope Scope, expr syntax.Expression) (ZnValue, *error.Error) {
 	scope.SetCurrentLine(expr.GetCurrentLine())
@@ -184,15 +166,14 @@ func evalExpression(ctx *Context, scope Scope, expr syntax.Expression) (ZnValue,
 		}
 		// regard iv as a RHS value
 		return iv.Reduce(nil, false)
-	case *syntax.Number, *syntax.String, *syntax.ID, *syntax.ArrayExpr, *syntax.HashMapExpr:		
+	case *syntax.Number, *syntax.String, *syntax.ID, *syntax.ArrayExpr, *syntax.HashMapExpr:
 		return evalPrimeExpr(ctx, scope, e)
 	case *syntax.FuncCallExpr:
 		return evalFunctionCall(ctx, scope, e)
 	default:
 		return nil, error.InvalidExprType()
-	}	
+	}
 }
-
 
 // （显示：A，B，C）
 func evalFunctionCall(ctx *Context, scope Scope, expr *syntax.FuncCallExpr) (ZnValue, *error.Error) {
@@ -333,7 +314,7 @@ func evalPrimeExpr(ctx *Context, scope Scope, expr syntax.Expression) (ZnValue, 
 		return NewZnString(e.GetLiteral()), nil
 	case *syntax.ID:
 		vtag := e.GetLiteral()
-		return scope.GetValue(ctx, vtag)		
+		return scope.GetValue(ctx, vtag)
 	case *syntax.ArrayExpr:
 		znObjs := []ZnValue{}
 		for _, item := range e.Items {
@@ -371,7 +352,6 @@ func evalPrimeExpr(ctx *Context, scope Scope, expr syntax.Expression) (ZnValue, 
 	}
 }
 
-
 // eval var assign
 func evalVarAssignExpr(ctx *Context, scope Scope, expr *syntax.VarAssignExpr) (ZnValue, *error.Error) {
 	// Right Side
@@ -385,7 +365,7 @@ func evalVarAssignExpr(ctx *Context, scope Scope, expr *syntax.VarAssignExpr) (Z
 	case *syntax.ID:
 		// set ID
 		vtag := v.GetLiteral()
-		err2 := scope.SetValue(ctx, vtag, val)		
+		err2 := scope.SetValue(ctx, vtag, val)
 		return val, err2
 	case *syntax.ArrayListIndexExpr:
 		iv, err := getArrayListIV(ctx, scope, v)

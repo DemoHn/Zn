@@ -8,18 +8,16 @@ import (
 
 // SymbolInfo - symbol info
 type SymbolInfo struct {
-	nestLevel  int
-	value      ZnValue
-	isConstant bool // if isConstant = true, the value of this symbol is prohibited from any modification.
+	NestLevel  int
+	Value      ZnValue
+	IsConstant bool // if isConstant = true, the value of this symbol is prohibited from any modification.
 }
 
 // Context - GLOBAL execution context, usually create only once in one program.
 type Context struct {
 	symbols map[string][]SymbolInfo
 	globals map[string]ZnValue
-	arith *Arith
-	// lastValue is set during the execution, usually stands for 'the return value' of a function.
-	lastValue ZnValue
+	arith   *Arith
 	lexScope
 }
 
@@ -51,17 +49,16 @@ func NewContext() *Context {
 	return &Context{
 		symbols: map[string][]SymbolInfo{},
 		globals: predefinedValues,
-		arith: NewArith(defaultPrecision),
+		arith:   NewArith(defaultPrecision),
 	}
 }
 
-
 // BindSymbol - add value to symbol table
-func (ctx *SymbolTable) BindSymbol(nestLevel int, id string, obj ZnValue, isConstant bool) *error.Error {
+func (ctx *Context) BindSymbol(nestLevel int, id string, obj ZnValue, isConstant bool) *error.Error {
 	newInfo := SymbolInfo{
-		nestLevel:  nestLevel,
-		value:      obj,
-		isConstant: isConstant,
+		NestLevel:  nestLevel,
+		Value:      obj,
+		IsConstant: isConstant,
 	}
 
 	symArr, ok := ctx.symbols[id]
@@ -72,7 +69,7 @@ func (ctx *SymbolTable) BindSymbol(nestLevel int, id string, obj ZnValue, isCons
 	}
 
 	// check if there's variable re-declaration
-	if len(symArr) > 0 && symArr[0].nestLevel == nestLevel {
+	if len(symArr) > 0 && symArr[0].NestLevel == nestLevel {
 		return error.NameRedeclared(id)
 	}
 
@@ -83,7 +80,7 @@ func (ctx *SymbolTable) BindSymbol(nestLevel int, id string, obj ZnValue, isCons
 
 // LookupSymbol - find the corresponded value from ID,
 // if nothing found, return error
-func (ctx *SymbolTable) LookupSymbol(id string) (ZnValue, *error.Error) {
+func (ctx *Context) LookupSymbol(id string) (ZnValue, *error.Error) {
 	symArr, ok := ctx.symbols[id]
 	if !ok {
 		return nil, error.NameNotDefined(id)
@@ -93,7 +90,7 @@ func (ctx *SymbolTable) LookupSymbol(id string) (ZnValue, *error.Error) {
 	if symArr == nil || len(symArr) == 0 {
 		return nil, error.NameNotDefined(id)
 	}
-	return symArr[0].value, nil
+	return symArr[0].Value, nil
 }
 
 // SetSymbol - after variable is defined, set the value from the label
@@ -104,8 +101,8 @@ func (ctx *Context) SetSymbol(id string, obj ZnValue) *error.Error {
 	}
 
 	if symArr != nil && len(symArr) > 0 {
-		symArr[0].value = obj
-		if symArr[0].isConstant {
+		symArr[0].Value = obj
+		if symArr[0].IsConstant {
 			return error.AssignToConstant()
 		}
 		return nil
@@ -114,26 +111,13 @@ func (ctx *Context) SetSymbol(id string, obj ZnValue) *error.Error {
 	return error.NameNotDefined(id)
 }
 
-func printSymbols(ctx *Context) string {
-	strs := []string{}
-	for k, symArr := range ctx.symbols {
-		if symArr != nil {
-			for _, symItem := range symArr {
-				symStr := "ε"
-				if symItem.value != nil {
-					symStr = symItem.value.String()
-				}
-				strs = append(strs, fmt.Sprintf("‹%s, %d› => %s", k, symItem.nestLevel, symStr))
-			}
-		}
-
-	}
-
-	return strings.Join(strs, "\n")
+// GetSymbols -
+func (ctx *Context) GetSymbols() map[string][]SymbolInfo {
+	return ctx.symbols
 }
 
 // ExecuteCode - execute program from input Zn code (whether from file or REPL)
-func (ctx *Context) ExecuteCode(in *lex.InputStream, scope Scope) Result {
+func (ctx *Context) ExecuteCode(in *lex.InputStream, scope *RootScope) Result {
 	l := lex.NewLexer(in)
 	p := syntax.NewParser(l)
 	// start
@@ -141,9 +125,8 @@ func (ctx *Context) ExecuteCode(in *lex.InputStream, scope Scope) Result {
 	if err != nil {
 		return Result{true, nil, err}
 	}
-	// After parsing, lines are split & cached completely.
-	// It's time to initialize lexScope
-	ctx.initLexScope(l)
+	// init scope
+	scope.Init(l)
 
 	// construct root (program) node
 	program := syntax.NewProgramNode(block)
@@ -152,7 +135,7 @@ func (ctx *Context) ExecuteCode(in *lex.InputStream, scope Scope) Result {
 		wrapError(ctx, err)
 		return Result{true, nil, err}
 	}
-	return Result{false, ctx.lastValue, nil}
+	return Result{false, NewZnNull(), nil}
 }
 
 // ExecuteBlockAST - execute blockStmt AST
@@ -166,39 +149,7 @@ func (ctx *Context) ExecuteBlockAST(scope Scope, block *syntax.BlockStmt) Result
 		}
 	}
 
-	lastValue := ctx.lastValue
-	if ctx.lastValue == nil {
-		lastValue = NewZnNull()
-	}
-	return Result{false, lastValue, nil}
-}
-
-// ResetLastValue - set ctx.lastValue -> nil
-func (ctx *Context) ResetLastValue() {
-	ctx.lastValue = nil
-}
-
-// lexScope helpers
-func (ctx *Context) initLexScope(l *lex.Lexer) {
-	ctx.lexScope = lexScope{
-		file:        l.InputStream.Scope,
-		currentLine: 0,
-		lineStack:   l.LineStack,
-	}
-}
-
-func (ctx *Context) getFile() string {
-	return ctx.lexScope.file
-}
-
-func (ctx *Context) getCurrentLine() int {
-	return ctx.lexScope.currentLine
-}
-
-func (ctx *Context) getCurrentLineText() string {
-	ls := ctx.lexScope
-	txt := ls.lineStack.GetLineText(ctx.currentLine, false)
-	return txt
+	return Result{false, NewZnNull(), nil}
 }
 
 //// Execute (Evaluate) statements
@@ -212,8 +163,11 @@ func EvalProgram(ctx *Context, scope Scope, program *syntax.Program) *error.Erro
 // If lineInfo missing, then we will add current execution line and hide some part to
 // display errors properly.
 func wrapError(ctx *Context, err *error.Error) {
+	/**
 	cursor := err.GetCursor()
+
 	if cursor.LineNum == 0 {
+
 		newCursor := error.Cursor{
 			File:    ctx.getFile(),
 			LineNum: ctx.getCurrentLine(),
@@ -221,4 +175,5 @@ func wrapError(ctx *Context, err *error.Error) {
 		}
 		err.SetCursor(newCursor)
 	}
+	*/
 }
