@@ -22,8 +22,10 @@ import (
 type Scope interface {
 	// GetValue - get variable name from current scope
 	GetValue(ctx *Context, name string) (ZnValue, *error.Error)
-	// GetValue - set variable value from current scope
+	// SetValue - set variable value from current scope
 	SetValue(ctx *Context, name string, value ZnValue) *error.Error
+	// BindValue - bind value to current scope
+	BindValue(ctx *Context, name string, value ZnValue) *error.Error
 	// create new (nested) scope from current scope
 	// fails if return scope is nil
 	NewScope(ctx *Context, sType string) Scope
@@ -52,7 +54,7 @@ func evalStatement(ctx *Context, scope Scope, stmt syntax.Statement) *error.Erro
 		return nil
 	case *syntax.FunctionDeclareStmt:
 		fn := NewZnFunction(v)
-		return ctx.Bind(v.FuncName.GetLiteral(), fn, false)
+		return scope.BindValue(ctx, v.FuncName.GetLiteral(), fn)
 	case *syntax.FunctionReturnStmt:
 		res, err := evalExpression(ctx, scope, v.ReturnExpr)
 		if err != nil {
@@ -83,7 +85,7 @@ func evalVarDeclareStmt(ctx *Context, scope Scope, node *syntax.VarDeclareStmt) 
 		for _, v := range vpair.Variables {
 			vtag := v.GetLiteral()
 			finalObj := duplicateValue(obj)
-			if scope.SetValue(ctx, vtag, finalObj); err != nil {
+			if scope.BindValue(ctx, vtag, finalObj); err != nil {
 				return err
 			}
 		}
@@ -383,7 +385,7 @@ func evalVarAssignExpr(ctx *Context, scope Scope, expr *syntax.VarAssignExpr) (Z
 	case *syntax.ID:
 		// set ID
 		vtag := v.GetLiteral()
-		err2 := ctx.SetData(vtag, val)
+		err2 := scope.SetValue(ctx, vtag, val)		
 		return val, err2
 	case *syntax.ArrayListIndexExpr:
 		iv, err := getArrayListIV(ctx, scope, v)

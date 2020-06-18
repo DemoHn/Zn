@@ -96,8 +96,8 @@ func (ctx *SymbolTable) LookupSymbol(id string) (ZnValue, *error.Error) {
 	return symArr[0].value, nil
 }
 
-// SetSymbolValue - after variable is defined, set the value
-func (ctx *Context) SetSymbolValue(id string, obj ZnValue) *error.Error {
+// SetSymbol - after variable is defined, set the value from the label
+func (ctx *Context) SetSymbol(id string, obj ZnValue) *error.Error {
 	symArr, ok := ctx.symbols[id]
 	if !ok {
 		return error.NameNotDefined(id)
