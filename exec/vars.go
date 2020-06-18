@@ -233,9 +233,6 @@ func (zf *ZnFunction) Exec(ctx *Context, scope Scope, params []ZnValue) (ZnValue
 	// st -> global symbol table
 	// if executor = nil, then use default function executor
 	if zf.Executor == nil {
-		// enter scope to add values
-		ctx.EnterScope()
-		defer ctx.ExitScope()
 		// check param length
 		if len(params) != len(zf.Node.ParamList) {
 			return nil, error.MismatchParamLengthError(len(zf.Node.ParamList), len(params))
@@ -244,7 +241,7 @@ func (zf *ZnFunction) Exec(ctx *Context, scope Scope, params []ZnValue) (ZnValue
 		// set id
 		for idx, param := range params {
 			paramID := zf.Node.ParamList[idx]
-			err := ctx.Bind(paramID.GetLiteral(), param, false)
+			err := scope.BindValue(ctx, paramID.GetLiteral(), param)
 			if err != nil {
 				return nil, err
 			}

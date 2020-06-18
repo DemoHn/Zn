@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
 
 	"github.com/DemoHn/Zn/exec"
 	"github.com/DemoHn/Zn/lex"
@@ -17,10 +18,9 @@ func EnterREPL() {
 	linerR := liner.NewLiner()
 	linerR.SetCtrlCAborts(true)
 	ctx := exec.NewContext()
-
+	scope := exec.NewRootScope()
 	// REPL loop
 	for {
-		ctx.ResetLastValue()
 		text, err := linerR.Prompt("Zn> ")
 		if err != nil {
 			if err == liner.ErrPromptAborted {
@@ -34,11 +34,18 @@ func EnterREPL() {
 		}
 		// append history
 		linerR.AppendHistory(text)
+		// add special command
+		if text == ".print" {
+			printSymbols(ctx)
+			continue
+		} else if text == ".exit" {
+			break
+		}
 
 		// execute program
 		in := lex.NewTextStream(text)
-		env := exec.NewProgramEnv()
-		result := ctx.ExecuteCode(in, env)
+
+		result := ctx.ExecuteCode(in, scope)
 		if !result.HasError {
 			if result.Value != nil {
 				prettyDisplayValue(result.Value, os.Stdout)
@@ -52,14 +59,14 @@ func EnterREPL() {
 // ExecProgram - exec program from file directly
 func ExecProgram(file string) {
 	ctx := exec.NewContext()
-	env := exec.NewProgramEnv()
+	scope := exec.NewRootScope()
 	in, errF := lex.NewFileStream(file)
 	if errF != nil {
 		fmt.Println(errF.Display())
 		return
 	}
 
-	result := ctx.ExecuteCode(in, env)
+	result := ctx.ExecuteCode(in, scope)
 	// when exec program, unlike REPL, it's not necessary to print last executed value
 	if result.HasError {
 		fmt.Println(result.Error.Display())
@@ -92,4 +99,23 @@ func prettyDisplayValue(val exec.ZnValue, w io.Writer) {
 	}
 
 	w.Write([]byte(displayData))
+}
+
+// printSymbols -
+func printSymbols(ctx *exec.Context) {
+	strs := []string{}
+	for k, symArr := range ctx.GetSymbols() {
+		if symArr != nil {
+			for _, symItem := range symArr {
+				symStr := "ε"
+				if symItem.Value != nil {
+					symStr = symItem.Value.String()
+				}
+				strs = append(strs, fmt.Sprintf("‹%s, %d› => %s", k, symItem.NestLevel, symStr))
+			}
+		}
+	}
+
+	data := strings.Join(strs, "\n")
+	fmt.Println(data)
 }
