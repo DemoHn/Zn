@@ -5,13 +5,12 @@ import (
 	"strings"
 
 	"github.com/DemoHn/Zn/error"
-	"github.com/DemoHn/Zn/syntax"
 )
 
 var predefinedValues map[string]ZnValue
 
 // （显示） 方法的执行逻辑
-var displayExecutor = func(params []ZnValue, template *syntax.FunctionDeclareStmt, ctx *Context) (ZnValue, *error.Error) {
+var displayExecutor = func(ctx *Context, scope Scope, params []ZnValue) (ZnValue, *error.Error) {
 	// display format string
 	var items = []string{}
 
@@ -23,7 +22,7 @@ var displayExecutor = func(params []ZnValue, template *syntax.FunctionDeclareStm
 }
 
 // （递增）方法的执行逻辑
-var addValueExecutor = func(params []ZnValue, template *syntax.FunctionDeclareStmt, ctx *Context) (ZnValue, *error.Error) {
+var addValueExecutor = func(ctx *Context, scope Scope, params []ZnValue) (ZnValue, *error.Error) {
 	var decimals = []*ZnDecimal{}
 	if len(params) == 0 {
 		return nil, error.LeastParamsError(1)
@@ -42,7 +41,7 @@ var addValueExecutor = func(params []ZnValue, template *syntax.FunctionDeclareSt
 }
 
 // （递减）方法的执行逻辑
-var subValueExecutor = func(params []ZnValue, template *syntax.FunctionDeclareStmt, ctx *Context) (ZnValue, *error.Error) {
+var subValueExecutor = func(ctx *Context, scope Scope, params []ZnValue) (ZnValue, *error.Error) {
 	var decimals = []*ZnDecimal{}
 	if len(params) == 0 {
 		return nil, error.LeastParamsError(1)
@@ -60,7 +59,7 @@ var subValueExecutor = func(params []ZnValue, template *syntax.FunctionDeclareSt
 	return sum, nil
 }
 
-var mulValueExecutor = func(params []ZnValue, template *syntax.FunctionDeclareStmt, ctx *Context) (ZnValue, *error.Error) {
+var mulValueExecutor = func(ctx *Context, scope Scope, params []ZnValue) (ZnValue, *error.Error) {
 	var decimals = []*ZnDecimal{}
 	if len(params) == 0 {
 		return nil, error.LeastParamsError(1)
@@ -78,7 +77,7 @@ var mulValueExecutor = func(params []ZnValue, template *syntax.FunctionDeclareSt
 	return sum, nil
 }
 
-var divValueExecutor = func(params []ZnValue, template *syntax.FunctionDeclareStmt, ctx *Context) (ZnValue, *error.Error) {
+var divValueExecutor = func(ctx *Context, scope Scope, params []ZnValue) (ZnValue, *error.Error) {
 	var decimals = []*ZnDecimal{}
 	if len(params) == 0 {
 		return nil, error.LeastParamsError(1)
