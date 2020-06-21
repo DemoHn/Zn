@@ -53,9 +53,12 @@ func evalStatement(ctx *Context, scope Scope, stmt syntax.Statement) *error.Erro
 		// send interrupt (NOT AN ACTUAL ERROR)
 		return error.ReturnValueInterrupt()
 	case syntax.Expression:
-		_, err := evalExpression(ctx, scope, v)
+		val, err := evalExpression(ctx, scope, v)
 		if err != nil {
 			return err
+		}
+		if rs, ok := scope.(*RootScope); ok {
+			rs.SetLastValue(val)
 		}
 		return nil
 	default:

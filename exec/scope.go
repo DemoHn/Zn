@@ -49,7 +49,9 @@ type RootScope struct {
 // NOTE: When a program file "requires" another one, another RootScope is created
 // for that "required" program file.
 func NewRootScope() *RootScope {
-	return &RootScope{}
+	return &RootScope{
+		lastValue: NewZnNull(),
+	}
 }
 
 // Init - init rootScope using new Lexer
@@ -85,6 +87,16 @@ func (rs *RootScope) BindValue(ctx *Context, name string, value ZnValue) *error.
 func (rs *RootScope) NewScope(ctx *Context, sType string) Scope {
 	// TODO
 	return nil
+}
+
+// SetLastValue - set last value
+func (rs *RootScope) SetLastValue(value ZnValue) {
+	rs.lastValue = value
+}
+
+// GetLastValue -
+func (rs *RootScope) GetLastValue() ZnValue {
+	return rs.lastValue
 }
 
 //// helpers
