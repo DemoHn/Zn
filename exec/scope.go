@@ -62,8 +62,21 @@ func (rs *RootScope) SetCurrentLine(line int) {
 
 // GetValue - get variable name from current scope
 func (rs *RootScope) GetValue(ctx *Context, name string) (ZnValue, *error.Error) {
-	// TODO
-	return nil, nil
+	// find on globals first
+	if symVal, inGlobals := ctx.globals[name]; inGlobals {
+		return symVal, nil
+	}
+	// ...then in symbols
+	symArr, ok := ctx.symbols[name]
+	if !ok {
+		return nil, error.NameNotDefined(name)
+	}
+
+	// find the nearest level of value
+	if symArr == nil || len(symArr) == 0 {
+		return nil, error.NameNotDefined(name)
+	}
+	return symArr[0].Value, nil
 }
 
 // SetValue - set variable value from current scope
@@ -74,7 +87,29 @@ func (rs *RootScope) SetValue(ctx *Context, name string, value ZnValue) *error.E
 
 // BindValue - bind value to current scope
 func (rs *RootScope) BindValue(ctx *Context, name string, value ZnValue) *error.Error {
-	// TODO
+	if _, inGlobals := ctx.globals[name]; inGlobals {
+		return error.NameRedeclared(name)
+	}
+	newInfo := SymbolInfo{
+		NestLevel:  1,
+		Value:      value,
+		IsConstant: false, 
+	}
+
+	symArr, ok := ctx.symbols[name]
+	if !ok {
+		// init symbolInfo array
+		ctx.symbols[name] = []SymbolInfo{newInfo}
+		return nil
+	}
+
+	// check if there's variable re-declaration
+	if len(symArr) > 0 && symArr[0].NestLevel == 1 {
+		return error.NameRedeclared(name)
+	}
+
+	// prepend data
+	ctx.symbols[name] = append([]SymbolInfo{newInfo}, ctx.symbols[name]...)
 	return nil
 }
 
