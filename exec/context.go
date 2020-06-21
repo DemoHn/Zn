@@ -78,7 +78,7 @@ func (ctx *Context) ExecuteCode(in *lex.InputStream, scope *RootScope) Result {
 		wrapError(ctx, err)
 		return Result{true, nil, err}
 	}
-	return Result{false, NewZnNull(), nil}
+	return Result{false, scope.GetLastValue(), nil}
 }
 
 // ExecuteBlockAST - execute blockStmt AST
