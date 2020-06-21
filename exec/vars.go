@@ -25,7 +25,7 @@ const (
 	compareTypeGt = 4
 )
 
-type funcExecutor func(params []ZnValue, template *syntax.FunctionDeclareStmt, ctx *Context) (ZnValue, *error.Error)
+type funcExecutor func(ctx *Context, scope Scope, params []ZnValue) (ZnValue, *error.Error)
 
 //////// Primitive Types Definition
 
@@ -225,36 +225,6 @@ func (zh *ZnHashMap) Compare(val ZnValue, cmpType znCompareType) (*ZnBool, *erro
 func (zb *ZnBool) Rev() *ZnBool {
 	zb.Value = !zb.Value
 	return zb
-}
-
-// Exec - ZnFunction exec function
-func (zf *ZnFunction) Exec(ctx *Context, scope Scope, params []ZnValue) (ZnValue, *error.Error) {
-	// TODO1: add new env
-	// st -> global symbol table
-	// if executor = nil, then use default function executor
-	if zf.Executor == nil {
-		// check param length
-		if len(params) != len(zf.Node.ParamList) {
-			return nil, error.MismatchParamLengthError(len(zf.Node.ParamList), len(params))
-		}
-
-		// set id
-		for idx, param := range params {
-			paramID := zf.Node.ParamList[idx]
-			err := scope.BindValue(ctx, paramID.GetLiteral(), param)
-			if err != nil {
-				return nil, err
-			}
-		}
-
-		result := ctx.ExecuteBlockAST(scope, zf.Node.ExecBlock)
-		if result.HasError {
-			return nil, result.Error
-		}
-		return result.Value, nil
-	}
-
-	return zf.Executor(params, zf.Node, ctx)
 }
 
 //////// New[Type] Constructors

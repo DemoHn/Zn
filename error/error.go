@@ -221,7 +221,6 @@ const (
 	NameErrorClass   = 0x25
 	ArithErrorClass  = 0x26
 	ParamErrorClass  = 0x27
-	InterruptsClass  = 0xFE
 )
 
 // NewErrorSLOT - a tmp placeholder for adding errors quickly while the
@@ -264,19 +263,6 @@ var (
 	// trigger error when input parameters doesn't satisfy the requirements
 	paramError = errorClass{ParamErrorClass, dpHideLineCursor}
 
-	// 0xFE - interrupts
-	// strictly, interrupts is NOT an error.
-	// we use interrupts to stop execution immediately.
-	// (like
-	//   ...
-	//   if err != nil {
-	//     return err
-	//   }
-	//   ...
-	// )
-	//
-	interrupts = errorClass{InterruptsClass, dpHideLineCursor}
-
 	errClassMap = map[uint16]string{
 		LexErrorClass:    "语法错误", // from lex
 		IOErrorClass:     "I/O错误",
@@ -286,6 +272,5 @@ var (
 		NameErrorClass:   "标识错误",
 		ArithErrorClass:  "算术错误",
 		ParamErrorClass:  "参数错误",
-		InterruptsClass:  "数据中断（不应见到此消息显示）",
 	}
 )

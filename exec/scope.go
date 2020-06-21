@@ -23,6 +23,9 @@ type Scope interface {
 const (
 	// RootLevel - RootScope nest level
 	RootLevel = 1
+	//
+	sTypeRoot = "scopeRoot"
+	sTypeFunc = "scopeFunc"
 )
 
 //// implementations
@@ -85,7 +88,14 @@ func (rs *RootScope) BindValue(ctx *Context, name string, value ZnValue) *error.
 // NewScope - create new (nested) scope from current scope
 // fails if return scope is nil
 func (rs *RootScope) NewScope(ctx *Context, sType string) Scope {
-	// TODO
+	if sType == sTypeFunc {
+		return &FuncScope{
+			returnValue: NewZnNull(),
+			root:        rs,
+			parent:      rs,
+			nestLevel:   RootLevel + 1,
+		}
+	}
 	return nil
 }
 
@@ -97,6 +107,70 @@ func (rs *RootScope) SetLastValue(value ZnValue) {
 // GetLastValue -
 func (rs *RootScope) GetLastValue() ZnValue {
 	return rs.lastValue
+}
+
+// FuncScope - function scope
+type FuncScope struct {
+	//// returnValue - the final return value of current scope
+	returnValue ZnValue
+	root        *RootScope
+	parent      Scope
+	nestLevel   int
+	returnFlag  bool
+}
+
+// GetValue - get variable name from current scope
+func (fs *FuncScope) GetValue(ctx *Context, name string) (ZnValue, *error.Error) {
+	return getValue(ctx, name)
+}
+
+// SetValue - set variable value from current scope
+func (fs *FuncScope) SetValue(ctx *Context, name string, value ZnValue) *error.Error {
+	return setValue(ctx, name, value)
+}
+
+// BindValue - bind value to current scope
+func (fs *FuncScope) BindValue(ctx *Context, name string, value ZnValue) *error.Error {
+	return bindValue(ctx, fs.nestLevel, name, value)
+}
+
+// NewScope - create new (nested) scope from current scope
+// fails if return scope is nil
+func (fs *FuncScope) NewScope(ctx *Context, sType string) Scope {
+	if sType == sTypeFunc {
+		return &FuncScope{
+			returnValue: NewZnNull(),
+			root:        fs.root,
+			parent:      fs,
+			nestLevel:   fs.nestLevel + 1,
+		}
+	}
+	return nil
+}
+
+// SetCurrentLine - set current execution line
+func (fs *FuncScope) SetCurrentLine(line int) {
+	fs.root.SetCurrentLine(line)
+}
+
+// SetReturnValue - set last value
+func (fs *FuncScope) SetReturnValue(value ZnValue) {
+	fs.returnValue = value
+}
+
+// GetReturnValue -
+func (fs *FuncScope) GetReturnValue() ZnValue {
+	return fs.returnValue
+}
+
+// SetReturnFlag - set last value
+func (fs *FuncScope) SetReturnFlag(flag bool) {
+	fs.returnFlag = flag
+}
+
+// GetReturnFlag -
+func (fs *FuncScope) GetReturnFlag() bool {
+	return fs.returnFlag
 }
 
 //// helpers

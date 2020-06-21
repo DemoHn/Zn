@@ -81,20 +81,6 @@ func (ctx *Context) ExecuteCode(in *lex.InputStream, scope *RootScope) Result {
 	return Result{false, scope.GetLastValue(), nil}
 }
 
-// ExecuteBlockAST - execute blockStmt AST
-// usually for executing function template
-func (ctx *Context) ExecuteBlockAST(scope Scope, block *syntax.BlockStmt) Result {
-	if err := evalStmtBlock(ctx, scope, block); err != nil {
-		// handle returnValue Interrupts
-		if err.GetErrorClass() != error.InterruptsClass {
-			wrapError(ctx, err)
-			return Result{true, nil, err}
-		}
-	}
-
-	return Result{false, NewZnNull(), nil}
-}
-
 // wrapError if lineInfo is missing (mostly for non-syntax errors)
 // If lineInfo missing, then we will add current execution line and hide some part to
 // display errors properly.

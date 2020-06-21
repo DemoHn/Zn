@@ -46,12 +46,15 @@ func evalStatement(ctx *Context, scope Scope, stmt syntax.Statement) *error.Erro
 		fn := NewZnFunction(v)
 		return scope.BindValue(ctx, v.FuncName.GetLiteral(), fn)
 	case *syntax.FunctionReturnStmt:
-		_, err := evalExpression(ctx, scope, v.ReturnExpr)
+		val, err := evalExpression(ctx, scope, v.ReturnExpr)
 		if err != nil {
 			return err
 		}
-		// send interrupt (NOT AN ACTUAL ERROR)
-		return error.ReturnValueInterrupt()
+		if fs, ok := scope.(*FuncScope); ok {
+			fs.SetReturnFlag(true)
+			fs.SetReturnValue(val)
+		}
+		return nil
 	case syntax.Expression:
 		val, err := evalExpression(ctx, scope, v)
 		if err != nil {
@@ -185,7 +188,7 @@ func evalExpression(ctx *Context, scope Scope, expr syntax.Expression) (ZnValue,
 
 // （显示：A，B，C）
 func evalFunctionCall(ctx *Context, scope Scope, expr *syntax.FuncCallExpr) (ZnValue, *error.Error) {
-	fScope := scope.NewScope(ctx, "func")
+	fScope, _ := scope.NewScope(ctx, sTypeFunc).(*FuncScope)
 	vtag := expr.FuncName.GetLiteral()
 	// find function definctxion
 	val, err := scope.GetValue(ctx, vtag)
@@ -193,7 +196,7 @@ func evalFunctionCall(ctx *Context, scope Scope, expr *syntax.FuncCallExpr) (ZnV
 		return nil, err
 	}
 	// assert value
-	vval, ok := val.(*ZnFunction)
+	zf, ok := val.(*ZnFunction)
 	if !ok {
 		return nil, error.InvalidFuncVariable(vtag)
 	}
@@ -206,8 +209,46 @@ func evalFunctionCall(ctx *Context, scope Scope, expr *syntax.FuncCallExpr) (ZnV
 		}
 		params = append(params, pval)
 	}
-	// exec function
-	return vval.Exec(ctx, fScope, params)
+	return evalFunctionValue(ctx, fScope, params, zf)
+}
+
+func evalFunctionValue(ctx *Context, scope *FuncScope, params []ZnValue, zf *ZnFunction) (ZnValue, *error.Error) {
+	// if executor = nil, then use default function executor
+	if zf.Executor == nil {
+		// check param length
+		if len(params) != len(zf.Node.ParamList) {
+			return nil, error.MismatchParamLengthError(len(zf.Node.ParamList), len(params))
+		}
+
+		// set id
+		for idx, param := range params {
+			paramID := zf.Node.ParamList[idx]
+			if err := scope.BindValue(ctx, paramID.GetLiteral(), param); err != nil {
+				return nil, err
+			}
+		}
+
+		var res ZnValue = NewZnNull()
+		execBlock := zf.Node.ExecBlock
+		// iterate block
+		for _, stmt := range execBlock.Children {
+			if err := evalStatement(ctx, scope, stmt); err != nil {
+				return nil, err
+			}
+			// if returnFlag = true (after executing the statement)
+			// return result immediately
+			if scope.GetReturnFlag() {
+				goto result
+			}
+		}
+
+	result:
+		res = scope.GetReturnValue()
+		return res, nil
+	}
+	// use pre-defined execution logic
+	return zf.Executor(ctx, scope, params)
+
 }
 
 // evaluate logic combination expressions

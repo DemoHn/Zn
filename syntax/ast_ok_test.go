@@ -8,11 +8,6 @@ import (
 	"github.com/DemoHn/Zn/lex"
 )
 
-/**
-# Introduction of ast testcases
-
-TODO
-*/
 var testSuccessSuites = []string{
 	varDeclCasesOK,
 	whileLoopCasesOK,
@@ -558,8 +553,6 @@ func TestAST_OK(t *testing.T) {
 		}
 	}
 
-	// TODO: filter
-	// after filtering...
 	for _, tt := range astCases {
 		t.Run(tt.name, func(t *testing.T) {
 			in := lex.NewTextStream(tt.input)
