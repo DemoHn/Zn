@@ -81,8 +81,24 @@ func (rs *RootScope) GetValue(ctx *Context, name string) (ZnValue, *error.Error)
 
 // SetValue - set variable value from current scope
 func (rs *RootScope) SetValue(ctx *Context, name string, value ZnValue) *error.Error {
-	// TODO
-	return nil
+	if _, inGlobals := ctx.globals[name]; inGlobals {
+		return error.NameRedeclared(name)
+	}
+
+	symArr, ok := ctx.symbols[name]
+	if !ok {
+		return error.NameNotDefined(name)
+	}
+
+	if symArr != nil && len(symArr) > 0 {
+		symArr[0].Value = value
+		if symArr[0].IsConstant {
+			return error.AssignToConstant()
+		}
+		return nil
+	}
+
+	return error.NameNotDefined(name)
 }
 
 // BindValue - bind value to current scope
@@ -93,7 +109,7 @@ func (rs *RootScope) BindValue(ctx *Context, name string, value ZnValue) *error.
 	newInfo := SymbolInfo{
 		NestLevel:  1,
 		Value:      value,
-		IsConstant: false, 
+		IsConstant: false,
 	}
 
 	symArr, ok := ctx.symbols[name]
