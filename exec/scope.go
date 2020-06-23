@@ -58,6 +58,7 @@ type RootScope struct {
 func NewRootScope() *RootScope {
 	return &RootScope{
 		lastValue: NewZnNull(),
+		symbolMap: map[string]SymbolInfo{},
 	}
 }
 
