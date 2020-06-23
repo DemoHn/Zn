@@ -183,5 +183,3 @@ func (fs *FuncScope) SetSymbol(name string, value ZnValue, isConstant bool) {
 		value, isConstant,
 	}
 }
-
-//// helpers

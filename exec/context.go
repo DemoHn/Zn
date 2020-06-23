@@ -61,7 +61,7 @@ func (ctx *Context) ExecuteCode(in *lex.InputStream, scope *RootScope) Result {
 
 	// eval program
 	if err := evalProgram(ctx, scope, program); err != nil {
-		wrapError(ctx, err)
+		wrapError(ctx, scope, err)
 		return Result{true, nil, err}
 	}
 	return Result{false, scope.GetLastValue(), nil}
@@ -70,18 +70,16 @@ func (ctx *Context) ExecuteCode(in *lex.InputStream, scope *RootScope) Result {
 // wrapError if lineInfo is missing (mostly for non-syntax errors)
 // If lineInfo missing, then we will add current execution line and hide some part to
 // display errors properly.
-func wrapError(ctx *Context, err *error.Error) {
-	/**
+func wrapError(ctx *Context, scope *RootScope, err *error.Error) {
 	cursor := err.GetCursor()
 
 	if cursor.LineNum == 0 {
 
 		newCursor := error.Cursor{
-			File:    ctx.getFile(),
-			LineNum: ctx.getCurrentLine(),
-			Text:    ctx.getCurrentLineText(),
+			File:    scope.file,
+			LineNum: scope.currentLine,
+			Text:    scope.lineStack.GetLineText(scope.currentLine, false),
 		}
 		err.SetCursor(newCursor)
 	}
-	*/
 }
