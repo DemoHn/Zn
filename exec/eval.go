@@ -44,7 +44,7 @@ func evalStatement(ctx *Context, scope Scope, stmt syntax.Statement) *error.Erro
 		return nil
 	case *syntax.FunctionDeclareStmt:
 		fn := NewZnFunction(v)
-		return scope.BindValue(ctx, v.FuncName.GetLiteral(), fn)
+		return bindValue(ctx, scope, v.FuncName.GetLiteral(), fn, false)
 	case *syntax.FunctionReturnStmt:
 		val, err := evalExpression(ctx, scope, v.ReturnExpr)
 		if err != nil {
@@ -78,7 +78,7 @@ func evalVarDeclareStmt(ctx *Context, scope Scope, node *syntax.VarDeclareStmt) 
 		for _, v := range vpair.Variables {
 			vtag := v.GetLiteral()
 			finalObj := duplicateValue(obj)
-			if scope.BindValue(ctx, vtag, finalObj); err != nil {
+			if bindValue(ctx, scope, vtag, finalObj, false); err != nil {
 				return err
 			}
 		}
@@ -191,7 +191,7 @@ func evalFunctionCall(ctx *Context, scope Scope, expr *syntax.FuncCallExpr) (ZnV
 	fScope, _ := scope.NewScope(ctx, sTypeFunc).(*FuncScope)
 	vtag := expr.FuncName.GetLiteral()
 	// find function definctxion
-	val, err := scope.GetValue(ctx, vtag)
+	val, err := getValue(ctx, scope, vtag)
 	if err != nil {
 		return nil, err
 	}
@@ -223,7 +223,7 @@ func evalFunctionValue(ctx *Context, scope *FuncScope, params []ZnValue, zf *ZnF
 		// set id
 		for idx, param := range params {
 			paramID := zf.Node.ParamList[idx]
-			if err := scope.BindValue(ctx, paramID.GetLiteral(), param); err != nil {
+			if err := bindValue(ctx, scope, paramID.GetLiteral(), param, false); err != nil {
 				return nil, err
 			}
 		}
@@ -363,7 +363,7 @@ func evalPrimeExpr(ctx *Context, scope Scope, expr syntax.Expression) (ZnValue, 
 		return NewZnString(e.GetLiteral()), nil
 	case *syntax.ID:
 		vtag := e.GetLiteral()
-		return scope.GetValue(ctx, vtag)
+		return getValue(ctx, scope, vtag)
 	case *syntax.ArrayExpr:
 		znObjs := []ZnValue{}
 		for _, item := range e.Items {
@@ -414,7 +414,7 @@ func evalVarAssignExpr(ctx *Context, scope Scope, expr *syntax.VarAssignExpr) (Z
 	case *syntax.ID:
 		// set ID
 		vtag := v.GetLiteral()
-		err2 := scope.SetValue(ctx, vtag, val)
+		err2 := setValue(ctx, scope, vtag, val)
 		return val, err2
 	case *syntax.ArrayListIndexExpr:
 		iv, err := getArrayListIV(ctx, scope, v)
@@ -463,4 +463,56 @@ func getArrayListIV(ctx *Context, scope Scope, expr *syntax.ArrayListIndexExpr) 
 	default:
 		return nil, error.InvalidExprType("array", "hashmap")
 	}
+}
+
+//// scope value setters/getters
+func getValue(ctx *Context, scope Scope, name string) (ZnValue, *error.Error) {
+	// find on globals first
+	if symVal, inGlobals := ctx.globals[name]; inGlobals {
+		return symVal, nil
+	}
+	// ...then in symbols
+	sp := scope
+	for sp != nil {
+		sym, ok := sp.GetSymbol(name)
+		if ok {
+			return sym.Value, nil
+		}
+		// if not found, search its parent
+		sp = sp.GetParent()
+	}
+	return nil, error.NameNotDefined(name)
+}
+
+func setValue(ctx *Context, scope Scope, name string, value ZnValue) *error.Error {
+	if _, inGlobals := ctx.globals[name]; inGlobals {
+		return error.NameRedeclared(name)
+	}
+	// ...then in symbols
+	sp := scope
+	for sp != nil {
+		sym, ok := sp.GetSymbol(name)
+		if ok {
+			if sym.IsConstant {
+				return error.AssignToConstant()
+			}
+			sp.SetSymbol(name, value, false)
+			return nil
+		}
+		// if not found, search its parent
+		sp = sp.GetParent()
+	}
+	return error.NameNotDefined(name)
+}
+
+func bindValue(ctx *Context, scope Scope, name string, value ZnValue, isConstatnt bool) *error.Error {
+	if _, inGlobals := ctx.globals[name]; inGlobals {
+		return error.NameRedeclared(name)
+	}
+	// bind directly
+	if _, ok := scope.GetSymbol(name); ok {
+		return error.NameRedeclared(name)
+	}
+	scope.SetSymbol(name, value, isConstatnt)
+	return nil
 }

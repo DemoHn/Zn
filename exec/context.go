@@ -6,16 +6,8 @@ import (
 	"github.com/DemoHn/Zn/syntax"
 )
 
-// SymbolInfo - symbol info
-type SymbolInfo struct {
-	NestLevel  int
-	Value      ZnValue
-	IsConstant bool // if isConstant = true, the value of this symbol is prohibited from any modification.
-}
-
 // Context - GLOBAL execution context, usually create only once in one program.
 type Context struct {
-	symbols map[string][]SymbolInfo
 	globals map[string]ZnValue
 	arith   *Arith
 	lexScope
@@ -47,15 +39,9 @@ type Result struct {
 // NewContext - create new Zn Context for furthur execution
 func NewContext() *Context {
 	return &Context{
-		symbols: map[string][]SymbolInfo{},
 		globals: predefinedValues,
 		arith:   NewArith(defaultPrecision),
 	}
-}
-
-// GetSymbols -
-func (ctx *Context) GetSymbols() map[string][]SymbolInfo {
-	return ctx.symbols
 }
 
 // ExecuteCode - execute program from input Zn code (whether from file or REPL)
