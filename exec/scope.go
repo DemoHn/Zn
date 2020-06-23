@@ -1,34 +1,36 @@
 package exec
 
 import (
-	"github.com/DemoHn/Zn/error"
 	"github.com/DemoHn/Zn/lex"
 )
 
 // Scope - tmp Scope solution TODO: will move in the future!
 type Scope interface {
-	// GetValue - get variable name from current scope
-	GetValue(ctx *Context, name string) (ZnValue, *error.Error)
-	// SetValue - set variable value from current scope
-	SetValue(ctx *Context, name string, value ZnValue) *error.Error
-	// BindValue - bind value to current scope
-	BindValue(ctx *Context, name string, value ZnValue) *error.Error
 	// create new (nested) scope from current scope
 	// fails if return scope is nil
 	NewScope(ctx *Context, sType string) Scope
 	// set current execution line
 	SetCurrentLine(line int)
+	// GetParent - get parent scope
+	GetParent() Scope
+	// GetSymbol - get symbol from internal symbol map
+	GetSymbol(name string) (SymbolInfo, bool)
+	// SetSymbol - set symbol from internal symbol map
+	SetSymbol(name string, value ZnValue, isConstant bool)
 }
 
 const (
-	// RootLevel - RootScope nest level
-	RootLevel = 1
-	//
 	sTypeRoot = "scopeRoot"
 	sTypeFunc = "scopeFunc"
 )
 
 //// implementations
+
+// SymbolInfo - symbol info
+type SymbolInfo struct {
+	Value      ZnValue
+	IsConstant bool // if isConstant = true, the value of this symbol is prohibited from any modification.
+}
 
 // RootScope - as named, this is the root scope for execution one program.
 // usually it contains all active variables, scopes, etc
@@ -40,8 +42,10 @@ type RootScope struct {
 	currentLine int
 	// lineStack - lexical info of (parsed) current file
 	lineStack *lex.LineStack
-	//// lastValue - get last valid value even if there's no return statement
+	// lastValue - get last valid value even if there's no return statement
 	lastValue ZnValue
+	// symbolMap - store variables within this scope
+	symbolMap map[string]SymbolInfo
 }
 
 // NewRootScope - create a rootScope from existing Lexer that
@@ -70,21 +74,6 @@ func (rs *RootScope) SetCurrentLine(line int) {
 	rs.currentLine = line
 }
 
-// GetValue - get variable name from current scope
-func (rs *RootScope) GetValue(ctx *Context, name string) (ZnValue, *error.Error) {
-	return getValue(ctx, name)
-}
-
-// SetValue - set variable value from current scope
-func (rs *RootScope) SetValue(ctx *Context, name string, value ZnValue) *error.Error {
-	return setValue(ctx, name, value)
-}
-
-// BindValue - bind value to current scope
-func (rs *RootScope) BindValue(ctx *Context, name string, value ZnValue) *error.Error {
-	return bindValue(ctx, RootLevel, name, value)
-}
-
 // NewScope - create new (nested) scope from current scope
 // fails if return scope is nil
 func (rs *RootScope) NewScope(ctx *Context, sType string) Scope {
@@ -93,10 +82,28 @@ func (rs *RootScope) NewScope(ctx *Context, sType string) Scope {
 			returnValue: NewZnNull(),
 			root:        rs,
 			parent:      rs,
-			nestLevel:   RootLevel + 1,
+			symbolMap:   map[string]SymbolInfo{},
 		}
 	}
 	return nil
+}
+
+// GetParent -
+func (rs *RootScope) GetParent() Scope {
+	return nil
+}
+
+// GetSymbol - get symbol
+func (rs *RootScope) GetSymbol(name string) (SymbolInfo, bool) {
+	sym, ok := rs.symbolMap[name]
+	return sym, ok
+}
+
+// SetSymbol - set symbol
+func (rs *RootScope) SetSymbol(name string, value ZnValue, isConstant bool) {
+	rs.symbolMap[name] = SymbolInfo{
+		value, isConstant,
+	}
 }
 
 // SetLastValue - set last value
@@ -115,23 +122,8 @@ type FuncScope struct {
 	returnValue ZnValue
 	root        *RootScope
 	parent      Scope
-	nestLevel   int
 	returnFlag  bool
-}
-
-// GetValue - get variable name from current scope
-func (fs *FuncScope) GetValue(ctx *Context, name string) (ZnValue, *error.Error) {
-	return getValue(ctx, name)
-}
-
-// SetValue - set variable value from current scope
-func (fs *FuncScope) SetValue(ctx *Context, name string, value ZnValue) *error.Error {
-	return setValue(ctx, name, value)
-}
-
-// BindValue - bind value to current scope
-func (fs *FuncScope) BindValue(ctx *Context, name string, value ZnValue) *error.Error {
-	return bindValue(ctx, fs.nestLevel, name, value)
+	symbolMap   map[string]SymbolInfo
 }
 
 // NewScope - create new (nested) scope from current scope
@@ -142,10 +134,15 @@ func (fs *FuncScope) NewScope(ctx *Context, sType string) Scope {
 			returnValue: NewZnNull(),
 			root:        fs.root,
 			parent:      fs,
-			nestLevel:   fs.nestLevel + 1,
+			symbolMap:   map[string]SymbolInfo{},
 		}
 	}
 	return nil
+}
+
+// GetParent -
+func (fs *FuncScope) GetParent() Scope {
+	return fs.parent
 }
 
 // SetCurrentLine - set current execution line
@@ -173,69 +170,17 @@ func (fs *FuncScope) GetReturnFlag() bool {
 	return fs.returnFlag
 }
 
+// GetSymbol - get symbol
+func (fs *FuncScope) GetSymbol(name string) (SymbolInfo, bool) {
+	sym, ok := fs.symbolMap[name]
+	return sym, ok
+}
+
+// SetSymbol - set symbol
+func (fs *FuncScope) SetSymbol(name string, value ZnValue, isConstant bool) {
+	fs.symbolMap[name] = SymbolInfo{
+		value, isConstant,
+	}
+}
+
 //// helpers
-func bindValue(ctx *Context, nestLevel int, name string, value ZnValue) *error.Error {
-	if _, inGlobals := ctx.globals[name]; inGlobals {
-		return error.NameRedeclared(name)
-	}
-	newInfo := SymbolInfo{
-		NestLevel:  nestLevel,
-		Value:      value,
-		IsConstant: false,
-	}
-
-	symArr, ok := ctx.symbols[name]
-	if !ok {
-		// init symbolInfo array
-		ctx.symbols[name] = []SymbolInfo{newInfo}
-		return nil
-	}
-
-	// check if there's variable re-declaration
-	if len(symArr) > 0 && symArr[0].NestLevel == nestLevel {
-		return error.NameRedeclared(name)
-	}
-
-	// prepend data
-	ctx.symbols[name] = append([]SymbolInfo{newInfo}, ctx.symbols[name]...)
-	return nil
-}
-
-func setValue(ctx *Context, name string, value ZnValue) *error.Error {
-	if _, inGlobals := ctx.globals[name]; inGlobals {
-		return error.NameRedeclared(name)
-	}
-
-	symArr, ok := ctx.symbols[name]
-	if !ok {
-		return error.NameNotDefined(name)
-	}
-
-	if symArr != nil && len(symArr) > 0 {
-		symArr[0].Value = value
-		if symArr[0].IsConstant {
-			return error.AssignToConstant()
-		}
-		return nil
-	}
-
-	return error.NameNotDefined(name)
-}
-
-func getValue(ctx *Context, name string) (ZnValue, *error.Error) {
-	// find on globals first
-	if symVal, inGlobals := ctx.globals[name]; inGlobals {
-		return symVal, nil
-	}
-	// ...then in symbols
-	symArr, ok := ctx.symbols[name]
-	if !ok {
-		return nil, error.NameNotDefined(name)
-	}
-
-	// find the nearest level of value
-	if symArr == nil || len(symArr) == 0 {
-		return nil, error.NameNotDefined(name)
-	}
-	return symArr[0].Value, nil
-}

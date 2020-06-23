@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"strings"
 
 	"github.com/DemoHn/Zn/exec"
 	"github.com/DemoHn/Zn/lex"
@@ -102,6 +101,7 @@ func prettyDisplayValue(val exec.ZnValue, w io.Writer) {
 
 // printSymbols -
 func printSymbols(ctx *exec.Context) {
+	/** TODO
 	strs := []string{}
 	for k, symArr := range ctx.GetSymbols() {
 		if symArr != nil {
@@ -117,4 +117,5 @@ func printSymbols(ctx *exec.Context) {
 
 	data := strings.Join(strs, "\n")
 	fmt.Println(data)
+	*/
 }
