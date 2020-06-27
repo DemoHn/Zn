@@ -284,6 +284,6 @@ var (
 		NameErrorClass:   "标识错误",
 		ArithErrorClass:  "算术错误",
 		ParamErrorClass:  "参数错误",
-		BreakErrorClass:  "中断信号（非错误）",
+		BreakErrorClass:  "中断信号",
 	}
 )

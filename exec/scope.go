@@ -115,9 +115,10 @@ func (rs *RootScope) GetLastValue() ZnValue {
 
 // FuncScope - function scope
 type FuncScope struct {
-	root      *RootScope
-	parent    Scope
-	symbolMap map[string]SymbolInfo
+	returnValue ZnValue
+	root        *RootScope
+	parent      Scope
+	symbolMap   map[string]SymbolInfo
 }
 
 // GetParent -
@@ -151,6 +152,16 @@ func (fs *FuncScope) SetSymbol(name string, value ZnValue, isConstant bool) {
 // HasSymbol -
 func (fs *FuncScope) HasSymbol() bool {
 	return true
+}
+
+// GetReturnValue -
+func (fs *FuncScope) GetReturnValue() ZnValue {
+	return fs.returnValue
+}
+
+// SetReturnValue -
+func (fs *FuncScope) SetReturnValue(value ZnValue) {
+	fs.returnValue = value
 }
 
 // WhileScope - a scope within *while* statement
