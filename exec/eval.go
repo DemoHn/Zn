@@ -57,8 +57,18 @@ func evalStatement(ctx *Context, scope Scope, stmt syntax.Statement) *error.Erro
 		if err != nil {
 			return err
 		}
-		if rs, ok := scope.(*RootScope); ok {
-			rs.SetLastValue(val)
+		// set last value (of rootScope or funcScope)
+		sp := scope
+		for sp != nil {
+			switch v := sp.(type) {
+			case *RootScope:
+				v.SetLastValue(val)
+				return nil
+			case *FuncScope:
+				v.SetReturnValue(val)
+				return nil
+			}
+			sp = sp.GetParent()
 		}
 		return nil
 	default:
@@ -225,23 +235,20 @@ func evalFunctionValue(ctx *Context, scope *FuncScope, params []ZnValue, zf *ZnF
 			}
 		}
 
-		var res ZnValue = NewZnNull()
 		execBlock := zf.Node.ExecBlock
 		// iterate block
 		for _, stmt := range execBlock.Children {
 			if err := evalStatement(ctx, scope, stmt); err != nil {
+				// if recv breaks
+				if err.GetErrorClass() == error.BreakErrorClass {
+					if extra, ok := err.GetExtra().(ZnValue); ok {
+						return extra, nil
+					}
+				}
 				return nil, err
 			}
-			// if returnFlag = true (after executing the statement)
-			// return result immediately
-			if scope.GetReturnFlag() {
-				goto result
-			}
 		}
-
-	result:
-		res = scope.GetReturnValue()
-		return res, nil
+		return scope.GetReturnValue(), nil
 	}
 	// use pre-defined execution logic
 	return zf.Executor(ctx, scope, params)
