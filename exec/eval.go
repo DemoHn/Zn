@@ -32,7 +32,7 @@ func evalProgram(ctx *Context, scope *RootScope, program *syntax.Program) *error
 
 // EvalStatement - eval statement
 func evalStatement(ctx *Context, scope Scope, stmt syntax.Statement) *error.Error {
-	scope.SetCurrentLine(stmt.GetCurrentLine())
+	scope.GetRoot().SetCurrentLine(stmt.GetCurrentLine())
 	switch v := stmt.(type) {
 	case *syntax.VarDeclareStmt:
 		return evalVarDeclareStmt(ctx, scope, v)
@@ -50,11 +50,8 @@ func evalStatement(ctx *Context, scope Scope, stmt syntax.Statement) *error.Erro
 		if err != nil {
 			return err
 		}
-		if fs, ok := scope.(*FuncScope); ok {
-			fs.SetReturnFlag(true)
-			fs.SetReturnValue(val)
-		}
-		return nil
+		// send RETURN break
+		return error.ReturnBreakError(val)
 	case syntax.Expression:
 		val, err := evalExpression(ctx, scope, v)
 		if err != nil {
@@ -87,7 +84,7 @@ func evalVarDeclareStmt(ctx *Context, scope Scope, node *syntax.VarDeclareStmt) 
 }
 
 func evalWhileLoopStmt(ctx *Context, scope Scope, node *syntax.WhileLoopStmt) *error.Error {
-	loopScope := scope.NewScope(ctx, "while")
+	loopScope := createScope(ctx, scope, sTypeWhile)
 	// TODO: more handler on scope
 	for {
 		// #1. first execute expr
@@ -161,7 +158,7 @@ func evalBranchStmt(ctx *Context, scope Scope, node *syntax.BranchStmt) *error.E
 //// execute expressions
 
 func evalExpression(ctx *Context, scope Scope, expr syntax.Expression) (ZnValue, *error.Error) {
-	scope.SetCurrentLine(expr.GetCurrentLine())
+	scope.GetRoot().SetCurrentLine(expr.GetCurrentLine())
 	switch e := expr.(type) {
 	case *syntax.VarAssignExpr:
 		return evalVarAssignExpr(ctx, scope, e)
@@ -188,7 +185,7 @@ func evalExpression(ctx *Context, scope Scope, expr syntax.Expression) (ZnValue,
 
 // （显示：A，B，C）
 func evalFunctionCall(ctx *Context, scope Scope, expr *syntax.FuncCallExpr) (ZnValue, *error.Error) {
-	fScope, _ := scope.NewScope(ctx, sTypeFunc).(*FuncScope)
+	fScope, _ := createScope(ctx, scope, sTypeFunc).(*FuncScope)
 	vtag := expr.FuncName.GetLiteral()
 	// find function definctxion
 	val, err := getValue(ctx, scope, vtag)
@@ -513,6 +510,14 @@ func bindValue(ctx *Context, scope Scope, name string, value ZnValue, isConstatn
 	if _, ok := scope.GetSymbol(name); ok {
 		return error.NameRedeclared(name)
 	}
-	scope.SetSymbol(name, value, isConstatnt)
+	sp := scope
+	for sp != nil {
+		if sp.HasSymbol() {
+			sp.SetSymbol(name, value, isConstatnt)
+			return nil
+		}
+		sp = sp.GetParent()
+	}
+
 	return nil
 }
