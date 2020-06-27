@@ -6,3 +6,8 @@ func ArithDivZeroError() *Error {
 		text: "被除数不得为0",
 	})
 }
+
+const (
+	// ErrCodeArithDivZero -
+	ErrCodeArithDivZero = (ArithErrorClass << 16) & 0x01
+)

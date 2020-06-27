@@ -6,22 +6,22 @@ import (
 
 // Scope - tmp Scope solution TODO: will move in the future!
 type Scope interface {
-	// create new (nested) scope from current scope
-	// fails if return scope is nil
-	NewScope(ctx *Context, sType string) Scope
-	// set current execution line
-	SetCurrentLine(line int)
 	// GetParent - get parent scope
 	GetParent() Scope
+	// GetRoot - get its root scope
+	GetRoot() *RootScope
 	// GetSymbol - get symbol from internal symbol map
 	GetSymbol(name string) (SymbolInfo, bool)
 	// SetSymbol - set symbol from internal symbol map
 	SetSymbol(name string, value ZnValue, isConstant bool)
+	// HasSymbol - if the scope has stand-alone valueMap
+	HasSymbol() bool
 }
 
 const (
-	sTypeRoot = "scopeRoot"
-	sTypeFunc = "scopeFunc"
+	sTypeRoot  = "scopeRoot"
+	sTypeFunc  = "scopeFunc"
+	sTypeWhile = "scopeWhile"
 )
 
 //// implementations
@@ -75,23 +75,14 @@ func (rs *RootScope) SetCurrentLine(line int) {
 	rs.currentLine = line
 }
 
-// NewScope - create new (nested) scope from current scope
-// fails if return scope is nil
-func (rs *RootScope) NewScope(ctx *Context, sType string) Scope {
-	if sType == sTypeFunc {
-		return &FuncScope{
-			returnValue: NewZnNull(),
-			root:        rs,
-			parent:      rs,
-			symbolMap:   map[string]SymbolInfo{},
-		}
-	}
-	return nil
-}
-
 // GetParent -
 func (rs *RootScope) GetParent() Scope {
 	return nil
+}
+
+// GetRoot -
+func (rs *RootScope) GetRoot() *RootScope {
+	return rs
 }
 
 // GetSymbol - get symbol
@@ -107,6 +98,11 @@ func (rs *RootScope) SetSymbol(name string, value ZnValue, isConstant bool) {
 	}
 }
 
+// HasSymbol -
+func (rs *RootScope) HasSymbol() bool {
+	return true
+}
+
 // SetLastValue - set last value
 func (rs *RootScope) SetLastValue(value ZnValue) {
 	rs.lastValue = value
@@ -119,26 +115,9 @@ func (rs *RootScope) GetLastValue() ZnValue {
 
 // FuncScope - function scope
 type FuncScope struct {
-	//// returnValue - the final return value of current scope
-	returnValue ZnValue
-	root        *RootScope
-	parent      Scope
-	returnFlag  bool
-	symbolMap   map[string]SymbolInfo
-}
-
-// NewScope - create new (nested) scope from current scope
-// fails if return scope is nil
-func (fs *FuncScope) NewScope(ctx *Context, sType string) Scope {
-	if sType == sTypeFunc {
-		return &FuncScope{
-			returnValue: NewZnNull(),
-			root:        fs.root,
-			parent:      fs,
-			symbolMap:   map[string]SymbolInfo{},
-		}
-	}
-	return nil
+	root      *RootScope
+	parent    Scope
+	symbolMap map[string]SymbolInfo
 }
 
 // GetParent -
@@ -146,29 +125,14 @@ func (fs *FuncScope) GetParent() Scope {
 	return fs.parent
 }
 
+// GetRoot -
+func (fs *FuncScope) GetRoot() *RootScope {
+	return fs.root
+}
+
 // SetCurrentLine - set current execution line
 func (fs *FuncScope) SetCurrentLine(line int) {
 	fs.root.SetCurrentLine(line)
-}
-
-// SetReturnValue - set last value
-func (fs *FuncScope) SetReturnValue(value ZnValue) {
-	fs.returnValue = value
-}
-
-// GetReturnValue -
-func (fs *FuncScope) GetReturnValue() ZnValue {
-	return fs.returnValue
-}
-
-// SetReturnFlag - set last value
-func (fs *FuncScope) SetReturnFlag(flag bool) {
-	fs.returnFlag = flag
-}
-
-// GetReturnFlag -
-func (fs *FuncScope) GetReturnFlag() bool {
-	return fs.returnFlag
 }
 
 // GetSymbol - get symbol
@@ -182,4 +146,62 @@ func (fs *FuncScope) SetSymbol(name string, value ZnValue, isConstant bool) {
 	fs.symbolMap[name] = SymbolInfo{
 		value, isConstant,
 	}
+}
+
+// HasSymbol -
+func (fs *FuncScope) HasSymbol() bool {
+	return true
+}
+
+// WhileScope - a scope within *while* statement
+// NOTICE: there's no standalone symbolMap inside this scope,
+// instead, use it's parent for get/set symbols
+type WhileScope struct {
+	root   *RootScope
+	parent Scope
+}
+
+// HasSymbol - while scope has NO standalone symbol system
+func (ws *WhileScope) HasSymbol() bool {
+	return false
+}
+
+// SetSymbol - set symbol
+func (ws *WhileScope) SetSymbol(name string, value ZnValue, isConstant bool) {
+	return
+}
+
+// GetSymbol - get symbol
+func (ws *WhileScope) GetSymbol(name string) (SymbolInfo, bool) {
+	return SymbolInfo{}, false
+}
+
+// GetParent - get parent
+func (ws *WhileScope) GetParent() Scope {
+	return ws.parent
+}
+
+// GetRoot -
+func (ws *WhileScope) GetRoot() *RootScope {
+	return ws.root
+}
+
+// createScope - create new (nested) scope from current scope
+// fails if return scope is nil
+func createScope(ctx *Context, scope Scope, sType string) Scope {
+	switch sType {
+	case sTypeFunc:
+		return &FuncScope{
+			returnValue: NewZnNull(),
+			root:        scope.GetRoot(),
+			parent:      scope,
+			symbolMap:   map[string]SymbolInfo{},
+		}
+	case sTypeWhile:
+		return &WhileScope{
+			root:   scope.GetRoot(),
+			parent: scope,
+		}
+	}
+	return nil
 }

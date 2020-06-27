@@ -15,6 +15,8 @@ type Error struct {
 	// info string format: key1=(value1) key2=(value2)
 	// example: path=(/tmp/new-data) code=(2000)
 	info string
+	// extra data (any type)
+	extra interface{}
 
 	displayMask uint16
 }
@@ -34,11 +36,6 @@ func (e *Error) Error() string {
 	return e.text
 }
 
-// GetCode - get error code
-func (e *Error) GetCode() uint16 {
-	return e.code
-}
-
 // SetCursor - set error occurance location
 // for better readability
 func (e *Error) SetCursor(cursor Cursor) {
@@ -48,6 +45,16 @@ func (e *Error) SetCursor(cursor Cursor) {
 // GetCursor - get error cursor
 func (e *Error) GetCursor() Cursor {
 	return e.cursor
+}
+
+// GetCode - get error code
+func (e *Error) GetCode() uint16 {
+	return e.code
+}
+
+// GetExtra - get extra info
+func (e *Error) GetExtra() interface{} {
+	return e.extra
 }
 
 // GetErrorClass - get error class
@@ -221,6 +228,7 @@ const (
 	NameErrorClass   = 0x25
 	ArithErrorClass  = 0x26
 	ParamErrorClass  = 0x27
+	BreakErrorClass  = 0x50
 )
 
 // NewErrorSLOT - a tmp placeholder for adding errors quickly while the
@@ -262,6 +270,10 @@ var (
 	// 0x27 - paramError
 	// trigger error when input parameters doesn't satisfy the requirements
 	paramError = errorClass{ParamErrorClass, dpHideLineCursor}
+	// 0x50 - breakError
+	// send a virtual BREAK interrupt to stop the process.
+	// NOTICE: breakError is NOT a true error!
+	breakError = errorClass{BreakErrorClass, dpHideLineCursor}
 
 	errClassMap = map[uint16]string{
 		LexErrorClass:    "语法错误", // from lex
@@ -272,5 +284,6 @@ var (
 		NameErrorClass:   "标识错误",
 		ArithErrorClass:  "算术错误",
 		ParamErrorClass:  "参数错误",
+		BreakErrorClass:  "中断信号（非错误）",
 	}
 )
