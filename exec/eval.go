@@ -207,13 +207,9 @@ func evalFunctionCall(ctx *Context, scope Scope, expr *syntax.FuncCallExpr) (ZnV
 		return nil, error.InvalidFuncVariable(vtag)
 	}
 	// exec params
-	params := []ZnValue{}
-	for _, paramExpr := range expr.Params {
-		pval, err := evalExpression(ctx, scope, paramExpr)
-		if err != nil {
-			return nil, err
-		}
-		params = append(params, pval)
+	params, err := exprsToValues(ctx, scope, expr.Params)
+	if err != nil {
+		return nil, err
 	}
 	return evalFunctionValue(ctx, fScope, params, zf)
 }
@@ -439,14 +435,9 @@ func getMemberExprIV(ctx *Context, scope Scope, expr *syntax.MemberExpr) (ZnIV, 
 		case syntax.MemberMethod:
 			m := expr.MemberMethod
 			funcName := m.FuncName.Literal
-			paramVals := []ZnValue{}
-
-			for _, p := range m.Params {
-				v, err := evalExpression(ctx, scope, p)
-				if err != nil {
-					return nil, err
-				}
-				paramVals = append(paramVals, v)
+			paramVals, err := exprsToValues(ctx, scope, m.Params)
+			if err != nil {
+				return nil, err
 			}
 			return &ZnScopeMethodIV{scope, funcName, paramVals}, nil
 		}
@@ -465,14 +456,9 @@ func getMemberExprIV(ctx *Context, scope Scope, expr *syntax.MemberExpr) (ZnIV, 
 	case syntax.MemberMethod:
 		m := expr.MemberMethod
 		funcName := m.FuncName.Literal
-		paramVals := []ZnValue{}
-
-		for _, p := range m.Params {
-			v, err := evalExpression(ctx, scope, p)
-			if err != nil {
-				return nil, err
-			}
-			paramVals = append(paramVals, v)
+		paramVals, err := exprsToValues(ctx, scope, m.Params)
+		if err != nil {
+			return nil, err
 		}
 		return &ZnMethodIV{valRoot, funcName, paramVals}, nil
 	case syntax.MemberIndex:
@@ -570,4 +556,19 @@ func bindValue(ctx *Context, scope Scope, name string, value ZnValue, isConstatn
 	}
 
 	return nil
+}
+
+//// helpers
+
+// exprsToValues - []syntax.Expression -> []eval.ZnValue
+func exprsToValues(ctx *Context, scope Scope, exprs []syntax.Expression) ([]ZnValue, *error.Error) {
+	params := []ZnValue{}
+	for _, paramExpr := range exprs {
+		pval, err := evalExpression(ctx, scope, paramExpr)
+		if err != nil {
+			return nil, err
+		}
+		params = append(params, pval)
+	}
+	return params, nil
 }

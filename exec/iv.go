@@ -90,3 +90,27 @@ func (iv *ZnHashMapIV) Reduce(ctx *Context, input ZnValue, lhs bool) (ZnValue, *
 	}
 	return vr, nil
 }
+
+// Reduce -
+func (iv *ZnMemberIV) Reduce(ctx *Context, input ZnValue, lhs bool) (ZnValue, *error.Error) {
+	// TODO: Implement this!!
+	return NewZnNull(), nil
+}
+
+// Reduce -
+func (iv *ZnMethodIV) Reduce(ctx *Context, input ZnValue, lhs bool) (ZnValue, *error.Error) {
+	// TODO: Implement this!!
+	return NewZnNull(), nil
+}
+
+// Reduce -
+func (iv *ZnScopeMemberIV) Reduce(ctx *Context, input ZnValue, lhs bool) (ZnValue, *error.Error) {
+	// TODO: Implement this!!
+	return NewZnNull(), nil
+}
+
+// Reduce -
+func (iv *ZnScopeMethodIV) Reduce(ctx *Context, input ZnValue, lhs bool) (ZnValue, *error.Error) {
+	// TODO: Implement this!!
+	return NewZnNull(), nil
+}
