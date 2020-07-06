@@ -183,12 +183,11 @@ type ArrayExpr struct {
 // HashMapExpr - hashMap expression
 type HashMapExpr struct {
 	ExprBase
-	KVPair []HashMapKeyValuePair
+	KVPair []hashMapKeyValuePair
 }
 
-// HashMapKeyValuePair -
-type HashMapKeyValuePair struct {
-	ExprBase
+// hashMapKeyValuePair -
+type hashMapKeyValuePair struct {
 	Key   Expression
 	Value Expression
 }
@@ -218,27 +217,53 @@ type FuncCallExpr struct {
 	Params   []Expression
 }
 
-// LogicType - define several logic type (OR, AND, EQ, etc)
-type LogicType uint8
+// MemberExpr - declare a member (dot) relation
+// Example:
+//    此之 代码
+//    【1，2】 之 和
+//    此之 （结束）
+//    100 之 （+1）
+type MemberExpr struct {
+	ExprBase
+	Root         Expression
+	IsSelfRoot   bool
+	MemberType   memberTypeE // 1 - memberID, 2 - memberMethod, 3 - memberIndex
+	MemberID     *ID
+	MemberMethod *FuncCallExpr
+	MemberIndex  Expression
+}
+
+// memberTypeE - member type enumeration
+type memberTypeE uint8
+
+// declare member types
+const (
+	MemberID     memberTypeE = 1 // T 之 prop
+	MemberMethod memberTypeE = 2 // T 之 （method）
+	MemberIndex  memberTypeE = 3 // T # num
+)
+
+// LogicTypeE - enumerates several logic type (OR, AND, EQ, etc)
+type LogicTypeE uint8
 
 // declare some logic types
 const (
-	LogicOR  LogicType = 1  // 或
-	LogicAND LogicType = 2  // 且
-	LogicIS  LogicType = 3  // 此 ... 为 ...
-	LogicEQ  LogicType = 4  // 等于
-	LogicNEQ LogicType = 5  // 不等于
-	LogicGT  LogicType = 6  // 大于
-	LogicGTE LogicType = 7  // 不小于
-	LogicLT  LogicType = 8  // 小于
-	LogicLTE LogicType = 9  // 不大于
-	LogicISN LogicType = 10 // 此 ... 不为 ...
+	LogicOR  LogicTypeE = 1  // 或
+	LogicAND LogicTypeE = 2  // 且
+	LogicIS  LogicTypeE = 3  // 此 ... 为 ...
+	LogicEQ  LogicTypeE = 4  // 等于
+	LogicNEQ LogicTypeE = 5  // 不等于
+	LogicGT  LogicTypeE = 6  // 大于
+	LogicGTE LogicTypeE = 7  // 不小于
+	LogicLT  LogicTypeE = 8  // 小于
+	LogicLTE LogicTypeE = 9  // 不大于
+	LogicISN LogicTypeE = 10 // 此 ... 不为 ...
 )
 
 // LogicExpr - logical expression return TRUE (真) or FALSE (假) only
 type LogicExpr struct {
 	ExprBase
-	Type      LogicType
+	Type      LogicTypeE
 	LeftExpr  Expression
 	RightExpr Expression
 }
@@ -355,7 +380,7 @@ func ParseExpression(p *Parser) Expression {
 		},
 		{lex.TypeLogicYesW}, // notice: this represents for Variable Assignment!
 	}
-	var logicTypeMap = map[lex.TokenType]LogicType{
+	var logicTypeMap = map[lex.TokenType]LogicTypeE{
 		lex.TypeLogicOrW:    LogicOR,
 		lex.TypeLogicAndW:   LogicAND,
 		lex.TypeLogicEqualW: LogicEQ,
@@ -370,7 +395,7 @@ func ParseExpression(p *Parser) Expression {
 	//// anynomous function definition
 	logicItemParser = func(idx int) Expression {
 		if idx >= len(logicKeywords) {
-			return ParseArrayListIndexExpr(p)
+			return ParseMemberExpr(p)
 		}
 		// #1. match item
 		expr1 := logicItemParser(idx + 1)
@@ -419,7 +444,7 @@ func ParseExpression(p *Parser) Expression {
 	return logicItemParser(0)
 }
 
-// ParseArrayListIndexExpr -
+// ParseArrayListIndexExpr - [GOING TO DEPRECATED]
 //
 // CFG:
 //
@@ -474,12 +499,127 @@ func ParseArrayListIndexExpr(p *Parser) Expression {
 	return arrayListTailParser(rootExpr)
 }
 
+// ParseMemberExpr -
+//
+// CFG:
+//
+// MemE  -> 此之 CallE' IdxE'
+//       -> BsE IdxE'
+//
+// IdxE' -> #  Number   IdxE'
+//       -> #  String   IdxE'
+//       -> #{  Expr  }  IdxE'
+//       -> 之  CallE' IdxE'
+//       ->
+//
+// CallE' -> ID
+//        -> （ID：E，E，...）
+func ParseMemberExpr(p *Parser) Expression {
+	// internal functions
+	var calleeTailParser func(bool, Expression) *MemberExpr
+	var memberTailParser func(Expression) Expression
+
+	// specially parsing items after 之 or 此之
+	calleeTailParser = func(hasRoot bool, expr Expression) *MemberExpr {
+		var validTypes = []lex.TokenType{
+			lex.TypeIdentifier,
+			lex.TypeVarQuote,
+			lex.TypeFuncQuoteL,
+			lex.TypeVarOneW,
+		}
+		memberExpr := &MemberExpr{
+			Root:       nil,
+			IsSelfRoot: !hasRoot,
+		}
+		if hasRoot {
+			memberExpr.Root = expr
+		}
+		match, tk := p.tryConsume(validTypes...)
+		if match {
+			switch tk.Type {
+			case lex.TypeIdentifier, lex.TypeVarQuote:
+				id := newID(tk)
+				id.SetCurrentLine(tk)
+				memberExpr.MemberType = MemberID
+				memberExpr.MemberID = id
+			case lex.TypeFuncQuoteL:
+				e := ParseFuncCallExpr(p)
+				e.SetCurrentLine(tk)
+				memberExpr.MemberType = MemberMethod
+				memberExpr.MemberMethod = e
+			case lex.TypeVarOneW:
+				e := ParseVarOneExpr(p)
+				e.SetCurrentLine(tk)
+				memberExpr.MemberType = MemberMethod
+				memberExpr.MemberMethod = e
+			}
+
+			return memberExpr
+		}
+		panic(error.InvalidSyntax())
+	}
+
+	memberTailParser = func(expr Expression) Expression {
+		mExpr := &MemberExpr{}
+
+		match, tk := p.tryConsume(lex.TypeMapHash, lex.TypeMapQHash, lex.TypeObjDotW)
+		if !match {
+			return expr
+		}
+		mExpr.SetCurrentLine(tk)
+		mExpr.Root = expr
+		mExpr.IsSelfRoot = false
+
+		switch tk.Type {
+		case lex.TypeMapHash:
+			match2, tk2 := p.tryConsume(lex.TypeNumber, lex.TypeString)
+			if match2 {
+				// set memberType
+				mExpr.MemberType = MemberIndex
+				switch tk2.Type {
+				case lex.TypeNumber:
+					mExpr.MemberIndex = newNumber(tk2)
+				case lex.TypeString:
+					mExpr.MemberIndex = newString(tk2)
+				}
+				return memberTailParser(mExpr)
+			}
+			panic(error.InvalidSyntax())
+		case lex.TypeMapQHash: // lex.TypeMapQHash
+			// #1. parse Expr
+			mExpr.MemberType = MemberIndex
+			mExpr.MemberIndex = ParseExpression(p)
+
+			// #2. parse tail brace
+			p.consume(lex.TypeStmtQuoteR)
+
+			return memberTailParser(mExpr)
+		case lex.TypeObjDotW:
+			newExpr := calleeTailParser(true, expr)
+			// replace current memberExpr as newExpr
+			return memberTailParser(newExpr)
+		}
+
+		panic(error.InvalidSyntax())
+	}
+
+	// #1. parse 此之 expr
+	match, _ := p.tryConsume(lex.TypeStaticSelfW) // 此之
+	if match {
+		newExpr := calleeTailParser(false, nil)
+		return memberTailParser(newExpr)
+	}
+	// #1. parse basic expr
+	rootExpr := ParseBasicExpr(p)
+	return memberTailParser(rootExpr)
+}
+
 // ParseBasicExpr - parse general basic expression
 //
 // CFG:
 // BsE   -> { E }
 //       -> （ ID ： E，E，...）
-//       -> 以 ID （ ID ： E，E，...）
+//       -> 以 E （ ID ： E，E，...）
 //       -> 此 BsE 为 BsE
 //       -> 此 BsE 不为 BsE
 //       -> ID
@@ -572,7 +712,7 @@ func ParseArrayExpr(p *Parser) UnionMapList {
 		Items: []Expression{},
 	}
 	var hm = &HashMapExpr{
-		KVPair: []HashMapKeyValuePair{},
+		KVPair: []hashMapKeyValuePair{},
 	}
 	var subtype = subtypeUnknown
 	for _, expr := range exprs {
@@ -595,7 +735,7 @@ func ParseArrayExpr(p *Parser) UnionMapList {
 			}
 			n0, _ := v.Children[0].(Expression)
 			n1, _ := v.Children[1].(Expression)
-			hm.KVPair = append(hm.KVPair, HashMapKeyValuePair{
+			hm.KVPair = append(hm.KVPair, hashMapKeyValuePair{
 				Key:   n0,
 				Value: n1,
 			})
@@ -626,7 +766,7 @@ func tryParseEmptyMapList(p *Parser) (bool, UnionMapList) {
 			return true, e
 		case lex.TypeMapData:
 			p.consume(lex.TypeArrayQuoteR)
-			e := &HashMapExpr{KVPair: []HashMapKeyValuePair{}}
+			e := &HashMapExpr{KVPair: []hashMapKeyValuePair{}}
 			e.SetCurrentLine(tk)
 			return true, e
 		}
@@ -677,7 +817,7 @@ func ParseFuncCallExpr(p *Parser) *FuncCallExpr {
 //
 // FuncExpr -> 以 ID RawFuncExpr
 // RawFuncExpr -> （ ID ： commaList ）
-func ParseVarOneExpr(p *Parser) Expression {
+func ParseVarOneExpr(p *Parser) *FuncCallExpr {
 	// #1. parse ID
 	match, tk := p.tryConsume(lex.TypeVarQuote, lex.TypeIdentifier)
 	if !match {
@@ -704,7 +844,7 @@ func ParseVarOneExpr(p *Parser) Expression {
 // LogicIS -> 此 BasicExpr 为 BasicExpr
 // LogicIS -> 此 BasicExpr 不为 BasicExpr
 func ParseLogicISExpr(p *Parser) *LogicExpr {
-	var logicType LogicType
+	var logicType LogicTypeE
 	// #1. parse expr1
 	expr1 := ParseBasicExpr(p)
 
@@ -936,7 +1076,7 @@ func ParseBranchStmt(p *Parser, mainIndent int) *BranchStmt {
 			}
 		}
 
-		// #1. parse expr
+		// #1. parse condition expr
 		if hState != stateElseBranch {
 			condExpr = ParseExpression(p)
 		}

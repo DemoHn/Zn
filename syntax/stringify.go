@@ -30,7 +30,7 @@ func StringifyAST(node Node) string {
 	case *ID:
 		return fmt.Sprintf("$ID(%s)", v.Literal)
 	case *LogicExpr:
-		var typeStrMap = map[LogicType]string{
+		var typeStrMap = map[LogicTypeE]string{
 			LogicIS:  "$IS",
 			LogicISN: "$ISN",
 			LogicEQ:  "$EQ",
@@ -51,6 +51,25 @@ func StringifyAST(node Node) string {
 		rstr := StringifyAST(v.Index)
 
 		return fmt.Sprintf("$ALI(root=(%s) index=(%s))", lstr, rstr)
+	case *MemberExpr:
+		var str = ""
+		var sType = ""
+		switch v.MemberType {
+		case MemberID:
+			str = StringifyAST(v.MemberID)
+			sType = "mID"
+		case MemberIndex:
+			str = StringifyAST(v.MemberIndex)
+			sType = "mIndex"
+		case MemberMethod:
+			str = StringifyAST(v.MemberMethod)
+			sType = "mMethod"
+		}
+		if v.IsSelfRoot {
+			return fmt.Sprintf("$MB(noroot type=(%s) object=(%s))", sType, str)
+		}
+		rootStr := StringifyAST(v.Root)
+		return fmt.Sprintf("$MB(root=(%s) type=(%s) object=(%s))", rootStr, sType, str)
 	case *EmptyStmt:
 		return "$"
 	case *VarDeclareStmt:
