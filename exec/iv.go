@@ -6,7 +6,7 @@ import "github.com/DemoHn/Zn/error"
 type ZnIV interface {
 	// Reduce - reduce an IV to a real ZnValue
 	// NOTICE: results may differ from whether it's on LHS or RHS
-	Reduce(input ZnValue, lhs bool) (ZnValue, *error.Error)
+	Reduce(ctx *Context, input ZnValue, lhs bool) (ZnValue, *error.Error)
 }
 
 // ZnArrayIV - a structure for intermediate-expression of an array or a hashmap
@@ -30,8 +30,34 @@ type ZnHashMapIV struct {
 	Index *ZnString
 }
 
+// ZnMemberIV - e.g. A 之 B, it shows member.property access
+type ZnMemberIV struct {
+	Root   ZnValue
+	Member string
+}
+
+// ZnMethodIV - e.g. A 之 （方法：X，Y，Z）
+type ZnMethodIV struct {
+	Root       ZnValue
+	MethodName string
+	Params     []ZnValue
+}
+
+// ZnScopeMemberIV - e.g. 此之 属性A
+type ZnScopeMemberIV struct {
+	RootScope Scope
+	Member    string
+}
+
+// ZnScopeMethodIV - e.g. 此之 （结束）
+type ZnScopeMethodIV struct {
+	RootScope  Scope
+	MethodName string
+	Params     []ZnValue
+}
+
 // Reduce -
-func (iv *ZnArrayIV) Reduce(input ZnValue, lhs bool) (ZnValue, *error.Error) {
+func (iv *ZnArrayIV) Reduce(ctx *Context, input ZnValue, lhs bool) (ZnValue, *error.Error) {
 	// check data
 	idx, err := iv.Index.asInteger()
 	if err != nil {
@@ -50,7 +76,7 @@ func (iv *ZnArrayIV) Reduce(input ZnValue, lhs bool) (ZnValue, *error.Error) {
 }
 
 // Reduce -
-func (iv *ZnHashMapIV) Reduce(input ZnValue, lhs bool) (ZnValue, *error.Error) {
+func (iv *ZnHashMapIV) Reduce(ctx *Context, input ZnValue, lhs bool) (ZnValue, *error.Error) {
 	// check data
 	key := iv.Index.Value
 	vr, ok := iv.List.Value[key]

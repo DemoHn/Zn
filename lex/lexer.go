@@ -175,7 +175,7 @@ func handleDeferError(l *Lexer, err *error.Error) {
 			// For I/O error, load current line buffer directly
 			// instead of moving cursor to line end (since it's impossible to retrieve line end)
 			err.SetCursor(error.Cursor{
-				File:    l.InputStream.Scope,
+				File:    l.InputStream.GetFile(),
 				LineNum: l.CurrentLine,
 				Text:    l.GetLineText(l.CurrentLine, false),
 				ColNum:  0,
@@ -888,7 +888,7 @@ func (l *Lexer) parseIdentifier(ch rune) (*Token, *error.Error) {
 // to display errors
 func (l *Lexer) moveAndSetCursor(err *error.Error) {
 	cursor := error.Cursor{
-		File:    l.InputStream.Scope,
+		File:    l.InputStream.GetFile(),
 		ColNum:  l.cursor - l.scanCursor.startIdx,
 		LineNum: l.CurrentLine,
 		Text:    l.GetLineText(l.CurrentLine, true),

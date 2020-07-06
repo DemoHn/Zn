@@ -247,7 +247,7 @@ func (p *Parser) getPeekIndent() int {
 func moveAndSetCursor(p *Parser, tk *lex.Token, err *error.Error) {
 	line := tk.Range.StartLine
 	cursor := error.Cursor{
-		File:    p.Lexer.InputStream.Scope,
+		File:    p.Lexer.InputStream.GetFile(),
 		ColNum:  p.GetLineColumn(line, tk.Range.StartIdx),
 		LineNum: tk.Range.StartLine,
 		Text:    p.GetLineText(line, true),

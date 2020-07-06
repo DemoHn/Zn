@@ -177,13 +177,12 @@ func evalExpression(ctx *Context, scope Scope, expr syntax.Expression) (ZnValue,
 			return evalLogicCombiner(ctx, scope, e)
 		}
 		return evalLogicComparator(ctx, scope, e)
-	case *syntax.ArrayListIndexExpr:
-		iv, err := getArrayListIV(ctx, scope, e)
+	case *syntax.MemberExpr:
+		iv, err := getMemberExprIV(ctx, scope, e)
 		if err != nil {
 			return nil, err
 		}
-		// regard iv as a RHS value
-		return iv.Reduce(nil, false)
+		return iv.Reduce(ctx, nil, false)
 	case *syntax.Number, *syntax.String, *syntax.ID, *syntax.ArrayExpr, *syntax.HashMapExpr:
 		return evalPrimeExpr(ctx, scope, e)
 	case *syntax.FuncCallExpr:
@@ -420,53 +419,97 @@ func evalVarAssignExpr(ctx *Context, scope Scope, expr *syntax.VarAssignExpr) (Z
 		vtag := v.GetLiteral()
 		err2 := setValue(ctx, scope, vtag, val)
 		return val, err2
-	case *syntax.ArrayListIndexExpr:
-		iv, err := getArrayListIV(ctx, scope, v)
+	case *syntax.MemberExpr:
+		iv, err := getMemberExprIV(ctx, scope, v)
 		if err != nil {
 			return nil, err
 		}
-		return iv.Reduce(val, true)
+		return iv.Reduce(ctx, val, true)
 	default:
 		return nil, error.InvalidCaseType()
 	}
 }
 
-func getArrayListIV(ctx *Context, scope Scope, expr *syntax.ArrayListIndexExpr) (ZnIV, *error.Error) {
-	// val # index  --> 【1，２，３】#2
-	val, err := evalExpression(ctx, scope, expr.Root)
-	if err != nil {
-		return nil, err
-	}
-	idx, err := evalExpression(ctx, scope, expr.Index)
-	if err != nil {
-		return nil, err
-	}
-	switch v := val.(type) {
-	case *ZnArray:
-		vr, ok := idx.(*ZnDecimal)
-		if !ok {
-			return nil, error.InvalidExprType("integer")
+func getMemberExprIV(ctx *Context, scope Scope, expr *syntax.MemberExpr) (ZnIV, *error.Error) {
+	if expr.IsSelfRoot { // 此之 XX
+		switch expr.MemberType {
+		case syntax.MemberID:
+			tag := expr.MemberID.Literal
+			return &ZnScopeMemberIV{scope, tag}, nil
+		case syntax.MemberMethod:
+			m := expr.MemberMethod
+			funcName := m.FuncName.Literal
+			paramVals := []ZnValue{}
+
+			for _, p := range m.Params {
+				v, err := evalExpression(ctx, scope, p)
+				if err != nil {
+					return nil, err
+				}
+				paramVals = append(paramVals, v)
+			}
+			return &ZnScopeMethodIV{scope, funcName, paramVals}, nil
 		}
-		return &ZnArrayIV{v, vr}, nil
-	case *ZnHashMap:
-		var s *ZnString
-		switch x := idx.(type) {
-		case *ZnDecimal:
-			// transform decimal value to string
-			// x.exp < 0 express that its a decimal value with point mark, not an integer
-			if x.exp < 0 {
+		return nil, error.NewErrorSLOT("unsupport memberType (should not throw)")
+	}
+
+	// IsSelfRoot = false (with root)
+	valRoot, err := evalExpression(ctx, scope, expr.Root)
+	if err != nil {
+		return nil, err
+	}
+	switch expr.MemberType {
+	case syntax.MemberID: // A 之 B
+		tag := expr.MemberID.Literal
+		return &ZnMemberIV{valRoot, tag}, nil
+	case syntax.MemberMethod:
+		m := expr.MemberMethod
+		funcName := m.FuncName.Literal
+		paramVals := []ZnValue{}
+
+		for _, p := range m.Params {
+			v, err := evalExpression(ctx, scope, p)
+			if err != nil {
+				return nil, err
+			}
+			paramVals = append(paramVals, v)
+		}
+		return &ZnMethodIV{valRoot, funcName, paramVals}, nil
+	case syntax.MemberIndex:
+		idx, err := evalExpression(ctx, scope, expr.MemberIndex)
+		if err != nil {
+			return nil, err
+		}
+		switch v := valRoot.(type) {
+		case *ZnArray:
+			vr, ok := idx.(*ZnDecimal)
+			if !ok {
+				return nil, error.InvalidExprType("integer")
+			}
+			return &ZnArrayIV{v, vr}, nil
+		case *ZnHashMap:
+			var s *ZnString
+			switch x := idx.(type) {
+			// regard decimal value directly as string
+			case *ZnDecimal:
+				// transform decimal value to string
+				// x.exp < 0 express that its a decimal value with point mark, not an integer
+				if x.exp < 0 {
+					return nil, error.InvalidExprType("integer", "string")
+				}
+				s = NewZnString(x.String())
+			case *ZnString:
+				s = x
+			default:
 				return nil, error.InvalidExprType("integer", "string")
 			}
-			s = NewZnString(x.String())
-		case *ZnString:
-			s = x
+			return &ZnHashMapIV{v, s}, nil
 		default:
-			return nil, error.InvalidExprType("integer", "string")
+			return nil, error.InvalidExprType("array", "hashmap")
 		}
-		return &ZnHashMapIV{v, s}, nil
-	default:
-		return nil, error.InvalidExprType("array", "hashmap")
 	}
+
+	return nil, error.NewErrorSLOT("unsupport memberType (should not throw)")
 }
 
 //// scope value setters/getters
