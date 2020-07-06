@@ -16,6 +16,7 @@ var testSuccessSuites = []string{
 	funcCallCasesOK,
 	branchStmtCasesOK,
 	stmtLineBreakCasesOK,
+	memberExprCasesOK,
 }
 
 const logicExprCasesOK = `
@@ -531,6 +532,121 @@ $PG($BK($FN(name=($ID(显示)) params=($STR(「1」) $FN(name=($ID(调用参数)
 】
 --------
 $PG($BK($VD(vars[]=($ID(对象表)) expr[]=($HM(key[]=($NUM(1)) value[]=($STR(「象」)) key[]=($NUM(2)) value[]=($STR(「士」)) key[]=($NUM(3)) value[]=($STR(「车」)))))))
+`
+
+const memberExprCasesOK = `
+========
+1. normal dot member
+--------
+天之涯
+--------
+$PG($BK(
+	$MB(root=($ID(天)) type=(mID) object=($ID(涯)))
+))
+
+========
+2. normal dot member (nested)
+--------
+雪花之天涯之海角
+--------
+$PG($BK(
+	$MB(
+		root=(
+			$MB(root=($ID(雪花)) type=(mID) object=($ID(天涯)))
+		)
+		type=(mID)
+		object=($ID(海角))
+	)
+))
+
+========
+3. call method
+--------
+雪花之（执行方法：A，B，C）
+--------
+$PG($BK(
+	$MB(
+		root=($ID(雪花))
+		type=(mMethod)
+		object=($FN(
+			name=($ID(执行方法))
+			params=($ID(A) $ID(B) $ID(C))
+		))
+	)
+))
+
+========
+4. array index
+--------
+Array#123
+--------
+$PG($BK(
+	$MB(root=($ID(Array)) type=(mIndex) object=($NUM(123)))
+))
+
+========
+5. array index (using {})
+--------
+Array#{天之涯}
+--------
+$PG($BK(
+	$MB(root=($ID(Array)) type=(mIndex) object=(
+		$MB(root=($ID(天)) type=(mID) object=($ID(涯)))
+	))
+))
+
+========
+6. array index (nested)
+--------
+Array#20#30#{QR}
+--------
+$PG($BK(
+	$MB(
+		root=(
+			$MB(
+				root=(
+					$MB(
+						root=($ID(Array))
+						type=(mIndex)
+						object=($NUM(20))
+					)
+				)
+				type=(mIndex)
+				object=($NUM(30))
+			)
+		)
+		type=(mIndex)
+		object=($ID(QR))
+	)
+))
+
+========
+7. mix methods & members & indexes
+--------
+Array#10之首之（执行）
+--------
+$PG($BK(
+	$MB(
+		root=(
+			$MB(
+				root=(
+					$MB(
+						root=($ID(Array))
+						type=(mIndex)
+						object=($NUM(10))
+					)
+				)
+				type=(mID)
+				object=($ID(首))
+			)
+		)
+		type=(mMethod)
+		object=($FN(
+			name=($ID(执行))
+			params=()
+		))
+	)
+))
 `
 
 type astSuccessCase struct {
