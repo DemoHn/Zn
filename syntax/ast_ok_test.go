@@ -647,6 +647,28 @@ $PG($BK(
 		))
 	)
 ))
+
+========
+8. self root
+--------
+此之（结束）#2
+--------
+$PG($BK(
+	$MB(
+		root=(
+			$MB(
+				noroot				
+				type=(mMethod)
+				object=($FN(
+					name=($ID(结束))
+					params=()
+				))
+			)
+		)
+		type=(mIndex)
+		object=($NUM(2))
+	)
+))
 `
 
 type astSuccessCase struct {

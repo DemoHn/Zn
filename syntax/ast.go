@@ -192,13 +192,6 @@ type hashMapKeyValuePair struct {
 	Value Expression
 }
 
-// ArrayListIndexExpr - root # index
-type ArrayListIndexExpr struct {
-	ExprBase
-	Root  Expression
-	Index Expression
-}
-
 // VarAssignExpr - variable assignment statement
 // assign <TargetExpr> from <AssignExpr>
 //
@@ -274,11 +267,11 @@ type LogicExpr struct {
 func (pe *PrimeExpr) SetLiteral(literal []rune) { pe.Literal = string(literal) }
 
 // GetLiteral -
-func (pe *PrimeExpr) GetLiteral() string   { return pe.Literal }
-func (ar *ArrayExpr) mapList()             {} // belongs to unionMapList
-func (ar *HashMapExpr) mapList()           {} // belongs to unionMapList
-func (ai *ArrayListIndexExpr) assignable() {}
-func (id *ID) assignable()                 {}
+func (pe *PrimeExpr) GetLiteral() string { return pe.Literal }
+func (ar *ArrayExpr) mapList()           {} // belongs to unionMapList
+func (ar *HashMapExpr) mapList()         {} // belongs to unionMapList
+func (id *ID) assignable()               {}
+func (me *MemberExpr) assignable()       {}
 
 //////// Parse Methods
 
@@ -442,61 +435,6 @@ func ParseExpression(p *Parser) Expression {
 	}
 
 	return logicItemParser(0)
-}
-
-// ParseArrayListIndexExpr - [GOING TO DEPRECATED]
-//
-// CFG:
-//
-// IdxE  -> BsE IdxE'
-// IdxE' -> #  Number   IdxE'
-// IdxE' -> #  String   IdxE'
-//       -> #{  Expr  }  IdxE'
-//       ->
-func ParseArrayListIndexExpr(p *Parser) Expression {
-	var arrayListTailParser func(Expression) Expression
-
-	arrayListTailParser = func(expr Expression) Expression {
-		idxExpr := &ArrayListIndexExpr{}
-
-		// #1. match hash mark
-		match, tk := p.tryConsume(lex.TypeMapHash, lex.TypeMapQHash)
-		if !match {
-			return expr
-		}
-		idxExpr.SetCurrentLine(tk)
-		idxExpr.Root = expr
-
-		switch tk.Type {
-		case lex.TypeMapHash:
-			// parse Number or String
-			tkIdx := p.peek()
-			if tkIdx.Type == lex.TypeNumber {
-				idxExpr.Index = newNumber(tkIdx)
-				p.next()
-			} else if tkIdx.Type == lex.TypeString {
-				idxExpr.Index = newString(tkIdx)
-				p.next()
-			} else {
-				panic(error.InvalidSyntax())
-			}
-			return arrayListTailParser(idxExpr)
-		default: // lex.TypeMapQHash
-			// #1. parse Expr
-			idxExpr.Index = ParseExpression(p)
-
-			// #2. parse tail brace
-			p.consume(lex.TypeStmtQuoteR)
-
-			return arrayListTailParser(idxExpr)
-		}
-	}
-
-	// #1. parse BasicExpr
-	rootExpr := ParseBasicExpr(p)
-
-	// #2. parse IdxE'
-	return arrayListTailParser(rootExpr)
 }
 
 // ParseMemberExpr -

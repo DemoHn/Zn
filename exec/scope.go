@@ -4,7 +4,7 @@ import (
 	"github.com/DemoHn/Zn/lex"
 )
 
-// Scope - tmp Scope solution TODO: will move in the future!
+// Scope -
 type Scope interface {
 	// GetParent - get parent scope
 	GetParent() Scope
@@ -64,7 +64,7 @@ func NewRootScope() *RootScope {
 
 // Init - init rootScope using new Lexer
 func (rs *RootScope) Init(l *lex.Lexer) {
-	rs.file = l.InputStream.Scope
+	rs.file = l.InputStream.GetFile()
 	rs.currentLine = 0
 	rs.lineStack = l.LineStack
 	rs.lastValue = NewZnNull()

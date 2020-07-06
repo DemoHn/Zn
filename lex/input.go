@@ -17,7 +17,7 @@ type Source struct {
 
 // InputStream stores code text with utf-8 encoding
 type InputStream struct {
-	Scope string // TODO - define the scope [now default is $global]
+	file string
 	io.Reader
 	encBuffer []byte // encoding utf-8 string buffer
 	readEnd   bool
@@ -49,7 +49,7 @@ func NewFileStream(path string) (*InputStream, *error.Error) {
 		return nil, error.FileOpenError(path, e)
 	}
 	return &InputStream{
-		Scope:   path,
+		file:    path,
 		Reader:  file,
 		readEnd: false,
 	}, nil
@@ -59,7 +59,7 @@ func NewFileStream(path string) (*InputStream, *error.Error) {
 func NewBufferStream(buf []byte) *InputStream {
 	r := bytes.NewReader(buf)
 	return &InputStream{
-		Scope:   "$repl",
+		file:    "$repl",
 		Reader:  r,
 		readEnd: false,
 	}
@@ -69,7 +69,7 @@ func NewBufferStream(buf []byte) *InputStream {
 func NewTextStream(text string) *InputStream {
 	r := strings.NewReader(text)
 	return &InputStream{
-		Scope:   "$repl",
+		file:    "$repl",
 		Reader:  r,
 		readEnd: false,
 	}
@@ -116,4 +116,9 @@ end:
 // End - if reading inputStream has ended
 func (is *InputStream) End() bool {
 	return is.readEnd
+}
+
+// GetFile - get fileName of inputStream
+func (is *InputStream) GetFile() string {
+	return is.file
 }
