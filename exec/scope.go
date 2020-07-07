@@ -1,6 +1,7 @@
 package exec
 
 import (
+	"github.com/DemoHn/Zn/error"
 	"github.com/DemoHn/Zn/lex"
 )
 
@@ -195,6 +196,25 @@ func (ws *WhileScope) GetParent() Scope {
 // GetRoot -
 func (ws *WhileScope) GetRoot() *RootScope {
 	return ws.root
+}
+
+// execSpecialFunctions - a weird way to execute internal "scope"-bound functions
+// example:
+// 每当 Cond：
+//     此之（结束）
+//     此之（继续）
+//
+// where `此之（结束）` means under this whileScope, execute the (结束) method to break the loop (same as "break" keyword)
+// where `此之（继续）` means under this whileScope, execute the (继续) method to continue the loop (same as "continue" keyword)
+func (ws *WhileScope) execSpecialFunctions(name string, params []ZnValue) (ZnValue, *error.Error) {
+	if name == "结束" {
+		return NewZnNull(), error.BreakBreakError()
+	}
+	if name == "继续" {
+		return NewZnNull(), error.ContinueBreakError()
+	}
+	// for other keywords, return error directly
+	return nil, error.NewErrorSLOT("no appropriate method name for while loop to execute")
 }
 
 // createScope - create new (nested) scope from current scope

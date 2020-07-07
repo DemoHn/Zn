@@ -113,6 +113,14 @@ func evalWhileLoopStmt(ctx *Context, scope Scope, node *syntax.WhileLoopStmt) *e
 		}
 		// #3. stmt block
 		if err := evalStmtBlock(ctx, loopScope, node.LoopBlock); err != nil {
+			if err.GetCode() == error.ContinueBreakSignal {
+				// continue next turn
+				continue
+			}
+			if err.GetCode() == error.BreakBreakSignal {
+				// break directly
+				return nil
+			}
 			return err
 		}
 	}
@@ -235,7 +243,7 @@ func evalFunctionValue(ctx *Context, scope *FuncScope, params []ZnValue, zf *ZnF
 		for _, stmt := range execBlock.Children {
 			if err := evalStatement(ctx, scope, stmt); err != nil {
 				// if recv breaks
-				if err.GetErrorClass() == error.BreakErrorClass {
+				if err.GetCode() == error.ReturnBreakSignal {
 					if extra, ok := err.GetExtra().(ZnValue); ok {
 						return extra, nil
 					}

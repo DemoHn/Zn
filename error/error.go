@@ -287,3 +287,10 @@ var (
 		BreakErrorClass:  "中断信号",
 	}
 )
+
+// declare some "breaks" error code
+const (
+	ReturnBreakSignal   = 0x5001
+	ContinueBreakSignal = 0x5002
+	BreakBreakSignal    = 0x5003
+)
