@@ -793,6 +793,13 @@ func (l *Lexer) parseKeyword(ch rune, moveForward bool) (bool, *Token) {
 		tk = NewKeywordToken(TypeLogicAndW)
 	case GlyphZHI:
 		tk = NewKeywordToken(TypeObjDotW)
+	case GlyphBIAN:
+		if l.peek() == GlyphLI {
+			wordLen = 2
+			tk = NewKeywordToken(TypeIteratorW)
+		} else {
+			return false, nil
+		}
 	}
 
 	if tk != nil {

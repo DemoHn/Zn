@@ -135,6 +135,10 @@ const (
 	GlyphZHI rune = 0x4E4B
 	// GlyphZAI - 再 - 再如
 	GlyphZAI rune = 0x518D
+	// GlyphBIAN - 遍 - 遍历
+	GlyphBIAN rune = 0x904D
+	// GlyphLI - 历 - 遍历
+	GlyphLI rune = 0x5386
 )
 
 // KeywordLeads - all glyphs that would be possible of the first character of one keyword.
@@ -145,7 +149,7 @@ var KeywordLeads = []rune{
 	GlyphDE, GlyphFOU, GlyphMEI,
 	GlyphCHENG, GlyphZUO, GlyphDING, GlyphLEI,
 	GlyphQI, GlyphCI, GlyphHE, GlyphHUO, GlyphQIE,
-	GlyphDUI, GlyphZHI, GlyphZAI,
+	GlyphDUI, GlyphZHI, GlyphZAI, GlyphBIAN,
 }
 
 //// 2. markers
@@ -295,18 +299,18 @@ func isIdentifierChar(ch rune, isFirst bool) bool {
 // for special type Tokens, its range varies from 0 - 9
 const (
 	TypeEOF          TokenType = 0
-	TypeComment      TokenType = 10
-	TypeCommaSep     TokenType = 11
-	TypeStmtSep      TokenType = 12
-	TypeFuncCall     TokenType = 13
-	TypeFuncDeclare  TokenType = 14
-	TypeObjRef       TokenType = 15
-	TypeMustT        TokenType = 16
-	TypeAnnoT        TokenType = 17
-	TypeMapHash      TokenType = 18
-	TypeMoreParam    TokenType = 19
-	TypeArrayQuoteL  TokenType = 20
-	TypeArrayQuoteR  TokenType = 21
+	TypeComment      TokenType = 10 // 注：
+	TypeCommaSep     TokenType = 11 // ，
+	TypeStmtSep      TokenType = 12 // ；
+	TypeFuncCall     TokenType = 13 // ：
+	TypeFuncDeclare  TokenType = 14 // ？
+	TypeObjRef       TokenType = 15 // &
+	TypeMustT        TokenType = 16 // ！
+	TypeAnnoT        TokenType = 17 // @
+	TypeMapHash      TokenType = 18 // #
+	TypeMoreParam    TokenType = 19 // ……
+	TypeArrayQuoteL  TokenType = 20 // 【
+	TypeArrayQuoteR  TokenType = 21 // 】
 	TypeFuncQuoteL   TokenType = 22 // （
 	TypeFuncQuoteR   TokenType = 23 // ）
 	TypeMapData      TokenType = 24 // ==
@@ -345,6 +349,7 @@ const (
 	TypeObjConstructW TokenType = 73 // 是为
 	TypeLogicEqualW   TokenType = 74 // 等于
 	TypeStaticSelfW   TokenType = 75 // 此之
+	TypeIteratorW     TokenType = 76 // 遍历
 	TypeString        TokenType = 90
 	TypeVarQuote      TokenType = 91
 	TypeNumber        TokenType = 100
@@ -384,6 +389,7 @@ var KeywordTypeMap = map[TokenType][]rune{
 	TypeLogicEqualW:   {GlyphDENG, GlyphYU},
 	TypeStaticSelfW:   {GlyphCI, GlyphZHI},
 	TypeCondOtherW:    {GlyphZAI, GlyphRU},
+	TypeIteratorW:     {GlyphBIAN, GlyphLI},
 }
 
 // NewTokenEOF - new EOF token
