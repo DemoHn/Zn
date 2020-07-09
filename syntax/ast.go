@@ -131,6 +131,14 @@ type WhileLoopStmt struct {
 	LoopBlock *BlockStmt
 }
 
+// IterateStmt - 以 ... 遍历 ... statement
+type IterateStmt struct {
+	StmtBase
+	IterateExpr  Expression
+	IndexNames   []*ID
+	IterateBlock *BlockStmt
+}
+
 // BlockStmt -
 type BlockStmt struct {
 	StmtBase
@@ -296,6 +304,8 @@ func ParseStatement(p *Parser) Statement {
 		lex.TypeFuncW,
 		lex.TypeReturnW,
 		lex.TypeWhileLoopW,
+		lex.TypeVarOneW,
+		lex.TypeIteratorW,
 	}
 	match, tk := p.tryConsume(validTypes...)
 	if match {
@@ -315,6 +325,10 @@ func ParseStatement(p *Parser) Statement {
 			s = ParseFunctionReturnStmt(p)
 		case lex.TypeWhileLoopW:
 			s = ParseWhileLoopStmt(p)
+		case lex.TypeVarOneW:
+			s = ParseVarOneLeadStmt(p) // parse any statements leads with 「以」
+		case lex.TypeIteratorW:
+			s = ParseIteratorStmt(p)
 		}
 		s.SetCurrentLine(tk)
 		return s
@@ -486,7 +500,7 @@ func ParseMemberExpr(p *Parser) Expression {
 				memberExpr.MemberType = MemberMethod
 				memberExpr.MemberMethod = e
 			case lex.TypeVarOneW:
-				e := ParseVarOneExpr(p)
+				e := ParseVarOneLeadExpr(p)
 				e.SetCurrentLine(tk)
 				memberExpr.MemberType = MemberMethod
 				memberExpr.MemberMethod = e
@@ -596,7 +610,7 @@ func ParseBasicExpr(p *Parser) Expression {
 		case lex.TypeFuncQuoteL:
 			e = ParseFuncCallExpr(p)
 		case lex.TypeVarOneW:
-			e = ParseVarOneExpr(p)
+			e = ParseVarOneLeadExpr(p)
 		case lex.TypeObjSelfW:
 			e = ParseLogicISExpr(p)
 		}
@@ -744,35 +758,36 @@ func ParseFuncCallExpr(p *Parser) *FuncCallExpr {
 	}
 
 	// #3. parse right quote
-
 	p.consume(lex.TypeFuncQuoteR)
 
 	return callExpr
 }
 
-// ParseVarOneExpr - 以 ... （‹方法名›）
+// ParseVarOneLeadExpr - 以 ... （‹方法名›）
 // CFG:
 //
-// FuncExpr -> 以 ID RawFuncExpr
+// FuncExpr -> 以 Expr，Expr， ... RawFuncExpr
 // RawFuncExpr -> （ ID ： commaList ）
-func ParseVarOneExpr(p *Parser) *FuncCallExpr {
-	// #1. parse ID
-	match, tk := p.tryConsume(lex.TypeVarQuote, lex.TypeIdentifier)
-	if !match {
-		panic(error.InvalidSyntaxCurr())
+func ParseVarOneLeadExpr(p *Parser) *FuncCallExpr {
+	// #1. parse exprs
+	exprList := []Expression{}
+	nodes := parseCommaList(p, func(idx int, nodes []Node) Node {
+		return ParseExpression(p)
+	})
+	for _, node := range nodes {
+		expr, _ := node.(Expression) // don't worry, it must be an expression
+		exprList = append(exprList, expr)
 	}
-
 	// #2. parse FuncExpr (maybe)
-	match2, _ := p.tryConsume(lex.TypeFuncQuoteL)
+	match2, tk := p.tryConsume(lex.TypeFuncQuoteL)
 	if !match2 {
-		// TODO: there may have other expressions
 		panic(error.InvalidSyntaxCurr())
 	}
 
 	// then suppose it's a funcCall expr
 	funcCallExpr := ParseFuncCallExpr(p)
 	// insert first ID into funcCall list
-	funcCallExpr.Params = append([]Expression{newID(tk)}, (funcCallExpr.Params)...)
+	funcCallExpr.Params = append(exprList, (funcCallExpr.Params)...)
 	funcCallExpr.SetCurrentLine(tk)
 	return funcCallExpr
 }
@@ -1090,7 +1105,7 @@ func ParseFunctionDeclareStmt(p *Parser) *FunctionDeclareStmt {
 		case stateParamList:
 			// parse 已知 expr
 			if match, _ := p.tryConsume(lex.TypeParamAssignW); match {
-				fdStmt.ParamList = parseParamDefList(p)
+				fdStmt.ParamList = parseParamDefList(p, true)
 				// then change state
 				hState = stateFuncBlock
 			} else {
@@ -1103,26 +1118,85 @@ func ParseFunctionDeclareStmt(p *Parser) *FunctionDeclareStmt {
 	return fdStmt
 }
 
-func parseParamDefList(p *Parser) []*ID {
-	defer p.resetLineTermFlag()
-	var idList = []*ID{}
-
-	// parse param lists
-	nodes := parseCommaList(p, func(idx int, nodes []Node) Node {
-		match2, tk := p.tryConsume(lex.TypeVarQuote, lex.TypeIdentifier)
-		if !match2 {
-			panic(error.InvalidSyntaxCurr())
-		}
-
-		return newID(tk)
-	})
-	// append IDs
-	for _, node := range nodes {
-		v, _ := node.(*ID)
-		idList = append(idList, v)
+// ParseVarOneLeadStmt -
+// There're 2 possible statements
+//
+// 1. 以 K，V 遍历...
+// 2. 以 A，B，C （执行方法）
+//
+// CFG:
+//
+// VOStmt -> 以 ID ， ID ... 遍历 IStmtT'
+//        -> 以 Expr ， Expr ... FuncExprT'
+func ParseVarOneLeadStmt(p *Parser) Statement {
+	validTypes := []lex.TokenType{
+		lex.TypeIteratorW,
+		lex.TypeFuncQuoteL,
 	}
+	exprList := parseCommaList(p, func(idx int, nodes []Node) Node {
+		return ParseExpression(p)
+	})
 
-	return idList
+	match, tk := p.tryConsume(validTypes...)
+	if match {
+		switch tk.Type {
+		case lex.TypeIteratorW:
+			// validate if each node in exprList is an ID type
+			// otherwise an error will be thrown
+			idList := []*ID{}
+			for _, pExpr := range exprList {
+				if id, ok := pExpr.(*ID); ok {
+					idList = append(idList, id)
+				} else {
+					panic(error.InvalidExprType("id"))
+				}
+			}
+			return parseIteratorStmtRest(p, idList)
+		case lex.TypeFuncQuoteL:
+			targetExpr := ParseFuncCallExpr(p)
+			// transform []Node -> []Expression
+			pListExprs := []Expression{}
+			for _, pExpr := range exprList {
+				exprItem, _ := pExpr.(Expression)
+				pListExprs = append(pListExprs, exprItem)
+			}
+			// prepend exprs
+			targetExpr.Params = append(pListExprs, targetExpr.Params...)
+			return targetExpr
+		}
+	}
+	panic(error.InvalidSyntax())
+}
+
+// ParseIteratorStmt - parse iterate stmt that starts with 遍历 keyword only
+// CFG:
+//
+// IStmt -> 遍历 TargetExpr ：  StmtBlock
+func ParseIteratorStmt(p *Parser) *IterateStmt {
+	return parseIteratorStmtRest(p, []*ID{})
+}
+
+// parseIteratorStmtRest - parse after 以 ... and meet 遍历
+// IStmtT'  -> [遍历] TargetExpr ：  StmtBlock
+func parseIteratorStmtRest(p *Parser, idList []*ID) *IterateStmt {
+	// 1. parse target expr
+	targetExpr := ParseExpression(p)
+
+	// 2. parse colon
+	p.consume(lex.TypeFuncCall)
+
+	// 3. parse iterate block
+	expected, blockIndent := p.expectBlockIndent()
+	if !expected {
+		panic(error.InvalidSyntax())
+	}
+	block := ParseBlockStmt(p, blockIndent)
+
+	return &IterateStmt{
+		IterateExpr:  targetExpr,
+		IndexNames:   idList,
+		IterateBlock: block,
+	}
 }
 
 // ParseFunctionReturnStmt - yield FuncParamList node (without head token: 返回)
@@ -1209,6 +1283,32 @@ func parseCommaListBlock(p *Parser, blockIndent int, consumer consumerFunc) []No
 		node = consumer(len(list), list)
 		list = append(list, node)
 	}
+}
+
+func parseParamDefList(p *Parser, allowBreak bool) []*ID {
+	defer func() {
+		if allowBreak {
+			p.resetLineTermFlag()
+		}
+	}()
+	var idList = []*ID{}
+
+	// parse param lists
+	nodes := parseCommaList(p, func(idx int, nodes []Node) Node {
+		match2, tk := p.tryConsume(lex.TypeVarQuote, lex.TypeIdentifier)
+		if !match2 {
+			panic(error.InvalidSyntaxCurr())
+		}
+
+		return newID(tk)
+	})
+	// append IDs
+	for _, node := range nodes {
+		v, _ := node.(*ID)
+		idList = append(idList, v)
+	}
+
+	return idList
 }
 
 func newID(tk *lex.Token) *ID {
