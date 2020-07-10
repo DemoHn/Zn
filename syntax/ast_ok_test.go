@@ -17,6 +17,7 @@ var testSuccessSuites = []string{
 	branchStmtCasesOK,
 	stmtLineBreakCasesOK,
 	memberExprCasesOK,
+	iterateCasesOK,
 }
 
 const logicExprCasesOK = `
@@ -667,6 +668,68 @@ $PG($BK(
 		)
 		type=(mIndex)
 		object=($NUM(2))
+	)
+))
+`
+
+const iterateCasesOK = `
+========
+1. normal iterate expr
+--------
+遍历【1，2，3】：
+    令A为此之值
+    此之（结束）
+--------
+$PG($BK(
+	$IT(
+		target=($ARR($NUM(1) $NUM(2) $NUM(3)))
+		idxList=()
+		block=($BK(
+			$VD(vars[]=($ID(A)) expr[]=(
+				$MB(noroot type=(mID) object=($ID(值)))
+			))
+			$MB(noroot type=(mMethod) object=($FN(name=($ID(结束)) params=())))
+		))
+	)
+))
+
+========
+2. lead one var
+--------
+以K遍历此之代码：
+    （显示：K）
+--------
+$PG($BK(
+	$IT(
+		target=($MB(noroot type=(mID) object=($ID(代码))))
+		idxList=($ID(K))
+		block=($BK(
+			$FN(name=($ID(显示)) params=($ID(K)))
+		))
+	)
+))
+========
+3. lead two vars
+--------
+以K，V遍历【
+	「A」 == 1，
+	「B」 == 2，
+	「C」 == 3
+】：
+	（显示：K，V）
+--------
+$PG($BK(
+	$IT(
+		target=($HM(
+			key[]=($STR(「A」)) value[]=($NUM(1))
+			key[]=($STR(「B」)) value[]=($NUM(2))
+			key[]=($STR(「C」)) value[]=($NUM(3))
+		))
+		idxList=($ID(K) $ID(V))
+		block=($BK($FN(
+			name=($ID(显示))
+			params=($ID(K) $ID(V))
+		)))
 	)
 ))
 `

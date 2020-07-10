@@ -139,6 +139,15 @@ func StringifyAST(node Node) string {
 			statements = append(statements, StringifyAST(stmt))
 		}
 		return fmt.Sprintf("$BK(%s)", strings.Join(statements, " "))
+	case *IterateStmt:
+		paramsStr := []string{}
+		for _, p := range v.IndexNames {
+			paramsStr = append(paramsStr, StringifyAST(p))
+		}
+		return fmt.Sprintf("$IT(target=(%s) idxList=(%s) block=(%s))",
+			StringifyAST(v.IterateExpr),
+			strings.Join(paramsStr, " "),
+			StringifyAST(v.IterateBlock))
 	default:
 		return ""
 	}
