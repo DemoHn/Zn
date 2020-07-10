@@ -198,7 +198,7 @@ func (ws *WhileScope) GetRoot() *RootScope {
 	return ws.root
 }
 
-// execSpecialFunctions - a weird way to execute internal "scope"-bound functions
+// execSpecialMethods - a weird way to execute internal "scope"-bound functions
 // example:
 // 每当 Cond：
 //     此之（结束）
@@ -206,7 +206,7 @@ func (ws *WhileScope) GetRoot() *RootScope {
 //
 // where `此之（结束）` means under this whileScope, execute the (结束) method to break the loop (same as "break" keyword)
 // where `此之（继续）` means under this whileScope, execute the (继续) method to continue the loop (same as "continue" keyword)
-func (ws *WhileScope) execSpecialFunctions(name string, params []ZnValue) (ZnValue, *error.Error) {
+func (ws *WhileScope) execSpecialMethods(name string, params []ZnValue) (ZnValue, *error.Error) {
 	if name == "结束" {
 		return NewZnNull(), error.BreakBreakError()
 	}
@@ -235,4 +235,69 @@ func createScope(ctx *Context, scope Scope, sType string) Scope {
 		}
 	}
 	return nil
+}
+
+// IterateScope - iterate stmt scope
+type IterateScope struct {
+	root      *RootScope
+	parent    Scope
+	symbolMap map[string]SymbolInfo
+	// current iteration: keys & values
+	currentIndex ZnValue
+	currentValue ZnValue
+}
+
+// GetParent -
+func (its *IterateScope) GetParent() Scope {
+	return its.parent
+}
+
+// GetRoot -
+func (its *IterateScope) GetRoot() *RootScope {
+	return its.root
+}
+
+// GetSymbol -
+func (its *IterateScope) GetSymbol(name string) (SymbolInfo, bool) {
+	sym, ok := its.symbolMap[name]
+	return sym, ok
+}
+
+// SetSymbol -
+func (its *IterateScope) SetSymbol(name string, value ZnValue, isConstant bool) {
+	its.symbolMap[name] = SymbolInfo{
+		value, isConstant,
+	}
+}
+
+// HasSymbol -
+func (its *IterateScope) HasSymbol() bool {
+	return true
+}
+
+func (its *IterateScope) setCurrentKV(index ZnValue, value ZnValue) {
+	its.currentIndex = index
+	its.currentValue = value
+}
+
+// get props: 此之值，此之索引
+func (its *IterateScope) getSpecialProps(name string) ZnValue {
+	if name == "值" {
+		return its.currentValue
+	}
+	if name == "索引" {
+		return its.currentIndex
+	}
+	panic(error.NewErrorSLOT("no appropriate prop name to get"))
+}
+
+func (its *IterateScope) execSpecialMethods(name string, params []ZnValue) (ZnValue, *error.Error) {
+	if name == "结束" {
+		return NewZnNull(), error.BreakBreakError()
+	}
+	if name == "继续" {
+		return NewZnNull(), error.ContinueBreakError()
+	}
+	// for other keywords, return error directly
+	return nil, error.NewErrorSLOT("no appropriate method name for while loop to execute")
 }

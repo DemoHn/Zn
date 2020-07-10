@@ -114,7 +114,7 @@ func (iv *ZnScopeMethodIV) Reduce(ctx *Context, input ZnValue, lhs bool) (ZnValu
 	// TODO: Implement this!!
 	switch sp := iv.RootScope.(type) {
 	case *WhileScope:
-		return sp.execSpecialFunctions(iv.MethodName, iv.Params)
+		return sp.execSpecialMethods(iv.MethodName, iv.Params)
 	}
 	return NewZnNull(), nil
 }
