@@ -27,6 +27,14 @@ func NewZnDecimal(value string) (*ZnDecimal, *error.Error) {
 	return decimal, err
 }
 
+// NewZnDecimalFromInt -
+func NewZnDecimalFromInt(value int) *ZnDecimal {
+	return &ZnDecimal{
+		exp: 0,
+		co:  big.NewInt(int64(value)),
+	}
+}
+
 // String - show decimal display string
 func (zd *ZnDecimal) String() (data string) {
 	var sflag = ""
