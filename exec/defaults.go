@@ -98,6 +98,13 @@ var probeExecutor = func(ctx *Context, scope Scope, params []ZnValue) (ZnValue, 
 	if len(params) != 2 {
 		return nil, error.NewErrorSLOT("__probe 当且仅当接受两个参数")
 	}
+
+	vtag, ok := params[1].(*ZnString)
+	if !ok {
+		return nil, error.NewErrorSLOT("第一个参数须为一个字符串")
+	}
+
+	ctx._probe.AddLog(vtag.Value, params[2])
 	return nil, nil
 }
 
@@ -107,17 +114,18 @@ func init() {
 	//// any execution procedure.
 	//// NOTICE: those variables are all constants!
 	predefinedValues = map[string]ZnValue{
-		"真":   NewZnBool(true),
-		"假":   NewZnBool(false),
-		"空":   NewZnNull(),
-		"显示":  NewZnNativeFunction("显示", displayExecutor),
-		"X+Y": NewZnNativeFunction("X+Y", addValueExecutor),
-		"求和":  NewZnNativeFunction("X+Y", addValueExecutor),
-		"X-Y": NewZnNativeFunction("X-Y", subValueExecutor),
-		"求差":  NewZnNativeFunction("X-Y", subValueExecutor),
-		"X*Y": NewZnNativeFunction("X*Y", mulValueExecutor),
-		"求积":  NewZnNativeFunction("X*Y", mulValueExecutor),
-		"X/Y": NewZnNativeFunction("X/Y", divValueExecutor),
-		"求商":  NewZnNativeFunction("X/Y", divValueExecutor),
+		"真":       NewZnBool(true),
+		"假":       NewZnBool(false),
+		"空":       NewZnNull(),
+		"显示":      NewZnNativeFunction("显示", displayExecutor),
+		"X+Y":     NewZnNativeFunction("X+Y", addValueExecutor),
+		"求和":      NewZnNativeFunction("X+Y", addValueExecutor),
+		"X-Y":     NewZnNativeFunction("X-Y", subValueExecutor),
+		"求差":      NewZnNativeFunction("X-Y", subValueExecutor),
+		"X*Y":     NewZnNativeFunction("X*Y", mulValueExecutor),
+		"求积":      NewZnNativeFunction("X*Y", mulValueExecutor),
+		"X/Y":     NewZnNativeFunction("X/Y", divValueExecutor),
+		"求商":      NewZnNativeFunction("X/Y", divValueExecutor),
+		"__probe": NewZnNativeFunction("__probe", probeExecutor),
 	}
 }

@@ -70,7 +70,7 @@ type KVPair struct {
 
 // String() - display those types
 func (zs *ZnString) String() string {
-	return fmt.Sprintf("%s", zs.Value)
+	return fmt.Sprintf("「%s」", zs.Value)
 }
 
 func (zb *ZnBool) String() string {
