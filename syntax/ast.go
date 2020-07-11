@@ -1327,7 +1327,8 @@ func newNumber(tk *lex.Token) *Number {
 
 func newString(tk *lex.Token) *String {
 	str := new(String)
-	str.SetLiteral(tk.Literal)
+	// remove first char and last char (that are left & right quotes)
+	str.SetLiteral(tk.Literal[1 : len(tk.Literal)-1])
 	str.SetCurrentLine(tk)
 	return str
 }

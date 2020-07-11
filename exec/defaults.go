@@ -94,6 +94,13 @@ var divValueExecutor = func(ctx *Context, scope Scope, params []ZnValue) (ZnValu
 	return ctx.arith.Div(decimals[0], decimals[1:]...)
 }
 
+var probeExecutor = func(ctx *Context, scope Scope, params []ZnValue) (ZnValue, *error.Error) {
+	if len(params) != 2 {
+		return nil, error.NewErrorSLOT("__probe 当且仅当接受两个参数")
+	}
+	return nil, nil
+}
+
 // init function
 func init() {
 	//// predefined values - those variables (symbols) are defined before

@@ -34,7 +34,7 @@ func TestExecuteCode_OK(t *testing.T) {
 	「等于」  注：这是一个干扰项
 	
 （测试：6）`,
-			NewZnString("「小于」"),
+			NewZnString("小于"),
 		},
 	}
 	ctx := NewContext()
