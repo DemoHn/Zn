@@ -1,7 +1,7 @@
 package debug
 
 import (
-	"fmt"
+	"reflect"
 	"time"
 )
 
@@ -13,10 +13,12 @@ type Probe struct {
 
 // ProbeLog -
 type ProbeLog struct {
-	probeTime time.Time
+	ProbeTime time.Time
 	// original value - DON'T USE ZnValue here to avoid circular dependency!
-	value  interface{}
-	valStr string
+	Value    interface{}
+	ValueStr string
+	// valueType - get actual  valueType (*exec.ZnXXXX) as string
+	ValueType string
 }
 
 // NewProbe -
@@ -28,5 +30,39 @@ func NewProbe() *Probe {
 
 // AddLog - add probe data to log
 func (pb *Probe) AddLog(tag string, value interface{}) {
-	fmt.Println(value)
+	var valStr, valType string
+	now := time.Now()
+	// init probeInfo
+	if _, ok := pb.info[tag]; !ok {
+		pb.info[tag] = []ProbeLog{}
+	}
+	// TODO: add deepcopy
+	rv := reflect.ValueOf(value)
+
+	vstrMethod := rv.MethodByName("String")
+	if vstrMethod.IsValid() {
+		vResults := vstrMethod.Call([]reflect.Value{})
+		valStr = vResults[0].String()
+	}
+
+	// add valType
+	valType = rv.Type().String()
+
+	probeLog := ProbeLog{
+		ProbeTime: now,
+		Value:     value,
+		ValueStr:  valStr,
+		ValueType: valType,
+	}
+	pb.info[tag] = append(pb.info[tag], probeLog)
+}
+
+// GetProbeLog -
+func (pb *Probe) GetProbeLog(tag string) []ProbeLog {
+	probeLog, ok := pb.info[tag]
+	if ok {
+		return probeLog
+	}
+	// return empty ProbeLog array when tag not found
+	return []ProbeLog{}
 }
