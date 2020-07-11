@@ -1,6 +1,7 @@
 package exec
 
 import (
+	"github.com/DemoHn/Zn/debug"
 	"github.com/DemoHn/Zn/error"
 	"github.com/DemoHn/Zn/lex"
 	"github.com/DemoHn/Zn/syntax"
@@ -10,17 +11,11 @@ import (
 type Context struct {
 	globals map[string]ZnValue
 	arith   *Arith
-	lexScope
-}
-
-// lexScope defines current lex info of context.
-// NOTICE: a Context is eligible to call ExecuteCode() many times, which means lexScope may
-// varies from different input stream even in same context!
-type lexScope struct {
-	file string
-	// current execution line - it's continuously changing within the execution process
-	currentLine int
-	lineStack   *lex.LineStack
+	// a seperate map to store inner debug data
+	// usage: call （__probe：「tagName」，variable）
+	// it will record all logs (including variable value, curernt scope, etc.)
+	// the value is deep-copied so don't worry - the value logged won't be changed
+	_probe *debug.Probe
 }
 
 const defaultPrecision = 8
@@ -41,6 +36,7 @@ func NewContext() *Context {
 	return &Context{
 		globals: predefinedValues,
 		arith:   NewArith(defaultPrecision),
+		_probe:  debug.NewProbe(),
 	}
 }
 

@@ -141,7 +141,7 @@ $PG($BK(
 		vars[]=($ID(小A) $ID(小B))
 		expr[]=($NUM(100))
 		vars[]=($ID(小C))
-		expr[]=($STR(「何处相思明月楼」))
+		expr[]=($STR(何处相思明月楼))
 		vars[]=($ID(D) $ID(E) $ID(F))
 		expr[]=($ID(B))
 	)
@@ -223,7 +223,7 @@ $PG($BK(
 （显示当前时间：「今天」）
 --------
 $PG($BK(
-	$FN(name=($ID(显示当前时间)) params=($STR(「今天」)))
+	$FN(name=($ID(显示当前时间)) params=($STR(今天)))
 ))
 
 ========
@@ -232,7 +232,7 @@ $PG($BK(
 （显示当前时间：「今天」，「15:30」）
 --------
 $PG($BK(
-	$FN(name=($ID(显示当前时间)) params=($STR(「今天」) $STR(「15:30」)))
+	$FN(name=($ID(显示当前时间)) params=($STR(今天) $STR(15:30)))
 ))
 
 ========
@@ -241,7 +241,7 @@ $PG($BK(
 （显示当前时间：「今天」，「15:30」，200，3000）
 --------
 $PG($BK(
-	$FN(name=($ID(显示当前时间)) params=($STR(「今天」) $STR(「15:30」) $NUM(200) $NUM(3000)))
+	$FN(name=($ID(显示当前时间)) params=($STR(今天) $STR(15:30) $NUM(200) $NUM(3000)))
 ))
 
 ========
@@ -251,8 +251,8 @@ $PG($BK(
 --------
 $PG($BK(
 	$FN(name=($ID(显示当前时间)) params=(
-		$STR(「今天」)
-		$STR(「15:30」) 
+		$STR(今天)
+		$STR(15:30) 
 		$FN(name=($ID(显示时刻)) params=())
 	))
 ))
@@ -415,7 +415,7 @@ $PG($BK($HM()))
 --------
 【「MacBook Air 12"」 ， 2080， 3000】
 --------
-$PG($BK($ARR($STR(「MacBook Air 12"」) $NUM(2080) $NUM(3000))))
+$PG($BK($ARR($STR(MacBook Air 12") $NUM(2080) $NUM(3000))))
 
 ========
 4. array with newline
@@ -426,7 +426,7 @@ $PG($BK($ARR($STR(「MacBook Air 12"」) $NUM(2080) $NUM(3000))))
     3000
 】
 --------
-$PG($BK($ARR($STR(「MacBook Air 12"」) $NUM(2080) $NUM(3000))))
+$PG($BK($ARR($STR(MacBook Air 12") $NUM(2080) $NUM(3000))))
 
 ========
 5. array nest with array
@@ -438,7 +438,7 @@ $PG($BK($ARR($STR(「MacBook Air 12"」) $NUM(2080) $NUM(3000))))
 】
 --------
 $PG($BK($ARR(
-	$STR(「MacBook Air 12"」) 
+	$STR(MacBook Air 12") 
 	$NUM(2080) 
 	$ARR($NUM(100) $NUM(200) $NUM(300))
 )))
@@ -457,7 +457,7 @@ $PG($BK($ARR(
 】
 --------
 $PG($BK($ARR(
-	$STR(「MacBook Air 12"」) 
+	$STR(MacBook Air 12") 
 	$NUM(2080) 
 	$ARR($NUM(100) $NUM(200) $NUM(300) $ARR($NUM(10000)))
 )))
@@ -471,8 +471,8 @@ $PG($BK($ARR(
 】
 --------
 $PG($BK($HM(
-	key[]=($STR(「数学」)) value[]=($NUM(80)) 
-	key[]=($STR(「语文」)) value[]=($NUM(90))
+	key[]=($STR(数学)) value[]=($NUM(80)) 
+	key[]=($STR(语文)) value[]=($NUM(90))
 )))
 
 ========
@@ -488,11 +488,11 @@ $PG($BK($HM(
 】
 --------
 $PG($BK($HM(
-	key[]=($STR(「数学」)) value[]=($NUM(80)) 
-	key[]=($STR(「语文」)) value[]=($HM(
-		key[]=($STR(「阅读」)) value[]=($NUM(20))
-		key[]=($STR(「听力」)) value[]=($NUM(30.5))
-		key[]=($STR(「比例」)) value[]=($NUM(0.12345))
+	key[]=($STR(数学)) value[]=($NUM(80)) 
+	key[]=($STR(语文)) value[]=($HM(
+		key[]=($STR(阅读)) value[]=($NUM(20))
+		key[]=($STR(听力)) value[]=($NUM(30.5))
+		key[]=($STR(比例)) value[]=($NUM(0.12345))
 	))
 )))
 `
@@ -503,7 +503,7 @@ const stmtLineBreakCasesOK = `
 --------
 令香港记者为记者名为「张宝华」
 --------
-$PG($BK($VD(vars[]=($ID(香港记者)) expr[]=($VA(target=($ID(记者名)) assign=($STR(「张宝华」)))))))
+$PG($BK($VD(vars[]=($ID(香港记者)) expr[]=($VA(target=($ID(记者名)) assign=($STR(张宝华)))))))
 
 ========
 2. a complete statement with comma list - 3 lines
@@ -512,7 +512,7 @@ $PG($BK($VD(vars[]=($ID(香港记者)) expr[]=($VA(target=($ID(记者名)) assig
     雪花为「白」，
         墨水为「黑」
 --------
-$PG($BK($VD(vars[]=($ID(树叶)) expr[]=($STR(「绿」)) vars[]=($ID(鲜花)) expr[]=($STR(「红」)) vars[]=($ID(雪花)) expr[]=($STR(「白」)) vars[]=($ID(墨水)) expr[]=($STR(「黑」)))))
+$PG($BK($VD(vars[]=($ID(树叶)) expr[]=($STR(绿)) vars[]=($ID(鲜花)) expr[]=($STR(红)) vars[]=($ID(雪花)) expr[]=($STR(白)) vars[]=($ID(墨水)) expr[]=($STR(黑)))))
 
 ========
 3. nested function calls with multiple lines
@@ -521,7 +521,7 @@ $PG($BK($VD(vars[]=($ID(树叶)) expr[]=($STR(「绿」)) vars[]=($ID(鲜花)) e
     「1」，（调用参数：200，300，
         4000，5000））
 --------
-$PG($BK($FN(name=($ID(显示)) params=($STR(「1」) $FN(name=($ID(调用参数)) params=($NUM(200) $NUM(300) $NUM(4000) $NUM(5000)))))))
+$PG($BK($FN(name=($ID(显示)) params=($STR(1) $FN(name=($ID(调用参数)) params=($NUM(200) $NUM(300) $NUM(4000) $NUM(5000)))))))
 
 ========
 4. multi-line hashmap
@@ -532,7 +532,7 @@ $PG($BK($FN(name=($ID(显示)) params=($STR(「1」) $FN(name=($ID(调用参数)
 		3 == 「车」
 】
 --------
-$PG($BK($VD(vars[]=($ID(对象表)) expr[]=($HM(key[]=($NUM(1)) value[]=($STR(「象」)) key[]=($NUM(2)) value[]=($STR(「士」)) key[]=($NUM(3)) value[]=($STR(「车」)))))))
+$PG($BK($VD(vars[]=($ID(对象表)) expr[]=($HM(key[]=($NUM(1)) value[]=($STR(象)) key[]=($NUM(2)) value[]=($STR(士)) key[]=($NUM(3)) value[]=($STR(车)))))))
 `
 
 const memberExprCasesOK = `
@@ -721,9 +721,9 @@ $PG($BK(
 $PG($BK(
 	$IT(
 		target=($HM(
-			key[]=($STR(「A」)) value[]=($NUM(1))
-			key[]=($STR(「B」)) value[]=($NUM(2))
-			key[]=($STR(「C」)) value[]=($NUM(3))
+			key[]=($STR(A)) value[]=($NUM(1))
+			key[]=($STR(B)) value[]=($NUM(2))
+			key[]=($STR(C)) value[]=($NUM(3))
 		))
 		idxList=($ID(K) $ID(V))
 		block=($BK($FN(

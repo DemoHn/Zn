@@ -206,10 +206,7 @@ func evalIterateStmt(ctx *Context, scope Scope, node *syntax.IterateStmt) *error
 				return err
 			}
 		}
-		if err := evalStmtBlock(ctx, iterScope, node.IterateBlock); err != nil {
-			return err
-		}
-
+		return evalStmtBlock(ctx, iterScope, node.IterateBlock)
 	}
 
 	// define indication variables as "currentKey" and "currentValue" under new iterScope
@@ -252,6 +249,7 @@ func evalIterateStmt(ctx *Context, scope Scope, node *syntax.IterateStmt) *error
 	case *ZnHashMap:
 		for key, val := range tv.Value {
 			keyVar := NewZnString(key)
+			// handle interrupts
 			if err := execIterationBlockFn(keyVar, val); err != nil {
 				if err.GetCode() == error.ContinueBreakSignal {
 					// continue next turn
