@@ -99,13 +99,13 @@ var probeExecutor = func(ctx *Context, scope Scope, params []ZnValue) (ZnValue, 
 		return nil, error.NewErrorSLOT("__probe 当且仅当接受两个参数")
 	}
 
-	vtag, ok := params[1].(*ZnString)
+	vtag, ok := params[0].(*ZnString)
 	if !ok {
 		return nil, error.NewErrorSLOT("第一个参数须为一个字符串")
 	}
-
-	ctx._probe.AddLog(vtag.Value, params[2])
-	return nil, nil
+	// add probe data to log
+	ctx._probe.AddLog(vtag.Value, params[1])
+	return NewZnNull(), nil
 }
 
 // init function
