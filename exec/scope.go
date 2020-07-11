@@ -20,9 +20,10 @@ type Scope interface {
 }
 
 const (
-	sTypeRoot  = "scopeRoot"
-	sTypeFunc  = "scopeFunc"
-	sTypeWhile = "scopeWhile"
+	sTypeRoot    = "scopeRoot"
+	sTypeFunc    = "scopeFunc"
+	sTypeWhile   = "scopeWhile"
+	sTypeIterate = "scopeIterate"
 )
 
 //// implementations
@@ -233,8 +234,24 @@ func createScope(ctx *Context, scope Scope, sType string) Scope {
 			root:   scope.GetRoot(),
 			parent: scope,
 		}
+	case sTypeIterate:
+		return &IterateScope{
+			root:      scope.GetRoot(),
+			parent:    scope,
+			symbolMap: map[string]SymbolInfo{},
+		}
 	}
+
 	return nil
+}
+
+// createIterateScope - create new (nested) iterate scope
+func createIterateScope(ctx *Context, scope Scope) *IterateScope {
+	return &IterateScope{
+		root:      scope.GetRoot(),
+		parent:    scope,
+		symbolMap: map[string]SymbolInfo{},
+	}
 }
 
 // IterateScope - iterate stmt scope

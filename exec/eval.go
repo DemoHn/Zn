@@ -45,6 +45,8 @@ func evalStatement(ctx *Context, scope Scope, stmt syntax.Statement) *error.Erro
 	case *syntax.FunctionDeclareStmt:
 		fn := NewZnFunction(v)
 		return bindValue(ctx, scope, v.FuncName.GetLiteral(), fn, false)
+	case *syntax.IterateStmt:
+		return evalIterateStmt(ctx, scope, v)
 	case *syntax.FunctionReturnStmt:
 		val, err := evalExpression(ctx, scope, v.ReturnExpr)
 		if err != nil {
@@ -95,7 +97,6 @@ func evalVarDeclareStmt(ctx *Context, scope Scope, node *syntax.VarDeclareStmt) 
 
 func evalWhileLoopStmt(ctx *Context, scope Scope, node *syntax.WhileLoopStmt) *error.Error {
 	loopScope := createScope(ctx, scope, sTypeWhile)
-	// TODO: more handler on scope
 	for {
 		// #1. first execute expr
 		trueExpr, err := evalExpression(ctx, loopScope, node.TrueExpr)
@@ -169,6 +170,102 @@ func evalBranchStmt(ctx *Context, scope Scope, node *syntax.BranchStmt) *error.E
 	// exec else branch if possible
 	if node.HasElse == true {
 		return evalStmtBlock(ctx, scope, node.IfFalseBlock)
+	}
+	return nil
+}
+
+func evalIterateStmt(ctx *Context, scope Scope, node *syntax.IterateStmt) *error.Error {
+	// pre-defined key, value variable name
+	var keySlot, valueSlot string
+	var nameLen = len(node.IndexNames)
+
+	iterScope := createIterateScope(ctx, scope)
+	// 以A，B遍历C： D
+	// execute expr: C
+	targetExpr, err := evalExpression(ctx, scope, node.IterateExpr)
+	if err != nil {
+		return err
+	}
+
+	// execIterationBlock, including set "currentKey" and "currentValue" to scope,
+	// and preDefined indication variables
+	execIterationBlockFn := func(key ZnValue, val ZnValue) *error.Error {
+		// set values of 此之值 and 此之
+		iterScope.setCurrentKV(key, val)
+
+		// set pre-defined value
+		if nameLen == 1 {
+			if err := setValue(ctx, iterScope, valueSlot, val); err != nil {
+				return err
+			}
+		} else if nameLen == 2 {
+			if err := setValue(ctx, iterScope, keySlot, key); err != nil {
+				return err
+			}
+			if err := setValue(ctx, iterScope, valueSlot, val); err != nil {
+				return err
+			}
+		}
+		if err := evalStmtBlock(ctx, iterScope, node.IterateBlock); err != nil {
+			return err
+		}
+
+	}
+
+	// define indication variables as "currentKey" and "currentValue" under new iterScope
+	// of course since there's no any iteration is executed yet, the initial values are all "Null"
+	if nameLen == 1 {
+		valueSlot = node.IndexNames[0].Literal
+		if err := bindValue(ctx, iterScope, valueSlot, NewZnNull(), false); err != nil {
+			return err
+		}
+	} else if nameLen == 2 {
+		keySlot = node.IndexNames[0].Literal
+		valueSlot = node.IndexNames[1].Literal
+		if err := bindValue(ctx, iterScope, keySlot, NewZnNull(), false); err != nil {
+			return err
+		}
+		if err := bindValue(ctx, iterScope, valueSlot, NewZnNull(), false); err != nil {
+			return err
+		}
+	} else if nameLen > 2 {
+		return error.NewErrorSLOT("过多的前置变量个数")
+	}
+
+	// execute iterations
+	switch tv := targetExpr.(type) {
+	case *ZnArray:
+		for idx, val := range tv.Value {
+			idxVar := NewZnDecimalFromInt(idx)
+			if err := execIterationBlockFn(idxVar, val); err != nil {
+				if err.GetCode() == error.ContinueBreakSignal {
+					// continue next turn
+					continue
+				}
+				if err.GetCode() == error.BreakBreakSignal {
+					// break directly
+					return nil
+				}
+				return err
+			}
+		}
+	case *ZnHashMap:
+		for key, val := range tv.Value {
+			keyVar := NewZnString(key)
+			if err := execIterationBlockFn(keyVar, val); err != nil {
+				if err.GetCode() == error.ContinueBreakSignal {
+					// continue next turn
+					continue
+				}
+				if err.GetCode() == error.BreakBreakSignal {
+					// break directly
+					return nil
+				}
+				return err
+			}
+		}
+	default:
+		return error.InvalidExprType("array", "hashmap")
 	}
 	return nil
 }
