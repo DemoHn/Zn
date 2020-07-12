@@ -4,7 +4,6 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/DemoHn/Zn/debug"
 	"github.com/DemoHn/Zn/lex"
 )
 
@@ -13,7 +12,7 @@ type programOKSuite struct {
 	program        string
 	symbols        map[string]ZnValue
 	expReturnValue ZnValue
-	expProbe       map[string][]debug.ProbeLog
+	expProbe       map[string][][]string
 }
 
 func Test_ExecPrimeExpr(t *testing.T) {
@@ -23,14 +22,14 @@ func Test_ExecPrimeExpr(t *testing.T) {
 			program:        "「香港记者跑得快」",
 			symbols:        map[string]ZnValue{},
 			expReturnValue: NewZnString("香港记者跑得快"),
-			expProbe:       map[string][]debug.ProbeLog{},
+			expProbe:       map[string][][]string{},
 		},
 		{
 			name:           "simple decimal",
 			program:        "314159*10^-8",
 			symbols:        map[string]ZnValue{},
 			expReturnValue: NewZnDecimalFromInt(314159, -8),
-			expProbe:       map[string][]debug.ProbeLog{},
+			expProbe:       map[string][][]string{},
 		},
 		{
 			name:    "simple variable",
@@ -40,7 +39,7 @@ func Test_ExecPrimeExpr(t *testing.T) {
 				"X-AE":     NewZnString("HelloWorld"),
 			},
 			expReturnValue: NewZnBool(true),
-			expProbe:       map[string][]debug.ProbeLog{},
+			expProbe:       map[string][][]string{},
 		},
 		{
 			name:    "simple array",
@@ -54,7 +53,7 @@ func Test_ExecPrimeExpr(t *testing.T) {
 				NewZnDecimalFromInt(20, 0),
 				NewZnDecimalFromInt(300, 0),
 			}),
-			expProbe: map[string][]debug.ProbeLog{},
+			expProbe: map[string][][]string{},
 		},
 		{
 			name:    "simple empty hashmap",
@@ -64,7 +63,7 @@ func Test_ExecPrimeExpr(t *testing.T) {
 				"X-AE":     NewZnString("HelloWorld"),
 			},
 			expReturnValue: NewZnHashMap([]KVPair{}),
-			expProbe:       map[string][]debug.ProbeLog{},
+			expProbe:       map[string][][]string{},
 		},
 		{
 			name:    "simple hashmap",
@@ -79,7 +78,69 @@ func Test_ExecPrimeExpr(t *testing.T) {
 					Value: NewZnDecimalFromInt(2, 0),
 				},
 			}),
-			expProbe: map[string][]debug.ProbeLog{},
+			expProbe: map[string][][]string{},
+		},
+	}
+
+	for _, suite := range suites {
+		assertSuite(t, suite)
+	}
+}
+
+func Test_IterateStmt(t *testing.T) {
+	suites := []programOKSuite{
+		{
+			name: "with no lead variables (array)",
+			program: `
+遍历诸变量：
+	令X为100
+	Y为（X+Y：Y，5）
+	（__probe：「$KEY」，此之索引）
+	（__probe：「$VAL」，此之值）
+	（__probe：「$X」，X）
+	（__probe：「$Y」，Y）
+			`,
+			symbols: map[string]ZnValue{
+				"Y": NewZnDecimalFromInt(255, -1), // 25.5
+				"诸变量": NewZnArray([]ZnValue{
+					NewZnString("一"),
+					NewZnString("地"),
+					NewZnString("在"),
+					NewZnString("要"),
+					NewZnString("工"),
+				}),
+			},
+			expReturnValue: NewZnNull(),
+			expProbe: map[string][][]string{
+				"$KEY": {
+					{"0", "*exec.ZnDecimal"},
+					{"1", "*exec.ZnDecimal"},
+					{"2", "*exec.ZnDecimal"},
+					{"3", "*exec.ZnDecimal"},
+					{"4", "*exec.ZnDecimal"},
+				},
+				"$VAL": {
+					{"「一」", "*exec.ZnString"},
+					{"「地」", "*exec.ZnString"},
+					{"「在」", "*exec.ZnString"},
+					{"「要」", "*exec.ZnString"},
+					{"「工」", "*exec.ZnString"},
+				},
+				"$X": {
+					{"100", "*exec.ZnDecimal"},
+					{"100", "*exec.ZnDecimal"},
+					{"100", "*exec.ZnDecimal"},
+					{"100", "*exec.ZnDecimal"},
+					{"100", "*exec.ZnDecimal"},
+				},
+				"$Y": {
+					{"30.5", "*exec.ZnDecimal"},
+					{"35.5", "*exec.ZnDecimal"},
+					{"40.5", "*exec.ZnDecimal"},
+					{"45.5", "*exec.ZnDecimal"},
+					{"50.5", "*exec.ZnDecimal"},
+				},
+			},
 		},
 	}
 
@@ -114,17 +175,17 @@ func assertSuite(t *testing.T, suite programOKSuite) {
 			gotLog := ctx._probe.GetProbeLog(tag)
 			// ensure length is same
 			if len(gotLog) != len(pLog) {
-				t.Errorf("probe log length not match, expect -> %d, got -> %d", len(pLog), len(gotLog))
+				t.Errorf("probe log [%s] length not match, expect -> %d, got -> %d", tag, len(pLog), len(gotLog))
 				return
 			}
 			// then check item one by one
 			for idx, pLogItem := range pLog {
-				if !reflect.DeepEqual(pLogItem.ValueStr, gotLog[idx].ValueStr) {
-					t.Errorf("probe log `valueStr` not match at #%d, expect -> %s, got -> %s", idx, pLogItem.ValueStr, gotLog[idx].ValueStr)
+				if !reflect.DeepEqual(pLogItem[0], gotLog[idx].ValueStr) {
+					t.Errorf("probe log [%s] `valueStr` not match at #%d, expect -> %s, got -> %s", tag, idx, pLogItem[0], gotLog[idx].ValueStr)
 					return
 				}
-				if !reflect.DeepEqual(pLogItem.ValueType, gotLog[idx].ValueType) {
-					t.Errorf("probe log `valueType` not match at #%d, expect -> %s, got -> %s", idx, pLogItem.ValueType, gotLog[idx].ValueType)
+				if !reflect.DeepEqual(pLogItem[1], gotLog[idx].ValueType) {
+					t.Errorf("probe log [%s] `valueType` not match at #%d, expect -> %s, got -> %s", tag, idx, pLogItem[1], gotLog[idx].ValueType)
 					return
 				}
 			}

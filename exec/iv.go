@@ -106,6 +106,11 @@ func (iv *ZnMethodIV) Reduce(ctx *Context, input ZnValue, lhs bool) (ZnValue, *e
 // Reduce -
 func (iv *ZnScopeMemberIV) Reduce(ctx *Context, input ZnValue, lhs bool) (ZnValue, *error.Error) {
 	// TODO: Implement this!!
+	switch sp := iv.RootScope.(type) {
+	case *IterateScope:
+		return sp.getSpecialProps(iv.Member), nil
+	}
+
 	return NewZnNull(), nil
 }
 
