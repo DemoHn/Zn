@@ -32,6 +32,13 @@ func evalProgram(ctx *Context, scope *RootScope, program *syntax.Program) *error
 
 // EvalStatement - eval statement
 func evalStatement(ctx *Context, scope Scope, stmt syntax.Statement) *error.Error {
+	// when evalStatement, last value should be set as ZnNull{}
+	resetLastValue := true
+	defer func() {
+		if resetLastValue {
+			scope.GetRoot().SetLastValue(NewZnNull())
+		}
+	}()
 	scope.GetRoot().SetCurrentLine(stmt.GetCurrentLine())
 	switch v := stmt.(type) {
 	case *syntax.VarDeclareStmt:
@@ -55,6 +62,7 @@ func evalStatement(ctx *Context, scope Scope, stmt syntax.Statement) *error.Erro
 		// send RETURN break
 		return error.ReturnBreakError(val)
 	case syntax.Expression:
+		resetLastValue = false
 		val, err := evalExpression(ctx, scope, v)
 		if err != nil {
 			return err
