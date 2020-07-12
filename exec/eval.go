@@ -233,7 +233,7 @@ func evalIterateStmt(ctx *Context, scope Scope, node *syntax.IterateStmt) *error
 	switch tv := targetExpr.(type) {
 	case *ZnArray:
 		for idx, val := range tv.Value {
-			idxVar := NewZnDecimalFromInt(idx)
+			idxVar := NewZnDecimalFromInt(idx, 0)
 			if err := execIterationBlockFn(idxVar, val); err != nil {
 				if err.GetCode() == error.ContinueBreakSignal {
 					// continue next turn
@@ -486,7 +486,7 @@ func evalPrimeExpr(ctx *Context, scope Scope, expr syntax.Expression) (ZnValue, 
 			}
 			exprKey, ok := expr.(*ZnString)
 			if !ok {
-				return nil, error.InvalidExprType("string", "integer")
+				return nil, error.InvalidExprType("string")
 			}
 			exprVal, err := evalExpression(ctx, scope, item.Value)
 			if err != nil {
