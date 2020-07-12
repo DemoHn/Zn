@@ -255,7 +255,8 @@ func evalIterateStmt(ctx *Context, scope Scope, node *syntax.IterateStmt) *error
 			}
 		}
 	case *ZnHashMap:
-		for key, val := range tv.Value {
+		for _, key := range tv.KeyOrder {
+			val := tv.Value[key]
 			keyVar := NewZnString(key)
 			// handle interrupts
 			if err := execIterationBlockFn(keyVar, val); err != nil {
