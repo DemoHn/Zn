@@ -105,7 +105,7 @@ var probeExecutor = func(ctx *Context, scope Scope, params []ZnValue) (ZnValue, 
 	}
 	// add probe data to log
 	ctx._probe.AddLog(vtag.Value, params[1])
-	return NewZnNull(), nil
+	return params[1], nil
 }
 
 // init function
