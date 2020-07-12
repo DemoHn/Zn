@@ -58,6 +58,9 @@ type ZnFunction struct {
 type ZnHashMap struct {
 	// now only support string as key
 	Value map[string]ZnValue
+	// The order of key is (delibrately) random when iterating a hashmap.
+	// Thus, we preserve the (insertion) order of key using "KeyOrder" field.
+	KeyOrder []string
 }
 
 // KVPair - key-value pair, used for ZnHashMap
@@ -100,7 +103,8 @@ func (zf *ZnFunction) String() string {
 
 func (zh *ZnHashMap) String() string {
 	strs := []string{}
-	for key, value := range zh.Value {
+	for _, key := range zh.KeyOrder {
+		value := zh.Value[key]
 		strs = append(strs, fmt.Sprintf("%s == %s", key, value.String()))
 	}
 	return fmt.Sprintf("【%s】", strings.Join(strs, "，"))
@@ -279,11 +283,13 @@ func NewZnNativeFunction(name string, executor funcExecutor) *ZnFunction {
 // NewZnHashMap -
 func NewZnHashMap(kvPairs []KVPair) *ZnHashMap {
 	hm := &ZnHashMap{
-		Value: map[string]ZnValue{},
+		Value:    map[string]ZnValue{},
+		KeyOrder: []string{},
 	}
 
 	for _, kvPair := range kvPairs {
 		hm.Value[kvPair.Key] = kvPair.Value
+		hm.KeyOrder = append(hm.KeyOrder, kvPair.Key)
 	}
 
 	return hm
