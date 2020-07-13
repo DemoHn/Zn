@@ -168,14 +168,14 @@ func Test_IterateStmt(t *testing.T) {
 			expReturnValue: NewZnNull(),
 			expProbe: map[string][][]string{
 				"$KEY": {
-					{"积分", "*exec.ZnString"},
-					{"年龄", "*exec.ZnString"},
-					{"穿着", "*exec.ZnString"},
+					{"「积分」", "*exec.ZnString"},
+					{"「年龄」", "*exec.ZnString"},
+					{"「穿着」", "*exec.ZnString"},
 				},
 				"$VAL": {
 					{"1000", "*exec.ZnDecimal"},
 					{"24", "*exec.ZnDecimal"},
-					{"蕾丝边裙子", "*exec.ZnString"},
+					{"「蕾丝边裙子」", "*exec.ZnString"},
 				},
 			},
 		},
@@ -183,11 +183,9 @@ func Test_IterateStmt(t *testing.T) {
 			name: "with one var lead (array, hashmap)",
 			program: `
 以V遍历【30， 40， 50】：
-	（__probe：「$L1V」，V）
-	
-	以V遍历【「甲」 == 20，「乙」 == 30】：
-	    （__probe：「$L2V」，V）
-			`,
+    （__probe：「$L1V」，V）
+    以V遍历【「甲」 == 20，「乙」 == 30】：
+        （__probe：「$L2V」，V）`,
 			symbols:        map[string]ZnValue{},
 			expReturnValue: NewZnNull(),
 			expProbe: map[string][][]string{
@@ -211,8 +209,7 @@ func Test_IterateStmt(t *testing.T) {
 			program: `
 以K，V遍历【「土」，「地」】：
     （__probe：「K1」，K）
-    （__probe：「V1」，V）
-			`,
+    （__probe：「V1」，V）`,
 			symbols:        map[string]ZnValue{},
 			expReturnValue: NewZnNull(),
 			expProbe: map[string][][]string{
@@ -221,8 +218,8 @@ func Test_IterateStmt(t *testing.T) {
 					{"1", "*exec.ZnDecimal"},
 				},
 				"V1": {
-					{"土", "*exec.ZnString"},
-					{"地", "*exec.ZnString"},
+					{"「土」", "*exec.ZnString"},
+					{"「地」", "*exec.ZnString"},
 				},
 			},
 		},
