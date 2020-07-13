@@ -223,6 +223,25 @@ func Test_IterateStmt(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "with two vars lead (hashmap)",
+			program: `
+以K，V遍历【「上」==「下」，「左」==「右」】：
+    （__probe：「K1」，K）
+    （__probe：「V1」，V）`,
+			symbols:        map[string]ZnValue{},
+			expReturnValue: NewZnNull(),
+			expProbe: map[string][][]string{
+				"K1": {
+					{"「上」", "*exec.ZnString"},
+					{"「下」", "*exec.ZnString"},
+				},
+				"V1": {
+					{"「左」", "*exec.ZnString"},
+					{"「右」", "*exec.ZnString"},
+				},
+			},
+		},
 	}
 
 	for _, suite := range suites {
