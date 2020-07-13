@@ -142,6 +142,90 @@ func Test_IterateStmt(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "with no lead variables (hashmap)",
+			program: `
+遍历示例列表：
+	（__probe：「$KEY」，此之索引）
+	（__probe：「$VAL」，此之值）
+			`,
+			symbols: map[string]ZnValue{
+				"示例列表": NewZnHashMap([]KVPair{
+					{
+						Key:   "积分",
+						Value: NewZnDecimalFromInt(1000, 0),
+					},
+					{
+						Key:   "年龄",
+						Value: NewZnDecimalFromInt(24, 0),
+					},
+					{
+						Key:   "穿着",
+						Value: NewZnString("蕾丝边裙子"),
+					},
+				}),
+			},
+			expReturnValue: NewZnNull(),
+			expProbe: map[string][][]string{
+				"$KEY": {
+					{"积分", "*exec.ZnString"},
+					{"年龄", "*exec.ZnString"},
+					{"穿着", "*exec.ZnString"},
+				},
+				"$VAL": {
+					{"1000", "*exec.ZnDecimal"},
+					{"24", "*exec.ZnDecimal"},
+					{"蕾丝边裙子", "*exec.ZnString"},
+				},
+			},
+		},
+		{
+			name: "with one var lead (array, hashmap)",
+			program: `
+以V遍历【30， 40， 50】：
+	（__probe：「$L1V」，V）
+	
+	以V遍历【「甲」 == 20，「乙」 == 30】：
+	    （__probe：「$L2V」，V）
+			`,
+			symbols:        map[string]ZnValue{},
+			expReturnValue: NewZnNull(),
+			expProbe: map[string][][]string{
+				"$L1V": {
+					{"30", "*exec.ZnDecimal"},
+					{"40", "*exec.ZnDecimal"},
+					{"50", "*exec.ZnDecimal"},
+				},
+				"$L2V": {
+					{"20", "*exec.ZnDecimal"},
+					{"30", "*exec.ZnDecimal"},
+					{"20", "*exec.ZnDecimal"},
+					{"30", "*exec.ZnDecimal"},
+					{"20", "*exec.ZnDecimal"},
+					{"30", "*exec.ZnDecimal"},
+				},
+			},
+		},
+		{
+			name: "with two vars lead (array)",
+			program: `
+以K，V遍历【「土」，「地」】：
+    （__probe：「K1」，K）
+    （__probe：「V1」，V）
+			`,
+			symbols:        map[string]ZnValue{},
+			expReturnValue: NewZnNull(),
+			expProbe: map[string][][]string{
+				"K1": {
+					{"0", "*exec.ZnDecimal"},
+					{"1", "*exec.ZnDecimal"},
+				},
+				"V1": {
+					{"土", "*exec.ZnString"},
+					{"地", "*exec.ZnString"},
+				},
+			},
+		},
 	}
 
 	for _, suite := range suites {
