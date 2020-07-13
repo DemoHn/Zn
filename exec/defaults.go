@@ -15,7 +15,11 @@ var displayExecutor = func(ctx *Context, scope Scope, params []ZnValue) (ZnValue
 	var items = []string{}
 
 	for _, param := range params {
-		items = append(items, param.String())
+		if v, ok := param.(*ZnString); ok {
+			items = append(items, v.Value)
+		} else {
+			items = append(items, param.String())
+		}
 	}
 	fmt.Printf("%s\n", strings.Join(items, " "))
 	return NewZnNull(), nil
