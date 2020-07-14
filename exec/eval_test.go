@@ -234,10 +234,10 @@ func Test_IterateStmt(t *testing.T) {
 			expProbe: map[string][][]string{
 				"K1": {
 					{"「上」", "*exec.ZnString"},
-					{"「下」", "*exec.ZnString"},
+					{"「左」", "*exec.ZnString"},
 				},
 				"V1": {
-					{"「左」", "*exec.ZnString"},
+					{"「下」", "*exec.ZnString"},
 					{"「右」", "*exec.ZnString"},
 				},
 			},
