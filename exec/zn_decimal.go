@@ -9,6 +9,12 @@ import (
 	"github.com/DemoHn/Zn/error"
 )
 
+const (
+	maxDigitCount      = 18 // XXXXXXXX.XXXXXXXXXX
+	maxLeadDecimalZero = 6  // 0.XXXXXX1234
+	maxSciDigitCount   = 8  // 2.XXXXXXXX *10^ N
+)
+
 // ZnDecimal - decimal number 「数值」型
 type ZnDecimal struct {
 	// decimal internal properties
@@ -36,29 +42,36 @@ func NewZnDecimalFromInt(value int, exp int) *ZnDecimal {
 }
 
 // String - show decimal display string
-func (zd *ZnDecimal) String() (data string) {
+func (zd *ZnDecimal) String() string {
 	var sflag = ""
 	if zd.co.Sign() < 0 {
 		sflag = "-"
 	}
 	var txt = new(big.Int).Abs(zd.co).String()
 
-	if zd.exp == 0 {
-		data = fmt.Sprintf("%s%s", sflag, txt)
-	} else if zd.exp > 0 {
-		var zeros = strings.Repeat("0", zd.exp)
-		data = fmt.Sprintf("%s%s%s", sflag, txt, zeros)
-	} else {
-		// case: zd.exp < 0
-		if zd.exp+len(txt) <= 0 {
-			var zeros = strings.Repeat("0", -(zd.exp + len(txt)))
-			data = fmt.Sprintf("%s0.%s%s", sflag, zeros, txt)
-		} else {
-			pt := zd.exp + len(txt)
-			data = fmt.Sprintf("%s%s.%s", sflag, txt[:pt], txt[pt:])
-		}
+	digitCount := len(txt)
+	pointPos := zd.exp + digitCount
+
+	// CASE I: no decimal point
+	if digitCount <= pointPos && pointPos <= maxDigitCount {
+		return fmt.Sprintf("%s%s", sflag, txt)
 	}
-	return
+	// CASE II: with decimal point
+	if pointPos <= maxDigitCount && pointPos < digitCount && pointPos > 0 && digitCount <= maxDigitCount {
+		return fmt.Sprintf("%s%s.%s", sflag, txt[:pointPos], txt[pointPos:])
+	}
+	// CASE III: lead 0. 0s
+	if pointPos <= 0 && pointPos > -maxLeadDecimalZero {
+		var zeros = strings.Repeat("0", -pointPos)
+		return fmt.Sprintf("%s0.%s%s", sflag, zeros, txt)
+	}
+	// CASE IV: sci format (1.23*10^-5)
+	if digitCount > maxSciDigitCount {
+		return fmt.Sprintf("%s%s.%s⏨%d", sflag, txt[0:1], txt[1:maxSciDigitCount+1], pointPos-1)
+	} else if digitCount > 1 {
+		return fmt.Sprintf("%s%s.%s⏨%d", sflag, txt[0:1], txt[1:], pointPos-1)
+	}
+	return fmt.Sprintf("%s%s⏨%d", sflag, txt[0:1], pointPos-1)
 }
 
 // Compare - ZnDecimal
