@@ -137,10 +137,34 @@ func evalWhileLoopStmt(ctx *Context, scope Scope, node *syntax.WhileLoopStmt) *e
 
 // EvalStmtBlock -
 func evalStmtBlock(ctx *Context, scope Scope, block *syntax.BlockStmt) *error.Error {
-	for _, stmt := range block.Children {
-		err := evalStatement(ctx, scope, stmt)
-		if err != nil {
-			return err
+	enableHoist := false
+	if _, ok := scope.(*RootScope); ok {
+		enableHoist = true
+	}
+
+	if enableHoist {
+		// ROUND I: declare function stmt FIRST
+		for _, stmtI := range block.Children {
+			if v, ok := stmtI.(*syntax.FunctionDeclareStmt); ok {
+				fn := NewZnFunction(v)
+				if err := bindValue(ctx, scope, v.FuncName.GetLiteral(), fn, false); err != nil {
+					return err
+				}
+			}
+		}
+		// ROUND II: exec statement except functionDecl stmt
+		for _, stmtII := range block.Children {
+			if _, ok := stmtII.(*syntax.FunctionDeclareStmt); !ok {
+				if err := evalStatement(ctx, scope, stmtII); err != nil {
+					return err
+				}
+			}
+		}
+	} else {
+		for _, stmt := range block.Children {
+			if err := evalStatement(ctx, scope, stmt); err != nil {
+				return err
+			}
 		}
 	}
 	return nil
@@ -343,16 +367,27 @@ func evalFunctionValue(ctx *Context, scope *FuncScope, params []ZnValue, zf *ZnF
 		}
 
 		execBlock := zf.Node.ExecBlock
-		// iterate block
-		for _, stmt := range execBlock.Children {
-			if err := evalStatement(ctx, scope, stmt); err != nil {
-				// if recv breaks
-				if err.GetCode() == error.ReturnBreakSignal {
-					if extra, ok := err.GetExtra().(ZnValue); ok {
-						return extra, nil
-					}
+		// iterate block round I - function hoisting
+		for _, stmtI := range execBlock.Children {
+			if v, ok := stmtI.(*syntax.FunctionDeclareStmt); ok {
+				fn := NewZnFunction(v)
+				if err := bindValue(ctx, scope, v.FuncName.GetLiteral(), fn, false); err != nil {
+					return nil, err
 				}
-				return nil, err
+			}
+		}
+		// iterate block round II
+		for _, stmtII := range execBlock.Children {
+			if _, ok := stmtII.(*syntax.FunctionDeclareStmt); !ok {
+				if err := evalStatement(ctx, scope, stmtII); err != nil {
+					// if recv breaks
+					if err.GetCode() == error.ReturnBreakSignal {
+						if extra, ok := err.GetExtra().(ZnValue); ok {
+							return extra, nil
+						}
+					}
+					return nil, err
+				}
 			}
 		}
 		return scope.GetReturnValue(), nil
