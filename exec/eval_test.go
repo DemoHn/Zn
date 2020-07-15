@@ -249,6 +249,33 @@ func Test_IterateStmt(t *testing.T) {
 	}
 }
 
+func Test_VarDeclareStmt(t *testing.T) {
+	suites := []programOKSuite{
+		{
+			name:           "normal one var declaration",
+			program:        `令金克木为「森林」；（__probe：「$K1」，金克木）`,
+			symbols:        map[string]ZnValue{},
+			expReturnValue: NewZnString("森林"),
+			expProbe: map[string][][]string{
+				"$K1": {
+					{"「森林」", "*exec.ZnString"},
+				},
+			},
+		},
+		{
+			name:           "normal one var with compound expression",
+			program:        `令_B52为（X+Y：2008，1963）；_B52`,
+			symbols:        map[string]ZnValue{},
+			expReturnValue: NewZnDecimalFromInt(3971, 0),
+			expProbe:       map[string][][]string{},
+		},
+	}
+
+	for _, suite := range suites {
+		assertSuite(t, suite)
+	}
+}
+
 func assertSuite(t *testing.T, suite programOKSuite) {
 	t.Run(suite.name, func(t *testing.T) {
 		ctx := NewContext()
