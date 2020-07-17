@@ -269,10 +269,82 @@ func Test_VarDeclareStmt(t *testing.T) {
 			expReturnValue: NewZnDecimalFromInt(3971, 0),
 			expProbe:       map[string][][]string{},
 		},
+		{
+			name:           "normal multiple vars",
+			program:        "令A为5，B为2，C为3；（X*Y：A，B，C）",
+			symbols:        map[string]ZnValue{},
+			expReturnValue: NewZnDecimalFromInt(30, 0),
+			expProbe:       map[string][][]string{},
+		},
+		{
+			name:           "normal multiple vars (with reference)",
+			program:        "令A为10，B为A，C为B；（X*Y：A，B，C）",
+			symbols:        map[string]ZnValue{},
+			expReturnValue: NewZnDecimalFromInt(1000, 0),
+			expProbe:       map[string][][]string{},
+		},
 	}
 
 	for _, suite := range suites {
 		assertSuite(t, suite)
+	}
+}
+
+func Test_WhileLoopStmt(t *testing.T) {
+	suites := []programOKSuite{
+		{
+			name: "simple while loop",
+			program: `
+每当X大于0：
+	（__probe：「$X」，X）
+	X为（X-Y：X，1）`,
+			symbols: map[string]ZnValue{
+				"X": NewZnDecimalFromInt(3, 0),
+			},
+			expReturnValue: NewZnNull(),
+			expProbe: map[string][][]string{
+				"$X": {
+					{"3", "*exec.ZnDecimal"},
+					{"2", "*exec.ZnDecimal"},
+					{"1", "*exec.ZnDecimal"},
+				},
+			},
+		},
+		{
+			name: "test break",
+			program: `
+每当X大于0：
+	Y为1
+	每当Y大于0：
+		Y为（X+Y：Y，1）
+		如果Y为3：
+			此之（结束）
+		（__probe：「VY」，Y）
+		
+	X为（X+Y：X，-1）
+	（__probe：「VX」，X）
+			`,
+			symbols: map[string]ZnValue{
+				"X": NewZnDecimalFromInt(2, 0),
+				"Y": NewZnDecimalFromInt(0, 0),
+			},
+			expReturnValue: NewZnNull(),
+			expProbe: map[string][][]string{
+				"VY": {
+					{"1", "*exec.ZnDecimal"},
+					{"2", "*exec.ZnDecimal"},
+					{"1", "*exec.ZnDecimal"},
+					{"2", "*exec.ZnDecimal"},
+				},
+				"VX": {
+					{"1", "*exec.ZnDecimal"},
+					{"0", "*exec.ZnDecimal"},
+				},
+			},
+		},
+	}
+	for _, tt := range suites {
+		assertSuite(t, tt)
 	}
 }
 
@@ -290,7 +362,7 @@ func assertSuite(t *testing.T, suite programOKSuite) {
 
 		// assert result
 		if result.HasError {
-			t.Errorf("program should have no error, got error: %s", result.Error)
+			t.Errorf("program should have no error, got error: %s", result.Error.Display())
 			return
 		}
 		if !reflect.DeepEqual(result.Value, suite.expReturnValue) {
