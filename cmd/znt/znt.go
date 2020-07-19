@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/DemoHn/Zn/cmd/znt/cmds"
 	"github.com/spf13/cobra"
 )
 
@@ -21,5 +22,6 @@ func main() {
 }
 
 func init() {
-	rootCommand.AddCommand(mdPrettyCmd)
+	rootCommand.AddCommand(cmds.MdPrettyCmd)
+	rootCommand.AddCommand(cmds.GenCodeImageCmd)
 }
