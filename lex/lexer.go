@@ -373,7 +373,6 @@ func (l *Lexer) parseString(ch rune) (*Token, *error.Error) {
 			}
 			l.pushBuffer(ch)
 		case CR, LF:
-
 			nl := l.parseCRLF(ch)
 			// push buffer & mark new line
 			l.pushBuffer(nl...)
