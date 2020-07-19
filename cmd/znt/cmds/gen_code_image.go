@@ -19,8 +19,8 @@ const (
 	marginBottom = 15.0
 	marginLeft   = 12.0
 	marginRight  = 12.0
-	lineHeight   = 20
-	fontSize     = 14
+	lineHeight   = 21
+	fontSize     = 15
 
 	finalWidth = 838 // GitHub <pre> bar width
 )
@@ -99,13 +99,10 @@ func newBackground(width int, height int, bgColor string) *gg.Context {
 	return dc
 }
 
-// TODO: 考虑单行字过长而换行的情况
 func measureCodeHeight(tMap [][]colorTextMap) int {
 	return lineHeight * len(tMap)
 }
 
-// TODO1: 考虑单行字过长而换行的情况
-// TODO2: 考虑 token 占多行的情况
 func drawColorText(dc *gg.Context, tMap [][]colorTextMap) {
 	spTop := marginTop   // start point Top (Y-axis)
 	spLeft := marginLeft // start point Left (X-axis)
@@ -190,11 +187,18 @@ func parseCodeFromFile(file string) ([][]colorTextMap, error) {
 				})
 			}
 		}
-		// add literal
-		tMapItems = append(tMapItems, colorTextMap{
-			text:  string(tok.Literal),
-			color: matchColorScheme(tok.Type, lastTok),
-		})
+		// add literal (support multi-line token)
+		literals := splitMultiLineString(tok.Literal)
+		for idx, lt := range literals {
+			tMapItems = append(tMapItems, colorTextMap{
+				text:  lt,
+				color: matchColorScheme(tok.Type, lastTok),
+			})
+			if idx < len(literals)-1 {
+				tMap = append(tMap, tMapItems)
+				tMapItems = []colorTextMap{}
+			}
+		}
 
 		lastLine = tok.Range.EndLine
 		lastIndex = tok.Range.EndIdx
@@ -230,7 +234,7 @@ func matchColorScheme(tkType lex.TokenType, lastTok *lex.Token) string {
 	case lex.TypeIdentifier:
 		if lastTok != nil {
 			// if lastToken is （ or 之 or 如何, that means the identifier is a member or a function name
-			if lastTok.Type == lex.TypeObjSelfW || lastTok.Type == lex.TypeFuncQuoteL || lastTok.Type == lex.TypeFuncW {
+			if lastTok.Type == lex.TypeObjDotW || lastTok.Type == lex.TypeFuncQuoteL || lastTok.Type == lex.TypeFuncW {
 				colorScheme = csMember
 			}
 		}
@@ -239,6 +243,41 @@ func matchColorScheme(tkType lex.TokenType, lastTok *lex.Token) string {
 		colorScheme = csKeyword
 	}
 	return colorScheme
+}
+
+// split string by '\n\r' | '\r\n' | '\n' | '\r'
+func splitMultiLineString(literal []rune) []string {
+	final := []string{}
+	start := 0
+	idx := 0
+	lLen := len(literal) // literal length
+	for {
+		if idx >= lLen {
+			break
+		}
+		r := literal[idx]
+		if r == '\n' {
+			final = append(final, string(literal[start:idx]))
+
+			start = idx + 1
+			if idx < lLen-1 && literal[idx+1] == '\r' {
+				idx++
+				start = idx + 2
+			}
+		} else if r == '\r' {
+			final = append(final, string(literal[start:idx]))
+
+			start = idx + 1
+			if idx < lLen-1 && literal[idx+1] == '\n' {
+				idx++
+				start = idx + 2
+			}
+		}
+		idx++
+	}
+
+	final = append(final, string(literal[start:]))
+	return final
 }
 
 func init() {
