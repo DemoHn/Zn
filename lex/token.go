@@ -299,6 +299,7 @@ func isIdentifierChar(ch rune, isFirst bool) bool {
 // for special type Tokens, its range varies from 0 - 9
 const (
 	TypeEOF          TokenType = 0
+	TypeSpace        TokenType = 1  // 空格类Token 备用
 	TypeComment      TokenType = 10 // 注：
 	TypeCommaSep     TokenType = 11 // ，
 	TypeStmtSep      TokenType = 12 // ；

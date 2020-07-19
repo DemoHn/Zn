@@ -1,4 +1,4 @@
-package main
+package cmds
 
 import (
 	"fmt"
@@ -29,8 +29,9 @@ const (
 	fontFamily = "Sarasa Mono SC, Microsoft YaHei, monospace"
 )
 
-var mdPrettyCmd = &cobra.Command{
-	Use:   "md:pretty [file]",
+// MdPrettyCmd -
+var MdPrettyCmd = &cobra.Command{
+	Use:   "md-pretty [file]",
 	Short: "语法高亮 Markdown 文件中的 Zn 语言代码",
 	Long: "将 Markdown 文件中带有 ```zn 开头的块状语句以及 `zn: <data>` 标识进行语法高亮，\n" +
 		"使得文档变得更加容易阅读。\n" +
