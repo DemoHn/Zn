@@ -141,7 +141,7 @@ func parseCodeFromFile(file string) ([][]colorTextMap, error) {
 	tMapItems := []colorTextMap{}
 	lastLine := 0
 	lastIndex := 0
-
+	var lastTok *lex.Token
 	for {
 		tok, err := l.NextToken()
 		indentType := l.LineStack.IndentType
@@ -175,7 +175,7 @@ func parseCodeFromFile(file string) ([][]colorTextMap, error) {
 			if indentStr != "" {
 				tMapItems = append(tMapItems, colorTextMap{
 					text:  indentStr,
-					color: matchColorScheme(lex.TypeSpace),
+					color: matchColorScheme(lex.TypeSpace, lastTok),
 				})
 			}
 		}
@@ -186,24 +186,25 @@ func parseCodeFromFile(file string) ([][]colorTextMap, error) {
 				nbsps := strings.Repeat(" ", colDiff)
 				tMapItems = append(tMapItems, colorTextMap{
 					text:  nbsps,
-					color: matchColorScheme(lex.TypeSpace),
+					color: matchColorScheme(lex.TypeSpace, lastTok),
 				})
 			}
 		}
 		// add literal
 		tMapItems = append(tMapItems, colorTextMap{
 			text:  string(tok.Literal),
-			color: matchColorScheme(tok.Type),
+			color: matchColorScheme(tok.Type, lastTok),
 		})
 
 		lastLine = tok.Range.EndLine
 		lastIndex = tok.Range.EndIdx
+		lastTok = tok
 	}
 
 	return tMap, nil
 }
 
-func matchColorScheme(tkType lex.TokenType) string {
+func matchColorScheme(tkType lex.TokenType, lastTok *lex.Token) string {
 	const (
 		// GitHub style (light) color scheme
 		csKeyword  = "#d73a49"
@@ -213,6 +214,7 @@ func matchColorScheme(tkType lex.TokenType) string {
 		csVariable = "#e36209"
 		csComment  = "#6a737d"
 		csNormal   = "#24292e"
+		csMember   = "#005cc5"
 	)
 
 	colorScheme := csNormal
@@ -225,8 +227,15 @@ func matchColorScheme(tkType lex.TokenType) string {
 		colorScheme = csToken
 	case lex.TypeComment:
 		colorScheme = csComment
+	case lex.TypeIdentifier:
+		if lastTok != nil {
+			// if lastToken is （ or 之 or 如何, that means the identifier is a member or a function name
+			if lastTok.Type == lex.TypeObjSelfW || lastTok.Type == lex.TypeFuncQuoteL || lastTok.Type == lex.TypeFuncW {
+				colorScheme = csMember
+			}
+		}
 	}
-	if tkType >= lex.TypeDeclareW && tkType <= lex.TypeStaticSelfW {
+	if tkType >= lex.TypeDeclareW && tkType <= lex.TypeIteratorW {
 		colorScheme = csKeyword
 	}
 	return colorScheme
