@@ -129,9 +129,10 @@ head:
 	// notice: it would also be a normal identifer (if 注[number]：) does not satisfy.
 	case GlyphZHU:
 		cursor := l.cursor
+		rg := newTokenRange(l)
 		isComment, isMultiLine, note := l.validateComment(ch)
 		if isComment {
-			tok, err = l.parseComment(l.getChar(l.cursor), isMultiLine, note)
+			tok, err = l.parseComment(l.getChar(l.cursor), isMultiLine, note, rg)
 			return
 		}
 
@@ -272,7 +273,7 @@ func (l *Lexer) validateComment(ch rune) (bool, bool, []rune) {
 }
 
 // parseComment until its end
-func (l *Lexer) parseComment(ch rune, isMultiLine bool, note []rune) (*Token, *error.Error) {
+func (l *Lexer) parseComment(ch rune, isMultiLine bool, note []rune, rg TokenRange) (*Token, *error.Error) {
 	// setup
 	l.clearBuffer()
 	if isMultiLine {
@@ -281,7 +282,6 @@ func (l *Lexer) parseComment(ch rune, isMultiLine bool, note []rune) (*Token, *e
 		}
 		l.pushBuffer(ch)
 	}
-	rg := newTokenRange(l)
 	// iterate
 	for {
 		ch = l.next()
@@ -846,6 +846,9 @@ func (l *Lexer) parseIdentifier(ch rune) (*Token, *error.Error) {
 	}
 
 	rg := newTokenRange(l)
+	// range.EndIdx = range.StartIdx + 1
+	// i.e. range at least include one char
+	rg.setRangeEnd(l)
 	// push first char
 	l.pushBuffer(ch)
 	count++
@@ -868,6 +871,7 @@ func (l *Lexer) parseIdentifier(ch rune) (*Token, *error.Error) {
 		if ch == GlyphZHU {
 			if validComment, _, _ := l.validateComment(ch); validComment {
 				l.rebase(prev)
+				rg.setRangeEnd(l)
 				return NewIdentifierToken(l.chBuffer, rg), nil
 			}
 			l.rebase(prev + 1)
