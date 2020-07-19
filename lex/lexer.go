@@ -1,6 +1,8 @@
 package lex
 
 import (
+	"fmt"
+
 	"github.com/DemoHn/Zn/error"
 	"github.com/DemoHn/Zn/util"
 )
@@ -32,6 +34,234 @@ func NewLexer(in *InputStream) *Lexer {
 		beginLex:    true,
 	}
 }
+
+// TokenType - general token type
+type TokenType int
+
+// Token - general token type
+type Token struct {
+	Type    TokenType
+	Literal []rune
+	Range   TokenRange
+}
+
+// TokenRange locates the absolute position of a token
+type TokenRange struct {
+	// startLine - line num (start from 1) of first char
+	StartLine int
+	StartIdx  int
+	// endLine - line num (start from 1) of last char
+	EndLine int
+	EndIdx  int
+}
+
+// newTokenRange creates new TokenRange struct
+// with startLine & startIdx initialized.
+func newTokenRange(l *Lexer) TokenRange {
+	return TokenRange{
+		StartLine: l.getCurrentLine(),
+		StartIdx:  l.cursor,
+		EndLine:   l.getCurrentLine(),
+		EndIdx:    l.cursor,
+	}
+}
+
+func (r *TokenRange) setRangeEnd(l *Lexer) {
+	r.EndLine = l.CurrentLine
+	r.EndIdx = l.cursor + 1
+}
+
+// GetStartLine -
+func (r *TokenRange) GetStartLine() int {
+	return r.StartLine
+}
+
+// GetEndLine -
+func (r *TokenRange) GetEndLine() int {
+	return r.EndLine
+}
+
+//// 0. EOF
+
+// EOF - mark as end of file, should only exists at the end of sequence
+const EOF rune = 0
+
+//// 1. keywords
+// MOVE to lex/keyword.go FILE, check there for more details
+
+//// 2. markers
+// declare marks
+const (
+	Comma             rune = 0xFF0C //，
+	Colon             rune = 0xFF1A //：
+	Semicolon         rune = 0xFF1B //；
+	QuestionMark      rune = 0xFF1F //？
+	RefMark           rune = 0x0026 // &
+	BangMark          rune = 0xFF01 // ！
+	AnnotationMark    rune = 0x0040 // @
+	HashMark          rune = 0x0023 // #
+	EllipsisMark      rune = 0x2026 // …
+	LeftBracket       rune = 0x3010 // 【
+	RightBracket      rune = 0x3011 // 】
+	LeftParen         rune = 0xFF08 // （
+	RightParen        rune = 0xFF09 // ）
+	Equal             rune = 0x003D // =
+	DoubleArrow       rune = 0x27FA // ⟺
+	LeftCurlyBracket  rune = 0x007B // {
+	RightCurlyBracket rune = 0x007D // }
+)
+
+// MarkLeads -
+var MarkLeads = []rune{
+	Comma, Colon, Semicolon, QuestionMark, RefMark, BangMark,
+	AnnotationMark, HashMark, EllipsisMark, LeftBracket,
+	RightBracket, LeftParen, RightParen, Equal, DoubleArrow,
+	LeftCurlyBracket, RightCurlyBracket,
+}
+
+//// 3. spaces
+const (
+	SP  rune = 0x0020 // <SP>
+	TAB rune = 0x0009 // <TAB>
+	CR  rune = 0x000D // \r
+	LF  rune = 0x000A // \n
+)
+
+// WhiteSpaces - all kinds of valid spaces
+var WhiteSpaces = []rune{
+	// where 0x0020 <--> SP
+	0x0009, 0x000B, 0x000C, 0x0020, 0x00A0,
+	0x2000, 0x2001, 0x2002, 0x2003, 0x2004,
+	0x2005, 0x2006, 0x2007, 0x2008, 0x2009,
+	0x200A, 0x200B, 0x202F, 0x205F, 0x3000,
+}
+
+// helpers
+func isWhiteSpace(ch rune) bool {
+	for _, whiteSpace := range WhiteSpaces {
+		if ch == whiteSpace {
+			return true
+		}
+	}
+
+	return false
+}
+
+//// 4. quotes
+// declare quotes
+const (
+	LeftQuoteI    rune = 0x300A //《
+	RightQuoteI   rune = 0x300B // 》
+	LeftQuoteII   rune = 0x300C // 「
+	RightQuoteII  rune = 0x300D // 」
+	LeftQuoteIII  rune = 0x300E // 『
+	RightQuoteIII rune = 0x300F // 』
+	LeftQuoteIV   rune = 0x201C // “
+	RightQuoteIV  rune = 0x201D // ”
+	LeftQuoteV    rune = 0x2018 // ‘
+	RightQuoteV   rune = 0x2019 // ’
+)
+
+// LeftQuotes -
+var LeftQuotes = []rune{
+	LeftQuoteI,
+	LeftQuoteII,
+	LeftQuoteIII,
+	LeftQuoteIV,
+	LeftQuoteV,
+}
+
+// RightQuotes -
+var RightQuotes = []rune{
+	RightQuoteI,
+	RightQuoteII,
+	RightQuoteIII,
+	RightQuoteIV,
+	RightQuoteV,
+}
+
+// QuoteMatchMap -
+var QuoteMatchMap = map[rune]rune{
+	LeftQuoteI:   RightQuoteI,
+	LeftQuoteII:  RightQuoteII,
+	LeftQuoteIII: RightQuoteIII,
+	LeftQuoteIV:  RightQuoteIV,
+	LeftQuoteV:   RightQuoteV,
+}
+
+//// 5. var quote
+const (
+	MiddleDot rune = 0x00B7 // ·
+)
+
+//// 6. numbers
+func isNumber(ch rune) bool {
+	return (ch >= '0' && ch <= '9')
+}
+
+//// 7. identifiers
+const maxIdentifierLength = 32
+
+// @params: ch - input char
+// @params: isFirst - is the first char of identifier
+func isIdentifierChar(ch rune, isFirst bool) bool {
+	// CJK unified ideograph
+	if ch >= 0x4E00 && ch <= 0x9FFF {
+		return true
+	}
+	// 〇, _
+	if ch == 0x3007 || ch == '_' {
+		return true
+	}
+	// A-Z
+	if ch >= 'A' && ch <= 'Z' {
+		return true
+	}
+	if ch >= 'a' && ch <= 'z' {
+		return true
+	}
+	if !isFirst {
+		if ch >= '0' && ch <= '9' {
+			return true
+		}
+		if util.Contains(ch, []rune{'*', '+', '-', '/'}) {
+			return true
+		}
+	}
+	return false
+}
+
+//// token consts and constructors (without keyword token)
+// token types -
+// for special type Tokens, its range varies from 0 - 9
+// for keyword types, check lex/keyword.go for details
+const (
+	TypeEOF        TokenType = 0
+	TypeSpace      TokenType = 1 // 空格类Token 备用
+	TypeString     TokenType = 2 // 字符串
+	TypeVarQuote   TokenType = 3
+	TypeNumber     TokenType = 4 // 数值
+	TypeIdentifier TokenType = 5 // 标识符
+
+	TypeComment     TokenType = 10 // 注：
+	TypeCommaSep    TokenType = 11 // ，
+	TypeStmtSep     TokenType = 12 // ；
+	TypeFuncCall    TokenType = 13 // ：
+	TypeFuncDeclare TokenType = 14 // ？
+	TypeObjRef      TokenType = 15 // &
+	TypeMustT       TokenType = 16 // ！
+	TypeAnnoT       TokenType = 17 // @
+	TypeMapHash     TokenType = 18 // #
+	TypeMoreParam   TokenType = 19 // ……
+	TypeArrayQuoteL TokenType = 20 // 【
+	TypeArrayQuoteR TokenType = 21 // 】
+	TypeFuncQuoteL  TokenType = 22 // （
+	TypeFuncQuoteR  TokenType = 23 // ）
+	TypeMapData     TokenType = 24 // ==
+	TypeStmtQuoteL  TokenType = 25 // {
+	TypeStmtQuoteR  TokenType = 26 // }
+	TypeMapQHash    TokenType = 27 // #{
+)
 
 // next - return current rune, and move forward the cursor for 1 character.
 func (l *Lexer) next() rune {
@@ -607,221 +837,7 @@ func (l *Lexer) parseMarkers(ch rune) (*Token, *error.Error) {
 	return nil, error.InvalidChar(ch)
 }
 
-// parseKeyword -
-// @return bool matchKeyword
-// @return *Token token
-//
-// when matchKeyword = true, a keyword token will be generated
-// matchKeyword = false, regard it as normal identifer
-// and return directly.
-func (l *Lexer) parseKeyword(ch rune, moveForward bool) (bool, *Token) {
-	var tk *Token
-	var wordLen = 1
-
-	rg := newTokenRange(l)
-	// manual matching one or consecutive keywords
-	switch ch {
-	case GlyphLING:
-		tk = NewKeywordToken(TypeDeclareW)
-	case GlyphWEI:
-		tk = NewKeywordToken(TypeLogicYesW)
-	case GlyphSHI:
-		if l.peek() == GlyphWEI {
-			wordLen = 2
-			tk = NewKeywordToken(TypeObjConstructW)
-		} else {
-			return false, nil
-		}
-	case GlyphRU:
-		switch l.peek() {
-		case GlyphGUO:
-			wordLen = 2
-			tk = NewKeywordToken(TypeCondW)
-		case GlyphHE:
-			wordLen = 2
-			tk = NewKeywordToken(TypeFuncW)
-		default:
-			return false, nil
-		}
-	case GlyphHE:
-		if l.peek() == GlyphWEI {
-			wordLen = 2
-			tk = NewKeywordToken(TypeStaticFuncW)
-		} else {
-			return false, nil
-		}
-	case GlyphYI:
-		if l.peek() == GlyphZHIy {
-			wordLen = 2
-			tk = NewKeywordToken(TypeParamAssignW)
-		} else {
-			return false, nil
-		}
-	case GlyphFAN:
-		if l.peek() == GlyphHUI {
-			wordLen = 2
-			tk = NewKeywordToken(TypeReturnW)
-		} else {
-			return false, nil
-		}
-	case GlyphBU:
-		switch l.peek() {
-		case GlyphWEI:
-			wordLen = 2
-			tk = NewKeywordToken(TypeLogicNotW)
-		case GlyphDENG:
-			if l.peek2() == GlyphYU {
-				wordLen = 3
-				tk = NewKeywordToken(TypeLogicNotEqW)
-			} else {
-				return false, nil
-			}
-		case GlyphDA:
-			if l.peek2() == GlyphYU {
-				wordLen = 3
-				tk = NewKeywordToken(TypeLogicLteW)
-			} else {
-				return false, nil
-			}
-		case GlyphXIAO:
-			if l.peek2() == GlyphYU {
-				wordLen = 3
-				tk = NewKeywordToken(TypeLogicGteW)
-			} else {
-				return false, nil
-			}
-		}
-	case GlyphDENG:
-		if l.peek() == GlyphYU {
-			wordLen = 2
-			tk = NewKeywordToken(TypeLogicEqualW)
-		} else {
-			return false, nil
-		}
-	case GlyphDA:
-		if l.peek() == GlyphYU {
-			wordLen = 2
-			tk = NewKeywordToken(TypeLogicGtW)
-		} else {
-			return false, nil
-		}
-	case GlyphXIAO:
-		if l.peek() == GlyphYU {
-			wordLen = 2
-			tk = NewKeywordToken(TypeLogicLtW)
-		} else {
-			return false, nil
-		}
-	case GlyphYIi:
-		tk = NewKeywordToken(TypeVarOneW)
-	case GlyphDE:
-		if l.peek() == GlyphDAO {
-			wordLen = 2
-			tk = NewKeywordToken(TypeFuncYieldW)
-		} else {
-			return false, nil
-		}
-	case GlyphDUI:
-		if l.peek() == GlyphYU {
-			wordLen = 2
-			tk = NewKeywordToken(TypeFuncCallOneW)
-		} else {
-			return false, nil
-		}
-	case GlyphFOU:
-		if l.peek() == GlyphZE {
-			wordLen = 2
-			tk = NewKeywordToken(TypeCondElseW)
-		} else {
-			return false, nil
-		}
-	case GlyphMEI:
-		if l.peek() == GlyphDANG {
-			wordLen = 2
-			tk = NewKeywordToken(TypeWhileLoopW)
-		} else {
-			return false, nil
-		}
-	case GlyphCHENG:
-		if l.peek() == GlyphWEI {
-			wordLen = 2
-			tk = NewKeywordToken(TypeObjNewW)
-		} else {
-			return false, nil
-		}
-	case GlyphZUO:
-		if l.peek() == GlyphWEI {
-			wordLen = 2
-			tk = NewKeywordToken(TypeVarAliasW)
-		} else {
-			return false, nil
-		}
-	case GlyphDING:
-		if l.peek() == GlyphYIy {
-			wordLen = 2
-			tk = NewKeywordToken(TypeObjDefineW)
-		} else {
-			return false, nil
-		}
-	case GlyphLEI:
-		if l.peek() == GlyphBI {
-			wordLen = 2
-			tk = NewKeywordToken(TypeObjTraitW)
-		} else {
-			return false, nil
-		}
-	case GlyphZAI:
-		if l.peek() == GlyphRU {
-			wordLen = 2
-			tk = NewKeywordToken(TypeCondOtherW)
-		} else {
-			return false, nil
-		}
-	case GlyphQI:
-		tk = NewKeywordToken(TypeObjThisW)
-	case GlyphCI:
-		if l.peek() == GlyphZHI {
-			wordLen = 2
-			tk = NewKeywordToken(TypeStaticSelfW)
-		} else {
-			tk = NewKeywordToken(TypeObjSelfW)
-		}
-	case GlyphHUO:
-		tk = NewKeywordToken(TypeLogicOrW)
-	case GlyphQIE:
-		tk = NewKeywordToken(TypeLogicAndW)
-	case GlyphZHI:
-		tk = NewKeywordToken(TypeObjDotW)
-	case GlyphBIAN:
-		if l.peek() == GlyphLI {
-			wordLen = 2
-			tk = NewKeywordToken(TypeIteratorW)
-		} else {
-			return false, nil
-		}
-	}
-
-	if tk != nil {
-		if moveForward {
-			switch wordLen {
-			case 1:
-				l.pushBuffer(ch)
-			case 2:
-				l.pushBuffer(ch, l.next())
-			case 3:
-				l.pushBuffer(ch, l.next(), l.next())
-			}
-		}
-
-		//rg.EndLine = rg.StartLine
-		//rg.EndCol = rg.StartCol + wordLen - 1
-		rg.EndLine = rg.StartLine
-		rg.EndIdx = rg.StartIdx + wordLen
-		tk.Range = rg
-		return true, tk
-	}
-	return false, nil
-}
+// for (l *Lexer) parseKeyword(), CHECK lex/keyword.go for details
 
 // consume (and skip) whitespaces
 func (l *Lexer) consumeWhiteSpace(ch rune) {
@@ -904,4 +920,102 @@ func (l *Lexer) moveAndSetCursor(err *error.Error) {
 		Text:    l.GetLineText(l.CurrentLine, true),
 	}
 	err.SetCursor(cursor)
+}
+
+// NewTokenEOF - new EOF token
+func NewTokenEOF(line int, col int) *Token {
+	return &Token{
+		Type:    TypeEOF,
+		Literal: []rune{},
+		Range: TokenRange{
+			StartLine: line,
+			StartIdx:  col,
+			EndLine:   line,
+			EndIdx:    col,
+		},
+	}
+}
+
+// NewStringToken -
+func NewStringToken(buf []rune, quoteType rune, rg TokenRange) *Token {
+	literal := append([]rune{quoteType}, util.Copy(buf)...)
+	switch quoteType {
+	case LeftQuoteI:
+		literal = append(literal, RightQuoteI)
+	case LeftQuoteII:
+		literal = append(literal, RightQuoteII)
+	case LeftQuoteIII:
+		literal = append(literal, RightQuoteIII)
+	case LeftQuoteIV:
+		literal = append(literal, RightQuoteIV)
+	case LeftQuoteV:
+		literal = append(literal, RightQuoteV)
+	}
+	return &Token{
+		Type:    TypeString,
+		Literal: literal,
+		Range:   rg,
+	}
+}
+
+// NewVarQuoteToken -
+func NewVarQuoteToken(buf []rune, rg TokenRange) *Token {
+	return &Token{
+		Type:    TypeVarQuote,
+		Literal: util.Copy(buf),
+		Range:   rg,
+	}
+}
+
+// NewCommentToken -
+func NewCommentToken(buf []rune, note []rune, rg TokenRange) *Token {
+	prefix := fmt.Sprintf("注%s：", string(note))
+	literal := append([]rune(prefix), util.Copy(buf)...)
+	return &Token{
+		Type:    TypeComment,
+		Literal: literal,
+		Range:   rg,
+	}
+}
+
+// NewNumberToken -
+func NewNumberToken(buf []rune, rg TokenRange) *Token {
+	return &Token{
+		Type:    TypeNumber,
+		Literal: util.Copy(buf),
+		Range:   rg,
+	}
+}
+
+// NewMarkToken -
+func NewMarkToken(buf []rune, t TokenType, startR TokenRange, num int) *Token {
+	rg := startR
+	rg.EndLine = startR.StartLine
+	rg.EndIdx = startR.StartIdx + num
+	return &Token{
+		Type:    t,
+		Literal: util.Copy(buf),
+		Range:   rg,
+	}
+}
+
+// NewKeywordToken -
+func NewKeywordToken(t TokenType) *Token {
+	var l = []rune{}
+	if item, ok := KeywordTypeMap[t]; ok {
+		l = item
+	}
+	return &Token{
+		Type:    t,
+		Literal: l,
+	}
+}
+
+// NewIdentifierToken -
+func NewIdentifierToken(buf []rune, rg TokenRange) *Token {
+	return &Token{
+		Type:    TypeIdentifier,
+		Literal: util.Copy(buf),
+		Range:   rg,
+	}
 }
