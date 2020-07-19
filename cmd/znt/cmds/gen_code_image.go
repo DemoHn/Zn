@@ -26,7 +26,8 @@ const (
 )
 
 var (
-	optOutFile string
+	optOutFile  string
+	optFontFile string
 )
 
 type colorTextMap struct {
@@ -42,7 +43,7 @@ var GenCodeImageCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		inFile := args[0]
 		// load font
-		fontFace, err := loadFontFace("sarasa-mono-sc-regular.ttf", fontSize)
+		fontFace, err := loadFontFace(optFontFile, fontSize)
 		if err != nil {
 			fmt.Println(err)
 			return
@@ -282,4 +283,5 @@ func splitMultiLineString(literal []rune) []string {
 
 func init() {
 	GenCodeImageCmd.Flags().StringVarP(&optOutFile, "outFile", "o", "out.png", "输出图片文件")
+	GenCodeImageCmd.Flags().StringVarP(&optFontFile, "fontFile", "f", "sarasa-mono-sc-regular.ttf", "字体文件")
 }
