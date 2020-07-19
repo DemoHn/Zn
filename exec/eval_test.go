@@ -317,7 +317,7 @@ func Test_WhileLoopStmt(t *testing.T) {
 	Y为1
 	每当Y大于0：
 		Y为（X+Y：Y，1）
-		如果Y为3：
+		如果Y为4：
 			此之（结束）
 		（__probe：「VY」，Y）
 		
@@ -331,10 +331,10 @@ func Test_WhileLoopStmt(t *testing.T) {
 			expReturnValue: NewZnNull(),
 			expProbe: map[string][][]string{
 				"VY": {
-					{"1", "*exec.ZnDecimal"},
 					{"2", "*exec.ZnDecimal"},
-					{"1", "*exec.ZnDecimal"},
+					{"3", "*exec.ZnDecimal"},
 					{"2", "*exec.ZnDecimal"},
+					{"3", "*exec.ZnDecimal"},
 				},
 				"VX": {
 					{"1", "*exec.ZnDecimal"},
