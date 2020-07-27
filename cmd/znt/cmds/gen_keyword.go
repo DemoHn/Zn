@@ -401,7 +401,7 @@ func genKeywordParsingLogic(leadsMap map[rune][]int, keywordMap map[int]kwItem, 
 			// generate else block
 			if len(nestMap.oneChar) == 1 {
 				codeList = append(codeList,
-					"else {",
+					"} else {",
 					fmt.Sprintf("tk = NewKeywordToken(%s)", nestMap.oneChar[0]),
 					"}",
 				)
