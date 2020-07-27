@@ -504,7 +504,7 @@ func TestNextToken_IdentifierONLY_SUCCESS(t *testing.T) {
 		},
 		{
 			name:        "normal identifier (keyword as terminator)",
-			input:       "正定县作为大县",
+			input:       "正定县成为大县",
 			expectError: false,
 			token: Token{
 				Type:    TypeIdentifier,
