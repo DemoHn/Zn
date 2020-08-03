@@ -350,7 +350,7 @@ $PG($BK(
 	)
 	$
 	$IF(
-		ifExpr=($ISN(L=($ID(C)) R=($ID(真))))
+		ifExpr=($NEQ(L=($ID(C)) R=($ID(真))))
 		ifBlock=($BK(
 			$FN(name=($ID(ASDF)) params=())
 		))
@@ -383,7 +383,7 @@ $PG($BK(
 			)
 		))
 		otherExpr[]=(
-			$IS(L=($ID(A)) R=($NUM(100)))
+			$EQ(L=($ID(A)) R=($NUM(100)))
 		)
 		otherBlock[]=($BK(
 			$FN(
