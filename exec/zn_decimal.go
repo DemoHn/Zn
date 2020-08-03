@@ -74,37 +74,6 @@ func (zd *ZnDecimal) String() string {
 	return fmt.Sprintf("%s%s⏨%d", sflag, txt[0:1], pointPos-1)
 }
 
-// Compare - ZnDecimal
-func (zd *ZnDecimal) Compare(val ZnValue, cmpType znCompareType) (*ZnBool, *error.Error) {
-	var valR *ZnDecimal
-	var targetRes = 0
-	switch v := val.(type) {
-	case *ZnDecimal:
-		valR = v
-	case *ZnNull:
-		return NewZnBool(false), nil
-	default:
-		if cmpType == compareTypeEq || cmpType == compareTypeIs {
-			return NewZnBool(false), nil
-		}
-		return nil, error.InvalidExprType("decimal")
-	}
-
-	switch cmpType {
-	case compareTypeEq, compareTypeIs:
-		targetRes = 0
-	case compareTypeGt:
-		targetRes = 1
-	case compareTypeLt:
-		targetRes = -1
-	}
-	r1, r2 := rescalePair(zd, valR)
-	if res := r1.co.Cmp(r2.co); res == targetRes {
-		return NewZnBool(true), nil
-	}
-	return NewZnBool(false), nil
-}
-
 // SetValue - set decimal value from raw string
 // raw string MUST be a valid number string
 func (zd *ZnDecimal) setValue(raw string) *error.Error {

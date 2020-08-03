@@ -40,6 +40,36 @@ func InvalidFuncVariable(tag string) *Error {
 	})
 }
 
+// InvalidCompareLType - 比较的值的类型
+func InvalidCompareLType(assertType ...string) *Error {
+	labels := []string{}
+	for _, at := range assertType {
+		label := at
+		if v, ok := typeNameMap[at]; ok {
+			label = v
+		}
+		labels = append(labels, fmt.Sprintf("「%s」", label))
+	}
+	return typeError.NewError(0x04, Error{
+		text: fmt.Sprintf("比较值的类型应为%s", strings.Join(labels, "、")),
+	})
+}
+
+// InvalidCompareRType - 被比较的值的类型
+func InvalidCompareRType(assertType ...string) *Error {
+	labels := []string{}
+	for _, at := range assertType {
+		label := at
+		if v, ok := typeNameMap[at]; ok {
+			label = v
+		}
+		labels = append(labels, fmt.Sprintf("「%s」", label))
+	}
+	return typeError.NewError(0x05, Error{
+		text: fmt.Sprintf("被比较值的类型应为%s", strings.Join(labels, "、")),
+	})
+}
+
 // InvalidCaseType - general error for default branch of switch
 // Theoratically, it should NOT be triggered at all!
 func InvalidCaseType() *Error {
