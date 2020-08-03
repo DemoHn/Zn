@@ -249,16 +249,14 @@ type LogicTypeE uint8
 
 // declare some logic types
 const (
-	LogicOR  LogicTypeE = 1  // 或
-	LogicAND LogicTypeE = 2  // 且
-	LogicIS  LogicTypeE = 3  // 此 ... 为 ... TODO: deprecate IT!
-	LogicEQ  LogicTypeE = 4  // 等于
-	LogicNEQ LogicTypeE = 5  // 不等于
-	LogicGT  LogicTypeE = 6  // 大于
-	LogicGTE LogicTypeE = 7  // 不小于
-	LogicLT  LogicTypeE = 8  // 小于
-	LogicLTE LogicTypeE = 9  // 不大于
-	LogicISN LogicTypeE = 10 // 此 ... 不为 ... TODO: deprecate IT!
+	LogicOR  LogicTypeE = 1 // 或
+	LogicAND LogicTypeE = 2 // 且
+	LogicEQ  LogicTypeE = 4 // 等于
+	LogicNEQ LogicTypeE = 5 // 不等于
+	LogicGT  LogicTypeE = 6 // 大于
+	LogicGTE LogicTypeE = 7 // 不小于
+	LogicLT  LogicTypeE = 8 // 小于
+	LogicLTE LogicTypeE = 9 // 不大于
 )
 
 // LogicExpr - logical expression return TRUE (真) or FALSE (假) only
@@ -396,8 +394,8 @@ func ParseExpression(p *Parser, asVarAssign bool) Expression {
 		lex.TypeLogicGteW:   LogicGTE,
 		lex.TypeLogicLtW:    LogicLT,
 		lex.TypeLogicLteW:   LogicLTE,
-		lex.TypeLogicNotW:   LogicISN, // TODO: merge LogicISN -> logicNEQ
-		lex.TypeLogicYesW:   LogicIS,  // TODO: merge LogicIS -> logicEQ
+		lex.TypeLogicNotW:   LogicNEQ,
+		lex.TypeLogicYesW:   LogicEQ,
 	}
 	var logicAllowTails = [4]bool{true, true, false, false}
 

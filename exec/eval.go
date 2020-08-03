@@ -579,10 +579,8 @@ func evalLogicComparator(ctx *Context, scope Scope, expr *syntax.LogicExpr) (*Zn
 	// #3. do comparison
 	switch logicType {
 	case syntax.LogicEQ:
-	case syntax.LogicIS: // TODO deprecate it
 		cmpRes, cmpErr = compareValues(left, right, CmpEq)
 	case syntax.LogicNEQ:
-	case syntax.LogicISN: // TODO deprecate it
 		cmpRes, cmpErr = compareValues(left, right, CmpEq)
 		cmpRes = !cmpRes // reverse result
 	case syntax.LogicGT:

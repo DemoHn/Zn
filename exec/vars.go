@@ -12,10 +12,13 @@ import (
 
 // ZnValue - general value interface
 type ZnValue interface {
+	//IsNull() bool
 	String() string
 }
 
 type funcExecutor func(ctx *Context, scope Scope, params []ZnValue) (ZnValue, *error.Error)
+
+//////// ZnObject Definition
 
 //////// Primitive Types Definition
 
