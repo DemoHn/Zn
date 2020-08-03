@@ -1,6 +1,10 @@
 package exec
 
 import (
+	"reflect"
+	"strconv"
+	"strings"
+
 	"github.com/DemoHn/Zn/error"
 	"github.com/DemoHn/Zn/syntax"
 )
@@ -21,6 +25,119 @@ import (
 // TODO: find a better way to handle this
 func duplicateValue(in ZnValue) ZnValue {
 	return in
+}
+
+type compareVerb uint8
+
+// Define compareVerbs, for details of each verb, check the following comments
+// on compareValues() function.
+const (
+	CmpEq compareVerb = 1
+	CmpLt compareVerb = 2
+	CmpGt compareVerb = 3
+)
+
+// compareValues - some ZnValues are comparable from specific types of right value
+// otherwise it will throw error.
+//
+// There are three types of compare verbs (actions): Eq, Lt and Gt.
+//
+// Eq - compare if two values are "equal". Usually there are two rules:
+// 1. types of left and right value are same. A number MUST BE equals to a number, that means
+// (string) “2” won't be equals to (number) 2;
+// 2. each items SHOULD BE identical, even for composited types (i.e. array, hashmap)
+//
+// Lt - for two decimals ONLY. If leftValue < rightValue.
+//
+// Gt - for two decimals ONLY. If leftValue > rightValue.
+func compareValues(left ZnValue, right ZnValue, verb compareVerb) (bool, *error.Error) {
+	switch vl := left.(type) {
+	case *ZnDecimal:
+		// compare right value - decimal only
+		if vr, ok := right.(*ZnDecimal); ok {
+			r1, r2 := rescalePair(vl, vr)
+			cmpResult := false
+			switch verb {
+			case CmpEq:
+				cmpResult = (r1.co.Cmp(r2.co) == 0)
+			case CmpLt:
+				cmpResult = (r1.co.Cmp(r2.co) < 0)
+			case CmpGt:
+				cmpResult = (r1.co.Cmp(r2.co) > 0)
+			default:
+				return false, error.UnExpectedCase("比较原语", strconv.Itoa(int(verb)))
+			}
+			return cmpResult, nil
+		}
+		return false, error.InvalidCompareRType("decimal")
+	case *ZnString:
+		// Only CmpEq is valid for comparison
+		if verb != CmpEq {
+			return false, error.InvalidCompareLType("decimal", "string", "bool", "array", "hashmap")
+		}
+		// compare right value - string only
+		if vr, ok := right.(*ZnString); ok {
+			cmpResult := (strings.Compare(vl.Value, vr.Value) == 0)
+			return cmpResult, nil
+		}
+		return false, error.InvalidCompareRType("string")
+	case *ZnBool:
+		if verb != CmpEq {
+			return false, error.InvalidCompareLType("decimal", "string", "bool", "array", "hashmap")
+		}
+		// compare right value - bool only
+		if vr, ok := right.(*ZnBool); ok {
+			cmpResult := vl.Value == vr.Value
+			return cmpResult, nil
+		}
+		return false, error.InvalidCompareRType("bool")
+	case *ZnArray:
+		if verb != CmpEq {
+			return false, error.InvalidCompareLType("decimal", "string", "bool", "array", "hashmap")
+		}
+
+		if vr, ok := right.(*ZnArray); ok {
+			if len(vl.Value) != len(vr.Value) {
+				return false, nil
+			}
+			// cmp each item
+			for idx := range vl.Value {
+				cmpVal, err := compareValues(vl.Value[idx], vr.Value[idx], CmpEq)
+				if err != nil {
+					return false, err
+				}
+				return cmpVal, nil
+			}
+			return true, nil
+		}
+		return false, error.InvalidCompareRType("array")
+	case *ZnHashMap:
+		if verb != CmpEq {
+			return false, error.InvalidCompareLType("decimal", "string", "bool", "array", "hashmap")
+		}
+
+		if vr, ok := right.(*ZnHashMap); ok {
+			if len(vl.Value) != len(vr.Value) {
+				return false, nil
+			}
+			// cmp each item
+			for idx := range vl.Value {
+				// ensure the key exists on vr
+				vrr, ok := vr.Value[idx]
+				if !ok {
+					return false, nil
+				}
+				cmpVal, err := compareValues(vl.Value[idx], vrr, CmpEq)
+				if err != nil {
+					return false, err
+				}
+				return cmpVal, nil
+			}
+			return true, nil
+		}
+		return false, error.InvalidCompareRType("hashmap")
+	}
+	return false, error.InvalidCompareLType("decimal", "string", "bool", "array", "hashmap")
 }
 
 //// eval program
@@ -82,7 +199,7 @@ func evalStatement(ctx *Context, scope Scope, stmt syntax.Statement) *error.Erro
 		}
 		return nil
 	default:
-		return error.InvalidCaseType()
+		return error.UnExpectedCase("语句类型", reflect.TypeOf(v).Name())
 	}
 }
 
@@ -451,53 +568,48 @@ func evalLogicComparator(ctx *Context, scope Scope, expr *syntax.LogicExpr) (*Zn
 	if err != nil {
 		return nil, err
 	}
-	// #3. eval right
+	// #2. eval right
 	right, err := evalExpression(ctx, scope, expr.RightExpr)
 	if err != nil {
 		return nil, err
 	}
 
-	// #5. evaluate
+	var cmpRes bool
+	var cmpErr *error.Error
+	// #3. do comparison
 	switch logicType {
 	case syntax.LogicEQ:
-		return left.Compare(right, compareTypeEq)
+	case syntax.LogicIS: // TODO deprecate it
+		cmpRes, cmpErr = compareValues(left, right, CmpEq)
 	case syntax.LogicNEQ:
-		zb, err := left.Compare(right, compareTypeEq)
-		return zb.Rev(), err
-	case syntax.LogicIS:
-		return left.Compare(right, compareTypeIs)
-	case syntax.LogicISN:
-		zb, err := left.Compare(right, compareTypeIs)
-		return zb.Rev(), err
+	case syntax.LogicISN: // TODO deprecate it
+		cmpRes, cmpErr = compareValues(left, right, CmpEq)
+		cmpRes = !cmpRes // reverse result
 	case syntax.LogicGT:
-		return left.Compare(right, compareTypeGt)
+		cmpRes, cmpErr = compareValues(left, right, CmpGt)
 	case syntax.LogicGTE:
-		zb1, err := left.Compare(right, compareTypeGt)
-		if err != nil {
-			return nil, err
+		var cmp1, cmp2 bool
+		cmp1, cmpErr = compareValues(left, right, CmpGt)
+		if cmpErr != nil {
+			return nil, cmpErr
 		}
-		zb2, err := left.Compare(right, compareTypeEq)
-		if err != nil {
-			return nil, err
-		}
-
-		return NewZnBool(zb1.Value || zb2.Value), nil
+		cmp2, cmpErr = compareValues(left, right, CmpEq)
+		cmpRes = cmp1 || cmp2
 	case syntax.LogicLT:
-		return left.Compare(right, compareTypeLt)
+		cmpRes, cmpErr = compareValues(left, right, CmpLt)
 	case syntax.LogicLTE:
-		zb1, err := left.Compare(right, compareTypeLt)
-		if err != nil {
-			return nil, err
+		var cmp1, cmp2 bool
+		cmp1, cmpErr = compareValues(left, right, CmpLt)
+		if cmpErr != nil {
+			return nil, cmpErr
 		}
-		zb2, err := left.Compare(right, compareTypeEq)
-		if err != nil {
-			return nil, err
-		}
-
-		return NewZnBool(zb1.Value || zb2.Value), nil
+		cmp2, cmpErr = compareValues(left, right, CmpEq)
+		cmpRes = cmp1 || cmp2
 	default:
-		return nil, error.InvalidCaseType()
+		return nil, error.UnExpectedCase("比较类型", strconv.Itoa(int(logicType)))
 	}
+
+	return NewZnBool(cmpRes), cmpErr
 }
 
 // eval prime expr

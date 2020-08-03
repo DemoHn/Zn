@@ -220,15 +220,16 @@ func (ec *errorClass) NewError(subcode uint16, model Error) *Error {
 
 // define some error classes
 const (
-	LexErrorClass    = 0x20
-	IOErrorClass     = 0x21
-	SyntaxErrorClass = 0x22
-	TypeErrorClass   = 0x23
-	IndexErrorClass  = 0x24
-	NameErrorClass   = 0x25
-	ArithErrorClass  = 0x26
-	ParamErrorClass  = 0x27
-	BreakErrorClass  = 0x50
+	LexErrorClass      = 0x20
+	IOErrorClass       = 0x21
+	SyntaxErrorClass   = 0x22
+	TypeErrorClass     = 0x23
+	IndexErrorClass    = 0x24
+	NameErrorClass     = 0x25
+	ArithErrorClass    = 0x26
+	ParamErrorClass    = 0x27
+	BreakErrorClass    = 0x50
+	InternalErrorClass = 0x60
 )
 
 // NewErrorSLOT - a tmp placeholder for adding errors quickly while the
@@ -274,17 +275,21 @@ var (
 	// send a virtual BREAK interrupt to stop the process.
 	// NOTICE: breakError is NOT a true error!
 	breakError = errorClass{BreakErrorClass, dpHideLineCursor}
+	// 0x60 - internalError
+	// Zn interpreter internal logic error, rarly happen
+	internalError = errorClass{InternalErrorClass, dpHideLineCursor}
 
 	errClassMap = map[uint16]string{
-		LexErrorClass:    "语法错误", // from lex
-		IOErrorClass:     "I/O错误",
-		SyntaxErrorClass: "语法错误", // from parser
-		TypeErrorClass:   "类型错误",
-		IndexErrorClass:  "索引错误",
-		NameErrorClass:   "标识错误",
-		ArithErrorClass:  "算术错误",
-		ParamErrorClass:  "参数错误",
-		BreakErrorClass:  "中断信号",
+		LexErrorClass:      "语法错误", // from lex
+		IOErrorClass:       "I/O错误",
+		SyntaxErrorClass:   "语法错误", // from parser
+		TypeErrorClass:     "类型错误",
+		IndexErrorClass:    "索引错误",
+		NameErrorClass:     "标识错误",
+		ArithErrorClass:    "算术错误",
+		ParamErrorClass:    "参数错误",
+		BreakErrorClass:    "中断信号",
+		InternalErrorClass: "内部错误",
 	}
 )
 

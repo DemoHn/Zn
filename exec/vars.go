@@ -13,17 +13,7 @@ import (
 // ZnValue - general value interface
 type ZnValue interface {
 	String() string
-	Compare(val ZnValue, cmpType znCompareType) (*ZnBool, *error.Error)
 }
-
-type znCompareType uint8
-
-const (
-	compareTypeEq = 1
-	compareTypeIs = 2
-	compareTypeLt = 3
-	compareTypeGt = 4
-)
 
 type funcExecutor func(ctx *Context, scope Scope, params []ZnValue) (ZnValue, *error.Error)
 
@@ -108,121 +98,6 @@ func (zh *ZnHashMap) String() string {
 		strs = append(strs, fmt.Sprintf("%s == %s", key, value.String()))
 	}
 	return fmt.Sprintf("【%s】", strings.Join(strs, "，"))
-}
-
-// Compare - compare data
-func (zs *ZnString) Compare(val ZnValue, cmpType znCompareType) (*ZnBool, *error.Error) {
-	var valR *ZnString
-	var targetResult int
-
-	switch v := val.(type) {
-	case *ZnString:
-		valR = v
-	case *ZnNull:
-		return NewZnBool(false), nil
-	default:
-		if cmpType == compareTypeEq || cmpType == compareTypeIs {
-			return NewZnBool(false), nil
-		}
-		return nil, error.InvalidExprType("string")
-	}
-
-	switch cmpType {
-	case compareTypeEq, compareTypeIs:
-		targetResult = 0
-	case compareTypeGt:
-		targetResult = 1
-	case compareTypeLt:
-		targetResult = -1
-	}
-
-	if res := strings.Compare(zs.Value, valR.Value); res == targetResult {
-		return NewZnBool(true), nil
-	}
-	return NewZnBool(false), nil
-}
-
-// Compare - ZnBool
-func (zb *ZnBool) Compare(val ZnValue, cmpType znCompareType) (*ZnBool, *error.Error) {
-	var valR *ZnBool
-	switch v := val.(type) {
-	case *ZnBool:
-		valR = v
-	case *ZnNull:
-		return NewZnBool(false), nil
-	default:
-		if cmpType == compareTypeEq || cmpType == compareTypeIs {
-			return NewZnBool(false), nil
-		}
-		return nil, error.InvalidExprType("bool")
-	}
-
-	switch cmpType {
-	case compareTypeEq, compareTypeIs:
-		if zb.Value == valR.Value {
-			return NewZnBool(true), nil
-		}
-		return NewZnBool(false), nil
-	default:
-		return nil, error.NewErrorSLOT("not supported for ZnBool")
-	}
-}
-
-// Compare - ZnArray
-func (za *ZnArray) Compare(val ZnValue, cmpType znCompareType) (*ZnBool, *error.Error) {
-	var valR *ZnArray
-	switch v := val.(type) {
-	case *ZnArray:
-		valR = v
-	case *ZnNull:
-		return NewZnBool(false), nil
-	default:
-		if cmpType == compareTypeEq || cmpType == compareTypeIs {
-			return NewZnBool(false), nil
-		}
-		return nil, error.InvalidExprType("array")
-	}
-
-	switch cmpType {
-	case compareTypeEq, compareTypeIs:
-		if len(za.Value) != len(valR.Value) {
-			return NewZnBool(false), nil
-		}
-		// cmp each item
-		for idx, item := range za.Value {
-			cmpVal, err := item.Compare(valR.Value[idx], cmpType)
-			if err != nil {
-				return nil, err
-			}
-			if cmpVal.Value == false {
-				return NewZnBool(false), nil
-			}
-		}
-		return NewZnBool(true), nil
-	default:
-		return nil, error.NewErrorSLOT("not supported for ZnArray")
-	}
-}
-
-// Compare - ZnNull
-func (zn *ZnNull) Compare(val ZnValue, cmpType znCompareType) (*ZnBool, *error.Error) {
-	switch val.(type) {
-	case *ZnNull:
-		return NewZnBool(true), nil
-	default:
-		return NewZnBool(false), nil
-	}
-}
-
-// Compare - ZnFunction
-func (zf *ZnFunction) Compare(val ZnValue, cmpType znCompareType) (*ZnBool, *error.Error) {
-	return nil, error.NewErrorSLOT("function is incomparable!")
-}
-
-// Compare - ZnHashMap
-func (zh *ZnHashMap) Compare(val ZnValue, cmpType znCompareType) (*ZnBool, *error.Error) {
-	// TODO -
-	return nil, nil
 }
 
 // Rev - ZnBool
