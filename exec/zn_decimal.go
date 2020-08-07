@@ -17,6 +17,7 @@ const (
 
 // ZnDecimal - decimal number 「数值」型
 type ZnDecimal struct {
+	ZnObject
 	// decimal internal properties
 	co  *big.Int
 	exp int

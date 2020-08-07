@@ -12,7 +12,7 @@ import (
 
 // ZnValue - general value interface
 type ZnValue interface {
-	//IsNull() bool
+	IsNull() bool
 	String() string
 }
 
@@ -20,35 +20,47 @@ type funcExecutor func(ctx *Context, scope Scope, params []ZnValue) (ZnValue, *e
 
 //////// ZnObject Definition
 
+// ZnObject -
+type ZnObject struct {
+	isNull bool
+}
+
 //////// Primitive Types Definition
 
 // ZnString - string 「文本」型
 type ZnString struct {
+	ZnObject
 	Value string
 }
 
 // ZnBool - (bool) 「二象」型
 type ZnBool struct {
+	ZnObject
 	Value bool
 }
 
 // ZnArray - Zn array type 「元组」型
 type ZnArray struct {
+	ZnObject
 	Value []ZnValue
 }
 
 // ZnNull - Zn null type - a special marker indicates that
 // this value has neither type nor value
-type ZnNull struct{}
+type ZnNull struct {
+	ZnObject
+}
 
 // ZnFunction -
 type ZnFunction struct {
+	ZnObject
 	Node     *syntax.FunctionDeclareStmt
 	Executor funcExecutor
 }
 
 // ZnHashMap -
 type ZnHashMap struct {
+	ZnObject
 	// now only support string as key
 	Value map[string]ZnValue
 	// The order of key is (delibrately) random when iterating a hashmap.
@@ -60,6 +72,13 @@ type ZnHashMap struct {
 type KVPair struct {
 	Key   string
 	Value ZnValue
+}
+
+//////// ZnObject implemetation
+
+// IsNull -
+func (o *ZnObject) IsNull() bool {
+	return o.isNull
 }
 
 //////// Variable Type Implementation
@@ -134,7 +153,9 @@ func NewZnArray(values []ZnValue) *ZnArray {
 
 // NewZnNull - null value
 func NewZnNull() *ZnNull {
-	return &ZnNull{}
+	t := &ZnNull{}
+	t.isNull = true
+	return t
 }
 
 // NewZnFunction -
