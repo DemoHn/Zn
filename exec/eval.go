@@ -653,7 +653,7 @@ func evalPrimeExpr(ctx *Context, scope Scope, expr syntax.Expression) (ZnValue, 
 		}
 		return NewZnHashMap(znPairs), nil
 	default:
-		return nil, error.InvalidCaseType()
+		return nil, error.UnExpectedCase("表达式类型", reflect.TypeOf(e).Name())
 	}
 }
 
@@ -679,7 +679,7 @@ func evalVarAssignExpr(ctx *Context, scope Scope, expr *syntax.VarAssignExpr) (Z
 		}
 		return iv.Reduce(ctx, val, true)
 	default:
-		return nil, error.InvalidCaseType()
+		return nil, error.UnExpectedCase("被赋值", reflect.TypeOf(v).Name())
 	}
 }
 
@@ -698,7 +698,7 @@ func getMemberExprIV(ctx *Context, scope Scope, expr *syntax.MemberExpr) (ZnIV, 
 			}
 			return &ZnScopeMethodIV{scope, funcName, paramVals}, nil
 		}
-		return nil, error.NewErrorSLOT("unsupport memberType (should not throw)")
+		return nil, error.UnExpectedCase("子项类型", reflect.TypeOf(expr.MemberType).Name())
 	}
 
 	// IsSelfRoot = false (with root)
@@ -751,8 +751,7 @@ func getMemberExprIV(ctx *Context, scope Scope, expr *syntax.MemberExpr) (ZnIV, 
 			return nil, error.InvalidExprType("array", "hashmap")
 		}
 	}
-
-	return nil, error.NewErrorSLOT("unsupport memberType (should not throw)")
+	return nil, error.UnExpectedCase("子项类型", reflect.TypeOf(expr.MemberType).Name())
 }
 
 //// scope value setters/getters

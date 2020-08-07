@@ -35,7 +35,7 @@ var addValueExecutor = func(ctx *Context, scope Scope, params []ZnValue) (ZnValu
 	for _, param := range params {
 		vparam, ok := param.(*ZnDecimal)
 		if !ok {
-			return nil, error.NewErrorSLOT("入参皆须为「数值」类型")
+			return nil, error.InvalidParamType("string")
 		}
 		decimals = append(decimals, vparam)
 	}
@@ -54,7 +54,7 @@ var subValueExecutor = func(ctx *Context, scope Scope, params []ZnValue) (ZnValu
 	for _, param := range params {
 		vparam, ok := param.(*ZnDecimal)
 		if !ok {
-			return nil, error.NewErrorSLOT("入参皆须为「数值」类型")
+			return nil, error.InvalidParamType("decimal")
 		}
 		decimals = append(decimals, vparam)
 	}
@@ -72,7 +72,7 @@ var mulValueExecutor = func(ctx *Context, scope Scope, params []ZnValue) (ZnValu
 	for _, param := range params {
 		vparam, ok := param.(*ZnDecimal)
 		if !ok {
-			return nil, error.NewErrorSLOT("入参皆须为「数值」类型")
+			return nil, error.InvalidParamType("decimal")
 		}
 		decimals = append(decimals, vparam)
 	}
@@ -90,7 +90,7 @@ var divValueExecutor = func(ctx *Context, scope Scope, params []ZnValue) (ZnValu
 	for _, param := range params {
 		vparam, ok := param.(*ZnDecimal)
 		if !ok {
-			return nil, error.NewErrorSLOT("入参皆须为「数值」类型")
+			return nil, error.InvalidParamType("decimal")
 		}
 		decimals = append(decimals, vparam)
 	}
@@ -105,7 +105,7 @@ var probeExecutor = func(ctx *Context, scope Scope, params []ZnValue) (ZnValue, 
 
 	vtag, ok := params[0].(*ZnString)
 	if !ok {
-		return nil, error.NewErrorSLOT("第一个参数须为一个字符串")
+		return nil, error.InvalidParamType("string")
 	}
 	// add probe data to log
 	ctx._probe.AddLog(vtag.Value, params[1])
