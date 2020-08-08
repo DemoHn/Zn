@@ -375,7 +375,7 @@ func evalIterateStmt(ctx *Context, scope Scope, node *syntax.IterateStmt) *error
 			return err
 		}
 	} else if nameLen > 2 {
-		return error.NewErrorSLOT("过多的前置变量个数")
+		return error.MostParamsError(2)
 	}
 
 	// execute iterations

@@ -70,7 +70,6 @@ func wrapError(ctx *Context, scope *RootScope, err *error.Error) {
 	cursor := err.GetCursor()
 
 	if cursor.LineNum == 0 {
-
 		newCursor := error.Cursor{
 			File:    scope.file,
 			LineNum: scope.currentLine,

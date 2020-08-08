@@ -100,7 +100,7 @@ var divValueExecutor = func(ctx *Context, scope Scope, params []ZnValue) (ZnValu
 
 var probeExecutor = func(ctx *Context, scope Scope, params []ZnValue) (ZnValue, *error.Error) {
 	if len(params) != 2 {
-		return nil, error.NewErrorSLOT("__probe 当且仅当接受两个参数")
+		return nil, error.ExactParamsError(2)
 	}
 
 	vtag, ok := params[0].(*ZnString)

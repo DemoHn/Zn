@@ -17,3 +17,19 @@ func MismatchParamLengthError(expect int, got int) *Error {
 		info: fmt.Sprintf("expect=(%d) got=(%d)", expect, got),
 	})
 }
+
+// MostParamsError -
+func MostParamsError(maxParams int) *Error {
+	return paramError.NewError(0x03, Error{
+		text: fmt.Sprintf("至多需要%d个参数", maxParams),
+		info: fmt.Sprintf("maxParams=(%d)", maxParams),
+	})
+}
+
+// ExactParamsError -
+func ExactParamsError(exactParams int) *Error {
+	return paramError.NewError(0x03, Error{
+		text: fmt.Sprintf("需要正好%d个参数", exactParams),
+		info: fmt.Sprintf("maxParams=(%d)", exactParams),
+	})
+}
