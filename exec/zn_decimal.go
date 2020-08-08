@@ -156,14 +156,14 @@ func (zd *ZnDecimal) setValue(raw string) *error.Error {
 
 	// construct values
 	if _, ok := zd.co.SetString(string(intValS), 10); !ok {
-		return error.NewErrorSLOT("parse BigInt error")
+		return error.ParseFromStringError(raw)
 	}
 
 	var expInt = 0
 	if len(expValS) > 0 {
 		data, err := strconv.Atoi(string(expValS))
 		if err != nil {
-			return error.NewErrorSLOT("atoi error")
+			return error.ParseFromStringError(raw)
 		}
 		expInt = data
 	}
@@ -174,11 +174,14 @@ func (zd *ZnDecimal) setValue(raw string) *error.Error {
 // asInteger - if a decimal number is an integer (i.e. zd.exp >= 0), then export its
 // value in (int) type; else return error.
 func (zd *ZnDecimal) asInteger() (int, *error.Error) {
+
 	if zd.exp < 0 {
-		return 0, error.NewErrorSLOT("this decimal not belongs to integer")
+		raw := zd.String()
+		return 0, error.ToIntegerError(raw)
 	}
 	if !zd.co.IsInt64() {
-		return 0, error.NewErrorSLOT("cast to int64 fail")
+		raw := zd.String()
+		return 0, error.ToIntegerError(raw)
 	}
 	return int(zd.co.Int64()), nil
 }
