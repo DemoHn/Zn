@@ -159,6 +159,25 @@ type FunctionReturnStmt struct {
 	ReturnExpr Expression
 }
 
+// ClassDeclareStmt - class definition (定义XX：)
+type ClassDeclareStmt struct {
+	StmtBase
+	ClassName *ID
+	// 其XX为XX
+	PropertyList []*PropertyDeclareStmt
+	// 是为XX，YY，ZZ
+	ConstructorIDList []*ID
+	// 如何XXX？
+	MethodList []*FunctionDeclareStmt
+}
+
+// PropertyDeclareStmt - valid inside Class
+type PropertyDeclareStmt struct {
+	StmtBase
+	PropertyID *ID
+	InitValue  Expression
+}
+
 //// Expressions (struct)
 
 // PrimeExpr - primitive expression
@@ -304,6 +323,7 @@ func ParseStatement(p *Parser) Statement {
 		lex.TypeWhileLoopW,
 		lex.TypeVarOneW,
 		lex.TypeIteratorW,
+		lex.TypeObjDefineW,
 	}
 	match, tk := p.tryConsume(validTypes...)
 	if match {
@@ -327,6 +347,8 @@ func ParseStatement(p *Parser) Statement {
 			s = ParseVarOneLeadStmt(p) // parse any statements leads with 「以」
 		case lex.TypeIteratorW:
 			s = ParseIteratorStmt(p)
+		case lex.TypeObjDefineW:
+			s = ParseClassDeclareStmt(p)
 		}
 		s.SetCurrentLine(tk)
 		return s
@@ -735,14 +757,10 @@ func ParseFuncCallExpr(p *Parser) *FuncCallExpr {
 		Params: []Expression{},
 	}
 	// #1. parse ID
-	match, tk := p.tryConsume(lex.TypeVarQuote, lex.TypeIdentifier)
-	if !match {
-		panic(error.InvalidSyntaxCurr())
-	}
-	callExpr.FuncName = newID(tk)
+	callExpr.FuncName = parseID(p)
 	// #2. parse colon (maybe there's no params)
-	match2, _ := p.tryConsume(lex.TypeFuncCall)
-	if match2 {
+	match, _ := p.tryConsume(lex.TypeFuncCall)
+	if match {
 		// #2.1 parse comma list
 		nodes := parseCommaList(p, func(idx int, nodes []Node) Node {
 			return ParseExpression(p, true)
@@ -816,11 +834,7 @@ func ParseVarDeclareStmt(p *Parser) *VarDeclareStmt {
 		//         -> ID 为 expr
 		var idExpr *ID
 		// #1. consume ID first
-		if match, tk := p.tryConsume(lex.TypeVarQuote, lex.TypeIdentifier); match {
-			idExpr = newID(tk)
-		} else {
-			panic(error.InvalidSyntaxCurr())
-		}
+		idExpr = parseID(p)
 
 		// #2. consume LogicYes - if not, return ID directly
 		if match2, _ := p.tryConsume(lex.TypeLogicYesW); !match2 {
@@ -1030,12 +1044,12 @@ func ParseBranchStmt(p *Parser, mainIndent int) *BranchStmt {
 
 // ParseFunctionDeclareStmt - yield FunctionDeclareStmt node
 // CFG:
-// FDStmt -> 如何 FuncName ？
+// FunctionDeclareStmt -> 如何 FuncName ？
 //       ...     已知 ID1， ID2， ...
 //       ...     ExecBlock
 //       ...     ....
 //
-// FDStmt -> 如何 FuncName ？
+// FunctionDeclareStmt -> 如何 FuncName ？
 //       ...     ExecBlock
 //       ...     ....
 //
@@ -1052,11 +1066,7 @@ func ParseFunctionDeclareStmt(p *Parser) *FunctionDeclareStmt {
 	var hState = stateParamList
 
 	// #1. try to parse ID
-	match, tk := p.tryConsume(lex.TypeIdentifier, lex.TypeVarQuote)
-	if !match {
-		panic(error.InvalidSyntaxCurr())
-	}
-	fdStmt.FuncName = newID(tk)
+	fdStmt.FuncName = parseID(p)
 	// #2. try to parse question mark
 	p.consume(lex.TypeFuncDeclare)
 
@@ -1184,13 +1194,7 @@ func tryParseParamList(p *Parser, fdStmt *FunctionDeclareStmt) bool {
 	}
 	// #2. parse param list (ID or VarQuote)
 	nodes := parseCommaList(p, func(i int, n []Node) Node {
-		// parse ID or VarQuote
-		match, tk := p.tryConsume(lex.TypeVarQuote, lex.TypeIdentifier)
-		if !match {
-			panic(error.InvalidSyntaxCurr())
-		}
-
-		return newID(tk)
+		return parseID(p)
 	})
 
 	// transform nodes to actual identifiers
@@ -1202,7 +1206,109 @@ func tryParseParamList(p *Parser, fdStmt *FunctionDeclareStmt) bool {
 	return true
 }
 
+// ParseClassDeclareStmt - define class structure
+// A typical class may look like this:
+//
+// 定义 <NAME>：
+//    其 <Prop1> 为 <Value1>     <-- PropertyDeclare (for listing all properties with initial value)
+//    其 <Prop2> 为 <Value2>
+//
+//    是为 <Prop1>，<Prop2>，...   <-- Constructor
+//
+//    如何 <Method1> ？    <-- MethodDeclare
+//        <Blocks> ...
+//        <Blocks> ...
+//
+// CFG:
+// ClassStmt  ->  定义 ClassID ：
+//                    ClassDeclareBlock
+//
+// ClassDeclareBlock  -> ClassDeclareBlockItem1  ClassDeclareBlockItem2 ...
+//
+// ClassDeclareBlockItem -> Constructor
+//                       -> PropertyDeclareStmt
+//                       -> FunctionDeclareStmt
+func ParseClassDeclareStmt(p *Parser) *ClassDeclareStmt {
+	var cdStmt = new(ClassDeclareStmt)
+	// #1. consume ID
+	cdStmt.ClassName = parseID(p)
+
+	// #2. parse colon
+	p.consume(lex.TypeFuncCall)
+	// #3. parse block
+	expected, blockIndent := p.expectBlockIndent()
+	if !expected {
+		panic(error.InvalidSyntax())
+	}
+
+	// parse block
+	for (p.peek().Type != lex.TypeEOF) && p.getPeekIndent() == blockIndent {
+		var validChildTypes = []lex.TokenType{
+			lex.TypeFuncW,
+			lex.TypeObjThisW,
+			lex.TypeObjConstructW,
+		}
+
+		match, tk := p.tryConsume(validChildTypes...)
+		if !match {
+			panic(error.InvalidSyntaxCurr())
+		}
+		switch tk.Type {
+		case lex.TypeFuncW:
+			stmt := ParseFunctionDeclareStmt(p)
+			cdStmt.MethodList = append(cdStmt.MethodList, stmt)
+		case lex.TypeObjThisW:
+			stmt := parsePropertyDeclareStmt(p)
+			cdStmt.PropertyList = append(cdStmt.PropertyList, stmt)
+		case lex.TypeObjConstructW:
+			cdStmt.ConstructorIDList = parseConstructor(p)
+		}
+	}
+	return cdStmt
+}
+
+// parseConstructor -
+// CFG:
+// Constructor  -> 是为 ID1，ID2 ...
+func parseConstructor(p *Parser) []*ID {
+	nodes := parseCommaList(p, func(idx int, nodes []Node) Node {
+		return parseID(p)
+	})
+
+	var idList = []*ID{}
+	for _, item := range nodes {
+		idItem, _ := item.(*ID)
+		idList = append(idList, idItem)
+	}
+	return idList
+}
+
+// parsePropertyDeclareStmt -
+// CFG:
+// PropertyDeclareStmt -> 其 ID 为 Expression
+func parsePropertyDeclareStmt(p *Parser) *PropertyDeclareStmt {
+	// #1. parse ID
+	idItem := parseID(p)
+	// consume 为
+	p.consume(lex.TypeLogicYesW)
+	// #2. parse expr
+	initExpr := ParseExpression(p, true)
+
+	return &PropertyDeclareStmt{
+		PropertyID: idItem,
+		InitValue:  initExpr,
+	}
+}
+
 //// parse helpers
+func parseID(p *Parser) *ID {
+	match, tk := p.tryConsume(lex.TypeVarQuote, lex.TypeIdentifier)
+	if !match {
+		panic(error.InvalidSyntaxCurr())
+	}
+	return newID(tk)
+}
+
 func parseCommaList(p *Parser, consumer consumerFunc) []Node {
 	var node Node
 	list := []Node{}
@@ -1261,12 +1367,7 @@ func parseParamDefList(p *Parser, allowBreak bool) []*ID {
 
 	// parse param lists
 	nodes := parseCommaList(p, func(idx int, nodes []Node) Node {
-		match2, tk := p.tryConsume(lex.TypeVarQuote, lex.TypeIdentifier)
-		if !match2 {
-			panic(error.InvalidSyntaxCurr())
-		}
-
-		return newID(tk)
+		return parseID(p)
 	})
 	// append IDs
 	for _, node := range nodes {
