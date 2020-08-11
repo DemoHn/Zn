@@ -146,6 +146,33 @@ func StringifyAST(node Node) string {
 			StringifyAST(v.IterateExpr),
 			strings.Join(paramsStr, " "),
 			StringifyAST(v.IterateBlock))
+	case *ClassDeclareStmt:
+		constructorStr := []string{}
+		propertyStr := []string{}
+		methodStr := []string{}
+		for _, c := range v.ConstructorIDList {
+			constructorStr = append(constructorStr, StringifyAST(c))
+		}
+		for _, p := range v.PropertyList {
+			propertyStr = append(propertyStr, StringifyAST(p))
+		}
+		for _, m := range v.MethodList {
+			methodStr = append(methodStr, StringifyAST(m))
+		}
+
+		return fmt.Sprintf(
+			"$CLS(name=(%s) properties=(%s) constructor=(%s) methods=(%s))",
+			StringifyAST(v.ClassName),
+			strings.Join(propertyStr, " "),
+			strings.Join(constructorStr, " "),
+			strings.Join(methodStr, " "),
+		)
+	case *PropertyDeclareStmt:
+		return fmt.Sprintf(
+			"$PD(id=(%s) expr=(%s))",
+			StringifyAST(v.PropertyID),
+			StringifyAST(v.InitValue),
+		)
 	default:
 		return ""
 	}

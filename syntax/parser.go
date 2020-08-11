@@ -96,7 +96,7 @@ func (p *Parser) peek2() *lex.Token {
 //
 // Theoratically, any type of token that located at the end of line
 //
-//   i.e.  this token is the last token of current line,
+//   i.e.  this token is the last one of current line,
 //   or    $token.Range.EndLine < ($token+1).Range.StartLine,
 //
 // should meet StmtLineBreak, which means meetStmtLineBreak() = true. Still, there're some

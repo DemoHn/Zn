@@ -18,6 +18,7 @@ var testSuccessSuites = []string{
 	stmtLineBreakCasesOK,
 	memberExprCasesOK,
 	iterateCasesOK,
+	classDeclareCasesOK,
 }
 
 const logicExprCasesOK = `
@@ -730,6 +731,90 @@ $PG($BK(
 			name=($ID(显示))
 			params=($ID(K) $ID(V))
 		)))
+	)
+))
+`
+
+const classDeclareCasesOK = `
+========
+1. simplist class definition
+--------
+定义狗：
+	其名为“小黄”
+	其品种为“拉布拉多”
+--------
+$PG($BK(
+	$CLS(
+		name=($ID(狗))
+		properties=(
+			$PD(id=($ID(名)) expr=($STR(小黄)))
+			$PD(id=($ID(品种)) expr=($STR(拉布拉多)))
+		)
+		constructor=()
+		methods=()
+	)
+))
+
+========
+2. class definition with constructor
+--------
+定义狗：
+	其名为“小黄”
+	其年龄为0
+
+	是为名，年龄
+--------
+$PG($BK(
+	$CLS(
+		name=($ID(狗))
+		properties=(
+			$PD(id=($ID(名)) expr=($STR(小黄)))
+			$PD(id=($ID(年龄)) expr=($NUM(0)))
+		)
+		constructor=($ID(名) $ID(年龄))
+		methods=()
+	)
+))
+
+========
+3. full class definition
+--------
+定义狗：
+	其名为“小黄”
+	其年龄为0
+
+	是为名，年龄
+
+	如何狂吠？
+		返回“汪汪汪”
+
+	如何添加年龄？
+		返回20
+--------
+$PG($BK(
+	$CLS(
+		name=($ID(狗))
+		properties=(
+			$PD(id=($ID(名)) expr=($STR(小黄)))
+			$PD(id=($ID(年龄)) expr=($NUM(0)))
+		)
+		constructor=($ID(名) $ID(年龄))
+		methods=(
+			$FN(
+				name=($ID(狂吠))
+				params=()
+				blockTokens=($BK(
+					$RT($STR(汪汪汪))
+				))
+			)
+			$FN(
+				name=($ID(添加年龄))
+				params=()
+				blockTokens=($BK(
+					$RT($NUM(20))
+				))
+			)
+		)
 	)
 ))
 `
