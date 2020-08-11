@@ -1243,28 +1243,33 @@ func ParseClassDeclareStmt(p *Parser) *ClassDeclareStmt {
 
 	// parse block
 	for (p.peek().Type != lex.TypeEOF) && p.getPeekIndent() == blockIndent {
-		var validChildTypes = []lex.TokenType{
-			lex.TypeFuncW,
-			lex.TypeObjThisW,
-			lex.TypeObjConstructW,
-		}
-
-		match, tk := p.tryConsume(validChildTypes...)
-		if !match {
-			panic(error.InvalidSyntaxCurr())
-		}
-		switch tk.Type {
-		case lex.TypeFuncW:
-			stmt := ParseFunctionDeclareStmt(p)
-			cdStmt.MethodList = append(cdStmt.MethodList, stmt)
-		case lex.TypeObjThisW:
-			stmt := parsePropertyDeclareStmt(p)
-			cdStmt.PropertyList = append(cdStmt.PropertyList, stmt)
-		case lex.TypeObjConstructW:
-			cdStmt.ConstructorIDList = parseConstructor(p)
-		}
+		parseClassDeclareBlockItem(p, cdStmt)
 	}
 	return cdStmt
+}
+
+func parseClassDeclareBlockItem(p *Parser, cdStmt *ClassDeclareStmt) {
+	defer p.resetLineTermFlag()
+	var validChildTypes = []lex.TokenType{
+		lex.TypeFuncW,
+		lex.TypeObjThisW,
+		lex.TypeObjConstructW,
+	}
+
+	match, tk := p.tryConsume(validChildTypes...)
+	if !match {
+		panic(error.InvalidSyntaxCurr())
+	}
+	switch tk.Type {
+	case lex.TypeFuncW:
+		stmt := ParseFunctionDeclareStmt(p)
+		cdStmt.MethodList = append(cdStmt.MethodList, stmt)
+	case lex.TypeObjThisW:
+		stmt := parsePropertyDeclareStmt(p)
+		cdStmt.PropertyList = append(cdStmt.PropertyList, stmt)
+	case lex.TypeObjConstructW:
+		cdStmt.ConstructorIDList = parseConstructor(p)
+	}
 }
 
 // parseConstructor -
@@ -1291,6 +1296,7 @@ func parsePropertyDeclareStmt(p *Parser) *PropertyDeclareStmt {
 	idItem := parseID(p)
 	// consume 为
 	p.consume(lex.TypeLogicYesW)
+
 	// #2. parse expr
 	initExpr := ParseExpression(p, true)
 
