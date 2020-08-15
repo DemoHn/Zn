@@ -58,8 +58,12 @@ func StringifyAST(node Node) string {
 			str = StringifyAST(v.MemberMethod)
 			sType = "mMethod"
 		}
-		if v.IsSelfRoot {
-			return fmt.Sprintf("$MB(noroot type=(%s) object=(%s))", sType, str)
+		rootTypeStr := "rootScope"
+		if v.RootType == RootTypeProp || v.RootType == RootTypeScope {
+			if v.RootType == RootTypeProp {
+				rootTypeStr = "rootProp"
+			}
+			return fmt.Sprintf("$MB(%s type=(%s) object=(%s))", rootTypeStr, sType, str)
 		}
 		rootStr := StringifyAST(v.Root)
 		return fmt.Sprintf("$MB(root=(%s) type=(%s) object=(%s))", rootStr, sType, str)

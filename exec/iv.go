@@ -56,6 +56,12 @@ type ZnScopeMethodIV struct {
 	Params     []ZnValue
 }
 
+// ZnPropIV - e.g. 其 数量
+type ZnPropIV struct {
+	RootObject ZnValue
+	Member     string
+}
+
 // Reduce -
 func (iv *ZnArrayIV) Reduce(ctx *Context, input ZnValue, lhs bool) (ZnValue, *error.Error) {
 	// check data
@@ -105,7 +111,6 @@ func (iv *ZnMethodIV) Reduce(ctx *Context, input ZnValue, lhs bool) (ZnValue, *e
 
 // Reduce -
 func (iv *ZnScopeMemberIV) Reduce(ctx *Context, input ZnValue, lhs bool) (ZnValue, *error.Error) {
-	// TODO: Implement this!!
 	switch sp := iv.RootScope.(type) {
 	case *IterateScope:
 		return sp.getSpecialProps(iv.Member), nil
@@ -116,10 +121,15 @@ func (iv *ZnScopeMemberIV) Reduce(ctx *Context, input ZnValue, lhs bool) (ZnValu
 
 // Reduce -
 func (iv *ZnScopeMethodIV) Reduce(ctx *Context, input ZnValue, lhs bool) (ZnValue, *error.Error) {
-	// TODO: Implement this!!
 	switch sp := iv.RootScope.(type) {
 	case *WhileScope:
 		return sp.execSpecialMethods(iv.MethodName, iv.Params)
 	}
+	return NewZnNull(), nil
+}
+
+// Reduce -
+func (iv *ZnPropIV) Reduce(ctx *Context, input ZnValue, lhs bool) (ZnValue, *error.Error) {
+	// TODO: Implement this!!
 	return NewZnNull(), nil
 }
