@@ -684,7 +684,7 @@ func evalVarAssignExpr(ctx *Context, scope Scope, expr *syntax.VarAssignExpr) (Z
 }
 
 func getMemberExprIV(ctx *Context, scope Scope, expr *syntax.MemberExpr) (ZnIV, *error.Error) {
-	if expr.IsSelfRoot { // 此之 XX
+	if expr.RootType == syntax.RootTypeScope { // 此之 XX
 		switch expr.MemberType {
 		case syntax.MemberID:
 			tag := expr.MemberID.Literal
@@ -698,10 +698,20 @@ func getMemberExprIV(ctx *Context, scope Scope, expr *syntax.MemberExpr) (ZnIV, 
 			}
 			return &ZnScopeMethodIV{scope, funcName, paramVals}, nil
 		}
-		return nil, error.UnExpectedCase("子项类型", reflect.TypeOf(expr.MemberType).Name())
+		return nil, error.UnExpectedCase("子项类型", strconv.Itoa(int(expr.MemberType)))
 	}
 
-	// IsSelfRoot = false (with root)
+	if expr.RootType == syntax.RootTypeProp { // 其 XX
+		if expr.MemberType == syntax.MemberID {
+			tag := expr.MemberID.Literal
+			var rootObj ZnValue // TODO
+
+			return &ZnPropIV{rootObj, tag}, nil
+		}
+		return nil, error.UnExpectedCase("子项类型", strconv.Itoa(int(expr.MemberType)))
+	}
+
+	// RootType = RootTypeExpr
 	valRoot, err := evalExpression(ctx, scope, expr.Root)
 	if err != nil {
 		return nil, err

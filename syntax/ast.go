@@ -245,13 +245,24 @@ type FuncCallExpr struct {
 //    100 之 （+1）
 type MemberExpr struct {
 	ExprBase
-	Root         Expression
-	IsSelfRoot   bool
-	MemberType   memberTypeE // 1 - memberID, 2 - memberMethod, 3 - memberIndex
+	Root       Expression  // root Expr (maybe null when rootType is 2 or 3)
+	RootType   rootTypeE   // 1 - RootTypeExpr, 2 - RootTypeProp, 3 - RootTypeScope
+	MemberType memberTypeE // 1 - memberID, 2 - memberMethod, 3 - memberIndex
+	// union: memberItem
 	MemberID     *ID
 	MemberMethod *FuncCallExpr
 	MemberIndex  Expression
 }
+
+// rootTypeE - root type enumeration
+type rootTypeE uint8
+
+// declare root types
+const (
+	RootTypeExpr  rootTypeE = 1 // T 之 X
+	RootTypeProp  rootTypeE = 2 // 其 X
+	RootTypeScope rootTypeE = 3 // 此之 X
+)
 
 // memberTypeE - member type enumeration
 type memberTypeE uint8
@@ -480,6 +491,7 @@ func ParseExpression(p *Parser, asVarAssign bool) Expression {
 // CFG:
 //
 // MemE  -> 此之 CallE' IdxE'
+//       -> 其 PropE' IdxE'
 //       -> BsE IdxE'
 //
 // IdxE' -> #  Number   IdxE'
@@ -490,13 +502,15 @@ func ParseExpression(p *Parser, asVarAssign bool) Expression {
 //
 // CallE' -> ID
 //        -> （ID：E，E，...）
+//
+// PropE' -> ID
 func ParseMemberExpr(p *Parser) Expression {
 	// internal functions
-	var calleeTailParser func(bool, Expression) *MemberExpr
+	var calleeTailParser func(bool, rootTypeE, Expression) *MemberExpr
 	var memberTailParser func(Expression) Expression
 
-	// specially parsing items after 之 or 此之
-	calleeTailParser = func(hasRoot bool, expr Expression) *MemberExpr {
+	// specially parsing items after 之 or 此之 or 其
+	calleeTailParser = func(hasRoot bool, rootType rootTypeE, expr Expression) *MemberExpr {
 		var validTypes = []lex.TokenType{
 			lex.TypeIdentifier,
 			lex.TypeVarQuote,
@@ -504,12 +518,20 @@ func ParseMemberExpr(p *Parser) Expression {
 			lex.TypeVarOneW,
 		}
 		memberExpr := &MemberExpr{
-			Root:       nil,
-			IsSelfRoot: !hasRoot,
+			Root:     nil,
+			RootType: rootType,
 		}
 		if hasRoot {
 			memberExpr.Root = expr
 		}
+		// when rootType is RootTypeProp (其XX)，only identifier is allowed to follow
+		if rootType == RootTypeProp {
+			validTypes = []lex.TokenType{
+				lex.TypeIdentifier,
+				lex.TypeVarQuote,
+			}
+		}
+
 		match, tk := p.tryConsume(validTypes...)
 		if match {
 			switch tk.Type {
@@ -544,7 +566,6 @@ func ParseMemberExpr(p *Parser) Expression {
 		}
 		mExpr.SetCurrentLine(tk)
 		mExpr.Root = expr
-		mExpr.IsSelfRoot = false
 
 		switch tk.Type {
 		case lex.TypeMapHash:
@@ -571,7 +592,7 @@ func ParseMemberExpr(p *Parser) Expression {
 
 			return memberTailParser(mExpr)
 		case lex.TypeObjDotW:
-			newExpr := calleeTailParser(true, expr)
+			newExpr := calleeTailParser(true, RootTypeExpr, expr)
 			// replace current memberExpr as newExpr
 			return memberTailParser(newExpr)
 		}
@@ -580,9 +601,13 @@ func ParseMemberExpr(p *Parser) Expression {
 	}
 
 	// #1. parse 此之 expr
-	match, _ := p.tryConsume(lex.TypeStaticSelfW) // 此之
+	match, tk := p.tryConsume(lex.TypeStaticSelfW, lex.TypeObjThisW) // 此之 或 其
 	if match {
-		newExpr := calleeTailParser(false, nil)
+		rootType := RootTypeScope        // 此之
+		if tk.Type == lex.TypeObjThisW { // 其
+			rootType = RootTypeProp
+		}
+		newExpr := calleeTailParser(false, rootType, nil)
 		return memberTailParser(newExpr)
 	}
 	// #1. parse basic expr

@@ -651,7 +651,7 @@ $PG($BK(
 ))
 
 ========
-8. self root
+8. self root (rootScope)
 --------
 此之（结束）#2
 --------
@@ -659,7 +659,7 @@ $PG($BK(
 	$MB(
 		root=(
 			$MB(
-				noroot				
+				rootScope				
 				type=(mMethod)
 				object=($FN(
 					name=($ID(结束))
@@ -669,6 +669,43 @@ $PG($BK(
 		)
 		type=(mIndex)
 		object=($NUM(2))
+	)
+))
+
+========
+9. self root (rootProp)
+--------
+其年龄为20
+--------
+$PG($BK(
+	$VA(
+		target=($MB(
+			rootProp
+			type=(mID)
+			object=($ID(年龄))
+		))		
+		assign=($NUM(20))
+	)
+))
+========
+10. mix rootProp and member
+--------
+其年龄之（文本）
+--------
+$PG($BK(
+	$MB(
+		root=(
+			$MB(
+				rootProp
+				type=(mID)
+				object=($ID(年龄))
+			)
+		)
+		type=(mMethod)
+		object=($FN(
+			name=($ID(文本))
+			params=()
+		))
 	)
 ))
 `
@@ -687,9 +724,9 @@ $PG($BK(
 		idxList=()
 		block=($BK(
 			$VD(vars[]=($ID(A)) expr[]=(
-				$MB(noroot type=(mID) object=($ID(值)))
+				$MB(rootScope type=(mID) object=($ID(值)))
 			))
-			$MB(noroot type=(mMethod) object=($FN(name=($ID(结束)) params=())))
+			$MB(rootScope type=(mMethod) object=($FN(name=($ID(结束)) params=())))
 		))
 	)
 ))
@@ -702,7 +739,7 @@ $PG($BK(
 --------
 $PG($BK(
 	$IT(
-		target=($MB(noroot type=(mID) object=($ID(代码))))
+		target=($MB(rootScope type=(mID) object=($ID(代码))))
 		idxList=($ID(K))
 		block=($BK(
 			$FN(name=($ID(显示)) params=($ID(K)))
