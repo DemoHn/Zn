@@ -39,6 +39,7 @@ ZHI     之
 ZAI     再
 BIAN    遍
 LI      历
+HENG    恒
 ================================
 # Part II： 定义每一个关键词及其对应的 tokenType。
 # 使用说明：
@@ -47,6 +48,7 @@ LI      历
 #
 DeclareW        40      令
 LogicYesW       41      为
+AssignConstW    42      恒为
 CondOtherW      43      再如
 CondW           44      如果
 FuncW           45      如何

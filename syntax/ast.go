@@ -103,9 +103,21 @@ type EmptyStmt struct {
 
 // VDAssignPair - helper type
 type VDAssignPair struct {
+	Type       vdAssignPairTypeE
 	Variables  []*ID
 	AssignExpr Expression
+	ObjClass   *ID          // 成为 XX： 1，2，3 ... valid only when Type = 2 (VDTypeObjNew)
+	ObjParams  []Expression // 成为 XX：P1，P2，P3，... valid only when Type = 2 (VDTypeObjNew)
 }
+
+type vdAssignPairTypeE uint8
+
+// declare VD Assign type
+const (
+	VDTypeAssign      = 1 // 为
+	VDTypeObjeNew     = 2 // 成为
+	VDTypeAssignConst = 3 // 恒为
+)
 
 // BranchStmt - conditional (if-else) statement
 type BranchStmt struct {
@@ -832,8 +844,11 @@ func ParseVarOneLeadExpr(p *Parser) *FuncCallExpr {
 
 // ParseVarDeclareStmt - yield VarDeclare node
 // CFG:
-// VarDeclare -> 令 IdfList 为 Expr
-//            -> 令 IdfList 成为 Idf ： Expr1， Expr2， ...
+// VarDeclare -> 令 VDItem
+//
+// VDItem     -> IdfList 为 Expr
+//            -> IdfList 成为 Idf ： Expr1， Expr2， ...
+//            -> IdfList 恒为 Expr
 //
 //    IdfList -> I I'
 //         I' -> ，I I'
@@ -842,7 +857,7 @@ func ParseVarOneLeadExpr(p *Parser) *FuncCallExpr {
 // or block declaration:
 //
 // VarDeclare -> 令 ：
-//           ...     I1 ， I2，
+//           ...
 //           ...     I3 ， I4， I5 ...
 func ParseVarDeclareStmt(p *Parser) *VarDeclareStmt {
 	vNode := &VarDeclareStmt{
@@ -885,43 +900,8 @@ func ParseVarDeclareStmt(p *Parser) *VarDeclareStmt {
 		nodes = parseCommaListBlock(p, blockIndent, consumer)
 	} else {
 		// #02. consume identifier declare list (comma list) inline
+		// [ONLY SUPPORT ONE VDAssignPair]
 		nodes = parseCommaList(p, consumer)
-	}
-
-	var idPtrList = []*ID{}
-	// to avoid incomplete AssignPair (i.e. only IDs, but no VA part, like 令A，B，C)
-	var completeAssignPair = false
-	// #03. translate & append nodes to pair
-	for _, node := range nodes {
-		switch v := node.(type) {
-		case *ID:
-			completeAssignPair = false
-			idPtrList = append(idPtrList, v)
-		case *NodeList:
-			if v.Tag == tagWithAssignExpr {
-				newPair := VDAssignPair{
-					Variables: []*ID{},
-				}
-
-				firstID, _ := v.Children[0].(*ID)
-				idPtrList = append(idPtrList, firstID)
-				//
-				secondExpr, _ := v.Children[1].(Expression)
-				// copy newPair
-				newPair.Variables = append(newPair.Variables, idPtrList...)
-				newPair.AssignExpr = secondExpr
-
-				// append newPair
-				vNode.AssignPair = append(vNode.AssignPair, newPair)
-				// clear idPtrList
-				idPtrList = []*ID{}
-				completeAssignPair = true
-			}
-		}
-	}
-
-	if !completeAssignPair {
-		panic(error.IncompleteStmtCurr())
 	}
 
 	return vNode
@@ -1279,15 +1259,13 @@ func ParseClassDeclareStmt(p *Parser) *ClassDeclareStmt {
 // CFG:
 // Constructor  -> 是为 ID1，ID2 ...
 func parseConstructor(p *Parser) []*ID {
-	nodes := parseCommaList(p, func(idx int, nodes []Node) Node {
-		return parseID(p)
+	var idList = []*ID{}
+	parseCommaList(p, func(idx int, nodes []Node) Node {
+		idItem := parseID(p)
+		idList = append(idList, idItem)
+		return nil
 	})
 
-	var idList = []*ID{}
-	for _, item := range nodes {
-		idItem, _ := item.(*ID)
-		idList = append(idList, idItem)
-	}
 	return idList
 }
 
