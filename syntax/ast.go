@@ -82,7 +82,7 @@ type Program struct {
 	Content *BlockStmt
 }
 
-// NodeList - a node that packs several nodes
+// NodeList - a simple struct that packs several nodes, with custom tag to indicate its feature.
 type NodeList struct {
 	Tag      int
 	Children []Node
@@ -322,8 +322,6 @@ func (me *MemberExpr) assignable()       {}
 //           -> Expr
 //           -> ；
 func ParseStatement(p *Parser) Statement {
-	defer p.resetLineTermFlag()
-
 	var validTypes = []lex.TokenType{
 		lex.TypeStmtSep,
 		lex.TypeComment,
@@ -835,6 +833,8 @@ func ParseVarOneLeadExpr(p *Parser) *FuncCallExpr {
 // ParseVarDeclareStmt - yield VarDeclare node
 // CFG:
 // VarDeclare -> 令 IdfList 为 Expr
+//            -> 令 IdfList 成为 Idf ： Expr1， Expr2， ...
+//
 //    IdfList -> I I'
 //         I' -> ，I I'
 //            ->
@@ -956,9 +956,15 @@ func ParseBlockStmt(p *Parser, blockIndent int) *BlockStmt {
 		Children: []Statement{},
 	}
 
-	for (p.peek().Type != lex.TypeEOF) && p.getPeekIndent() == blockIndent {
-		stmt := ParseStatement(p)
-		bStmt.Children = append(bStmt.Children, stmt)
+	// 01. parse all statements
+	nodes := parseItemListBlock(p, blockIndent, func(idx int, nodes []Node) Node {
+		return ParseStatement(p)
+	})
+
+	// 02. translate node -> statement
+	for _, node := range nodes {
+		s, _ := node.(Statement)
+		bStmt.Children = append(bStmt.Children, s)
 	}
 
 	return bStmt
@@ -1407,6 +1413,19 @@ func parseParamDefList(p *Parser, allowBreak bool) []*ID {
 	}
 
 	return idList
+}
+
+func parseItemListBlock(p *Parser, blockIndent int, consumer consumerFunc) []Node {
+	nodeList := []Node{}
+
+	itemConsumer := func() Node {
+		defer p.resetLineTermFlag()
+		return consumer(len(nodeList), nodeList)
+	}
+	for (p.peek().Type != lex.TypeEOF) && p.getPeekIndent() == blockIndent {
+		nodeList = append(nodeList, itemConsumer())
+	}
+	return nodeList
 }
 
 func newID(tk *lex.Token) *ID {
