@@ -957,15 +957,10 @@ func ParseBlockStmt(p *Parser, blockIndent int) *BlockStmt {
 	}
 
 	// 01. parse all statements
-	nodes := parseItemListBlock(p, blockIndent, func(idx int, nodes []Node) Node {
-		return ParseStatement(p)
+	parseItemListBlock(p, blockIndent, func() {
+		stmt := ParseStatement(p)
+		bStmt.Children = append(bStmt.Children, stmt)
 	})
-
-	// 02. translate node -> statement
-	for _, node := range nodes {
-		s, _ := node.(Statement)
-		bStmt.Children = append(bStmt.Children, s)
-	}
 
 	return bStmt
 }
@@ -1107,7 +1102,7 @@ func ParseFunctionDeclareStmt(p *Parser) *FunctionDeclareStmt {
 		panic(error.UnexpectedIndent())
 	}
 	// #3.1 parse param def list
-	for p.peek().Type != lex.TypeEOF && p.getPeekIndent() == blockIndent {
+	parseItemListBlock(p, blockIndent, func() {
 		switch hState {
 		case stateParamList:
 			// parse 已知 expr
@@ -1121,7 +1116,8 @@ func ParseFunctionDeclareStmt(p *Parser) *FunctionDeclareStmt {
 		case stateFuncBlock:
 			fdStmt.ExecBlock = ParseBlockStmt(p, blockIndent)
 		}
-	}
+	})
+
 	return fdStmt
 }
 
@@ -1217,26 +1213,6 @@ func ParseFunctionReturnStmt(p *Parser) *FunctionReturnStmt {
 	}
 }
 
-// tryParseParamList - try to parse line
-func tryParseParamList(p *Parser, fdStmt *FunctionDeclareStmt) bool {
-	// #1. parse 已知
-	if match, _ := p.tryConsume(lex.TypeParamAssignW); !match {
-		return false
-	}
-	// #2. parse param list (ID or VarQuote)
-	nodes := parseCommaList(p, func(i int, n []Node) Node {
-		return parseID(p)
-	})
-
-	// transform nodes to actual identifiers
-	for _, node := range nodes {
-		// make sure node must be *ID type
-		v, _ := node.(*ID)
-		fdStmt.ParamList = append(fdStmt.ParamList, v)
-	}
-	return true
-}
-
 // ParseClassDeclareStmt - define class structure
 // A typical class may look like this:
 //
@@ -1273,34 +1249,30 @@ func ParseClassDeclareStmt(p *Parser) *ClassDeclareStmt {
 	}
 
 	// parse block
-	for (p.peek().Type != lex.TypeEOF) && p.getPeekIndent() == blockIndent {
-		parseClassDeclareBlockItem(p, cdStmt)
-	}
+	parseItemListBlock(p, blockIndent, func() {
+		var validChildTypes = []lex.TokenType{
+			lex.TypeFuncW,
+			lex.TypeObjThisW,
+			lex.TypeObjConstructW,
+		}
+
+		match, tk := p.tryConsume(validChildTypes...)
+		if !match {
+			panic(error.InvalidSyntaxCurr())
+		}
+		switch tk.Type {
+		case lex.TypeFuncW:
+			stmt := ParseFunctionDeclareStmt(p)
+			cdStmt.MethodList = append(cdStmt.MethodList, stmt)
+		case lex.TypeObjThisW:
+			stmt := parsePropertyDeclareStmt(p)
+			cdStmt.PropertyList = append(cdStmt.PropertyList, stmt)
+		case lex.TypeObjConstructW:
+			cdStmt.ConstructorIDList = parseConstructor(p)
+		}
+	})
+
 	return cdStmt
-}
-
-func parseClassDeclareBlockItem(p *Parser, cdStmt *ClassDeclareStmt) {
-	defer p.resetLineTermFlag()
-	var validChildTypes = []lex.TokenType{
-		lex.TypeFuncW,
-		lex.TypeObjThisW,
-		lex.TypeObjConstructW,
-	}
-
-	match, tk := p.tryConsume(validChildTypes...)
-	if !match {
-		panic(error.InvalidSyntaxCurr())
-	}
-	switch tk.Type {
-	case lex.TypeFuncW:
-		stmt := ParseFunctionDeclareStmt(p)
-		cdStmt.MethodList = append(cdStmt.MethodList, stmt)
-	case lex.TypeObjThisW:
-		stmt := parsePropertyDeclareStmt(p)
-		cdStmt.PropertyList = append(cdStmt.PropertyList, stmt)
-	case lex.TypeObjConstructW:
-		cdStmt.ConstructorIDList = parseConstructor(p)
-	}
 }
 
 // parseConstructor -
@@ -1415,17 +1387,14 @@ func parseParamDefList(p *Parser, allowBreak bool) []*ID {
 	return idList
 }
 
-func parseItemListBlock(p *Parser, blockIndent int, consumer consumerFunc) []Node {
-	nodeList := []Node{}
-
-	itemConsumer := func() Node {
+func parseItemListBlock(p *Parser, blockIndent int, consumer func()) {
+	itemConsumer := func() {
 		defer p.resetLineTermFlag()
-		return consumer(len(nodeList), nodeList)
+		consumer()
 	}
 	for (p.peek().Type != lex.TypeEOF) && p.getPeekIndent() == blockIndent {
-		nodeList = append(nodeList, itemConsumer())
+		itemConsumer()
 	}
-	return nodeList
 }
 
 func newID(tk *lex.Token) *ID {
