@@ -60,10 +60,10 @@ const whileLoopCasesOK = `
 $PG($BK(
 	$WL(
 		expr=($NUM(1))
-		block=($BK($VD(
+		block=($BK($VD($VP(
 				vars[]=($ID(A))
 				expr[]=($ID(B))
-		)))
+		))))
 	)
 ))
 
@@ -114,10 +114,10 @@ const varDeclCasesOK = `
 令某变量为100
 --------
 $PG($BK(
-	$VD(
+	$VD($VP(
 		vars[]=($ID(某变量))
 		expr[]=($NUM(100))
-	)
+	))
 ))
 
 ========
@@ -126,26 +126,22 @@ $PG($BK(
 令变量1，变量2为100
 --------
 $PG($BK(
-	$VD(
+	$VD($VP(
 		vars[]=($ID(变量1) $ID(变量2))
 		expr[]=($NUM(100))
-	)
+	))
 ))
 
 ========
-3. paired variables inline
+3. paired variables inline (one pair only)
 --------
-令小A，小B为100，小C为「何处相思明月楼」，D，E，F为B
+令小A，小B，小C为100
 --------
 $PG($BK(
-	$VD(
-		vars[]=($ID(小A) $ID(小B))
+	$VD($VP(
+		vars[]=($ID(小A) $ID(小B) $ID(小C))
 		expr[]=($NUM(100))
-		vars[]=($ID(小C))
-		expr[]=($STR(何处相思明月楼))
-		vars[]=($ID(D) $ID(E) $ID(F))
-		expr[]=($ID(B))
-	)
+	))
 ))
 
 ========
@@ -154,10 +150,10 @@ $PG($BK(
 令小A，·先令·为200
 --------
 $PG($BK(
-	$VD(
+	$VD($VP(
 		vars[]=($ID(小A) $ID(先令))
 		expr[]=($NUM(200))
-	)
+	))
 ))
 
 ========
@@ -166,7 +162,7 @@ $PG($BK(
 令A为B为C
 --------
 $PG($BK(
-	$VD(
+	$VD($VP(
 		vars[]=($ID(A))
 		expr[]=(
 			$VA(
@@ -174,28 +170,70 @@ $PG($BK(
 				assign=($ID(C))
 			)
 		)
-	)
+	))
 ))
 
 ========
 6. block var declare
 --------
 令：
-	A为1，B为2，C，D为3，
+	A为1
+	B为2
+	C，D为3
 	E，F为4
 
 令G为5
 --------
 $PG($BK(
 	$VD(
-		vars[]=($ID(A))		expr[]=($NUM(1))
-		vars[]=($ID(B))		expr[]=($NUM(2))
-		vars[]=($ID(C) $ID(D))		expr[]=($NUM(3))
-		vars[]=($ID(E) $ID(F))		expr[]=($NUM(4))
+		$VP(vars[]=($ID(A))		expr[]=($NUM(1)))
+		$VP(vars[]=($ID(B))		expr[]=($NUM(2)))
+		$VP(vars[]=($ID(C) $ID(D))		expr[]=($NUM(3)))
+		$VP(vars[]=($ID(E) $ID(F))		expr[]=($NUM(4)))
 	)
-	$VD(
+	$VD($VP(
 		vars[]=($ID(G))
 		expr[]=($NUM(5))
+	))
+))
+
+========
+7. define const variables
+--------
+令圆周率恒为3.1415926
+--------
+$PG($BK(
+	$VD(
+		$VP(const vars[]=($ID(圆周率)) expr[]=($NUM(3.1415926)))
+	)
+))
+
+========
+8. define new object
+--------
+令圆周率成为数学：3.1415926
+--------
+$PG($BK(
+	$VD(
+		$VP(object vars[]=($ID(圆周率)) class=($ID(数学)) params[]=($NUM(3.1415926)))
+	)
+))
+
+========
+9. block declaration - mixture of const,assign,newObj
+--------
+令：
+	高脚杯，小盅成为SKU：「玻璃制品」，10，20，30
+	A，B，C为「Amazon」
+	D，E，F恒为空
+	G恒为空
+--------
+$PG($BK(
+	$VD(
+		$VP(object vars[]=($ID(高脚杯) $ID(小盅)) class=($ID(SKU)) params[]=($STR(玻璃制品) $NUM(10) $NUM(20) $NUM(30)))
+		$VP(vars[]=($ID(A) $ID(B) $ID(C)) expr[]=($STR(Amazon)))
+		$VP(const vars[]=($ID(D) $ID(E) $ID(F)) expr[]=($ID(空)))
+		$VP(const vars[]=($ID(G)) expr[]=($ID(空)))
 	)
 ))
 `
@@ -504,16 +542,16 @@ const stmtLineBreakCasesOK = `
 --------
 令香港记者为记者名为「张宝华」
 --------
-$PG($BK($VD(vars[]=($ID(香港记者)) expr[]=($VA(target=($ID(记者名)) assign=($STR(张宝华)))))))
+$PG($BK($VD($VP(vars[]=($ID(香港记者)) expr[]=($VA(target=($ID(记者名)) assign=($STR(张宝华))))))))
 
 ========
 2. a complete statement with comma list - 3 lines
 --------
-令树叶为「绿」，鲜花为「红」，
-    雪花为「白」，
-        墨水为「黑」
+令树叶，鲜花，
+    雪花，
+                墨水为「黑」
 --------
-$PG($BK($VD(vars[]=($ID(树叶)) expr[]=($STR(绿)) vars[]=($ID(鲜花)) expr[]=($STR(红)) vars[]=($ID(雪花)) expr[]=($STR(白)) vars[]=($ID(墨水)) expr[]=($STR(黑)))))
+$PG($BK($VD($VP(vars[]=($ID(树叶) $ID(鲜花) $ID(雪花) $ID(墨水)) expr[]=($STR(黑))))))
 
 ========
 3. nested function calls with multiple lines
@@ -533,7 +571,7 @@ $PG($BK($FN(name=($ID(显示)) params=($STR(1) $FN(name=($ID(调用参数)) para
 		3 == 「车」
 】
 --------
-$PG($BK($VD(vars[]=($ID(对象表)) expr[]=($HM(key[]=($NUM(1)) value[]=($STR(象)) key[]=($NUM(2)) value[]=($STR(士)) key[]=($NUM(3)) value[]=($STR(车)))))))
+$PG($BK($VD($VP(vars[]=($ID(对象表)) expr[]=($HM(key[]=($NUM(1)) value[]=($STR(象)) key[]=($NUM(2)) value[]=($STR(士)) key[]=($NUM(3)) value[]=($STR(车))))))))
 `
 
 const memberExprCasesOK = `
@@ -723,9 +761,9 @@ $PG($BK(
 		target=($ARR($NUM(1) $NUM(2) $NUM(3)))
 		idxList=()
 		block=($BK(
-			$VD(vars[]=($ID(A)) expr[]=(
+			$VD($VP(vars[]=($ID(A)) expr[]=(
 				$MB(rootScope type=(mID) object=($ID(值)))
-			))
+			)))
 			$MB(rootScope type=(mMethod) object=($FN(name=($ID(结束)) params=())))
 		))
 	)
