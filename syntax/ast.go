@@ -12,7 +12,7 @@ import (
 // Node -
 type Node interface{}
 
-type consumerFunc func(idx int, nodes []Node) Node
+type consumerFunc func()
 
 // Statement -
 type Statement interface {
@@ -698,19 +698,21 @@ func ParseArrayExpr(p *Parser) UnionMapList {
 		subtypeHashMap = 2
 	)
 	// #1. consume item list (comma list)
-	exprs := parseCommaList(p, func(idx int, nodes []Node) Node {
+	exprs := []Node{}
+	parseCommaList(p, func() {
 		expr := ParseExpression(p, true)
 
 		// parse if there's double equals, then cont'd parsing right expr for hashmap
 		if match, _ := p.tryConsume(lex.TypeMapData); match {
 			exprR := ParseExpression(p, true)
 
-			return &NodeList{
+			exprs = append(exprs, &NodeList{
 				Tag:      tagHashMap,
 				Children: []Node{expr, exprR},
-			}
+			})
+			return
 		}
-		return expr
+		exprs = append(exprs, expr)
 	})
 
 	// type cast (because there's no GENERIC TYPE in golang!!!)
@@ -797,14 +799,10 @@ func ParseFuncCallExpr(p *Parser) *FuncCallExpr {
 	match, _ := p.tryConsume(lex.TypeFuncCall)
 	if match {
 		// #2.1 parse comma list
-		nodes := parseCommaList(p, func(idx int, nodes []Node) Node {
-			return ParseExpression(p, true)
+		parseCommaList(p, func() {
+			expr := ParseExpression(p, true)
+			callExpr.Params = append(callExpr.Params, expr)
 		})
-		// #2.2 translate nodes into params
-		for _, node := range nodes {
-			v, _ := node.(Expression)
-			callExpr.Params = append(callExpr.Params, v)
-		}
 	}
 
 	// #3. parse right quote
@@ -821,13 +819,10 @@ func ParseFuncCallExpr(p *Parser) *FuncCallExpr {
 func ParseVarOneLeadExpr(p *Parser) *FuncCallExpr {
 	// #1. parse exprs
 	exprList := []Expression{}
-	nodes := parseCommaList(p, func(idx int, nodes []Node) Node {
-		return ParseExpression(p, true)
-	})
-	for _, node := range nodes {
-		expr, _ := node.(Expression) // don't worry, it must be an expression
+	parseCommaList(p, func() {
+		expr := ParseExpression(p, true)
 		exprList = append(exprList, expr)
-	}
+	})
 	// #2. parse FuncExpr (maybe)
 	match2, tk := p.tryConsume(lex.TypeFuncQuoteL)
 	if !match2 {
@@ -905,6 +900,10 @@ func ParseVarDeclareStmt(p *Parser) *VarDeclareStmt {
 	}
 
 	return vNode
+}
+
+func parseVDAssignPair(p *Parser) *VDAssignPair {
+
 }
 
 // ParseWhileLoopStmt - yield while loop node
@@ -1116,8 +1115,9 @@ func ParseVarOneLeadStmt(p *Parser) Statement {
 		lex.TypeIteratorW,
 		lex.TypeFuncQuoteL,
 	}
-	exprList := parseCommaList(p, func(idx int, nodes []Node) Node {
-		return ParseExpression(p, true)
+	exprList := []Expression{}
+	parseCommaList(p, func() {
+		exprList = append(exprList, ParseExpression(p, true))
 	})
 
 	match, tk := p.tryConsume(validTypes...)
@@ -1137,14 +1137,8 @@ func ParseVarOneLeadStmt(p *Parser) Statement {
 			return parseIteratorStmtRest(p, idList)
 		case lex.TypeFuncQuoteL:
 			targetExpr := ParseFuncCallExpr(p)
-			// transform []Node -> []Expression
-			pListExprs := []Expression{}
-			for _, pExpr := range exprList {
-				exprItem, _ := pExpr.(Expression)
-				pListExprs = append(pListExprs, exprItem)
-			}
 			// prepend exprs
-			targetExpr.Params = append(pListExprs, targetExpr.Params...)
+			targetExpr.Params = append(exprList, targetExpr.Params...)
 			return targetExpr
 		}
 	}
@@ -1260,10 +1254,9 @@ func ParseClassDeclareStmt(p *Parser) *ClassDeclareStmt {
 // Constructor  -> 是为 ID1，ID2 ...
 func parseConstructor(p *Parser) []*ID {
 	var idList = []*ID{}
-	parseCommaList(p, func(idx int, nodes []Node) Node {
+	parseCommaList(p, func() {
 		idItem := parseID(p)
 		idList = append(idList, idItem)
-		return nil
 	})
 
 	return idList
@@ -1296,51 +1289,40 @@ func parseID(p *Parser) *ID {
 	return newID(tk)
 }
 
-func parseCommaList(p *Parser, consumer consumerFunc) []Node {
-	var node Node
-	list := []Node{}
-
+func parseCommaList(p *Parser, consumer consumerFunc) {
 	// first item MUST be consumed!
-	node = consumer(0, list)
-	list = append(list, node)
+	consumer()
 
 	// iterate to get value
 	for {
 		// consume comma
 		if match, _ := p.tryConsume(lex.TypeCommaSep); !match {
 			// stop parsing immediately
-			return list
+			return
 		}
-		node = consumer(len(list), list)
-		list = append(list, node)
+		consumer()
 	}
 }
 
-func parseCommaListBlock(p *Parser, blockIndent int, consumer consumerFunc) []Node {
-	var node Node
-	//
-	list := []Node{}
-
+func parseCommaListBlock(p *Parser, blockIndent int, consumer consumerFunc) {
 	// first token MUST be exactly on the indent
 	if p.getPeekIndent() != blockIndent {
 		panic(error.UnexpectedIndent())
 	}
 	// first item MUST be consumed!
-	node = consumer(0, list)
-	list = append(list, node)
+	consumer()
 
 	// iterate to get value
 	for {
 		if p.getPeekIndent() != blockIndent {
-			return list
+			return
 		}
 		// consume comma
 		if match, _ := p.tryConsume(lex.TypeCommaSep); !match {
 			// stop parsing immediately
-			return list
+			return
 		}
-		node = consumer(len(list), list)
-		list = append(list, node)
+		consumer()
 	}
 }
 
@@ -1353,14 +1335,10 @@ func parseParamDefList(p *Parser, allowBreak bool) []*ID {
 	var idList = []*ID{}
 
 	// parse param lists
-	nodes := parseCommaList(p, func(idx int, nodes []Node) Node {
-		return parseID(p)
+	parseCommaList(p, func() {
+		idItem := parseID(p)
+		idList = append(idList, idItem)
 	})
-	// append IDs
-	for _, node := range nodes {
-		v, _ := node.(*ID)
-		idList = append(idList, v)
-	}
 
 	return idList
 }
