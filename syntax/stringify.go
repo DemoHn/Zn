@@ -78,8 +78,27 @@ func StringifyAST(node Node) string {
 			for _, vd := range vpair.Variables {
 				vars = append(vars, StringifyAST(vd))
 			}
-			expr = StringifyAST(vpair.AssignExpr)
-			items = append(items, fmt.Sprintf("vars[]=(%s) expr[]=(%s)", strings.Join(vars, " "), expr))
+
+			switch vpair.Type {
+			case VDTypeAssign, VDTypeAssignConst:
+				expr = StringifyAST(vpair.AssignExpr)
+				if vpair.Type == VDTypeAssignConst {
+					items = append(items, fmt.Sprintf("$VP(const vars[]=(%s) expr[]=(%s))", strings.Join(vars, " "), expr))
+				} else {
+					items = append(items, fmt.Sprintf("$VP(vars[]=(%s) expr[]=(%s))", strings.Join(vars, " "), expr))
+				}
+			case VDTypeObjNew:
+				paramsStr := []string{}
+				for _, vp := range vpair.ObjParams {
+					paramsStr = append(paramsStr, StringifyAST(vp))
+				}
+				items = append(items, fmt.Sprintf(
+					"$VP(object vars[]=(%s) class=(%s) params[]=(%s))",
+					strings.Join(vars, " "),
+					StringifyAST(vpair.ObjClass),
+					strings.Join(paramsStr, " "),
+				))
+			}
 		}
 		// parse exprs
 		return fmt.Sprintf("$VD(%s)", strings.Join(items, " "))

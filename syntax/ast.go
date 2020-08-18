@@ -115,7 +115,7 @@ type vdAssignPairTypeE uint8
 // declare VD Assign type
 const (
 	VDTypeAssign      = 1 // 为
-	VDTypeObjeNew     = 2 // 成为
+	VDTypeObjNew      = 2 // 成为
 	VDTypeAssignConst = 3 // 恒为
 )
 
@@ -859,31 +859,6 @@ func ParseVarDeclareStmt(p *Parser) *VarDeclareStmt {
 		AssignPair: []VDAssignPair{},
 	}
 
-	const (
-		tagWithAssignExpr = 10
-	)
-	var nodes = []Node{}
-
-	var consumer = func(idx int, nodes []Node) Node {
-		// subExpr -> ID
-		//         -> ID 为 expr
-		var idExpr *ID
-		// #1. consume ID first
-		idExpr = parseID(p)
-
-		// #2. consume LogicYes - if not, return ID directly
-		if match2, _ := p.tryConsume(lex.TypeLogicYesW); !match2 {
-			return idExpr
-		}
-
-		// #3. consume expr
-		assignExpr := ParseExpression(p, true)
-
-		return &NodeList{
-			Tag:      tagWithAssignExpr,
-			Children: []Node{idExpr, assignExpr},
-		}
-	}
 	// #01. try to read colon
 	// if colon exists -> parse comma list by block
 	// if colon not exists -> parse comma list inline
@@ -892,18 +867,74 @@ func ParseVarDeclareStmt(p *Parser) *VarDeclareStmt {
 		if !expected {
 			panic(error.InvalidSyntaxCurr())
 		}
-		nodes = parseCommaListBlock(p, blockIndent, consumer)
+
+		parseItemListBlock(p, blockIndent, func() {
+			vNode.AssignPair = append(vNode.AssignPair, parseVDAssignPair(p))
+		})
 	} else {
 		// #02. consume identifier declare list (comma list) inline
 		// [ONLY SUPPORT ONE VDAssignPair]
-		nodes = parseCommaList(p, consumer)
+		vNode.AssignPair = append(vNode.AssignPair, parseVDAssignPair(p))
 	}
 
 	return vNode
 }
 
-func parseVDAssignPair(p *Parser) *VDAssignPair {
+func parseVDAssignPair(p *Parser) VDAssignPair {
+	idfList := []*ID{}
 
+	// #1. parse identifier
+	parseCommaList(p, func() {
+		id := parseID(p)
+		idfList = append(idfList, id)
+	})
+
+	// parse keyword
+	validKeywords := []lex.TokenType{
+		lex.TypeLogicYesW,
+		lex.TypeAssignConstW,
+		lex.TypeObjNewW,
+	}
+	match, tk := p.tryConsume(validKeywords...)
+	if !match {
+		panic(error.InvalidSyntaxCurr())
+	}
+
+	switch tk.Type {
+	case lex.TypeLogicYesW:
+		expr := ParseExpression(p, true)
+
+		return VDAssignPair{
+			Type:       VDTypeAssign,
+			Variables:  idfList,
+			AssignExpr: expr,
+		}
+	case lex.TypeAssignConstW:
+		expr := ParseExpression(p, true)
+
+		return VDAssignPair{
+			Type:       VDTypeAssignConst,
+			Variables:  idfList,
+			AssignExpr: expr,
+		}
+	default: // ObjNewW
+		className := parseID(p)
+		// parse colon
+		p.consume(lex.TypeFuncCall)
+		// param param list
+		params := []Expression{}
+		parseCommaList(p, func() {
+			e := ParseExpression(p, true)
+			params = append(params, e)
+		})
+
+		return VDAssignPair{
+			Type:      VDTypeObjNew,
+			Variables: idfList,
+			ObjClass:  className,
+			ObjParams: params,
+		}
+	}
 }
 
 // ParseWhileLoopStmt - yield while loop node

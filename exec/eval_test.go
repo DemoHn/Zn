@@ -271,14 +271,14 @@ func Test_VarDeclareStmt(t *testing.T) {
 		},
 		{
 			name:           "normal multiple vars",
-			program:        "令A为5，B为2，C为3；（X*Y：A，B，C）",
+			program:        "令A为5；令B为2；令C为3；（X*Y：A，B，C）",
 			symbols:        map[string]ZnValue{},
 			expReturnValue: NewZnDecimalFromInt(30, 0),
 			expProbe:       map[string][][]string{},
 		},
 		{
 			name:           "normal multiple vars (with reference)",
-			program:        "令A为10，B为A，C为B；（X*Y：A，B，C）",
+			program:        "令A为10；令B为A；令C为B；（X*Y：A，B，C）",
 			symbols:        map[string]ZnValue{},
 			expReturnValue: NewZnDecimalFromInt(1000, 0),
 			expProbe:       map[string][][]string{},

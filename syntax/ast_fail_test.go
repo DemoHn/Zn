@@ -43,7 +43,7 @@ code=2250 line=2 col=9
     【A，B】为100
     
 --------
-code=2252 line=2 col=5
+code=2250 line=2 col=5
 
 ========
 4. invalid token (lexError)
@@ -86,17 +86,7 @@ code=2250 line=2 col=1
     B为C，
     
 --------
-code=2250 line=4 col=7
-
-========
-7. block var declare - missing comma
---------
-    
-令：
-    A为B
-    B为C
---------
-code=2254 line=4 col=4
+code=2250 line=3 col=6
 
 ========
 8. keyword only
