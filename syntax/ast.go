@@ -1335,28 +1335,6 @@ func parseCommaList(p *Parser, consumer consumerFunc) {
 	}
 }
 
-func parseCommaListBlock(p *Parser, blockIndent int, consumer consumerFunc) {
-	// first token MUST be exactly on the indent
-	if p.getPeekIndent() != blockIndent {
-		panic(error.UnexpectedIndent())
-	}
-	// first item MUST be consumed!
-	consumer()
-
-	// iterate to get value
-	for {
-		if p.getPeekIndent() != blockIndent {
-			return
-		}
-		// consume comma
-		if match, _ := p.tryConsume(lex.TypeCommaSep); !match {
-			// stop parsing immediately
-			return
-		}
-		consumer()
-	}
-}
-
 func parseParamDefList(p *Parser, allowBreak bool) []*ID {
 	defer func() {
 		if allowBreak {
