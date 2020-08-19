@@ -920,7 +920,15 @@ func parseVDAssignPair(p *Parser) VDAssignPair {
 	default: // ObjNewW
 		className := parseID(p)
 		// parse colon
-		p.consume(lex.TypeFuncCall)
+		match, _ := p.tryConsume(lex.TypeFuncCall)
+		if !match {
+			return VDAssignPair{
+				Type:      VDTypeObjNew,
+				Variables: idfList,
+				ObjClass:  className,
+				ObjParams: []Expression{},
+			}
+		}
 		// param param list
 		params := []Expression{}
 		parseCommaList(p, func() {

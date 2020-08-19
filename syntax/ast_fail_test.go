@@ -94,6 +94,13 @@ code=2250 line=3 col=6
 令
 --------
 code=2250 line=1 col=0
+
+========
+9. inline declare - multiple declarations
+--------
+令A为1，B为2
+--------
+code=2250 line=1 col=4
 `
 
 const whileLoopCasesFAIL = `

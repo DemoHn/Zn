@@ -236,6 +236,17 @@ $PG($BK(
 		$VP(const vars[]=($ID(G)) expr[]=($ID(空)))
 	)
 ))
+
+========
+10. block declaration - new object without params
+--------
+令A成为B
+--------
+$PG($BK(
+	$VD(
+		$VP(object vars[]=($ID(A)) class=($ID(B)) params[]=())
+	)
+))
 `
 const funcCallCasesOK = `
 ========
