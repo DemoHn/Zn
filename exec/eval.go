@@ -50,6 +50,8 @@ const (
 // Lt - for two decimals ONLY. If leftValue < rightValue.
 //
 // Gt - for two decimals ONLY. If leftValue > rightValue.
+//
+// TODO: NULL value compare logic!
 func compareValues(left ZnValue, right ZnValue, verb compareVerb) (bool, *error.Error) {
 	switch vl := left.(type) {
 	case *ZnDecimal:
@@ -169,6 +171,12 @@ func evalStatement(ctx *Context, scope Scope, stmt syntax.Statement) *error.Erro
 	case *syntax.FunctionDeclareStmt:
 		fn := NewZnFunction(v)
 		return bindValue(ctx, scope, v.FuncName.GetLiteral(), fn, false)
+	case *syntax.ClassDeclareStmt:
+		sp, ok := scope.(*RootScope)
+		if !ok {
+			return error.NewErrorSLOT("只能在RootScope使用类定义")
+		}
+		return bindClassRef(ctx, sp, v)
 	case *syntax.IterateStmt:
 		return evalIterateStmt(ctx, scope, v)
 	case *syntax.FunctionReturnStmt:
@@ -203,16 +211,34 @@ func evalStatement(ctx *Context, scope Scope, stmt syntax.Statement) *error.Erro
 	}
 }
 
+// evalVarDeclareStmt - consists of three branches:
+// 1. A，B 为 C
+// 2. A，B 成为 X：P1，P2，...
+// 3. A，B 恒为 C
 func evalVarDeclareStmt(ctx *Context, scope Scope, node *syntax.VarDeclareStmt) *error.Error {
 	for _, vpair := range node.AssignPair {
-		obj, err := evalExpression(ctx, scope, vpair.AssignExpr)
-		if err != nil {
-			return err
-		}
-		for _, v := range vpair.Variables {
-			vtag := v.GetLiteral()
-			finalObj := duplicateValue(obj)
-			if bindValue(ctx, scope, vtag, finalObj, false); err != nil {
+		switch vpair.Type {
+		case syntax.VDTypeAssign, syntax.VDTypeAssignConst: // 为，恒为
+			obj, err := evalExpression(ctx, scope, vpair.AssignExpr)
+			if err != nil {
+				return err
+			}
+			// if assign a constant variable or not
+			isConst := false
+			if vpair.Type == syntax.VDTypeAssignConst {
+				isConst = true
+			}
+
+			for _, v := range vpair.Variables {
+				vtag := v.GetLiteral()
+				finalObj := duplicateValue(obj)
+
+				if bindValue(ctx, scope, vtag, finalObj, isConst); err != nil {
+					return err
+				}
+			}
+		case syntax.VDTypeObjNew: // 成为
+			if err := evalNewObjectPart(ctx, scope, vpair); err != nil {
 				return err
 			}
 		}
@@ -220,6 +246,54 @@ func evalVarDeclareStmt(ctx *Context, scope Scope, node *syntax.VarDeclareStmt) 
 	return nil
 }
 
+// eval A,B 成为 C：P1，P2，P3，...
+// ensure VDAssignPair.Type MUST BE syntax.VDTypeObjNew
+// TODO: need a better implementation!
+func evalNewObjectPart(ctx *Context, scope Scope, node syntax.VDAssignPair) *error.Error {
+	// compose a new object instance
+	object := NewZnObject()
+	vtag := node.ObjClass.Literal
+	// get class definition
+	classRef, err := getClassRef(ctx, scope.GetRoot(), vtag)
+	if err != nil {
+		return err
+	}
+	// init prop list
+	for _, propPair := range classRef.PropertyList {
+		propID := propPair.PropertyID.GetLiteral()
+		object.PropList[propID] = propPair.InitValue
+	}
+
+	// initialize constructor
+	if len(node.ObjParams) != len(classRef.ConstructorIDList) {
+		return nil, error.MismatchParamLengthError(len(node.ObjParams), len(classRef.ConstructorIDList))
+	}
+	for idx, objParam := range node.ObjParams {
+		propID := classRef.ConstructorIDList[idx].GetLiteral()
+		object.PropList[propID] = objParam
+	}
+
+	// add method list
+	for _, methodItem := range classRef.MethodList {
+		methodID := methodItem.FuncName.GetLiteral()
+		object.MethodList[methodID] = &ZnFunction{
+			Node:     methodItem,
+			Executor: nil,
+		}
+	}
+
+	// assign new object to variables
+	for _, v := range vpair.Variables {
+		vtag := v.GetLiteral()
+		finalObj := duplicateValue(object)
+
+		if bindValue(ctx, scope, vtag, finalObj, false); err != nil {
+			return err
+		}
+	}
+}
+
+// evalWhileLoopStmt -
 func evalWhileLoopStmt(ctx *Context, scope Scope, node *syntax.WhileLoopStmt) *error.Error {
 	loopScope := createScope(ctx, scope, sTypeWhile)
 	for {
@@ -464,10 +538,12 @@ func evalFunctionCall(ctx *Context, scope Scope, expr *syntax.FuncCallExpr) (ZnV
 	if err != nil {
 		return nil, err
 	}
-	return evalFunctionValue(ctx, fScope, params, zf)
+	return evalFunctionValuePart(ctx, fScope, params, zf)
 }
 
-func evalFunctionValue(ctx *Context, scope *FuncScope, params []ZnValue, zf *ZnFunction) (ZnValue, *error.Error) {
+// evalFunctionValuePart - the concrete logic of how to execute inside a function
+// NOTICE: scope here is a brand new FuncScope created from parent `evalFunctionCall()` logic
+func evalFunctionValuePart(ctx *Context, scope *FuncScope, params []ZnValue, zf *ZnFunction) (ZnValue, *error.Error) {
 	// if executor = nil, then use default function executor
 	if zf.Executor == nil {
 		// check param length
@@ -511,7 +587,6 @@ func evalFunctionValue(ctx *Context, scope *FuncScope, params []ZnValue, zf *ZnF
 	}
 	// use pre-defined execution logic
 	return zf.Executor(ctx, scope, params)
-
 }
 
 // evaluate logic combination expressions
@@ -802,6 +877,23 @@ func setValue(ctx *Context, scope Scope, name string, value ZnValue) *error.Erro
 		sp = sp.GetParent()
 	}
 	return error.NameNotDefined(name)
+}
+
+func getClassRef(ctx *Context, scope *RootScope, name string) (*syntax.ClassDeclareStmt, *error.Error) {
+	sym, ok := scope.classRefMap[name]
+	if ok {
+		return sym, nil
+	}
+	return nil, error.NameNotDefined(name)
+}
+
+func bindClassRef(ctx *Context, scope *RootScope, ref *syntax.ClassDeclareStmt) *error.Error {
+	name := ref.ClassName.Literal
+	_, ok := scope.classRefMap[name]
+	if ok {
+		return error.NameRedeclared(name)
+	}
+	scope.classRefMap[name] = ref
 }
 
 func bindValue(ctx *Context, scope Scope, name string, value ZnValue, isConstatnt bool) *error.Error {
