@@ -78,6 +78,10 @@ type KVPair struct {
 
 //////// Variable Type Implementation
 
+func (zo *ZnObject) String() string {
+	return "[Object]"
+}
+
 // String() - display those types
 func (zs *ZnString) String() string {
 	return fmt.Sprintf("「%s」", zs.Value)

@@ -1,6 +1,7 @@
 package exec
 
 import (
+	"math/big"
 	"reflect"
 	"testing"
 
@@ -13,6 +14,43 @@ type programOKSuite struct {
 	symbols        map[string]ZnValue
 	expReturnValue ZnValue
 	expProbe       map[string][][]string
+}
+
+func Test_DuplicateValue(t *testing.T) {
+	suites := []struct {
+		name      string
+		input     ZnValue
+		outputStr string
+	}{
+		{
+			name:      "copy decimal",
+			input:     NewZnDecimalFromInt(1217543, -9),
+			outputStr: "0.001217543",
+		},
+		{
+			name: "copy decimal #2",
+			input: &ZnDecimal{
+				co:  big.NewInt(12345),
+				exp: 3,
+			},
+			outputStr: "12345000",
+		},
+		{
+			name:      "copy string",
+			input:     &ZnString{Value: "这是一个测试"},
+			outputStr: "「这是一个测试」",
+		},
+	}
+
+	for _, suite := range suites {
+		t.Run(suite.name, func(t *testing.T) {
+			out := duplicateValue(suite.input)
+			expectStr := out.String()
+			if expectStr != suite.outputStr {
+				t.Errorf("duplicateValue() result expect -> %s, got -> %s", suite.outputStr, expectStr)
+			}
+		})
+	}
 }
 
 func Test_ExecPrimeExpr(t *testing.T) {

@@ -55,6 +55,11 @@ func (zd *ZnDecimal) String() string {
 
 	// CASE I: no decimal point
 	if digitCount <= pointPos && pointPos <= maxDigitCount {
+		// subcase: add tail zeros
+		if zd.exp > 0 {
+			var zeros = strings.Repeat("0", zd.exp)
+			return fmt.Sprintf("%s%s%s", sflag, txt, zeros)
+		}
 		return fmt.Sprintf("%s%s", sflag, txt)
 	}
 	// CASE II: with decimal point
