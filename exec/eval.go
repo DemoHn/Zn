@@ -23,59 +23,59 @@ import (
 // `evalXXXXStmt` will change the value of its corresponding scope; However, `evalXXXXExpr` will export
 // a ZnValue object and mostly won't change scopes (but search a variable from scope is frequently used)
 
-
-// duplicateValue - 
+// duplicateValue -
 func duplicateValue(in ZnValue) ZnValue {
 	switch v := in.(type) {
-		case *ZnBool {
-			return &ZnBool{Value:v.Value}
-		case *ZnString:
-			return &ZnString{Value:v.Value}
-		case *ZnDecimal:
-			x := new(big.Int)
-			return &ZnDecimal{
-				co: x.Set(v.co),
-				exp: v.exp
-			}
-		case *ZnNull:
-			return in // no need to copy since all "NULL" values are same
-		case *ZnArray:
-			newArr := []ZnValue{}
-			for _, val := range v.Value {
-				newArr = append(newArr, duplicateValue(val))
-			}
-			return &ZnArray{Value: newArr}
-		case *ZnHashMap:
-			newHashMap := map[string]ZnValue{}
-			newKeyOrder := []string{}
-			for key, val := range v.Value {
-				newHashMap[key] = duplicateValue(val)
-			}
-			for _, keyItem := range v.KeyOrder {
-				newKeyOrder = append(newKeyOrder, keyItem)
-			}
-			return &ZnHashMap{
-				Value: newHashMap,
-				KeyOrder: newKeyOrder,
-			}
-		case *ZnFunction: // function itself is immutable, so return directly
-			return in
-		case *ZnObject:
- 			newPropList := map[string]ZnValue{}
-			newMethodList := map[string]*ZnFunction{}
+	case *ZnBool:
+		return &ZnBool{
+			Value: v.Value,
+		}
+	case *ZnString:
+		return &ZnString{Value: v.Value}
+	case *ZnDecimal:
+		x := new(big.Int)
+		return &ZnDecimal{
+			co:  x.Set(v.co),
+			exp: v.exp,
+		}
+	case *ZnNull:
+		return in // no need to copy since all "NULL" values are same
+	case *ZnArray:
+		newArr := []ZnValue{}
+		for _, val := range v.Value {
+			newArr = append(newArr, duplicateValue(val))
+		}
+		return &ZnArray{Value: newArr}
+	case *ZnHashMap:
+		newHashMap := map[string]ZnValue{}
+		newKeyOrder := []string{}
+		for key, val := range v.Value {
+			newHashMap[key] = duplicateValue(val)
+		}
+		for _, keyItem := range v.KeyOrder {
+			newKeyOrder = append(newKeyOrder, keyItem)
+		}
+		return &ZnHashMap{
+			Value:    newHashMap,
+			KeyOrder: newKeyOrder,
+		}
+	case *ZnFunction: // function itself is immutable, so return directly
+		return in
+	case *ZnObject:
+		newPropList := map[string]ZnValue{}
+		newMethodList := map[string]*ZnFunction{}
 
-			// copy prop
-			for key, prop := v.PropList {
-				newPropList[key] = duplicateValue(prop)
-			}
-			// copy method
-			for name, methodFunc := v.MethodList {
-				newMethodList[name] = duplicateValue(methodFunc)
-			}
-			return &ZnObject{
-				PropList: newPropList,
-				MethodList: newMethodList,
-			}
+		// copy prop
+		for key, prop := range v.PropList {
+			newPropList[key] = duplicateValue(prop)
+		}
+		// copy method
+		for name, methodFunc := range v.MethodList {
+			newMethodList[name] = duplicateValue(methodFunc).(*ZnFunction)
+		}
+		return &ZnObject{
+			PropList:   newPropList,
+			MethodList: newMethodList,
 		}
 	}
 	return in
@@ -315,16 +315,24 @@ func evalNewObjectPart(ctx *Context, scope Scope, node syntax.VDAssignPair) *err
 	// init prop list
 	for _, propPair := range classRef.PropertyList {
 		propID := propPair.PropertyID.GetLiteral()
-		object.PropList[propID] = propPair.InitValue
+		expr, err := evalExpression(ctx, scope, propPair.InitValue)
+		if err != nil {
+			return err
+		}
+		object.PropList[propID] = expr
 	}
 
 	// initialize constructor
 	if len(node.ObjParams) != len(classRef.ConstructorIDList) {
-		return nil, error.MismatchParamLengthError(len(node.ObjParams), len(classRef.ConstructorIDList))
+		return error.MismatchParamLengthError(len(node.ObjParams), len(classRef.ConstructorIDList))
 	}
 	for idx, objParam := range node.ObjParams {
 		propID := classRef.ConstructorIDList[idx].GetLiteral()
-		object.PropList[propID] = objParam
+		expr, err := evalExpression(ctx, scope, objParam)
+		if err != nil {
+			return err
+		}
+		object.PropList[propID] = expr
 	}
 
 	// add method list
@@ -337,7 +345,7 @@ func evalNewObjectPart(ctx *Context, scope Scope, node syntax.VDAssignPair) *err
 	}
 
 	// assign new object to variables
-	for _, v := range vpair.Variables {
+	for _, v := range node.Variables {
 		vtag := v.GetLiteral()
 		finalObj := duplicateValue(object)
 
@@ -345,6 +353,7 @@ func evalNewObjectPart(ctx *Context, scope Scope, node syntax.VDAssignPair) *err
 			return err
 		}
 	}
+	return nil
 }
 
 // evalWhileLoopStmt -
@@ -948,6 +957,7 @@ func bindClassRef(ctx *Context, scope *RootScope, ref *syntax.ClassDeclareStmt) 
 		return error.NameRedeclared(name)
 	}
 	scope.classRefMap[name] = ref
+	return nil
 }
 
 func bindValue(ctx *Context, scope Scope, name string, value ZnValue, isConstatnt bool) *error.Error {
