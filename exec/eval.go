@@ -1,6 +1,7 @@
 package exec
 
 import (
+	"math/big"
 	"reflect"
 	"strconv"
 	"strings"
@@ -22,8 +23,61 @@ import (
 // `evalXXXXStmt` will change the value of its corresponding scope; However, `evalXXXXExpr` will export
 // a ZnValue object and mostly won't change scopes (but search a variable from scope is frequently used)
 
-// TODO: find a better way to handle this
+
+// duplicateValue - 
 func duplicateValue(in ZnValue) ZnValue {
+	switch v := in.(type) {
+		case *ZnBool {
+			return &ZnBool{Value:v.Value}
+		case *ZnString:
+			return &ZnString{Value:v.Value}
+		case *ZnDecimal:
+			x := new(big.Int)
+			return &ZnDecimal{
+				co: x.Set(v.co),
+				exp: v.exp
+			}
+		case *ZnNull:
+			return in // no need to copy since all "NULL" values are same
+		case *ZnArray:
+			newArr := []ZnValue{}
+			for _, val := range v.Value {
+				newArr = append(newArr, duplicateValue(val))
+			}
+			return &ZnArray{Value: newArr}
+		case *ZnHashMap:
+			newHashMap := map[string]ZnValue{}
+			newKeyOrder := []string{}
+			for key, val := range v.Value {
+				newHashMap[key] = duplicateValue(val)
+			}
+			for _, keyItem := range v.KeyOrder {
+				newKeyOrder = append(newKeyOrder, keyItem)
+			}
+			return &ZnHashMap{
+				Value: newHashMap,
+				KeyOrder: newKeyOrder,
+			}
+		case *ZnFunction: // function itself is immutable, so return directly
+			return in
+		case *ZnObject:
+ 			newPropList := map[string]ZnValue{}
+			newMethodList := map[string]*ZnFunction{}
+
+			// copy prop
+			for key, prop := v.PropList {
+				newPropList[key] = duplicateValue(prop)
+			}
+			// copy method
+			for name, methodFunc := v.MethodList {
+				newMethodList[name] = duplicateValue(methodFunc)
+			}
+			return &ZnObject{
+				PropList: newPropList,
+				MethodList: newMethodList,
+			}
+		}
+	}
 	return in
 }
 
