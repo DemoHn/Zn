@@ -12,7 +12,6 @@ import (
 
 // ZnValue - general value interface
 type ZnValue interface {
-	IsNull() bool
 	String() string
 }
 
@@ -22,7 +21,10 @@ type funcExecutor func(ctx *Context, scope Scope, params []ZnValue) (ZnValue, *e
 
 // ZnObject -
 type ZnObject struct {
-	isNull bool
+	// defines all properties (readable and writable)
+	PropList map[string]ZnValue
+	// defines all methods: A 之 （B：XX）
+	MethodList map[string]*ZnFunction
 }
 
 //////// Primitive Types Definition
@@ -72,13 +74,6 @@ type ZnHashMap struct {
 type KVPair struct {
 	Key   string
 	Value ZnValue
-}
-
-//////// ZnObject implemetation
-
-// IsNull -
-func (o *ZnObject) IsNull() bool {
-	return o.isNull
 }
 
 //////// Variable Type Implementation
@@ -154,7 +149,6 @@ func NewZnArray(values []ZnValue) *ZnArray {
 // NewZnNull - null value
 func NewZnNull() *ZnNull {
 	t := &ZnNull{}
-	t.isNull = true
 	return t
 }
 
@@ -192,4 +186,14 @@ func NewZnHashMap(kvPairs []KVPair) *ZnHashMap {
 	}
 
 	return hm
+}
+
+// NewZnObject -
+func NewZnObject() *ZnObject {
+	obj := &ZnObject{
+		PropList:   map[string]ZnValue{},
+		MethodList: map[string]*ZnFunction{},
+	}
+
+	return obj
 }
