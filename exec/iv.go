@@ -38,9 +38,10 @@ type ZnMemberIV struct {
 
 // ZnMethodIV - e.g. A 之 （方法：X，Y，Z）
 type ZnMethodIV struct {
-	Root       ZnValue
-	MethodName string
-	Params     []ZnValue
+	Root        ZnValue
+	MethodName  string
+	Params      []ZnValue
+	ObjectScope Scope
 }
 
 // ZnScopeMemberIV - e.g. 此之 属性A
@@ -99,14 +100,22 @@ func (iv *ZnHashMapIV) Reduce(ctx *Context, input ZnValue, lhs bool) (ZnValue, *
 
 // Reduce -
 func (iv *ZnMemberIV) Reduce(ctx *Context, input ZnValue, lhs bool) (ZnValue, *error.Error) {
-	// TODO: Implement this!!
-	return NewZnNull(), nil
+	if lhs == true {
+		if err := iv.Root.SetProperty(iv.Member, input); err != nil {
+			return nil, err
+		}
+		return input, nil
+	}
+	return iv.Root.GetProperty(iv.Member)
 }
 
 // Reduce -
 func (iv *ZnMethodIV) Reduce(ctx *Context, input ZnValue, lhs bool) (ZnValue, *error.Error) {
-	// TODO: Implement this!!
-	return NewZnNull(), nil
+	// TOOD: exclude lhs
+	if lhs == true {
+		return error.NewErrorSLOT("Invalid left-hand side in assignment")
+	}
+	methodFunc := iv.Root.GetMethod(iv.MethodName)
 }
 
 // Reduce -
@@ -130,6 +139,11 @@ func (iv *ZnScopeMethodIV) Reduce(ctx *Context, input ZnValue, lhs bool) (ZnValu
 
 // Reduce -
 func (iv *ZnPropIV) Reduce(ctx *Context, input ZnValue, lhs bool) (ZnValue, *error.Error) {
-	// TODO: Implement this!!
-	return NewZnNull(), nil
+	if lhs == true {
+		if err := iv.RootObject.SetProperty(iv.Member, input); err != nil {
+			return nil, err
+		}
+		return input, nil
+	}
+	return iv.RootObject.GetProperty(iv.Member)
 }

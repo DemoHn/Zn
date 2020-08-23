@@ -24,3 +24,19 @@ func AssignToConstant() *Error {
 		text: "不允许赋值给常变量",
 	})
 }
+
+// PropertyNotFound -
+func PropertyNotFound(name string) *Error {
+	return nameError.NewError(0x04, Error{
+		text: fmt.Sprintf("未找到属性「%s」", name),
+		info: fmt.Sprintf("name=(%s)", name),
+	})
+}
+
+// MethodNotFound -
+func MethodNotFound(name string) *Error {
+	return nameError.NewError(0x05, Error{
+		text: fmt.Sprintf("未找到方法名「%s」", name),
+		info: fmt.Sprintf("name=(%s)", name),
+	})
+}
