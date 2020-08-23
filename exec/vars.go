@@ -13,6 +13,9 @@ import (
 // ZnValue - general value interface
 type ZnValue interface {
 	String() string
+	GetProperty(string) (ZnValue, *error.Error)
+	SetProperty(string, ZnValue) *error.Error
+	GetMethod(string) (*ZnFunction, *error.Error)
 }
 
 type funcExecutor func(ctx *Context, scope Scope, params []ZnValue) (ZnValue, *error.Error)
@@ -31,38 +34,38 @@ type ZnObject struct {
 
 // ZnString - string 「文本」型
 type ZnString struct {
-	ZnObject
+	*ZnObject
 	Value string
 }
 
 // ZnBool - (bool) 「二象」型
 type ZnBool struct {
-	ZnObject
+	*ZnObject
 	Value bool
 }
 
 // ZnArray - Zn array type 「元组」型
 type ZnArray struct {
-	ZnObject
+	*ZnObject
 	Value []ZnValue
 }
 
 // ZnNull - Zn null type - a special marker indicates that
 // this value has neither type nor value
 type ZnNull struct {
-	ZnObject
+	*ZnObject
 }
 
 // ZnFunction -
 type ZnFunction struct {
-	ZnObject
+	*ZnObject
 	Node     *syntax.FunctionDeclareStmt
 	Executor funcExecutor
 }
 
 // ZnHashMap -
 type ZnHashMap struct {
-	ZnObject
+	*ZnObject
 	// now only support string as key
 	Value map[string]ZnValue
 	// The order of key is (delibrately) random when iterating a hashmap.
@@ -80,6 +83,34 @@ type KVPair struct {
 
 func (zo *ZnObject) String() string {
 	return "[Object]"
+}
+
+// GetProperty -
+func (zo *ZnObject) GetProperty(name string) (ZnValue, *error.Error) {
+	prop, ok := zo.PropList[name]
+	if !ok {
+		return nil, error.PropertyNotFound(name)
+	}
+	return prop, nil
+}
+
+// SetProperty -
+func (zo *ZnObject) SetProperty(name string, value ZnValue) *error.Error {
+	_, ok := zo.PropList[name]
+	if !ok {
+		return error.PropertyNotFound(name)
+	}
+	zo.PropList[name] = value
+	return nil
+}
+
+// GetMethod -
+func (zo *ZnObject) GetMethod(name string) (*ZnFunction, *error.Error) {
+	methodFunc, ok := zo.MethodList[name]
+	if !ok {
+		return nil, error.MethodNotFound(name)
+	}
+	return methodFunc, nil
 }
 
 // String() - display those types

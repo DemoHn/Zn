@@ -392,23 +392,32 @@ func evalWhileLoopStmt(ctx *Context, scope Scope, node *syntax.WhileLoopStmt) *e
 // EvalStmtBlock -
 func evalStmtBlock(ctx *Context, scope Scope, block *syntax.BlockStmt) *error.Error {
 	enableHoist := false
-	if _, ok := scope.(*RootScope); ok {
+	rootScope, ok := scope.(*RootScope)
+	if ok {
 		enableHoist = true
 	}
 
 	if enableHoist {
 		// ROUND I: declare function stmt FIRST
 		for _, stmtI := range block.Children {
-			if v, ok := stmtI.(*syntax.FunctionDeclareStmt); ok {
+			switch v := stmtI.(type) {
+			case *syntax.FunctionDeclareStmt:
 				fn := NewZnFunction(v)
 				if err := bindValue(ctx, scope, v.FuncName.GetLiteral(), fn, false); err != nil {
+					return err
+				}
+			case *syntax.ClassDeclareStmt:
+				if err := bindClassRef(ctx, rootScope, v); err != nil {
 					return err
 				}
 			}
 		}
 		// ROUND II: exec statement except functionDecl stmt
 		for _, stmtII := range block.Children {
-			if _, ok := stmtII.(*syntax.FunctionDeclareStmt); !ok {
+			switch stmtII.(type) {
+			case *syntax.FunctionDeclareStmt, *syntax.ClassDeclareStmt:
+				continue
+			default:
 				if err := evalStatement(ctx, scope, stmtII); err != nil {
 					return err
 				}
@@ -465,7 +474,7 @@ func evalIterateStmt(ctx *Context, scope Scope, node *syntax.IterateStmt) *error
 	var keySlot, valueSlot string
 	var nameLen = len(node.IndexNames)
 
-	iterScope := createIterateScope(ctx, scope)
+	iterScope := createScope(ctx, scope, sTypeIterate)
 	// 以A，B遍历C： D
 	// execute expr: C
 	targetExpr, err := evalExpression(ctx, scope, node.IterateExpr)

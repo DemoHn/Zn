@@ -251,15 +251,6 @@ func createScope(ctx *Context, scope Scope, sType string) Scope {
 	return nil
 }
 
-// createIterateScope - create new (nested) iterate scope
-func createIterateScope(ctx *Context, scope Scope) *IterateScope {
-	return &IterateScope{
-		root:      scope.GetRoot(),
-		parent:    scope,
-		symbolMap: map[string]SymbolInfo{},
-	}
-}
-
 // IterateScope - iterate stmt scope
 type IterateScope struct {
 	root      *RootScope
