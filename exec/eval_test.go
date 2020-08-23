@@ -31,14 +31,57 @@ func Test_DuplicateValue(t *testing.T) {
 			name: "copy decimal #2",
 			input: &ZnDecimal{
 				co:  big.NewInt(12345),
-				exp: 3,
+				exp: 4,
 			},
-			outputStr: "12345000",
+			outputStr: "123450000",
 		},
 		{
 			name:      "copy string",
-			input:     &ZnString{Value: "这是一个测试"},
-			outputStr: "「这是一个测试」",
+			input:     &ZnString{Value: "这是「一个」测试"},
+			outputStr: "「这是「一个」测试」",
+		},
+		{
+			name:      "copy bool",
+			input:     &ZnBool{Value: false},
+			outputStr: "假",
+		},
+		{
+			name: "copy array",
+			input: &ZnArray{
+				Value: []ZnValue{&ZnBool{Value: true}, &ZnString{Value: "哈哈哈哈"}, NewZnDecimalFromInt(1234, -3)},
+			},
+			outputStr: "【真，「哈哈哈哈」，1.234】",
+		},
+		{
+			name: "copy array (nested)",
+			input: NewZnArray([]ZnValue{
+				NewZnArray([]ZnValue{
+					NewZnDecimalFromInt(123, 0),
+					NewZnDecimalFromInt(1234, 0),
+					NewZnDecimalFromInt(12345, 0),
+				}),
+				NewZnString("ASDF"),
+			}),
+			outputStr: "【【123，1234，12345】，「ASDF」】",
+		},
+		{
+			name: "copy hashmap (nested)",
+			input: NewZnHashMap([]KVPair{
+				{
+					Key:   "猪",
+					Value: NewZnDecimalFromInt(100, 2),
+				},
+				{
+					Key: "锅",
+					Value: NewZnHashMap([]KVPair{
+						{
+							Key:   "SH",
+							Value: NewZnBool(true),
+						},
+					}),
+				},
+			}),
+			outputStr: "【猪 == 10000，锅 == 【SH == 真】】",
 		},
 	}
 
