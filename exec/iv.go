@@ -41,7 +41,7 @@ type ZnMethodIV struct {
 	Root        ZnValue
 	MethodName  string
 	Params      []ZnValue
-	ObjectScope Scope
+	ObjectScope *ObjectScope
 }
 
 // ZnScopeMemberIV - e.g. 此之 属性A
@@ -111,18 +111,25 @@ func (iv *ZnMemberIV) Reduce(ctx *Context, input ZnValue, lhs bool) (ZnValue, *e
 
 // Reduce -
 func (iv *ZnMethodIV) Reduce(ctx *Context, input ZnValue, lhs bool) (ZnValue, *error.Error) {
-	// TOOD: exclude lhs
 	if lhs == true {
-		return error.NewErrorSLOT("Invalid left-hand side in assignment")
+		return nil, error.NewErrorSLOT("Invalid left-hand side in assignment")
 	}
-	methodFunc := iv.Root.GetMethod(iv.MethodName)
+	methodFunc, err := iv.Root.GetMethod(iv.MethodName)
+	if err != nil {
+		return nil, err
+	}
+
+	funcScope := NewFuncScope(iv.ObjectScope)
+
+	// exec methodFunc
+	return evalFunctionValuePart(ctx, funcScope, iv.Params, methodFunc)
 }
 
 // Reduce -
 func (iv *ZnScopeMemberIV) Reduce(ctx *Context, input ZnValue, lhs bool) (ZnValue, *error.Error) {
 	switch sp := iv.RootScope.(type) {
 	case *IterateScope:
-		return sp.getSpecialProps(iv.Member), nil
+		return sp.getSpecialProps(iv.Member)
 	}
 
 	return NewZnNull(), nil

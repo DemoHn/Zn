@@ -358,7 +358,7 @@ func evalNewObjectPart(ctx *Context, scope Scope, node syntax.VDAssignPair) *err
 
 // evalWhileLoopStmt -
 func evalWhileLoopStmt(ctx *Context, scope Scope, node *syntax.WhileLoopStmt) *error.Error {
-	loopScope := createScope(ctx, scope, sTypeWhile)
+	loopScope := NewWhileScope(scope)
 	for {
 		// #1. first execute expr
 		trueExpr, err := evalExpression(ctx, loopScope, node.TrueExpr)
@@ -474,7 +474,7 @@ func evalIterateStmt(ctx *Context, scope Scope, node *syntax.IterateStmt) *error
 	var keySlot, valueSlot string
 	var nameLen = len(node.IndexNames)
 
-	iterScope := createScope(ctx, scope, sTypeIterate)
+	iterScope := NewIterateScope(scope)
 	// 以A，B遍历C： D
 	// execute expr: C
 	targetExpr, err := evalExpression(ctx, scope, node.IterateExpr)
@@ -593,7 +593,7 @@ func evalExpression(ctx *Context, scope Scope, expr syntax.Expression) (ZnValue,
 
 // （显示：A，B，C）
 func evalFunctionCall(ctx *Context, scope Scope, expr *syntax.FuncCallExpr) (ZnValue, *error.Error) {
-	fScope, _ := createScope(ctx, scope, sTypeFunc).(*FuncScope)
+	fScope := NewFuncScope(scope)
 	vtag := expr.FuncName.GetLiteral()
 	// find function definctxion
 	val, err := getValue(ctx, scope, vtag)
@@ -851,7 +851,23 @@ func getMemberExprIV(ctx *Context, scope Scope, expr *syntax.MemberExpr) (ZnIV, 
 	if expr.RootType == syntax.RootTypeProp { // 其 XX
 		if expr.MemberType == syntax.MemberID {
 			tag := expr.MemberID.Literal
-			var rootObj ZnValue // TODO
+
+			var sp = scope
+			var objectScope *ObjectScope
+			// find valid scope
+			for sp != nil {
+				if osp, ok := sp.(*ObjectScope); ok {
+					objectScope = osp
+					break
+				}
+				sp = sp.GetParent()
+			}
+
+			if sp == nil {
+				return nil, error.NewErrorSLOT("No valid ObjectScope for execution")
+			}
+			// get rootObj from ObjectScope
+			var rootObj = objectScope.rootObject
 
 			return &ZnPropIV{rootObj, tag}, nil
 		}
@@ -874,7 +890,9 @@ func getMemberExprIV(ctx *Context, scope Scope, expr *syntax.MemberExpr) (ZnIV, 
 		if err != nil {
 			return nil, err
 		}
-		return &ZnMethodIV{valRoot, funcName, paramVals}, nil
+
+		objScope := NewObjectScope(scope, valRoot)
+		return &ZnMethodIV{valRoot, funcName, paramVals, objScope}, nil
 	case syntax.MemberIndex:
 		idx, err := evalExpression(ctx, scope, expr.MemberIndex)
 		if err != nil {
@@ -977,15 +995,7 @@ func bindValue(ctx *Context, scope Scope, name string, value ZnValue, isConstatn
 	if _, ok := scope.GetSymbol(name); ok {
 		return error.NameRedeclared(name)
 	}
-	sp := scope
-	for sp != nil {
-		if sp.HasSymbol() {
-			sp.SetSymbol(name, value, isConstatnt)
-			return nil
-		}
-		sp = sp.GetParent()
-	}
-
+	scope.SetSymbol(name, value, isConstatnt)
 	return nil
 }
 

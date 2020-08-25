@@ -16,8 +16,6 @@ type Scope interface {
 	GetSymbol(name string) (SymbolInfo, bool)
 	// SetSymbol - set symbol from internal symbol map
 	SetSymbol(name string, value ZnValue, isConstant bool)
-	// HasSymbol - if the scope has stand-alone valueMap
-	HasSymbol() bool
 }
 
 const (
@@ -29,6 +27,36 @@ const (
 
 //// implementations
 
+// ScopeBase - basic scope structure
+type ScopeBase struct {
+	root      *RootScope
+	parent    Scope
+	symbolMap map[string]SymbolInfo
+}
+
+// GetRoot - get root scope
+func (sb *ScopeBase) GetRoot() *RootScope {
+	return sb.root
+}
+
+// GetParent - get parent scope
+func (sb *ScopeBase) GetParent() Scope {
+	return sb.parent
+}
+
+// GetSymbol -
+func (sb *ScopeBase) GetSymbol(name string) (SymbolInfo, bool) {
+	sym, ok := sb.symbolMap[name]
+	return sym, ok
+}
+
+// SetSymbol -
+func (sb *ScopeBase) SetSymbol(name string, value ZnValue, isConstant bool) {
+	sb.symbolMap[name] = SymbolInfo{
+		value, isConstant,
+	}
+}
+
 // SymbolInfo - symbol info
 type SymbolInfo struct {
 	Value      ZnValue
@@ -38,6 +66,7 @@ type SymbolInfo struct {
 // RootScope - as named, this is the root scope for execution one program.
 // usually it contains all active variables, scopes, etc
 type RootScope struct {
+	*ScopeBase
 	//// lexical scope
 	// file - current execution file directory
 	file string
@@ -47,8 +76,6 @@ type RootScope struct {
 	lineStack *lex.LineStack
 	// lastValue - get last valid value even if there's no return statement
 	lastValue ZnValue
-	// symbolMap - store variables within this scope
-	symbolMap map[string]SymbolInfo
 	// classRefMap - class definition template (reference)
 	// this item only exists on RootScope since class defition block IS allowed
 	// ONLY in root block
@@ -63,11 +90,17 @@ type RootScope struct {
 // NOTE: When a program file "requires" another one, another RootScope is created
 // for that "required" program file.
 func NewRootScope() *RootScope {
-	return &RootScope{
+	rs := &RootScope{
 		lastValue:   NewZnNull(),
-		symbolMap:   map[string]SymbolInfo{},
 		classRefMap: map[string]*syntax.ClassDeclareStmt{},
 	}
+	rs.ScopeBase = &ScopeBase{
+		root:      rs,
+		parent:    nil,
+		symbolMap: map[string]SymbolInfo{},
+	}
+
+	return rs
 }
 
 // Init - init rootScope using new Lexer
@@ -83,34 +116,6 @@ func (rs *RootScope) SetCurrentLine(line int) {
 	rs.currentLine = line
 }
 
-// GetParent -
-func (rs *RootScope) GetParent() Scope {
-	return nil
-}
-
-// GetRoot -
-func (rs *RootScope) GetRoot() *RootScope {
-	return rs
-}
-
-// GetSymbol - get symbol
-func (rs *RootScope) GetSymbol(name string) (SymbolInfo, bool) {
-	sym, ok := rs.symbolMap[name]
-	return sym, ok
-}
-
-// SetSymbol - set symbol
-func (rs *RootScope) SetSymbol(name string, value ZnValue, isConstant bool) {
-	rs.symbolMap[name] = SymbolInfo{
-		value, isConstant,
-	}
-}
-
-// HasSymbol -
-func (rs *RootScope) HasSymbol() bool {
-	return true
-}
-
 // SetLastValue - set last value
 func (rs *RootScope) SetLastValue(value ZnValue) {
 	rs.lastValue = value
@@ -123,43 +128,25 @@ func (rs *RootScope) GetLastValue() ZnValue {
 
 // FuncScope - function scope
 type FuncScope struct {
+	*ScopeBase
 	returnValue ZnValue
-	root        *RootScope
-	parent      Scope
-	symbolMap   map[string]SymbolInfo
 }
 
-// GetParent -
-func (fs *FuncScope) GetParent() Scope {
-	return fs.parent
-}
-
-// GetRoot -
-func (fs *FuncScope) GetRoot() *RootScope {
-	return fs.root
+// NewFuncScope -
+func NewFuncScope(parent Scope) *FuncScope {
+	return &FuncScope{
+		returnValue: NewZnNull(),
+		ScopeBase: &ScopeBase{
+			root:      parent.GetRoot(),
+			parent:    parent,
+			symbolMap: map[string]SymbolInfo{},
+		},
+	}
 }
 
 // SetCurrentLine - set current execution line
 func (fs *FuncScope) SetCurrentLine(line int) {
 	fs.root.SetCurrentLine(line)
-}
-
-// GetSymbol - get symbol
-func (fs *FuncScope) GetSymbol(name string) (SymbolInfo, bool) {
-	sym, ok := fs.symbolMap[name]
-	return sym, ok
-}
-
-// SetSymbol - set symbol
-func (fs *FuncScope) SetSymbol(name string, value ZnValue, isConstant bool) {
-	fs.symbolMap[name] = SymbolInfo{
-		value, isConstant,
-	}
-}
-
-// HasSymbol -
-func (fs *FuncScope) HasSymbol() bool {
-	return true
 }
 
 // GetReturnValue -
@@ -173,36 +160,19 @@ func (fs *FuncScope) SetReturnValue(value ZnValue) {
 }
 
 // WhileScope - a scope within *while* statement
-// NOTICE: there's no standalone symbolMap inside this scope,
-// instead, use it's parent for get/set symbols
 type WhileScope struct {
-	root   *RootScope
-	parent Scope
+	*ScopeBase
 }
 
-// HasSymbol - while scope has NO standalone symbol system
-func (ws *WhileScope) HasSymbol() bool {
-	return false
-}
-
-// SetSymbol - set symbol
-func (ws *WhileScope) SetSymbol(name string, value ZnValue, isConstant bool) {
-	return
-}
-
-// GetSymbol - get symbol
-func (ws *WhileScope) GetSymbol(name string) (SymbolInfo, bool) {
-	return SymbolInfo{}, false
-}
-
-// GetParent - get parent
-func (ws *WhileScope) GetParent() Scope {
-	return ws.parent
-}
-
-// GetRoot -
-func (ws *WhileScope) GetRoot() *RootScope {
-	return ws.root
+// NewWhileScope -
+func NewWhileScope(parent Scope) *WhileScope {
+	return &WhileScope{
+		ScopeBase: &ScopeBase{
+			root:      parent.GetRoot(),
+			parent:    parent,
+			symbolMap: map[string]SymbolInfo{},
+		},
+	}
 }
 
 // execSpecialMethods - a weird way to execute internal "scope"-bound functions
@@ -214,79 +184,34 @@ func (ws *WhileScope) GetRoot() *RootScope {
 // where `此之（结束）` means under this whileScope, execute the (结束) method to break the loop (same as "break" keyword)
 // where `此之（继续）` means under this whileScope, execute the (继续) method to continue the loop (same as "continue" keyword)
 func (ws *WhileScope) execSpecialMethods(name string, params []ZnValue) (ZnValue, *error.Error) {
-	if name == "结束" {
+	switch name {
+	case "结束":
 		return NewZnNull(), error.BreakBreakError()
-	}
-	if name == "继续" {
+	case "继续":
 		return NewZnNull(), error.ContinueBreakError()
+	default:
+		// for other keywords, return error directly
+		return nil, error.NewErrorSLOT("no appropriate method name for while loop to execute")
 	}
-	// for other keywords, return error directly
-	return nil, error.NewErrorSLOT("no appropriate method name for while loop to execute")
-}
-
-// createScope - create new (nested) scope from current scope
-// fails if return scope is nil
-func createScope(ctx *Context, scope Scope, sType string) Scope {
-	switch sType {
-	case sTypeFunc:
-		return &FuncScope{
-			returnValue: NewZnNull(),
-			root:        scope.GetRoot(),
-			parent:      scope,
-			symbolMap:   map[string]SymbolInfo{},
-		}
-	case sTypeWhile:
-		return &WhileScope{
-			root:   scope.GetRoot(),
-			parent: scope,
-		}
-	case sTypeIterate:
-		return &IterateScope{
-			root:      scope.GetRoot(),
-			parent:    scope,
-			symbolMap: map[string]SymbolInfo{},
-		}
-	}
-
-	return nil
 }
 
 // IterateScope - iterate stmt scope
 type IterateScope struct {
-	root      *RootScope
-	parent    Scope
-	symbolMap map[string]SymbolInfo
+	*ScopeBase
 	// current iteration: keys & values
 	currentIndex ZnValue
 	currentValue ZnValue
 }
 
-// GetParent -
-func (its *IterateScope) GetParent() Scope {
-	return its.parent
-}
-
-// GetRoot -
-func (its *IterateScope) GetRoot() *RootScope {
-	return its.root
-}
-
-// GetSymbol -
-func (its *IterateScope) GetSymbol(name string) (SymbolInfo, bool) {
-	sym, ok := its.symbolMap[name]
-	return sym, ok
-}
-
-// SetSymbol -
-func (its *IterateScope) SetSymbol(name string, value ZnValue, isConstant bool) {
-	its.symbolMap[name] = SymbolInfo{
-		value, isConstant,
+// NewIterateScope -
+func NewIterateScope(parent Scope) *IterateScope {
+	return &IterateScope{
+		ScopeBase: &ScopeBase{
+			root:      parent.GetRoot(),
+			parent:    parent,
+			symbolMap: map[string]SymbolInfo{},
+		},
 	}
-}
-
-// HasSymbol -
-func (its *IterateScope) HasSymbol() bool {
-	return true
 }
 
 func (its *IterateScope) setCurrentKV(index ZnValue, value ZnValue) {
@@ -295,23 +220,43 @@ func (its *IterateScope) setCurrentKV(index ZnValue, value ZnValue) {
 }
 
 // get props: 此之值，此之索引
-func (its *IterateScope) getSpecialProps(name string) ZnValue {
-	if name == "值" {
-		return its.currentValue
+func (its *IterateScope) getSpecialProps(name string) (ZnValue, *error.Error) {
+	switch name {
+	case "值":
+		return its.currentValue, nil
+	case "索引":
+		return its.currentIndex, nil
+	default:
+		return nil, error.NewErrorSLOT("no appropriate prop name to get")
 	}
-	if name == "索引" {
-		return its.currentIndex
-	}
-	panic(error.NewErrorSLOT("no appropriate prop name to get"))
 }
 
 func (its *IterateScope) execSpecialMethods(name string, params []ZnValue) (ZnValue, *error.Error) {
-	if name == "结束" {
+	switch name {
+	case "结束":
 		return NewZnNull(), error.BreakBreakError()
-	}
-	if name == "继续" {
+	case "继续":
 		return NewZnNull(), error.ContinueBreakError()
+	default:
+		// for other keywords, return error directly
+		return nil, error.NewErrorSLOT("no appropriate method name for while loop to execute")
 	}
-	// for other keywords, return error directly
-	return nil, error.NewErrorSLOT("no appropriate method name for while loop to execute")
+}
+
+// ObjectScope -
+type ObjectScope struct {
+	*ScopeBase
+	rootObject ZnValue
+}
+
+// NewObjectScope -
+func NewObjectScope(parent Scope, rootObject ZnValue) *ObjectScope {
+	return &ObjectScope{
+		ScopeBase: &ScopeBase{
+			root:      parent.GetRoot(),
+			parent:    parent,
+			symbolMap: map[string]SymbolInfo{},
+		},
+		rootObject: rootObject,
+	}
 }
