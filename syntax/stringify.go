@@ -154,6 +154,10 @@ func StringifyAST(node Node) string {
 			StringifyAST(v.FuncName),
 			strings.Join(paramsStr, " "),
 			StringifyAST(v.ExecBlock))
+	case *GetterDeclareStmt:
+		return fmt.Sprintf("$GT(name=(%s) blockTokens=(%s))",
+			StringifyAST(v.GetterName),
+			StringifyAST(v.ExecBlock))
 	case *BlockStmt:
 		var statements = []string{}
 		for _, stmt := range v.Children {
@@ -173,6 +177,8 @@ func StringifyAST(node Node) string {
 		constructorStr := []string{}
 		propertyStr := []string{}
 		methodStr := []string{}
+		getterStr := []string{}
+
 		for _, c := range v.ConstructorIDList {
 			constructorStr = append(constructorStr, StringifyAST(c))
 		}
@@ -182,13 +188,17 @@ func StringifyAST(node Node) string {
 		for _, m := range v.MethodList {
 			methodStr = append(methodStr, StringifyAST(m))
 		}
+		for _, g := range v.GetterList {
+			getterStr = append(getterStr, StringifyAST(g))
+		}
 
 		return fmt.Sprintf(
-			"$CLS(name=(%s) properties=(%s) constructor=(%s) methods=(%s))",
+			"$CLS(name=(%s) properties=(%s) constructor=(%s) methods=(%s) getters=(%s))",
 			StringifyAST(v.ClassName),
 			strings.Join(propertyStr, " "),
 			strings.Join(constructorStr, " "),
 			strings.Join(methodStr, " "),
+			strings.Join(getterStr, " "),
 		)
 	case *PropertyDeclareStmt:
 		return fmt.Sprintf(
