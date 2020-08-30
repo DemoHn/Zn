@@ -118,11 +118,7 @@ func (iv *ZnMethodIV) Reduce(ctx *Context, input ZnValue, lhs bool) (ZnValue, *e
 	if err != nil {
 		return nil, err
 	}
-
-	funcScope := NewFuncScope(iv.ObjectScope)
-
-	// exec methodFunc
-	return evalFunctionValuePart(ctx, funcScope, iv.Params, methodFunc)
+	return methodFunc.Exec(ctx, iv.ObjectScope, iv.Params)
 }
 
 // Reduce -
