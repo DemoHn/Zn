@@ -8,7 +8,7 @@ const (
 	GlyphBU rune = 0x4E0D
 	// GlyphQIE - 且 - 且
 	GlyphQIE rune = 0x4E14
-	// GlyphWEI - 为 - 是为，成为，恒为，为，不为
+	// GlyphWEI - 为 - 是为，成为，恒为，何为，为，不为
 	GlyphWEI rune = 0x4E3A
 	// GlyphYIy - 义 - 定义
 	GlyphYIy rune = 0x4E49
@@ -20,7 +20,7 @@ const (
 	GlyphLING rune = 0x4EE4
 	// GlyphYIi - 以 - 以
 	GlyphYIi rune = 0x4EE5
-	// GlyphHE - 何 - 如何
+	// GlyphHE - 何 - 如何，何为
 	GlyphHE rune = 0x4F55
 	// GlyphQI - 其 - 其
 	GlyphQI rune = 0x5176
@@ -76,12 +76,12 @@ const (
 var KeywordLeads = []rune{
 	GlyphBU, GlyphQIE, GlyphWEI,
 	GlyphZHI, GlyphLING, GlyphYIi,
-	GlyphQI, GlyphZAI, GlyphFOU,
-	GlyphDA, GlyphRU, GlyphDING,
-	GlyphXIAO, GlyphYI, GlyphHENG,
-	GlyphCHENG, GlyphHUO, GlyphSHI,
-	GlyphCI, GlyphMEI, GlyphDENG,
-	GlyphFAN, GlyphBIAN,
+	GlyphHE, GlyphQI, GlyphZAI,
+	GlyphFOU, GlyphDA, GlyphRU,
+	GlyphDING, GlyphXIAO, GlyphYI,
+	GlyphHENG, GlyphCHENG, GlyphHUO,
+	GlyphSHI, GlyphCI, GlyphMEI,
+	GlyphDENG, GlyphFAN, GlyphBIAN,
 }
 
 // Keyword token types
@@ -92,6 +92,7 @@ const (
 	TypeCondOtherW    TokenType = 43 // 再如
 	TypeCondW         TokenType = 44 // 如果
 	TypeFuncW         TokenType = 45 // 如何
+	TypeGetterW       TokenType = 46 // 何为
 	TypeParamAssignW  TokenType = 47 // 已知
 	TypeReturnW       TokenType = 48 // 返回
 	TypeLogicNotW     TokenType = 49 // 不为
@@ -123,6 +124,7 @@ var KeywordTypeMap = map[TokenType][]rune{
 	TypeCondOtherW:    {GlyphZAI, GlyphRU},
 	TypeCondW:         {GlyphRU, GlyphGUO},
 	TypeFuncW:         {GlyphRU, GlyphHE},
+	TypeGetterW:       {GlyphHE, GlyphWEI},
 	TypeParamAssignW:  {GlyphYI, GlyphZHIy},
 	TypeReturnW:       {GlyphFAN, GlyphHUI},
 	TypeLogicNotW:     {GlyphBU, GlyphWEI},
@@ -186,6 +188,13 @@ func (l *Lexer) parseKeyword(ch rune, moveForward bool) (bool, *Token) {
 		tk = NewKeywordToken(TypeDeclareW)
 	case GlyphYIi:
 		tk = NewKeywordToken(TypeVarOneW)
+	case GlyphHE:
+		if l.peek() == GlyphWEI {
+			wordLen = 2
+			tk = NewKeywordToken(TypeGetterW)
+		} else {
+			return false, nil
+		}
 	case GlyphQI:
 		tk = NewKeywordToken(TypeObjThisW)
 	case GlyphZAI:

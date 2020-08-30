@@ -52,6 +52,7 @@ AssignConstW    42      恒为
 CondOtherW      43      再如
 CondW           44      如果
 FuncW           45      如何
+GetterW         46      何为
 ParamAssignW    47      已知
 ReturnW         48      返回
 LogicNotW       49      不为
