@@ -1307,6 +1307,7 @@ func ParseClassDeclareStmt(p *Parser) *ClassDeclareStmt {
 	parseItemListBlock(p, blockIndent, func() {
 		var validChildTypes = []lex.TokenType{
 			lex.TypeFuncW,
+			lex.TypeGetterW,
 			lex.TypeObjThisW,
 			lex.TypeObjConstructW,
 		}

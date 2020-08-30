@@ -838,6 +838,7 @@ $PG($BK(
 		)
 		constructor=()
 		methods=()
+		getters=()
 	)
 ))
 
@@ -859,6 +860,7 @@ $PG($BK(
 		)
 		constructor=($ID(名) $ID(年龄))
 		methods=()
+		getters=()
 	)
 ))
 
@@ -875,6 +877,9 @@ $PG($BK(
 		返回“汪汪汪”
 
 	如何添加年龄？
+		返回20
+
+	何为总和？
 		返回20
 --------
 $PG($BK(
@@ -896,6 +901,14 @@ $PG($BK(
 			$FN(
 				name=($ID(添加年龄))
 				params=()
+				blockTokens=($BK(
+					$RT($NUM(20))
+				))
+			)
+		)
+		getters=(
+			$GT(
+				name=($ID(总和))
 				blockTokens=($BK(
 					$RT($NUM(20))
 				))
