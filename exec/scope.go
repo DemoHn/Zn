@@ -3,7 +3,6 @@ package exec
 import (
 	"github.com/DemoHn/Zn/error"
 	"github.com/DemoHn/Zn/lex"
-	"github.com/DemoHn/Zn/syntax"
 )
 
 // Scope -
@@ -72,7 +71,7 @@ type RootScope struct {
 	// classRefMap - class definition template (reference)
 	// this item only exists on RootScope since class defition block IS allowed
 	// ONLY in root block
-	classRefMap map[string]*syntax.ClassDeclareStmt
+	classRefMap map[string]*ClassRef
 }
 
 // NewRootScope - create a rootScope from existing Lexer that
@@ -85,7 +84,7 @@ type RootScope struct {
 func NewRootScope() *RootScope {
 	rs := &RootScope{
 		lastValue:   NewZnNull(),
-		classRefMap: map[string]*syntax.ClassDeclareStmt{},
+		classRefMap: map[string]*ClassRef{},
 	}
 	rs.ScopeBase = &ScopeBase{
 		root:      rs,

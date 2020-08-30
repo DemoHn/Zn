@@ -63,19 +63,13 @@ func duplicateValue(in ZnValue) ZnValue {
 		return in
 	case *ZnObject:
 		newPropList := map[string]ZnValue{}
-		newMethodList := map[string]*ZnFunction{}
 
 		// copy prop
 		for key, prop := range v.PropList {
 			newPropList[key] = duplicateValue(prop)
 		}
-		// copy method
-		for name, methodFunc := range v.MethodList {
-			newMethodList[name] = duplicateValue(methodFunc).(*ZnFunction)
-		}
 		return &ZnObject{
-			PropList:   newPropList,
-			MethodList: newMethodList,
+			PropList: newPropList,
 		}
 	}
 	return in
@@ -306,52 +300,31 @@ func evalVarDeclareStmt(ctx *Context, scope Scope, node *syntax.VarDeclareStmt) 
 
 // eval A,B 成为 C：P1，P2，P3，...
 // ensure VDAssignPair.Type MUST BE syntax.VDTypeObjNew
-// TODO: need a better implementation!
 func evalNewObjectPart(ctx *Context, scope Scope, node syntax.VDAssignPair) *error.Error {
-	// compose a new object instance
-	object := NewZnObject()
-	vtag := node.ObjClass.Literal
+	vtag := node.ObjClass.GetLiteral()
 	// get class definition
 	classRef, err := getClassRef(ctx, scope.GetRoot(), vtag)
 	if err != nil {
 		return err
 	}
-	// init prop list
-	for _, propPair := range classRef.PropertyList {
-		propID := propPair.PropertyID.GetLiteral()
-		expr, err := evalExpression(ctx, scope, propPair.InitValue)
-		if err != nil {
-			return err
-		}
-		object.PropList[propID] = expr
-	}
 
-	// initialize constructor
-	if len(node.ObjParams) != len(classRef.ConstructorIDList) {
-		return error.MismatchParamLengthError(len(node.ObjParams), len(classRef.ConstructorIDList))
-	}
-	for idx, objParam := range node.ObjParams {
-		propID := classRef.ConstructorIDList[idx].GetLiteral()
+	cParams := []ZnValue{}
+	for _, objParam := range node.ObjParams {
 		expr, err := evalExpression(ctx, scope, objParam)
 		if err != nil {
 			return err
 		}
-		object.PropList[propID] = expr
-	}
-
-	// add method list
-	for _, methodItem := range classRef.MethodList {
-		methodID := methodItem.FuncName.GetLiteral()
-		object.MethodList[methodID] = &ZnFunction{
-			Node:     methodItem,
-			Executor: nil,
-		}
+		cParams = append(cParams, expr)
 	}
 
 	// assign new object to variables
 	for _, v := range node.Variables {
 		vtag := v.GetLiteral()
-		finalObj := duplicateValue(object)
+		// compose a new object instance
+		finalObj, err := classRef.Construct(ctx, scope, cParams)
+		if err != nil {
+			return err
+		}
 
 		if bindValue(ctx, scope, vtag, finalObj, false); err != nil {
 			return err
@@ -597,7 +570,6 @@ func evalExpression(ctx *Context, scope Scope, expr syntax.Expression) (ZnValue,
 
 // （显示：A，B，C）
 func evalFunctionCall(ctx *Context, scope Scope, expr *syntax.FuncCallExpr) (ZnValue, *error.Error) {
-	fScope := NewFuncScope(scope)
 	vtag := expr.FuncName.GetLiteral()
 	var zf *ZnFunction
 
@@ -617,11 +589,11 @@ func evalFunctionCall(ctx *Context, scope Scope, expr *syntax.FuncCallExpr) (ZnV
 			return nil, err
 		}
 		// assert value
-		if zval, ok := val.(*ZnFunction); !ok {
+		zval, ok := val.(*ZnFunction)
+		if !ok {
 			return nil, error.InvalidFuncVariable(vtag)
-		} else {
-			zf = zval
 		}
+		zf = zval
 	}
 
 	// exec params
@@ -630,55 +602,8 @@ func evalFunctionCall(ctx *Context, scope Scope, expr *syntax.FuncCallExpr) (ZnV
 		return nil, err
 	}
 
-	return evalFunctionValuePart(ctx, fScope, params, zf)
-}
-
-// evalFunctionValuePart - the concrete logic of how to execute inside a function
-// NOTICE: scope here is a brand new FuncScope created from parent `evalFunctionCall()` logic
-func evalFunctionValuePart(ctx *Context, scope *FuncScope, params []ZnValue, zf *ZnFunction) (ZnValue, *error.Error) {
-	// if executor = nil, then use default function executor
-	if zf.Executor == nil {
-		// check param length
-		if len(params) != len(zf.Node.ParamList) {
-			return nil, error.MismatchParamLengthError(len(zf.Node.ParamList), len(params))
-		}
-
-		// bind parasms (as variable) to function scope
-		for idx, param := range params {
-			paramID := zf.Node.ParamList[idx]
-			if err := bindValue(ctx, scope, paramID.GetLiteral(), param, false); err != nil {
-				return nil, err
-			}
-		}
-
-		execBlock := zf.Node.ExecBlock
-		// iterate block round I - function hoisting
-		for _, stmtI := range execBlock.Children {
-			if v, ok := stmtI.(*syntax.FunctionDeclareStmt); ok {
-				fn := NewZnFunction(v)
-				if err := bindValue(ctx, scope, v.FuncName.GetLiteral(), fn, false); err != nil {
-					return nil, err
-				}
-			}
-		}
-		// iterate block round II
-		for _, stmtII := range execBlock.Children {
-			if _, ok := stmtII.(*syntax.FunctionDeclareStmt); !ok {
-				if err := evalStatement(ctx, scope, stmtII); err != nil {
-					// if recv breaks
-					if err.GetCode() == error.ReturnBreakSignal {
-						if extra, ok := err.GetExtra().(ZnValue); ok {
-							return extra, nil
-						}
-					}
-					return nil, err
-				}
-			}
-		}
-		return scope.GetReturnValue(), nil
-	}
-	// use pre-defined execution logic
-	return zf.Executor(ctx, scope, params)
+	// exec function call via its ClosureRef
+	return zf.Exec(ctx, scope, params)
 }
 
 // evaluate logic combination expressions
@@ -978,21 +903,21 @@ func setValue(ctx *Context, scope Scope, name string, value ZnValue) *error.Erro
 	return error.NameNotDefined(name)
 }
 
-func getClassRef(ctx *Context, scope *RootScope, name string) (*syntax.ClassDeclareStmt, *error.Error) {
-	sym, ok := scope.classRefMap[name]
+func getClassRef(ctx *Context, scope *RootScope, name string) (*ClassRef, *error.Error) {
+	ref, ok := scope.classRefMap[name]
 	if ok {
-		return sym, nil
+		return ref, nil
 	}
 	return nil, error.NameNotDefined(name)
 }
 
-func bindClassRef(ctx *Context, scope *RootScope, ref *syntax.ClassDeclareStmt) *error.Error {
-	name := ref.ClassName.Literal
+func bindClassRef(ctx *Context, scope *RootScope, classStmt *syntax.ClassDeclareStmt) *error.Error {
+	name := classStmt.ClassName.GetLiteral()
 	_, ok := scope.classRefMap[name]
 	if ok {
 		return error.NameRedeclared(name)
 	}
-	scope.classRefMap[name] = ref
+	scope.classRefMap[name] = NewClassRef(name, classStmt)
 	return nil
 }
 

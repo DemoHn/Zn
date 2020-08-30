@@ -18,16 +18,13 @@ type ZnValue interface {
 	GetMethod(string) (*ZnFunction, *error.Error)
 }
 
-type funcExecutor func(ctx *Context, scope Scope, params []ZnValue) (ZnValue, *error.Error)
-
 //////// ZnObject Definition
 
 // ZnObject -
 type ZnObject struct {
 	// defines all properties (readable and writable)
 	PropList map[string]ZnValue
-	// defines all methods: A 之 （B：XX）
-	MethodList map[string]*ZnFunction
+	*ClassRef
 }
 
 //////// Primitive Types Definition
@@ -59,8 +56,7 @@ type ZnNull struct {
 // ZnFunction -
 type ZnFunction struct {
 	*ZnObject
-	Node     *syntax.FunctionDeclareStmt
-	Executor funcExecutor
+	*ClosureRef
 }
 
 // ZnHashMap -
@@ -106,11 +102,13 @@ func (zo *ZnObject) SetProperty(name string, value ZnValue) *error.Error {
 
 // GetMethod -
 func (zo *ZnObject) GetMethod(name string) (*ZnFunction, *error.Error) {
-	methodFunc, ok := zo.MethodList[name]
+	methodRef, ok := zo.MethodList[name]
 	if !ok {
 		return nil, error.MethodNotFound(name)
 	}
-	return methodFunc, nil
+	return &ZnFunction{
+		ClosureRef: methodRef,
+	}, nil
 }
 
 // String() - display those types
@@ -140,7 +138,7 @@ func (zn *ZnNull) String() string {
 }
 
 func (zf *ZnFunction) String() string {
-	return fmt.Sprintf("方法： %s", zf.Node.FuncName.GetLiteral())
+	return fmt.Sprintf("方法： %s", zf.ClosureRef.Name)
 }
 
 func (zh *ZnHashMap) String() string {
@@ -189,22 +187,18 @@ func NewZnNull() *ZnNull {
 
 // NewZnFunction -
 func NewZnFunction(node *syntax.FunctionDeclareStmt) *ZnFunction {
+	funcName := node.FuncName.GetLiteral()
+	closureRef := NewClosureRef(funcName, node.ParamList, node.ExecBlock)
 	return &ZnFunction{
-		Node:     node,
-		Executor: nil,
+		ClosureRef: closureRef,
 	}
 }
 
 // NewZnNativeFunction - new Zn native function
 func NewZnNativeFunction(name string, executor funcExecutor) *ZnFunction {
-	id := new(syntax.ID)
-	id.SetLiteral([]rune(name))
-
+	closureRef := NewNativeClosureRef(name, executor)
 	return &ZnFunction{
-		Node: &syntax.FunctionDeclareStmt{
-			FuncName: id,
-		},
-		Executor: executor,
+		ClosureRef: closureRef,
 	}
 }
 
@@ -226,8 +220,7 @@ func NewZnHashMap(kvPairs []KVPair) *ZnHashMap {
 // NewZnObject -
 func NewZnObject() *ZnObject {
 	obj := &ZnObject{
-		PropList:   map[string]ZnValue{},
-		MethodList: map[string]*ZnFunction{},
+		PropList: map[string]ZnValue{},
 	}
 
 	return obj

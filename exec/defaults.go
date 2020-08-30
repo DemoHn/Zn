@@ -10,7 +10,7 @@ import (
 var predefinedValues map[string]ZnValue
 
 // （显示） 方法的执行逻辑
-var displayExecutor = func(ctx *Context, scope Scope, params []ZnValue) (ZnValue, *error.Error) {
+var displayExecutor = func(ctx *Context, scope *FuncScope, params []ZnValue) (ZnValue, *error.Error) {
 	// display format string
 	var items = []string{}
 
@@ -26,7 +26,7 @@ var displayExecutor = func(ctx *Context, scope Scope, params []ZnValue) (ZnValue
 }
 
 // （递增）方法的执行逻辑
-var addValueExecutor = func(ctx *Context, scope Scope, params []ZnValue) (ZnValue, *error.Error) {
+var addValueExecutor = func(ctx *Context, scope *FuncScope, params []ZnValue) (ZnValue, *error.Error) {
 	var decimals = []*ZnDecimal{}
 	if len(params) == 0 {
 		return nil, error.LeastParamsError(1)
@@ -45,7 +45,7 @@ var addValueExecutor = func(ctx *Context, scope Scope, params []ZnValue) (ZnValu
 }
 
 // （递减）方法的执行逻辑
-var subValueExecutor = func(ctx *Context, scope Scope, params []ZnValue) (ZnValue, *error.Error) {
+var subValueExecutor = func(ctx *Context, scope *FuncScope, params []ZnValue) (ZnValue, *error.Error) {
 	var decimals = []*ZnDecimal{}
 	if len(params) == 0 {
 		return nil, error.LeastParamsError(1)
@@ -63,7 +63,7 @@ var subValueExecutor = func(ctx *Context, scope Scope, params []ZnValue) (ZnValu
 	return sum, nil
 }
 
-var mulValueExecutor = func(ctx *Context, scope Scope, params []ZnValue) (ZnValue, *error.Error) {
+var mulValueExecutor = func(ctx *Context, scope *FuncScope, params []ZnValue) (ZnValue, *error.Error) {
 	var decimals = []*ZnDecimal{}
 	if len(params) == 0 {
 		return nil, error.LeastParamsError(1)
@@ -81,7 +81,7 @@ var mulValueExecutor = func(ctx *Context, scope Scope, params []ZnValue) (ZnValu
 	return sum, nil
 }
 
-var divValueExecutor = func(ctx *Context, scope Scope, params []ZnValue) (ZnValue, *error.Error) {
+var divValueExecutor = func(ctx *Context, scope *FuncScope, params []ZnValue) (ZnValue, *error.Error) {
 	var decimals = []*ZnDecimal{}
 	if len(params) == 0 {
 		return nil, error.LeastParamsError(1)
@@ -98,7 +98,7 @@ var divValueExecutor = func(ctx *Context, scope Scope, params []ZnValue) (ZnValu
 	return ctx.arith.Div(decimals[0], decimals[1:]...)
 }
 
-var probeExecutor = func(ctx *Context, scope Scope, params []ZnValue) (ZnValue, *error.Error) {
+var probeExecutor = func(ctx *Context, scope *FuncScope, params []ZnValue) (ZnValue, *error.Error) {
 	if len(params) != 2 {
 		return nil, error.ExactParamsError(2)
 	}
