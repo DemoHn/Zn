@@ -18,13 +18,6 @@ type Scope interface {
 	SetSymbol(name string, value ZnValue, isConstant bool)
 }
 
-const (
-	sTypeRoot    = "scopeRoot"
-	sTypeFunc    = "scopeFunc"
-	sTypeWhile   = "scopeWhile"
-	sTypeIterate = "scopeIterate"
-)
-
 //// implementations
 
 // ScopeBase - basic scope structure
@@ -259,4 +252,26 @@ func NewObjectScope(parent Scope, rootObject ZnValue) *ObjectScope {
 		},
 		rootObject: rootObject,
 	}
+}
+
+//// helpers
+
+// findObjectScope
+// returns: (found bool, objScope *ObjectScope)
+func findObjectScope(scope Scope) (bool, *ObjectScope) {
+	var sp = scope
+	var objectScope *ObjectScope
+	// find valid scope
+	for sp != nil {
+		if osp, ok := sp.(*ObjectScope); ok {
+			objectScope = osp
+			break
+		}
+		sp = sp.GetParent()
+	}
+
+	if sp == nil {
+		return false, nil
+	}
+	return true, objectScope
 }

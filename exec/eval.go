@@ -105,9 +105,13 @@ const (
 //
 // Gt - for two decimals ONLY. If leftValue > rightValue.
 //
-// TODO: NULL value compare logic!
 func compareValues(left ZnValue, right ZnValue, verb compareVerb) (bool, *error.Error) {
 	switch vl := left.(type) {
+	case *ZnNull:
+		if _, ok := right.(*ZnNull); ok {
+			return true, nil
+		}
+		return false, nil
 	case *ZnDecimal:
 		// compare right value - decimal only
 		if vr, ok := right.(*ZnDecimal); ok {
@@ -595,21 +599,37 @@ func evalExpression(ctx *Context, scope Scope, expr syntax.Expression) (ZnValue,
 func evalFunctionCall(ctx *Context, scope Scope, expr *syntax.FuncCallExpr) (ZnValue, *error.Error) {
 	fScope := NewFuncScope(scope)
 	vtag := expr.FuncName.GetLiteral()
-	// find function definctxion
-	val, err := getValue(ctx, scope, vtag)
-	if err != nil {
-		return nil, err
+	var zf *ZnFunction
+
+	// find from outer object scope first
+	if found, objScope := findObjectScope(scope); found {
+		rootObject := objScope.rootObject
+		if val, err := rootObject.GetMethod(vtag); err == nil {
+			zf = val
+		}
 	}
-	// assert value
-	zf, ok := val.(*ZnFunction)
-	if !ok {
-		return nil, error.InvalidFuncVariable(vtag)
+
+	// if function value not found from object scope, look up from local scope
+	if zf == nil {
+		// find function definction
+		val, err := getValue(ctx, scope, vtag)
+		if err != nil {
+			return nil, err
+		}
+		// assert value
+		if zval, ok := val.(*ZnFunction); !ok {
+			return nil, error.InvalidFuncVariable(vtag)
+		} else {
+			zf = zval
+		}
 	}
+
 	// exec params
 	params, err := exprsToValues(ctx, scope, expr.Params)
 	if err != nil {
 		return nil, err
 	}
+
 	return evalFunctionValuePart(ctx, fScope, params, zf)
 }
 
@@ -623,7 +643,7 @@ func evalFunctionValuePart(ctx *Context, scope *FuncScope, params []ZnValue, zf 
 			return nil, error.MismatchParamLengthError(len(zf.Node.ParamList), len(params))
 		}
 
-		// set id
+		// bind parasms (as variable) to function scope
 		for idx, param := range params {
 			paramID := zf.Node.ParamList[idx]
 			if err := bindValue(ctx, scope, paramID.GetLiteral(), param, false); err != nil {
@@ -851,23 +871,12 @@ func getMemberExprIV(ctx *Context, scope Scope, expr *syntax.MemberExpr) (ZnIV, 
 	if expr.RootType == syntax.RootTypeProp { // 其 XX
 		if expr.MemberType == syntax.MemberID {
 			tag := expr.MemberID.Literal
-
-			var sp = scope
-			var objectScope *ObjectScope
-			// find valid scope
-			for sp != nil {
-				if osp, ok := sp.(*ObjectScope); ok {
-					objectScope = osp
-					break
-				}
-				sp = sp.GetParent()
-			}
-
-			if sp == nil {
+			found, objScope := findObjectScope(scope)
+			if !found {
 				return nil, error.NewErrorSLOT("No valid ObjectScope for execution")
 			}
 			// get rootObj from ObjectScope
-			var rootObj = objectScope.rootObject
+			var rootObj = objScope.rootObject
 
 			return &ZnPropIV{rootObj, tag}, nil
 		}
