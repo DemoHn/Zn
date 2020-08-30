@@ -165,6 +165,13 @@ type FunctionDeclareStmt struct {
 	ExecBlock *BlockStmt
 }
 
+// GetterDeclareStmt - getter declaration (何为)
+type GetterDeclareStmt struct {
+	StmtBase
+	GetterName *ID
+	ExecBlock  *BlockStmt
+}
+
 // FunctionReturnStmt - return (expr)
 type FunctionReturnStmt struct {
 	StmtBase
@@ -181,6 +188,8 @@ type ClassDeclareStmt struct {
 	ConstructorIDList []*ID
 	// 如何XXX？
 	MethodList []*FunctionDeclareStmt
+	// 何为XXX？
+	GetterList []*GetterDeclareStmt
 }
 
 // PropertyDeclareStmt - valid inside Class
@@ -1139,6 +1148,33 @@ func ParseFunctionDeclareStmt(p *Parser) *FunctionDeclareStmt {
 	return fdStmt
 }
 
+// ParseGetterDeclareStmt - yield GetterDeclareStmt node
+// CFG:
+// GetterDeclareStmt -> 何为 GetterName ？
+//       ...     ExecBlock
+//       ...     ....
+//
+func ParseGetterDeclareStmt(p *Parser) *GetterDeclareStmt {
+	var fdStmt = &GetterDeclareStmt{}
+
+	// #1. try to parse ID
+	fdStmt.GetterName = parseID(p)
+	// #2. try to parse question mark
+	p.consume(lex.TypeFuncDeclare)
+
+	// #3. parse block manually
+	ok, blockIndent := p.expectBlockIndent()
+	if !ok {
+		panic(error.UnexpectedIndent())
+	}
+	// #3.1 parse param def list
+	parseItemListBlock(p, blockIndent, func() {
+		fdStmt.ExecBlock = ParseBlockStmt(p, blockIndent)
+	})
+
+	return fdStmt
+}
+
 // ParseVarOneLeadStmt -
 // There're 2 possible statements
 //
@@ -1239,6 +1275,10 @@ func ParseFunctionReturnStmt(p *Parser) *FunctionReturnStmt {
 //        <Blocks> ...
 //        <Blocks> ...
 //
+//    何为 <Method1> ？    <-- GetterDeclare
+//        <Blocks> ...
+//        <Blocks> ...
+//
 // CFG:
 // ClassStmt  ->  定义 ClassID ：
 //                    ClassDeclareBlock
@@ -1248,6 +1288,8 @@ func ParseFunctionReturnStmt(p *Parser) *FunctionReturnStmt {
 // ClassDeclareBlockItem -> Constructor
 //                       -> PropertyDeclareStmt
 //                       -> FunctionDeclareStmt
+//                       -> GetterDeclareStmt
+//
 func ParseClassDeclareStmt(p *Parser) *ClassDeclareStmt {
 	var cdStmt = new(ClassDeclareStmt)
 	// #1. consume ID
@@ -1277,6 +1319,9 @@ func ParseClassDeclareStmt(p *Parser) *ClassDeclareStmt {
 		case lex.TypeFuncW:
 			stmt := ParseFunctionDeclareStmt(p)
 			cdStmt.MethodList = append(cdStmt.MethodList, stmt)
+		case lex.TypeGetterW:
+			stmt := ParseGetterDeclareStmt(p)
+			cdStmt.GetterList = append(cdStmt.GetterList, stmt)
 		case lex.TypeObjThisW:
 			stmt := parsePropertyDeclareStmt(p)
 			cdStmt.PropertyList = append(cdStmt.PropertyList, stmt)
