@@ -32,8 +32,9 @@ type ZnHashMapIV struct {
 
 // ZnMemberIV - e.g. A 之 B, it shows member.property access
 type ZnMemberIV struct {
-	Root   ZnValue
-	Member string
+	Root      ZnValue
+	Member    string
+	RootScope Scope
 }
 
 // ZnMethodIV - e.g. A 之 （方法：X，Y，Z）
@@ -61,6 +62,7 @@ type ZnScopeMethodIV struct {
 type ZnPropIV struct {
 	RootObject ZnValue
 	Member     string
+	RootScope  Scope
 }
 
 // Reduce -
@@ -100,6 +102,15 @@ func (iv *ZnHashMapIV) Reduce(ctx *Context, input ZnValue, lhs bool) (ZnValue, *
 
 // Reduce -
 func (iv *ZnMemberIV) Reduce(ctx *Context, input ZnValue, lhs bool) (ZnValue, *error.Error) {
+	// look for property from getter list at first
+	found, getterRef := iv.Root.FindGetter(iv.Member)
+	if found {
+		// when using getter, only RHS (right-hand side) is allowed
+		if lhs == true {
+			return nil, error.NewErrorSLOT("Invalid left-hand side in assignment for getter")
+		}
+		return getterRef.Exec(ctx, iv.RootScope, []ZnValue{})
+	}
 	if lhs == true {
 		if err := iv.Root.SetProperty(iv.Member, input); err != nil {
 			return nil, err
@@ -142,6 +153,16 @@ func (iv *ZnScopeMethodIV) Reduce(ctx *Context, input ZnValue, lhs bool) (ZnValu
 
 // Reduce -
 func (iv *ZnPropIV) Reduce(ctx *Context, input ZnValue, lhs bool) (ZnValue, *error.Error) {
+	// look for property from getter list at first
+	found, getterRef := iv.RootObject.FindGetter(iv.Member)
+	if found {
+		// when using getter, only RHS (right-hand side) is allowed
+		if lhs == true {
+			return nil, error.NewErrorSLOT("Invalid left-hand side in assignment for getter")
+		}
+		return getterRef.Exec(ctx, iv.RootScope, []ZnValue{})
+	}
+	// look for orinary property
 	if lhs == true {
 		if err := iv.RootObject.SetProperty(iv.Member, input); err != nil {
 			return nil, err
