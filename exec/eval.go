@@ -803,7 +803,7 @@ func getMemberExprIV(ctx *Context, scope Scope, expr *syntax.MemberExpr) (ZnIV, 
 			// get rootObj from ObjectScope
 			var rootObj = objScope.rootObject
 
-			return &ZnPropIV{rootObj, tag}, nil
+			return &ZnPropIV{rootObj, tag, scope}, nil
 		}
 		return nil, error.UnExpectedCase("子项类型", strconv.Itoa(int(expr.MemberType)))
 	}
@@ -816,7 +816,8 @@ func getMemberExprIV(ctx *Context, scope Scope, expr *syntax.MemberExpr) (ZnIV, 
 	switch expr.MemberType {
 	case syntax.MemberID: // A 之 B
 		tag := expr.MemberID.Literal
-		return &ZnMemberIV{valRoot, tag}, nil
+		objScope := NewObjectScope(scope, valRoot)
+		return &ZnMemberIV{valRoot, tag, objScope}, nil
 	case syntax.MemberMethod:
 		m := expr.MemberMethod
 		funcName := m.FuncName.Literal

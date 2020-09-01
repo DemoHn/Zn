@@ -15,7 +15,8 @@ type ZnValue interface {
 	String() string
 	GetProperty(string) (ZnValue, *error.Error)
 	SetProperty(string, ZnValue) *error.Error
-	GetMethod(string) (*ZnFunction, *error.Error)
+	GetMethod(string) (*ClosureRef, *error.Error)
+	FindGetter(string) (bool, *ClosureRef)
 }
 
 //////// ZnObject Definition
@@ -101,14 +102,21 @@ func (zo *ZnObject) SetProperty(name string, value ZnValue) *error.Error {
 }
 
 // GetMethod -
-func (zo *ZnObject) GetMethod(name string) (*ZnFunction, *error.Error) {
+func (zo *ZnObject) GetMethod(name string) (*ClosureRef, *error.Error) {
 	methodRef, ok := zo.MethodList[name]
 	if !ok {
 		return nil, error.MethodNotFound(name)
 	}
-	return &ZnFunction{
-		ClosureRef: methodRef,
-	}, nil
+	return methodRef, nil
+}
+
+// FindGetter -
+func (zo *ZnObject) FindGetter(name string) (bool, *ClosureRef) {
+	getterRef, ok := zo.GetterList[name]
+	if !ok {
+		return false, nil
+	}
+	return true, getterRef
 }
 
 // String() - display those types

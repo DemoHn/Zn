@@ -84,8 +84,10 @@ func NewNativeClosureRef(name string, executor funcExecutor) *ClosureRef {
 func (cr *ClosureRef) Exec(ctx *Context, scope Scope, params []ZnValue) (ZnValue, *error.Error) {
 	fScope := NewFuncScope(scope)
 	// handle params
-	if err := cr.ParamHandler(ctx, fScope, params); err != nil {
-		return nil, err
+	if cr.ParamHandler != nil {
+		if err := cr.ParamHandler(ctx, fScope, params); err != nil {
+			return nil, err
+		}
 	}
 	// do execution
 	return cr.Executor(ctx, fScope, params)
