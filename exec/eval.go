@@ -571,7 +571,7 @@ func evalExpression(ctx *Context, scope Scope, expr syntax.Expression) (ZnValue,
 // （显示：A，B，C）
 func evalFunctionCall(ctx *Context, scope Scope, expr *syntax.FuncCallExpr) (ZnValue, *error.Error) {
 	vtag := expr.FuncName.GetLiteral()
-	var zf *ZnFunction
+	var zf *ClosureRef
 
 	// find from outer object scope first
 	if found, objScope := findObjectScope(scope); found {
@@ -593,7 +593,7 @@ func evalFunctionCall(ctx *Context, scope Scope, expr *syntax.FuncCallExpr) (ZnV
 		if !ok {
 			return nil, error.InvalidFuncVariable(vtag)
 		}
-		zf = zval
+		zf = zval.ClosureRef
 	}
 
 	// exec params

@@ -1309,6 +1309,7 @@ func ParseClassDeclareStmt(p *Parser) *ClassDeclareStmt {
 			lex.TypeFuncW,
 			lex.TypeGetterW,
 			lex.TypeObjThisW,
+			lex.TypeComment,
 			lex.TypeObjConstructW,
 		}
 
