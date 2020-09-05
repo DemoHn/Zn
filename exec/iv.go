@@ -6,7 +6,7 @@ import "github.com/DemoHn/Zn/error"
 type ZnIV interface {
 	// Reduce - reduce an IV to a real ZnValue
 	// NOTICE: results may differ from whether it's on LHS or RHS
-	Reduce(ctx *Context, input ZnValue, lhs bool) (ZnValue, *error.Error)
+	Reduce(ctx *Context, scope Scope, input ZnValue, lhs bool) (ZnValue, *error.Error)
 }
 
 // ZnArrayIV - a structure for intermediate-expression of an array or a hashmap
@@ -32,14 +32,13 @@ type ZnHashMapIV struct {
 
 // ZnMemberIV - e.g. A 之 B, it shows member.property access
 type ZnMemberIV struct {
-	Root      ZnValue
-	Member    string
-	RootScope Scope
+	RootObject ZnValue
+	Member     string
 }
 
 // ZnMethodIV - e.g. A 之 （方法：X，Y，Z）
 type ZnMethodIV struct {
-	Root        ZnValue
+	RootObject  ZnValue
 	MethodName  string
 	Params      []ZnValue
 	ObjectScope *ObjectScope
@@ -47,13 +46,11 @@ type ZnMethodIV struct {
 
 // ZnScopeMemberIV - e.g. 此之 属性A
 type ZnScopeMemberIV struct {
-	RootScope Scope
-	Member    string
+	Member string
 }
 
 // ZnScopeMethodIV - e.g. 此之 （结束）
 type ZnScopeMethodIV struct {
-	RootScope  Scope
 	MethodName string
 	Params     []ZnValue
 }
@@ -62,11 +59,10 @@ type ZnScopeMethodIV struct {
 type ZnPropIV struct {
 	RootObject ZnValue
 	Member     string
-	RootScope  Scope
 }
 
 // Reduce -
-func (iv *ZnArrayIV) Reduce(ctx *Context, input ZnValue, lhs bool) (ZnValue, *error.Error) {
+func (iv *ZnArrayIV) Reduce(ctx *Context, scope Scope, input ZnValue, lhs bool) (ZnValue, *error.Error) {
 	// check data
 	idx, err := iv.Index.asInteger()
 	if err != nil {
@@ -85,7 +81,7 @@ func (iv *ZnArrayIV) Reduce(ctx *Context, input ZnValue, lhs bool) (ZnValue, *er
 }
 
 // Reduce -
-func (iv *ZnHashMapIV) Reduce(ctx *Context, input ZnValue, lhs bool) (ZnValue, *error.Error) {
+func (iv *ZnHashMapIV) Reduce(ctx *Context, scope Scope, input ZnValue, lhs bool) (ZnValue, *error.Error) {
 	// check data
 	key := iv.Index.Value
 	vr, ok := iv.List.Value[key]
@@ -101,31 +97,31 @@ func (iv *ZnHashMapIV) Reduce(ctx *Context, input ZnValue, lhs bool) (ZnValue, *
 }
 
 // Reduce -
-func (iv *ZnMemberIV) Reduce(ctx *Context, input ZnValue, lhs bool) (ZnValue, *error.Error) {
+func (iv *ZnMemberIV) Reduce(ctx *Context, scope Scope, input ZnValue, lhs bool) (ZnValue, *error.Error) {
 	// look for property from getter list at first
-	found, getterRef := iv.Root.FindGetter(iv.Member)
+	found, getterRef := iv.RootObject.FindGetter(iv.Member)
 	if found {
 		// when using getter, only RHS (right-hand side) is allowed
 		if lhs == true {
 			return nil, error.NewErrorSLOT("Invalid left-hand side in assignment for getter")
 		}
-		return getterRef.Exec(ctx, iv.RootScope, []ZnValue{})
+		return getterRef.Exec(ctx, scope, []ZnValue{})
 	}
 	if lhs == true {
-		if err := iv.Root.SetProperty(iv.Member, input); err != nil {
+		if err := iv.RootObject.SetProperty(iv.Member, input); err != nil {
 			return nil, err
 		}
 		return input, nil
 	}
-	return iv.Root.GetProperty(iv.Member)
+	return iv.RootObject.GetProperty(iv.Member)
 }
 
 // Reduce -
-func (iv *ZnMethodIV) Reduce(ctx *Context, input ZnValue, lhs bool) (ZnValue, *error.Error) {
+func (iv *ZnMethodIV) Reduce(ctx *Context, scope Scope, input ZnValue, lhs bool) (ZnValue, *error.Error) {
 	if lhs == true {
 		return nil, error.NewErrorSLOT("Invalid left-hand side in assignment")
 	}
-	methodFunc, err := iv.Root.GetMethod(iv.MethodName)
+	methodFunc, err := iv.RootObject.GetMethod(iv.MethodName)
 	if err != nil {
 		return nil, err
 	}
@@ -133,8 +129,9 @@ func (iv *ZnMethodIV) Reduce(ctx *Context, input ZnValue, lhs bool) (ZnValue, *e
 }
 
 // Reduce -
-func (iv *ZnScopeMemberIV) Reduce(ctx *Context, input ZnValue, lhs bool) (ZnValue, *error.Error) {
-	switch sp := iv.RootScope.(type) {
+func (iv *ZnScopeMemberIV) Reduce(ctx *Context, scope Scope, input ZnValue, lhs bool) (ZnValue, *error.Error) {
+	// TODO: general scope method management
+	switch sp := scope.(type) {
 	case *IterateScope:
 		return sp.getSpecialProps(iv.Member)
 	}
@@ -143,16 +140,18 @@ func (iv *ZnScopeMemberIV) Reduce(ctx *Context, input ZnValue, lhs bool) (ZnValu
 }
 
 // Reduce -
-func (iv *ZnScopeMethodIV) Reduce(ctx *Context, input ZnValue, lhs bool) (ZnValue, *error.Error) {
-	switch sp := iv.RootScope.(type) {
+func (iv *ZnScopeMethodIV) Reduce(ctx *Context, scope Scope, input ZnValue, lhs bool) (ZnValue, *error.Error) {
+	switch sp := scope.(type) {
 	case *WhileScope:
+		return sp.execSpecialMethods(iv.MethodName, iv.Params)
+	case *IterateScope:
 		return sp.execSpecialMethods(iv.MethodName, iv.Params)
 	}
 	return NewZnNull(), nil
 }
 
 // Reduce -
-func (iv *ZnPropIV) Reduce(ctx *Context, input ZnValue, lhs bool) (ZnValue, *error.Error) {
+func (iv *ZnPropIV) Reduce(ctx *Context, scope Scope, input ZnValue, lhs bool) (ZnValue, *error.Error) {
 	// look for property from getter list at first
 	found, getterRef := iv.RootObject.FindGetter(iv.Member)
 	if found {
@@ -160,7 +159,7 @@ func (iv *ZnPropIV) Reduce(ctx *Context, input ZnValue, lhs bool) (ZnValue, *err
 		if lhs == true {
 			return nil, error.NewErrorSLOT("Invalid left-hand side in assignment for getter")
 		}
-		return getterRef.Exec(ctx, iv.RootScope, []ZnValue{})
+		return getterRef.Exec(ctx, scope, []ZnValue{})
 	}
 	// look for orinary property
 	if lhs == true {

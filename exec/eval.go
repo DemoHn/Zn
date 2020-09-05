@@ -558,7 +558,7 @@ func evalExpression(ctx *Context, scope Scope, expr syntax.Expression) (ZnValue,
 		if err != nil {
 			return nil, err
 		}
-		return iv.Reduce(ctx, nil, false)
+		return iv.Reduce(ctx, scope, nil, false)
 	case *syntax.Number, *syntax.String, *syntax.ID, *syntax.ArrayExpr, *syntax.HashMapExpr:
 		return evalPrimeExpr(ctx, scope, e)
 	case *syntax.FuncCallExpr:
@@ -769,7 +769,7 @@ func evalVarAssignExpr(ctx *Context, scope Scope, expr *syntax.VarAssignExpr) (Z
 		if err != nil {
 			return nil, err
 		}
-		return iv.Reduce(ctx, val, true)
+		return iv.Reduce(ctx, scope, val, true)
 	default:
 		return nil, error.UnExpectedCase("被赋值", reflect.TypeOf(v).Name())
 	}
@@ -780,7 +780,7 @@ func getMemberExprIV(ctx *Context, scope Scope, expr *syntax.MemberExpr) (ZnIV, 
 		switch expr.MemberType {
 		case syntax.MemberID:
 			tag := expr.MemberID.Literal
-			return &ZnScopeMemberIV{scope, tag}, nil
+			return &ZnScopeMemberIV{tag}, nil
 		case syntax.MemberMethod:
 			m := expr.MemberMethod
 			funcName := m.FuncName.Literal
@@ -788,7 +788,7 @@ func getMemberExprIV(ctx *Context, scope Scope, expr *syntax.MemberExpr) (ZnIV, 
 			if err != nil {
 				return nil, err
 			}
-			return &ZnScopeMethodIV{scope, funcName, paramVals}, nil
+			return &ZnScopeMethodIV{funcName, paramVals}, nil
 		}
 		return nil, error.UnExpectedCase("子项类型", strconv.Itoa(int(expr.MemberType)))
 	}
@@ -803,7 +803,7 @@ func getMemberExprIV(ctx *Context, scope Scope, expr *syntax.MemberExpr) (ZnIV, 
 			// get rootObj from ObjectScope
 			var rootObj = objScope.rootObject
 
-			return &ZnPropIV{rootObj, tag, scope}, nil
+			return &ZnPropIV{rootObj, tag}, nil
 		}
 		return nil, error.UnExpectedCase("子项类型", strconv.Itoa(int(expr.MemberType)))
 	}
@@ -816,8 +816,7 @@ func getMemberExprIV(ctx *Context, scope Scope, expr *syntax.MemberExpr) (ZnIV, 
 	switch expr.MemberType {
 	case syntax.MemberID: // A 之 B
 		tag := expr.MemberID.Literal
-		objScope := NewObjectScope(scope, valRoot)
-		return &ZnMemberIV{valRoot, tag, objScope}, nil
+		return &ZnMemberIV{valRoot, tag}, nil
 	case syntax.MemberMethod:
 		m := expr.MemberMethod
 		funcName := m.FuncName.Literal

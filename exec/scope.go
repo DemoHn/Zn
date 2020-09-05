@@ -19,33 +19,42 @@ type Scope interface {
 
 //// implementations
 
-// ScopeBase - basic scope structure
-type ScopeBase struct {
+// BlockScope - basic scope structure
+type BlockScope struct {
 	root      *RootScope
 	parent    Scope
 	symbolMap map[string]SymbolInfo
 }
 
 // GetRoot - get root scope
-func (sb *ScopeBase) GetRoot() *RootScope {
+func (sb *BlockScope) GetRoot() *RootScope {
 	return sb.root
 }
 
 // GetParent - get parent scope
-func (sb *ScopeBase) GetParent() Scope {
+func (sb *BlockScope) GetParent() Scope {
 	return sb.parent
 }
 
 // GetSymbol -
-func (sb *ScopeBase) GetSymbol(name string) (SymbolInfo, bool) {
+func (sb *BlockScope) GetSymbol(name string) (SymbolInfo, bool) {
 	sym, ok := sb.symbolMap[name]
 	return sym, ok
 }
 
 // SetSymbol -
-func (sb *ScopeBase) SetSymbol(name string, value ZnValue, isConstant bool) {
+func (sb *BlockScope) SetSymbol(name string, value ZnValue, isConstant bool) {
 	sb.symbolMap[name] = SymbolInfo{
 		value, isConstant,
+	}
+}
+
+// NewBlockScope -
+func NewBlockScope(scope Scope) *BlockScope {
+	return &BlockScope{
+		root:      scope.GetRoot(),
+		parent:    scope,
+		symbolMap: map[string]SymbolInfo{},
 	}
 }
 
@@ -58,7 +67,7 @@ type SymbolInfo struct {
 // RootScope - as named, this is the root scope for execution one program.
 // usually it contains all active variables, scopes, etc
 type RootScope struct {
-	*ScopeBase
+	*BlockScope
 	//// lexical scope
 	// file - current execution file directory
 	file string
@@ -86,7 +95,7 @@ func NewRootScope() *RootScope {
 		lastValue:   NewZnNull(),
 		classRefMap: map[string]*ClassRef{},
 	}
-	rs.ScopeBase = &ScopeBase{
+	rs.BlockScope = &BlockScope{
 		root:      rs,
 		parent:    nil,
 		symbolMap: map[string]SymbolInfo{},
@@ -120,7 +129,7 @@ func (rs *RootScope) GetLastValue() ZnValue {
 
 // FuncScope - function scope
 type FuncScope struct {
-	*ScopeBase
+	*BlockScope
 	returnValue ZnValue
 }
 
@@ -128,7 +137,7 @@ type FuncScope struct {
 func NewFuncScope(parent Scope) *FuncScope {
 	return &FuncScope{
 		returnValue: NewZnNull(),
-		ScopeBase: &ScopeBase{
+		BlockScope: &BlockScope{
 			root:      parent.GetRoot(),
 			parent:    parent,
 			symbolMap: map[string]SymbolInfo{},
@@ -153,13 +162,13 @@ func (fs *FuncScope) SetReturnValue(value ZnValue) {
 
 // WhileScope - a scope within *while* statement
 type WhileScope struct {
-	*ScopeBase
+	*BlockScope
 }
 
 // NewWhileScope -
 func NewWhileScope(parent Scope) *WhileScope {
 	return &WhileScope{
-		ScopeBase: &ScopeBase{
+		BlockScope: &BlockScope{
 			root:      parent.GetRoot(),
 			parent:    parent,
 			symbolMap: map[string]SymbolInfo{},
@@ -189,7 +198,7 @@ func (ws *WhileScope) execSpecialMethods(name string, params []ZnValue) (ZnValue
 
 // IterateScope - iterate stmt scope
 type IterateScope struct {
-	*ScopeBase
+	*BlockScope
 	// current iteration: keys & values
 	currentIndex ZnValue
 	currentValue ZnValue
@@ -198,7 +207,7 @@ type IterateScope struct {
 // NewIterateScope -
 func NewIterateScope(parent Scope) *IterateScope {
 	return &IterateScope{
-		ScopeBase: &ScopeBase{
+		BlockScope: &BlockScope{
 			root:      parent.GetRoot(),
 			parent:    parent,
 			symbolMap: map[string]SymbolInfo{},
@@ -237,14 +246,14 @@ func (its *IterateScope) execSpecialMethods(name string, params []ZnValue) (ZnVa
 
 // ObjectScope -
 type ObjectScope struct {
-	*ScopeBase
+	*BlockScope
 	rootObject ZnValue
 }
 
 // NewObjectScope -
 func NewObjectScope(parent Scope, rootObject ZnValue) *ObjectScope {
 	return &ObjectScope{
-		ScopeBase: &ScopeBase{
+		BlockScope: &BlockScope{
 			root:      parent.GetRoot(),
 			parent:    parent,
 			symbolMap: map[string]SymbolInfo{},
