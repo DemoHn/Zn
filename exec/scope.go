@@ -130,13 +130,28 @@ func (rs *RootScope) GetLastValue() ZnValue {
 // FuncScope - function scope
 type FuncScope struct {
 	*BlockScope
+	// For method functions of an exising object (i.e. `父对象 之 （方法：a，b，c，...）` )
+	// the implicit "this" value which implies the root object ofget-property expression (i.e. `其属性A`)
+	// is the object before `之` keyword (which is `父对象` on the above example).
+	//
+	// The value may be nil when funcScope is on root context. Also, it can be inherited from parent
+	// funcScope (if exists).
+	targetThis  ZnValue
 	returnValue ZnValue
 }
 
 // NewFuncScope -
-func NewFuncScope(parent Scope) *FuncScope {
+func NewFuncScope(parent Scope, targetThis ZnValue) *FuncScope {
+	this := targetThis
+	// inherit "this" from parent if parent scope is also an FuncScope
+	if sp, ok := parent.(*FuncScope); ok {
+		if targetThis == nil {
+			this = sp.targetThis
+		}
+	}
 	return &FuncScope{
 		returnValue: NewZnNull(),
+		targetThis:  this,
 		BlockScope: &BlockScope{
 			root:      parent.GetRoot(),
 			parent:    parent,
@@ -153,6 +168,11 @@ func (fs *FuncScope) SetCurrentLine(line int) {
 // GetReturnValue -
 func (fs *FuncScope) GetReturnValue() ZnValue {
 	return fs.returnValue
+}
+
+// GetTargetThis -
+func (fs *FuncScope) GetTargetThis() ZnValue {
+	return fs.targetThis
 }
 
 // SetReturnValue -
@@ -242,44 +262,4 @@ func (its *IterateScope) execSpecialMethods(name string, params []ZnValue) (ZnVa
 		// for other keywords, return error directly
 		return nil, error.NewErrorSLOT("no appropriate method name for while loop to execute")
 	}
-}
-
-// ObjectScope -
-type ObjectScope struct {
-	*BlockScope
-	rootObject ZnValue
-}
-
-// NewObjectScope -
-func NewObjectScope(parent Scope, rootObject ZnValue) *ObjectScope {
-	return &ObjectScope{
-		BlockScope: &BlockScope{
-			root:      parent.GetRoot(),
-			parent:    parent,
-			symbolMap: map[string]SymbolInfo{},
-		},
-		rootObject: rootObject,
-	}
-}
-
-//// helpers
-
-// findObjectScope
-// returns: (found bool, objScope *ObjectScope)
-func findObjectScope(scope Scope) (bool, *ObjectScope) {
-	var sp = scope
-	var objectScope *ObjectScope
-	// find valid scope
-	for sp != nil {
-		if osp, ok := sp.(*ObjectScope); ok {
-			objectScope = osp
-			break
-		}
-		sp = sp.GetParent()
-	}
-
-	if sp == nil {
-		return false, nil
-	}
-	return true, objectScope
 }

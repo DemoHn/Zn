@@ -321,7 +321,8 @@ func evalNewObjectPart(ctx *Context, scope Scope, node syntax.VDAssignPair) *err
 	for _, v := range node.Variables {
 		vtag := v.GetLiteral()
 		// compose a new object instance
-		finalObj, err := classRef.Construct(ctx, scope, cParams)
+		fScope := NewFuncScope(scope, nil)
+		finalObj, err := classRef.Construct(ctx, fScope, cParams)
 		if err != nil {
 			return err
 		}
@@ -573,10 +574,10 @@ func evalFunctionCall(ctx *Context, scope Scope, expr *syntax.FuncCallExpr) (ZnV
 	vtag := expr.FuncName.GetLiteral()
 	var zf *ClosureRef
 
-	// find from outer object scope first
-	if found, objScope := findObjectScope(scope); found {
-		rootObject := objScope.rootObject
-		if val, err := rootObject.GetMethod(vtag); err == nil {
+	// if current scope is FuncScope, find ID from funcScope's "targetThis" method list
+	if sp, ok := scope.(*FuncScope); ok {
+		targetThis := sp.GetTargetThis()
+		if val, err := targetThis.GetMethod(vtag); err == nil {
 			zf = val
 		}
 	}
@@ -602,8 +603,9 @@ func evalFunctionCall(ctx *Context, scope Scope, expr *syntax.FuncCallExpr) (ZnV
 		return nil, err
 	}
 
+	fScope := NewFuncScope(scope, nil)
 	// exec function call via its ClosureRef
-	return zf.Exec(ctx, scope, params)
+	return zf.Exec(ctx, fScope, params)
 }
 
 // evaluate logic combination expressions
@@ -796,14 +798,7 @@ func getMemberExprIV(ctx *Context, scope Scope, expr *syntax.MemberExpr) (ZnIV, 
 	if expr.RootType == syntax.RootTypeProp { // 其 XX
 		if expr.MemberType == syntax.MemberID {
 			tag := expr.MemberID.Literal
-			found, objScope := findObjectScope(scope)
-			if !found {
-				return nil, error.NewErrorSLOT("No valid ObjectScope for execution")
-			}
-			// get rootObj from ObjectScope
-			var rootObj = objScope.rootObject
-
-			return &ZnPropIV{rootObj, tag}, nil
+			return &ZnPropIV{tag}, nil
 		}
 		return nil, error.UnExpectedCase("子项类型", strconv.Itoa(int(expr.MemberType)))
 	}
@@ -825,8 +820,7 @@ func getMemberExprIV(ctx *Context, scope Scope, expr *syntax.MemberExpr) (ZnIV, 
 			return nil, err
 		}
 
-		objScope := NewObjectScope(scope, valRoot)
-		return &ZnMethodIV{valRoot, funcName, paramVals, objScope}, nil
+		return &ZnMethodIV{valRoot, funcName, paramVals}, nil
 	case syntax.MemberIndex:
 		idx, err := evalExpression(ctx, scope, expr.MemberIndex)
 		if err != nil {

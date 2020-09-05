@@ -81,16 +81,15 @@ func NewNativeClosureRef(name string, executor funcExecutor) *ClosureRef {
 }
 
 // Exec - exec function
-func (cr *ClosureRef) Exec(ctx *Context, scope Scope, params []ZnValue) (ZnValue, *error.Error) {
-	fScope := NewFuncScope(scope)
+func (cr *ClosureRef) Exec(ctx *Context, scope *FuncScope, params []ZnValue) (ZnValue, *error.Error) {
 	// handle params
 	if cr.ParamHandler != nil {
-		if err := cr.ParamHandler(ctx, fScope, params); err != nil {
+		if err := cr.ParamHandler(ctx, scope, params); err != nil {
 			return nil, err
 		}
 	}
 	// do execution
-	return cr.Executor(ctx, fScope, params)
+	return cr.Executor(ctx, scope, params)
 }
 
 // ClassRef -
@@ -155,7 +154,6 @@ func NewClassRef(name string, classNode *syntax.ClassDeclareStmt) *ClassRef {
 }
 
 // Construct - yield new instance of this class
-func (cr *ClassRef) Construct(ctx *Context, scope Scope, params []ZnValue) (ZnValue, *error.Error) {
-	fScope := NewFuncScope(scope)
-	return cr.Constructor(ctx, fScope, params)
+func (cr *ClassRef) Construct(ctx *Context, scope *FuncScope, params []ZnValue) (ZnValue, *error.Error) {
+	return cr.Constructor(ctx, scope, params)
 }

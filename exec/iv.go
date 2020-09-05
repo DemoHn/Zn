@@ -38,10 +38,9 @@ type ZnMemberIV struct {
 
 // ZnMethodIV - e.g. A 之 （方法：X，Y，Z）
 type ZnMethodIV struct {
-	RootObject  ZnValue
-	MethodName  string
-	Params      []ZnValue
-	ObjectScope *ObjectScope
+	RootObject ZnValue
+	MethodName string
+	Params     []ZnValue
 }
 
 // ZnScopeMemberIV - e.g. 此之 属性A
@@ -57,8 +56,7 @@ type ZnScopeMethodIV struct {
 
 // ZnPropIV - e.g. 其 数量
 type ZnPropIV struct {
-	RootObject ZnValue
-	Member     string
+	Member string
 }
 
 // Reduce -
@@ -105,7 +103,8 @@ func (iv *ZnMemberIV) Reduce(ctx *Context, scope Scope, input ZnValue, lhs bool)
 		if lhs == true {
 			return nil, error.NewErrorSLOT("Invalid left-hand side in assignment for getter")
 		}
-		return getterRef.Exec(ctx, scope, []ZnValue{})
+		fScope := NewFuncScope(scope, iv.RootObject)
+		return getterRef.Exec(ctx, fScope, []ZnValue{})
 	}
 	if lhs == true {
 		if err := iv.RootObject.SetProperty(iv.Member, input); err != nil {
@@ -125,7 +124,8 @@ func (iv *ZnMethodIV) Reduce(ctx *Context, scope Scope, input ZnValue, lhs bool)
 	if err != nil {
 		return nil, err
 	}
-	return methodFunc.Exec(ctx, iv.ObjectScope, iv.Params)
+	fScope := NewFuncScope(scope, iv.RootObject)
+	return methodFunc.Exec(ctx, fScope, iv.Params)
 }
 
 // Reduce -
@@ -152,21 +152,28 @@ func (iv *ZnScopeMethodIV) Reduce(ctx *Context, scope Scope, input ZnValue, lhs 
 
 // Reduce -
 func (iv *ZnPropIV) Reduce(ctx *Context, scope Scope, input ZnValue, lhs bool) (ZnValue, *error.Error) {
+	fs, ok := scope.(*FuncScope)
+	if !ok {
+		return nil, error.NewErrorSLOT("invalid scope")
+	}
+
+	targetThis := fs.GetTargetThis()
 	// look for property from getter list at first
-	found, getterRef := iv.RootObject.FindGetter(iv.Member)
+	found, getterRef := targetThis.FindGetter(iv.Member)
 	if found {
 		// when using getter, only RHS (right-hand side) is allowed
 		if lhs == true {
 			return nil, error.NewErrorSLOT("Invalid left-hand side in assignment for getter")
 		}
-		return getterRef.Exec(ctx, scope, []ZnValue{})
+		fScope := NewFuncScope(scope, targetThis)
+		return getterRef.Exec(ctx, fScope, []ZnValue{})
 	}
 	// look for orinary property
 	if lhs == true {
-		if err := iv.RootObject.SetProperty(iv.Member, input); err != nil {
+		if err := targetThis.SetProperty(iv.Member, input); err != nil {
 			return nil, err
 		}
 		return input, nil
 	}
-	return iv.RootObject.GetProperty(iv.Member)
+	return targetThis.GetProperty(iv.Member)
 }
