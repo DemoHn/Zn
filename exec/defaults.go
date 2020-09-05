@@ -128,20 +128,51 @@ var probeExecutor = func(ctx *Context, scope *FuncScope, params []ZnValue) (ZnVa
 }
 
 var defaultArrayClassRef = &ClassRef{
-	Name: "数值",
+	Name: "数组",
 	Constructor: func(ctx *Context, scope *FuncScope, params []ZnValue) (ZnValue, *error.Error) {
 		return NewZnNull(), nil
 	},
 	GetterList: map[string]*ClosureRef{
-		"和": &ClosureRef{
+		"和": {
+			// 【1，2，3】之和
 			Name: "和",
 			Executor: func(ctx *Context, scope *FuncScope, params []ZnValue) (ZnValue, *error.Error) {
-				// TODO
-				return nil, nil
+				this, ok := scope.GetTargetThis().(*ZnArray)
+				if !ok {
+					return nil, error.NewErrorSLOT("invalid object type")
+				}
+				return addValueExecutor(ctx, scope, this.Value)
 			},
 		},
-		"差": &ClosureRef{
+		"差": {
 			Name: "差",
+			Executor: func(ctx *Context, scope *FuncScope, params []ZnValue) (ZnValue, *error.Error) {
+				this, ok := scope.GetTargetThis().(*ZnArray)
+				if !ok {
+					return nil, error.NewErrorSLOT("invalid object type")
+				}
+				return subValueExecutor(ctx, scope, this.Value)
+			},
+		},
+		"积": {
+			Name: "积",
+			Executor: func(ctx *Context, scope *FuncScope, params []ZnValue) (ZnValue, *error.Error) {
+				this, ok := scope.GetTargetThis().(*ZnArray)
+				if !ok {
+					return nil, error.NewErrorSLOT("invalid object type")
+				}
+				return mulValueExecutor(ctx, scope, this.Value)
+			},
+		},
+		"商": {
+			Name: "商",
+			Executor: func(ctx *Context, scope *FuncScope, params []ZnValue) (ZnValue, *error.Error) {
+				this, ok := scope.GetTargetThis().(*ZnArray)
+				if !ok {
+					return nil, error.NewErrorSLOT("invalid object type")
+				}
+				return divValueExecutor(ctx, scope, this.Value)
+			},
 		},
 	},
 }
