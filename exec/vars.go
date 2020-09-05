@@ -184,6 +184,10 @@ func NewZnBool(value bool) *ZnBool {
 func NewZnArray(values []ZnValue) *ZnArray {
 	return &ZnArray{
 		Value: values,
+		ZnObject: &ZnObject{
+			PropList: map[string]ZnValue{},
+			ClassRef: defaultArrayClassRef,
+		},
 	}
 }
 
