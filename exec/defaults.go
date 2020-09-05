@@ -35,9 +35,13 @@ var addValueExecutor = func(ctx *Context, scope *FuncScope, params []ZnValue) (Z
 	for _, param := range params {
 		vparam, ok := param.(*ZnDecimal)
 		if !ok {
-			return nil, error.InvalidParamType("string")
+			return nil, error.InvalidParamType("decimal")
 		}
 		decimals = append(decimals, vparam)
+	}
+
+	if len(decimals) == 1 {
+		return decimals[0], nil
 	}
 
 	sum := ctx.arith.Add(decimals[0], decimals[1:]...)
@@ -59,6 +63,10 @@ var subValueExecutor = func(ctx *Context, scope *FuncScope, params []ZnValue) (Z
 		decimals = append(decimals, vparam)
 	}
 
+	if len(decimals) == 1 {
+		return decimals[0], nil
+	}
+
 	sum := ctx.arith.Sub(decimals[0], decimals[1:]...)
 	return sum, nil
 }
@@ -75,6 +83,10 @@ var mulValueExecutor = func(ctx *Context, scope *FuncScope, params []ZnValue) (Z
 			return nil, error.InvalidParamType("decimal")
 		}
 		decimals = append(decimals, vparam)
+	}
+
+	if len(decimals) == 1 {
+		return decimals[0], nil
 	}
 
 	sum := ctx.arith.Mul(decimals[0], decimals[1:]...)
@@ -94,6 +106,9 @@ var divValueExecutor = func(ctx *Context, scope *FuncScope, params []ZnValue) (Z
 		}
 		decimals = append(decimals, vparam)
 	}
+	if len(decimals) == 1 {
+		return decimals[0], nil
+	}
 
 	return ctx.arith.Div(decimals[0], decimals[1:]...)
 }
@@ -110,6 +125,25 @@ var probeExecutor = func(ctx *Context, scope *FuncScope, params []ZnValue) (ZnVa
 	// add probe data to log
 	ctx._probe.AddLog(vtag.Value, params[1])
 	return params[1], nil
+}
+
+var defaultArrayClassRef = &ClassRef{
+	Name: "数值",
+	Constructor: func(ctx *Context, scope *FuncScope, params []ZnValue) (ZnValue, *error.Error) {
+		return NewZnNull(), nil
+	},
+	GetterList: map[string]*ClosureRef{
+		"和": &ClosureRef{
+			Name: "和",
+			Executor: func(ctx *Context, scope *FuncScope, params []ZnValue) (ZnValue, *error.Error) {
+				// TODO
+				return nil, nil
+			},
+		},
+		"差": &ClosureRef{
+			Name: "差",
+		},
+	},
 }
 
 // init function
