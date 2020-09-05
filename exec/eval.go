@@ -28,15 +28,20 @@ func duplicateValue(in ZnValue) ZnValue {
 	switch v := in.(type) {
 	case *ZnBool:
 		return &ZnBool{
-			Value: v.Value,
+			ZnObject: v.ZnObject,
+			Value:    v.Value,
 		}
 	case *ZnString:
-		return &ZnString{Value: v.Value}
+		return &ZnString{
+			ZnObject: v.ZnObject,
+			Value:    v.Value,
+		}
 	case *ZnDecimal:
 		x := new(big.Int)
 		return &ZnDecimal{
-			co:  x.Set(v.co),
-			exp: v.exp,
+			ZnObject: v.ZnObject,
+			co:       x.Set(v.co),
+			exp:      v.exp,
 		}
 	case *ZnNull:
 		return in // no need to copy since all "NULL" values are same
@@ -45,7 +50,7 @@ func duplicateValue(in ZnValue) ZnValue {
 		for _, val := range v.Value {
 			newArr = append(newArr, duplicateValue(val))
 		}
-		return &ZnArray{Value: newArr}
+		return &ZnArray{ZnObject: v.ZnObject, Value: newArr}
 	case *ZnHashMap:
 		newHashMap := map[string]ZnValue{}
 		newKeyOrder := []string{}
@@ -56,6 +61,7 @@ func duplicateValue(in ZnValue) ZnValue {
 			newKeyOrder = append(newKeyOrder, keyItem)
 		}
 		return &ZnHashMap{
+			ZnObject: v.ZnObject,
 			Value:    newHashMap,
 			KeyOrder: newKeyOrder,
 		}
@@ -69,6 +75,7 @@ func duplicateValue(in ZnValue) ZnValue {
 			newPropList[key] = duplicateValue(prop)
 		}
 		return &ZnObject{
+			ClassRef: v.ClassRef,
 			PropList: newPropList,
 		}
 	}

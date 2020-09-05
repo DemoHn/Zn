@@ -174,6 +174,34 @@ var defaultArrayClassRef = &ClassRef{
 				return divValueExecutor(ctx, scope, this.Value)
 			},
 		},
+		// get first item of array
+		"首": {
+			Name: "首",
+			Executor: func(ctx *Context, scope *FuncScope, params []ZnValue) (ZnValue, *error.Error) {
+				this, ok := scope.GetTargetThis().(*ZnArray)
+				if !ok {
+					return nil, error.NewErrorSLOT("invalid object type")
+				}
+				if len(this.Value) == 0 {
+					return NewZnNull(), nil
+				}
+				return this.Value[0], nil
+			},
+		},
+		// get last item of array
+		"尾": {
+			Name: "尾",
+			Executor: func(ctx *Context, scope *FuncScope, params []ZnValue) (ZnValue, *error.Error) {
+				this, ok := scope.GetTargetThis().(*ZnArray)
+				if !ok {
+					return nil, error.NewErrorSLOT("invalid object type")
+				}
+				if len(this.Value) == 0 {
+					return NewZnNull(), nil
+				}
+				return this.Value[len(this.Value)-1], nil
+			},
+		},
 	},
 }
 
