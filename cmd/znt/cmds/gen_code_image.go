@@ -55,7 +55,7 @@ var GenCodeImageCmd = &cobra.Command{
 			return
 		}
 		textHeight := measureCodeHeight(textMap)
-		finalHeight := textHeight + marginTop + marginBottom + lineHeight // add one blank line for better apperance
+		finalHeight := textHeight + marginTop + marginBottom + 4 // add some blanks at bottom for better apperance
 
 		// new background
 		dc := newBackground(finalWidth, finalHeight, "#f6f8fa")
