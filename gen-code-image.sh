@@ -4,8 +4,6 @@ SNIPPETS_DIR="./doc/snippets"
 EXPORT_DIR="./doc/images"
 ZNT="./znt"
 
-CMD="$ZNT gen-code-image -h"
-
 # find and exec
 for x in $(find $SNIPPETS_DIR -name "*.zn")
 do
