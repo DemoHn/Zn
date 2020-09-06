@@ -111,7 +111,7 @@ func NewClassRef(name string, classNode *syntax.ClassDeclareStmt) *ClassRef {
 
 	// define default constrcutor
 	var constructor = func(ctx *Context, scope *FuncScope, params []ZnValue) (ZnValue, *error.Error) {
-		obj := NewZnObject()
+		obj := NewZnObject(ref)
 		// init prop list
 		for _, propPair := range classNode.PropertyList {
 			propID := propPair.PropertyID.GetLiteral()
@@ -129,9 +129,6 @@ func NewClassRef(name string, classNode *syntax.ClassDeclareStmt) *ClassRef {
 			propID := classNode.ConstructorIDList[idx].GetLiteral()
 			obj.PropList[propID] = objParam
 		}
-
-		// add classRef
-		obj.ClassRef = ref
 
 		return obj, nil
 	}

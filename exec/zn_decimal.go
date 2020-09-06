@@ -17,7 +17,7 @@ const (
 
 // ZnDecimal - decimal number 「数值」型
 type ZnDecimal struct {
-	ZnObject
+	*ZnObject
 	// decimal internal properties
 	co  *big.Int
 	exp int
@@ -26,8 +26,9 @@ type ZnDecimal struct {
 // NewZnDecimal -
 func NewZnDecimal(value string) (*ZnDecimal, *error.Error) {
 	var decimal = &ZnDecimal{
-		exp: 0,
-		co:  big.NewInt(0),
+		exp:      0,
+		co:       big.NewInt(0),
+		ZnObject: NewZnObject(defaultDecimalClassRef),
 	}
 
 	err := decimal.setValue(value)
