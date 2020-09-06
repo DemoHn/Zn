@@ -584,8 +584,10 @@ func evalFunctionCall(ctx *Context, scope Scope, expr *syntax.FuncCallExpr) (ZnV
 	// if current scope is FuncScope, find ID from funcScope's "targetThis" method list
 	if sp, ok := scope.(*FuncScope); ok {
 		targetThis := sp.GetTargetThis()
-		if val, err := targetThis.GetMethod(vtag); err == nil {
-			zf = val
+		if targetThis != nil {
+			if val, err := targetThis.GetMethod(vtag); err == nil {
+				zf = val
+			}
 		}
 	}
 

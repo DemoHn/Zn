@@ -183,11 +183,8 @@ func NewZnBool(value bool) *ZnBool {
 // NewZnArray -
 func NewZnArray(values []ZnValue) *ZnArray {
 	return &ZnArray{
-		Value: values,
-		ZnObject: &ZnObject{
-			PropList: map[string]ZnValue{},
-			ClassRef: defaultArrayClassRef,
-		},
+		Value:    values,
+		ZnObject: NewZnObject(defaultArrayClassRef),
 	}
 }
 
@@ -230,10 +227,9 @@ func NewZnHashMap(kvPairs []KVPair) *ZnHashMap {
 }
 
 // NewZnObject -
-func NewZnObject() *ZnObject {
-	obj := &ZnObject{
+func NewZnObject(classRef *ClassRef) *ZnObject {
+	return &ZnObject{
 		PropList: map[string]ZnValue{},
+		ClassRef: classRef,
 	}
-
-	return obj
 }

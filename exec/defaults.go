@@ -127,6 +127,26 @@ var probeExecutor = func(ctx *Context, scope *FuncScope, params []ZnValue) (ZnVa
 	return params[1], nil
 }
 
+var defaultDecimalClassRef = &ClassRef{
+	Name: "数值",
+	Constructor: func(ctx *Context, scope *FuncScope, params []ZnValue) (ZnValue, *error.Error) {
+		return NewZnNull(), nil
+	},
+	// decimal to string
+	GetterList: map[string]*ClosureRef{
+		"文本": {
+			Name: "文本",
+			Executor: func(ctx *Context, scope *FuncScope, params []ZnValue) (ZnValue, *error.Error) {
+				this, ok := scope.GetTargetThis().(*ZnDecimal)
+				if !ok {
+					return nil, error.NewErrorSLOT("invalid object type")
+				}
+				return NewZnString(this.String()), nil
+			},
+		},
+	},
+}
+
 var defaultArrayClassRef = &ClassRef{
 	Name: "数组",
 	Constructor: func(ctx *Context, scope *FuncScope, params []ZnValue) (ZnValue, *error.Error) {
@@ -200,6 +220,16 @@ var defaultArrayClassRef = &ClassRef{
 					return NewZnNull(), nil
 				}
 				return this.Value[len(this.Value)-1], nil
+			},
+		},
+		"数目": {
+			Name: "数目",
+			Executor: func(ctx *Context, scope *FuncScope, params []ZnValue) (ZnValue, *error.Error) {
+				this, ok := scope.GetTargetThis().(*ZnArray)
+				if !ok {
+					return nil, error.NewErrorSLOT("invalid object type")
+				}
+				return NewZnDecimalFromInt(len(this.Value), 0), nil
 			},
 		},
 	},
