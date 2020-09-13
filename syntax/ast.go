@@ -840,8 +840,8 @@ func ParseVarOneLeadExpr(p *Parser) *FuncCallExpr {
 
 	// then suppose it's a funcCall expr
 	funcCallExpr := ParseFuncCallExpr(p)
-	// insert first ID into funcCall list
-	funcCallExpr.Params = append(exprList, (funcCallExpr.Params)...)
+	// append first ID into funcCall list
+	funcCallExpr.Params = append(funcCallExpr.Params, exprList...)
 	funcCallExpr.SetCurrentLine(tk)
 	return funcCallExpr
 }
