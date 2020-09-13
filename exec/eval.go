@@ -130,6 +130,11 @@ func compareValues(left ZnValue, right ZnValue, verb compareVerb) (bool, *error.
 			}
 			return cmpResult, nil
 		}
+		// if vert == CmbEq and rightValue is not decimal type
+		// then return `false` directly
+		if verb == CmpEq {
+			return false, nil
+		}
 		return false, error.InvalidCompareRType("decimal")
 	case *ZnString:
 		// Only CmpEq is valid for comparison
@@ -141,7 +146,7 @@ func compareValues(left ZnValue, right ZnValue, verb compareVerb) (bool, *error.
 			cmpResult := (strings.Compare(vl.Value, vr.Value) == 0)
 			return cmpResult, nil
 		}
-		return false, error.InvalidCompareRType("string")
+		return false, nil
 	case *ZnBool:
 		if verb != CmpEq {
 			return false, error.InvalidCompareLType("decimal", "string", "bool", "array", "hashmap")
@@ -151,7 +156,7 @@ func compareValues(left ZnValue, right ZnValue, verb compareVerb) (bool, *error.
 			cmpResult := vl.Value == vr.Value
 			return cmpResult, nil
 		}
-		return false, error.InvalidCompareRType("bool")
+		return false, nil
 	case *ZnArray:
 		if verb != CmpEq {
 			return false, error.InvalidCompareLType("decimal", "string", "bool", "array", "hashmap")
@@ -171,7 +176,7 @@ func compareValues(left ZnValue, right ZnValue, verb compareVerb) (bool, *error.
 			}
 			return true, nil
 		}
-		return false, error.InvalidCompareRType("array")
+		return false, nil
 	case *ZnHashMap:
 		if verb != CmpEq {
 			return false, error.InvalidCompareLType("decimal", "string", "bool", "array", "hashmap")
@@ -196,7 +201,7 @@ func compareValues(left ZnValue, right ZnValue, verb compareVerb) (bool, *error.
 			}
 			return true, nil
 		}
-		return false, error.InvalidCompareRType("hashmap")
+		return false, nil
 	}
 	return false, error.InvalidCompareLType("decimal", "string", "bool", "array", "hashmap")
 }
