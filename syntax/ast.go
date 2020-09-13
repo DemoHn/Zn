@@ -521,6 +521,7 @@ func ParseExpression(p *Parser, asVarAssign bool) Expression {
 //
 // CallE' -> ID
 //        -> （ID：E，E，...）
+//        -> 以 E，E，... （ID：E，E，...）
 //
 // PropE' -> ID
 func ParseMemberExpr(p *Parser) Expression {
@@ -1213,7 +1214,7 @@ func ParseVarOneLeadStmt(p *Parser) Statement {
 		case lex.TypeFuncQuoteL:
 			targetExpr := ParseFuncCallExpr(p)
 			// prepend exprs
-			targetExpr.Params = append(exprList, targetExpr.Params...)
+			targetExpr.Params = append(targetExpr.Params, exprList...)
 			return targetExpr
 		}
 	}
