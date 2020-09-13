@@ -44,9 +44,10 @@ func TestReduce_Array_RHS_OK(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			decimal, _ := NewZnDecimal(tt.index)
 			ctx := NewContext()
+			scope := NewRootScope()
 			iv := ZnArrayIV{NewZnArray(tt.array), decimal}
 
-			v, err := iv.Reduce(ctx, fakeInput, false)
+			v, err := iv.Reduce(ctx, scope, fakeInput, false)
 			if err != nil {
 				t.Errorf("reduce() should have no error - but error: %s occured", err.Error())
 				return
