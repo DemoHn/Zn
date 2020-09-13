@@ -246,13 +246,13 @@ func init() {
 		"空":       NewZnNull(),
 		"显示":      NewZnNativeFunction("显示", displayExecutor),
 		"X+Y":     NewZnNativeFunction("X+Y", addValueExecutor),
-		"求和":      NewZnNativeFunction("X+Y", addValueExecutor),
+		"相加":      NewZnNativeFunction("X+Y", addValueExecutor),
 		"X-Y":     NewZnNativeFunction("X-Y", subValueExecutor),
-		"求差":      NewZnNativeFunction("X-Y", subValueExecutor),
+		"相减":      NewZnNativeFunction("X-Y", subValueExecutor),
 		"X*Y":     NewZnNativeFunction("X*Y", mulValueExecutor),
-		"求积":      NewZnNativeFunction("X*Y", mulValueExecutor),
+		"相乘":      NewZnNativeFunction("X*Y", mulValueExecutor),
 		"X/Y":     NewZnNativeFunction("X/Y", divValueExecutor),
-		"求商":      NewZnNativeFunction("X/Y", divValueExecutor),
+		"相除":      NewZnNativeFunction("X/Y", divValueExecutor),
 		"__probe": NewZnNativeFunction("__probe", probeExecutor),
 	}
 }
