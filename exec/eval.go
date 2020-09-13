@@ -67,17 +67,8 @@ func duplicateValue(in ZnValue) ZnValue {
 		}
 	case *ZnFunction: // function itself is immutable, so return directly
 		return in
-	case *ZnObject:
-		newPropList := map[string]ZnValue{}
-
-		// copy prop
-		for key, prop := range v.PropList {
-			newPropList[key] = duplicateValue(prop)
-		}
-		return &ZnObject{
-			ClassRef: v.ClassRef,
-			PropList: newPropList,
-		}
+	case *ZnObject: // we don't copy object value at all
+		return in
 	}
 	return in
 }
@@ -765,27 +756,29 @@ func evalPrimeExpr(ctx *Context, scope Scope, expr syntax.Expression) (ZnValue, 
 	}
 }
 
-// eval var assign
+// eval variable assign
 func evalVarAssignExpr(ctx *Context, scope Scope, expr *syntax.VarAssignExpr) (ZnValue, *error.Error) {
 	// Right Side
 	val, err := evalExpression(ctx, scope, expr.AssignExpr)
 	if err != nil {
 		return nil, err
 	}
+	// duplicate value
+	dupVal := duplicateValue(val)
 
 	// Left Side
 	switch v := expr.TargetVar.(type) {
 	case *syntax.ID:
 		// set ID
 		vtag := v.GetLiteral()
-		err2 := setValue(ctx, scope, vtag, val)
+		err2 := setValue(ctx, scope, vtag, dupVal)
 		return val, err2
 	case *syntax.MemberExpr:
 		iv, err := getMemberExprIV(ctx, scope, v)
 		if err != nil {
 			return nil, err
 		}
-		return iv.Reduce(ctx, scope, val, true)
+		return iv.Reduce(ctx, scope, dupVal, true)
 	default:
 		return nil, error.UnExpectedCase("被赋值", reflect.TypeOf(v).Name())
 	}
