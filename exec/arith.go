@@ -170,9 +170,6 @@ func rescalePair(d1 *ZnDecimal, d2 *ZnDecimal) (*ZnDecimal, *ZnDecimal) {
 
 // copyDecimal - duplicate deicmal value to a new variable
 func copyZnDecimal(old *ZnDecimal) *ZnDecimal {
-	var result = new(ZnDecimal)
-	result.exp = old.exp
-	result.co = new(big.Int).Set(old.co)
-
+	result, _ := duplicateValue(old).(*ZnDecimal)
 	return result
 }

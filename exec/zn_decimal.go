@@ -38,8 +38,9 @@ func NewZnDecimal(value string) (*ZnDecimal, *error.Error) {
 // NewZnDecimalFromInt -
 func NewZnDecimalFromInt(value int, exp int) *ZnDecimal {
 	return &ZnDecimal{
-		exp: exp,
-		co:  big.NewInt(int64(value)),
+		exp:      exp,
+		co:       big.NewInt(int64(value)),
+		ZnObject: NewZnObject(defaultDecimalClassRef),
 	}
 }
 
