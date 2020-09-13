@@ -651,7 +651,7 @@ func (l *Lexer) parseVarQuote(ch rune) (*Token, *error.Error) {
 	}
 }
 
-// regex: ^[Ff]?[-+]?[0-9]*\.?[0-9]+((([eE][-+])|(\*(10)?\^[-+]?))[0-9]+)?$
+// regex: ^[-+]?[0-9]*\.?[0-9]+((([eE][-+])|(\*(10)?\^[-+]?))[0-9]+)?$
 // ref: https://github.com/DemoHn/Zn/issues/4
 func (l *Lexer) parseNumber(ch rune) (*Token, *error.Error) {
 	// setup
