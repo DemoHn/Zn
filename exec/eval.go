@@ -23,7 +23,9 @@ import (
 // `evalXXXXStmt` will change the value of its corresponding scope; However, `evalXXXXExpr` will export
 // a ZnValue object and mostly won't change scopes (but search a variable from scope is frequently used)
 
-// duplicateValue -
+// duplicateValue - deepcopy values' structure, including bool, string, decimal, array, hashmap
+// for function or object or null, pass the original reference instead.
+// This is due to the 'copycat by default' policy
 func duplicateValue(in ZnValue) ZnValue {
 	switch v := in.(type) {
 	case *ZnBool:
@@ -311,13 +313,9 @@ func evalNewObjectPart(ctx *Context, scope Scope, node syntax.VDAssignPair) *err
 		return err
 	}
 
-	cParams := []ZnValue{}
-	for _, objParam := range node.ObjParams {
-		expr, err := evalExpression(ctx, scope, objParam)
-		if err != nil {
-			return err
-		}
-		cParams = append(cParams, expr)
+	cParams, err := exprsToValues(ctx, scope, node.ObjParams)
+	if err != nil {
+		return err
 	}
 
 	// assign new object to variables
@@ -944,7 +942,8 @@ func exprsToValues(ctx *Context, scope Scope, exprs []syntax.Expression) ([]ZnVa
 		if err != nil {
 			return nil, err
 		}
-		params = append(params, pval)
+		dupVal := duplicateValue(pval)
+		params = append(params, dupVal)
 	}
 	return params, nil
 }
