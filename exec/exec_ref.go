@@ -26,7 +26,7 @@ func NewClosureRef(name string, paramTags []*syntax.ID, stmtBlock *syntax.BlockS
 		for _, stmtI := range stmtBlock.Children {
 			if v, ok := stmtI.(*syntax.FunctionDeclareStmt); ok {
 				fn := NewZnFunction(v)
-				if err := bindValue(ctx, scope, v.FuncName.GetLiteral(), fn, false); err != nil {
+				if err := bindValue(ctx, scope, v.FuncName.GetLiteral(), fn); err != nil {
 					return nil, err
 				}
 			}
@@ -57,7 +57,7 @@ func NewClosureRef(name string, paramTags []*syntax.ID, stmtBlock *syntax.BlockS
 		// bind params (as variable) to function scope
 		for idx, param := range params {
 			paramTag := paramTags[idx].GetLiteral()
-			if err := bindValue(ctx, scope, paramTag, param, false); err != nil {
+			if err := bindValue(ctx, scope, paramTag, param); err != nil {
 				return err
 			}
 		}

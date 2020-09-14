@@ -227,7 +227,7 @@ func evalStatement(ctx *Context, scope Scope, stmt syntax.Statement) *error.Erro
 		return nil
 	case *syntax.FunctionDeclareStmt:
 		fn := NewZnFunction(v)
-		return bindValue(ctx, scope, v.FuncName.GetLiteral(), fn, false)
+		return bindValue(ctx, scope, v.FuncName.GetLiteral(), fn)
 	case *syntax.ClassDeclareStmt:
 		sp, ok := scope.(*RootScope)
 		if !ok {
@@ -280,17 +280,16 @@ func evalVarDeclareStmt(ctx *Context, scope Scope, node *syntax.VarDeclareStmt) 
 			if err != nil {
 				return err
 			}
-			// if assign a constant variable or not
+			// if assign const
 			isConst := false
 			if vpair.Type == syntax.VDTypeAssignConst {
 				isConst = true
 			}
-
 			for _, v := range vpair.Variables {
 				vtag := v.GetLiteral()
 				finalObj := duplicateValue(obj)
 
-				if bindValue(ctx, scope, vtag, finalObj, isConst); err != nil {
+				if err := bindValueDecl(ctx, scope, vtag, finalObj, isConst); err != nil {
 					return err
 				}
 			}
@@ -328,7 +327,7 @@ func evalNewObjectPart(ctx *Context, scope Scope, node syntax.VDAssignPair) *err
 			return err
 		}
 
-		if bindValue(ctx, scope, vtag, finalObj, false); err != nil {
+		if bindValue(ctx, scope, vtag, finalObj); err != nil {
 			return err
 		}
 	}
@@ -382,7 +381,7 @@ func evalStmtBlock(ctx *Context, scope Scope, block *syntax.BlockStmt) *error.Er
 			switch v := stmtI.(type) {
 			case *syntax.FunctionDeclareStmt:
 				fn := NewZnFunction(v)
-				if err := bindValue(ctx, scope, v.FuncName.GetLiteral(), fn, false); err != nil {
+				if err := bindValue(ctx, scope, v.FuncName.GetLiteral(), fn); err != nil {
 					return err
 				}
 			case *syntax.ClassDeclareStmt:
@@ -487,16 +486,16 @@ func evalIterateStmt(ctx *Context, scope Scope, node *syntax.IterateStmt) *error
 	// of course since there's no any iteration is executed yet, the initial values are all "Null"
 	if nameLen == 1 {
 		valueSlot = node.IndexNames[0].Literal
-		if err := bindValue(ctx, iterScope, valueSlot, NewZnNull(), false); err != nil {
+		if err := bindValue(ctx, iterScope, valueSlot, NewZnNull()); err != nil {
 			return err
 		}
 	} else if nameLen == 2 {
 		keySlot = node.IndexNames[0].Literal
 		valueSlot = node.IndexNames[1].Literal
-		if err := bindValue(ctx, iterScope, keySlot, NewZnNull(), false); err != nil {
+		if err := bindValue(ctx, iterScope, keySlot, NewZnNull()); err != nil {
 			return err
 		}
-		if err := bindValue(ctx, iterScope, valueSlot, NewZnNull(), false); err != nil {
+		if err := bindValue(ctx, iterScope, valueSlot, NewZnNull()); err != nil {
 			return err
 		}
 	} else if nameLen > 2 {
@@ -920,7 +919,8 @@ func bindClassRef(ctx *Context, scope *RootScope, classStmt *syntax.ClassDeclare
 	return nil
 }
 
-func bindValue(ctx *Context, scope Scope, name string, value ZnValue, isConstatnt bool) *error.Error {
+// bind non-const value with re-declaration check on same scope
+func bindValue(ctx *Context, scope Scope, name string, value ZnValue) *error.Error {
 	if _, inGlobals := ctx.globals[name]; inGlobals {
 		return error.NameRedeclared(name)
 	}
@@ -928,7 +928,16 @@ func bindValue(ctx *Context, scope Scope, name string, value ZnValue, isConstatn
 	if _, ok := scope.GetSymbol(name); ok {
 		return error.NameRedeclared(name)
 	}
-	scope.SetSymbol(name, value, isConstatnt)
+	scope.SetSymbol(name, value, false)
+	return nil
+}
+
+// bind value for declaration statement - that variables could be re-bind.
+func bindValueDecl(ctx *Context, scope Scope, name string, value ZnValue, isConst bool) *error.Error {
+	if _, inGlobals := ctx.globals[name]; inGlobals {
+		return error.NameRedeclared(name)
+	}
+	scope.SetSymbol(name, value, isConst)
 	return nil
 }
 
