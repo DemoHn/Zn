@@ -160,6 +160,8 @@ const (
 	RightQuoteIV  rune = 0x201D // ”
 	LeftQuoteV    rune = 0x2018 // ‘
 	RightQuoteV   rune = 0x2019 // ’
+	LeftQuoteVI   rune = 0x27E8 //〈
+	RightQuoteVI  rune = 0x27E9 // 〉
 )
 
 // LeftQuotes -
@@ -169,6 +171,7 @@ var LeftQuotes = []rune{
 	LeftQuoteIII,
 	LeftQuoteIV,
 	LeftQuoteV,
+	LeftQuoteVI,
 }
 
 // RightQuotes -
@@ -178,6 +181,7 @@ var RightQuotes = []rune{
 	RightQuoteIII,
 	RightQuoteIV,
 	RightQuoteV,
+	RightQuoteVI,
 }
 
 // QuoteMatchMap -
@@ -187,6 +191,7 @@ var QuoteMatchMap = map[rune]rune{
 	LeftQuoteIII: RightQuoteIII,
 	LeftQuoteIV:  RightQuoteIV,
 	LeftQuoteV:   RightQuoteV,
+	LeftQuoteVI:  RightQuoteVI,
 }
 
 //// 5. var quote
@@ -368,8 +373,8 @@ head:
 
 		l.rebase(cursor)
 		// goto normal identifier
-	// left quotes
-	case LeftQuoteI, LeftQuoteII, LeftQuoteIII, LeftQuoteIV, LeftQuoteV:
+	// left quotes (only double quotes are allowed)
+	case LeftQuoteI, LeftQuoteII, LeftQuoteIV:
 		tok, err = l.parseString(ch)
 		return
 	case MiddleDot:
@@ -585,13 +590,13 @@ func (l *Lexer) parseString(ch rune) (*Token, *error.Error) {
 			rg.setRangeEnd(l)
 			return NewStringToken(l.chBuffer, firstChar, rg), nil
 		// push quotes
-		case LeftQuoteI, LeftQuoteII, LeftQuoteIII, LeftQuoteIV, LeftQuoteV:
+		case LeftQuoteI, LeftQuoteII, LeftQuoteIII, LeftQuoteIV, LeftQuoteV, LeftQuoteVI:
 			l.pushBuffer(ch)
 			if !l.quoteStack.Push(ch) {
 				return nil, error.QuoteStackFull(l.quoteStack.GetMaxSize())
 			}
 		// pop quotes if match
-		case RightQuoteI, RightQuoteII, RightQuoteIII, RightQuoteIV, RightQuoteV:
+		case RightQuoteI, RightQuoteII, RightQuoteIII, RightQuoteIV, RightQuoteV, RightQuoteVI:
 			currentL, _ := l.quoteStack.Current()
 			if QuoteMatchMap[currentL] == ch {
 				l.quoteStack.Pop()
