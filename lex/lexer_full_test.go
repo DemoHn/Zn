@@ -77,10 +77,10 @@ func TestNextToken_MixedText(t *testing.T) {
 		},
 		{
 			name:        "nest multiple strings",
-			input:       "·显然在其中·“不为空”‘为\n\n空’「「「随意“嵌套”」233」456」",
+			input:       "·显然在其中·“不为空”《为\n\n空》「「「随意“嵌套”」233」456」",
 			expectError: false,
-			tokens:      "$3[显然在其中] $2[“不为空”] $2[‘为\n\n空’] $2[「「「随意“嵌套”」233」456」]",
-			lines:       "U<0>[·显然在其中·“不为空”‘为] E<0> U<0>[空’「「「随意“嵌套”」233」456」]",
+			tokens:      "$3[显然在其中] $2[“不为空”] $2[《为\n\n空》] $2[「「「随意“嵌套”」233」456」]",
+			lines:       "U<0>[·显然在其中·“不为空”《为] E<0> U<0>[空》「「「随意“嵌套”」233」456」]",
 		},
 		{
 			name:        "incomplete var quote at end",

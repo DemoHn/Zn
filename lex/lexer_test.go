@@ -170,11 +170,11 @@ func TestNextToken_StringONLY(t *testing.T) {
 		},
 		{
 			name:        "multiple-line string",
-			input:       "『233\n    456\r\n7  』",
+			input:       "《233\n    456\r\n7  》",
 			expectError: false,
 			token: Token{
 				Type:    TypeString,
-				Literal: []rune("『233\n    456\r\n7  』"),
+				Literal: []rune("《233\n    456\r\n7  》"),
 			},
 		},
 	}
