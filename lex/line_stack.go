@@ -251,21 +251,15 @@ func (ls *LineStack) getLineRune(lineNum int, slideToLineEnd bool) []rune {
 }
 
 func (ls *LineStack) getLineColumn(lineNum int, cursor int) int {
-	countIndentChars := func(indent int) int {
-		if ls.IndentType == IdetSpace {
-			return indent * 4
-		}
-		return indent
-	}
 	switch util.Compare(lineNum, ls.CurrentLine) {
 	case -1: // a < b
 		if lineNum > 0 {
 			line := ls.lines[lineNum-1]
-			return cursor - line.startIdx + countIndentChars(line.indents)
+			return cursor - line.startIdx
 		}
 		return -1
 	case 0:
-		return cursor - ls.scanCursor.startIdx + countIndentChars(ls.scanCursor.indents)
+		return cursor - ls.scanCursor.startIdx
 	default:
 		return -1
 	}

@@ -149,10 +149,19 @@ func StringifyAST(node Node) string {
 		for _, p := range v.ParamList {
 			paramsStr = append(paramsStr, StringifyAST(p))
 		}
+		refMarkStr := []string{}
+		for _, r := range v.RefMarkList {
+			if r {
+				refMarkStr = append(refMarkStr, "true")
+			} else {
+				refMarkStr = append(refMarkStr, "false")
+			}
+		}
 
-		return fmt.Sprintf("$FN(name=(%s) params=(%s) blockTokens=(%s))",
+		return fmt.Sprintf("$FN(name=(%s) params=(%s) refs=(%s) blockTokens=(%s))",
 			StringifyAST(v.FuncName),
 			strings.Join(paramsStr, " "),
+			strings.Join(refMarkStr, " "),
 			StringifyAST(v.ExecBlock))
 	case *GetterDeclareStmt:
 		return fmt.Sprintf("$GT(name=(%s) blockTokens=(%s))",
