@@ -160,9 +160,10 @@ type BlockStmt struct {
 // FunctionDeclareStmt - function declaration
 type FunctionDeclareStmt struct {
 	StmtBase
-	FuncName  *ID
-	ParamList []*ID
-	ExecBlock *BlockStmt
+	FuncName    *ID
+	ParamList   []*ID
+	RefMarkList []bool // to show if this variable is "referenced" or not
+	ExecBlock   *BlockStmt
 }
 
 // GetterDeclareStmt - getter declaration (何为)
@@ -1099,7 +1100,7 @@ func ParseBranchStmt(p *Parser, mainIndent int) *BranchStmt {
 // ParseFunctionDeclareStmt - yield FunctionDeclareStmt node
 // CFG:
 // FunctionDeclareStmt -> 如何 FuncName ？
-//       ...     已知 ID1， ID2， ...
+//       ...     已知 ID1， & ID2， ...
 //       ...     ExecBlock
 //       ...     ....
 //
@@ -1109,7 +1110,8 @@ func ParseBranchStmt(p *Parser, mainIndent int) *BranchStmt {
 //
 func ParseFunctionDeclareStmt(p *Parser) *FunctionDeclareStmt {
 	var fdStmt = &FunctionDeclareStmt{
-		ParamList: []*ID{},
+		ParamList:   []*ID{},
+		RefMarkList: []bool{},
 	}
 	// by definition, when 已知 statement exists, it should be at first line
 	// of function block
@@ -1135,7 +1137,16 @@ func ParseFunctionDeclareStmt(p *Parser) *FunctionDeclareStmt {
 		case stateParamList:
 			// parse 已知 expr
 			if match, _ := p.tryConsume(lex.TypeParamAssignW); match {
-				fdStmt.ParamList = parseParamDefList(p, true)
+				parseCommaList(p, func() {
+					refMark := false
+					if ok, _ := p.tryConsume(lex.TypeObjRef); ok {
+						refMark = true
+					}
+					idItem := parseID(p)
+					fdStmt.ParamList = append(fdStmt.ParamList, idItem)
+					fdStmt.RefMarkList = append(fdStmt.RefMarkList, refMark)
+				})
+
 				// then change state
 				hState = stateFuncBlock
 			} else {

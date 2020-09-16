@@ -19,6 +19,7 @@ var testSuccessSuites = []string{
 	memberExprCasesOK,
 	iterateCasesOK,
 	classDeclareCasesOK,
+	functionDeclareCasesOK,
 }
 
 const logicExprCasesOK = `
@@ -894,6 +895,7 @@ $PG($BK(
 			$FN(
 				name=($ID(狂吠))
 				params=()
+				refs=()
 				blockTokens=($BK(
 					$RT($STR(汪汪汪))
 				))
@@ -901,6 +903,7 @@ $PG($BK(
 			$FN(
 				name=($ID(添加年龄))
 				params=()
+				refs=()
 				blockTokens=($BK(
 					$RT($NUM(20))
 				))
@@ -951,6 +954,7 @@ $PG($BK(
 			$FN(
 				name=($ID(狂吠))
 				params=()
+				refs=()
 				blockTokens=($BK($
 					$RT($STR(汪汪汪))
 				))
@@ -958,6 +962,7 @@ $PG($BK(
 			$FN(
 				name=($ID(添加年龄))
 				params=()
+				refs=()
 				blockTokens=($BK(
 					$RT($NUM(20))
 				))
@@ -974,6 +979,99 @@ $PG($BK(
 	)
 ))
 
+`
+
+const functionDeclareCasesOK = `
+========
+1. simplist function
+--------
+如何搞个大新闻？
+	1024
+--------
+$PG($BK(
+	$FN(
+		name=($ID(搞个大新闻))
+		params=()
+		refs=()
+		blockTokens=($BK(
+			$NUM(1024)
+		))
+	)
+))
+========
+2. with one param
+--------
+如何搞个大新闻？
+	已知变量1
+	1024
+--------
+$PG($BK(
+	$FN(
+		name=($ID(搞个大新闻))
+		params=($ID(变量1))
+		refs=(false)
+		blockTokens=($BK(
+			$NUM(1024)
+		))
+	)
+))
+========
+3. with multiple params
+--------
+如何搞个大新闻？
+	已知A，B，·华为手机·
+	1024
+--------
+$PG($BK(
+	$FN(
+		name=($ID(搞个大新闻))
+		params=($ID(A) $ID(B) $ID(华为手机))
+		refs=(false false false)
+		blockTokens=($BK(
+			$NUM(1024)
+		))
+	)
+))
+========
+4. with multiple params and refs
+--------
+如何搞个大新闻？
+	已知A，&B，&·华为手机·
+	1024
+--------
+$PG($BK(
+	$FN(
+		name=($ID(搞个大新闻))
+		params=($ID(A) $ID(B) $ID(华为手机))
+		refs=(false true true)
+		blockTokens=($BK(
+			$NUM(1024)
+		))
+	)
+))
+========
+5. with multiple refs and return block
+--------
+如何搞个大新闻？
+	已知 &A，&B，&·华为手机·
+	如果C为空：
+		返回1024
+--------
+$PG($BK(
+	$FN(
+		name=($ID(搞个大新闻))
+		params=($ID(A) $ID(B) $ID(华为手机))
+		refs=(true true true)
+		blockTokens=($BK(
+			$IF(
+				ifExpr=($EQ(L=($ID(C)) R=($ID(空))))
+				ifBlock=($BK(
+					$RT($NUM(1024))
+				))
+			)
+		))
+	)
+))
 `
 
 type astSuccessCase struct {

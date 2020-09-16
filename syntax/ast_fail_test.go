@@ -13,6 +13,7 @@ var testFailSuites = []string{
 	whileLoopCasesFAIL,
 	funcCallCasesFAIL,
 	arrayListCasesFAIL,
+	funcDeclareCasesFAIL,
 }
 
 const varDeclCasesFAIL = `
@@ -86,7 +87,7 @@ code=2250 line=2 col=1
     B为C，
     
 --------
-code=2250 line=3 col=6
+code=2250 line=3 col=2
 
 ========
 8. keyword only
@@ -149,7 +150,7 @@ code=2250 line=1 col=2
 每当变量为真：
     令数组为【【233】
 --------
-code=2250 line=2 col=14
+code=2250 line=2 col=10
 `
 
 const funcCallCasesFAIL = `
@@ -224,6 +225,33 @@ code=2250 line=1 col=5
 【 100，「正定」== 10 】
 --------
 code=2255 line=1 col=13
+`
+
+const funcDeclareCasesFAIL = `
+========
+1. no exec blocks
+--------
+如何搞个大新闻？
+A为B
+--------
+code=2251 line=2 col=0
+
+========
+2. multiple 已知 blocks
+--------
+如何搞个大新闻？
+    已知A
+    已知B
+--------
+code=2250 line=3 col=0
+
+========
+3. more than one ref mark
+--------
+如何搞个大新闻？
+    已知A，&&B	
+--------
+code=2250 line=2 col=4
 `
 
 type astFailCase struct {
