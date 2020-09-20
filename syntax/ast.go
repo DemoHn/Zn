@@ -106,6 +106,7 @@ type VDAssignPair struct {
 	Type       vdAssignPairTypeE
 	Variables  []*ID
 	AssignExpr Expression
+	RefMark    bool
 	ObjClass   *ID          // 成为 XX： 1，2，3 ... valid only when Type = 2 (VDTypeObjNew)
 	ObjParams  []Expression // 成为 XX：P1，P2，P3，... valid only when Type = 2 (VDTypeObjNew)
 }
@@ -249,6 +250,7 @@ type hashMapKeyValuePair struct {
 type VarAssignExpr struct {
 	ExprBase
 	TargetVar  Assignable
+	RefMark    bool
 	AssignExpr Expression
 }
 
@@ -410,6 +412,7 @@ func ParseStatement(p *Parser) Statement {
 //
 // VaE   -> IdxE VaE'
 // VaE'  -> 为 IdxE
+// VaE'  -> 为 & IdxE
 //       ->
 //
 // IdxE  -> BsE IdxE'
@@ -913,19 +916,29 @@ func parseVDAssignPair(p *Parser) VDAssignPair {
 
 	switch tk.Type {
 	case lex.TypeLogicYesW:
+		refMark := false
+		if match, _ := p.tryConsume(lex.TypeObjRef); match {
+			refMark = true
+		}
 		expr := ParseExpression(p, true)
 
 		return VDAssignPair{
 			Type:       VDTypeAssign,
 			Variables:  idfList,
+			RefMark:    refMark,
 			AssignExpr: expr,
 		}
 	case lex.TypeAssignConstW:
+		refMark := false
+		if match, _ := p.tryConsume(lex.TypeObjRef); match {
+			refMark = true
+		}
 		expr := ParseExpression(p, true)
 
 		return VDAssignPair{
 			Type:       VDTypeAssignConst,
 			Variables:  idfList,
+			RefMark:    refMark,
 			AssignExpr: expr,
 		}
 	default: // ObjNewW
