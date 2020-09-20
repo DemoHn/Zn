@@ -19,7 +19,7 @@ type ClosureRef struct {
 }
 
 // NewClosureRef -
-func NewClosureRef(name string, paramTags []*syntax.ID, stmtBlock *syntax.BlockStmt) *ClosureRef {
+func NewClosureRef(name string, paramTags []*syntax.ParamItem, stmtBlock *syntax.BlockStmt) *ClosureRef {
 
 	var executor = func(ctx *Context, scope *FuncScope, params []ZnValue) (ZnValue, *error.Error) {
 		// iterate block round I - function hoisting
@@ -55,9 +55,15 @@ func NewClosureRef(name string, paramTags []*syntax.ID, stmtBlock *syntax.BlockS
 		}
 
 		// bind params (as variable) to function scope
-		for idx, param := range params {
-			paramTag := paramTags[idx].GetLiteral()
-			if err := bindValue(ctx, scope, paramTag, param); err != nil {
+		for idx, paramVal := range params {
+			param := paramTags[idx]
+			// if param is NOT a reference type, then we need additionally
+			// copy its value
+			if !param.RefMark {
+				paramVal = duplicateValue(paramVal)
+			}
+			paramName := param.ID.GetLiteral()
+			if err := bindValue(ctx, scope, paramName, paramVal); err != nil {
 				return err
 			}
 		}
@@ -125,9 +131,14 @@ func NewClassRef(name string, classNode *syntax.ClassDeclareStmt) *ClassRef {
 		if len(params) != len(classNode.ConstructorIDList) {
 			return nil, error.MismatchParamLengthError(len(params), len(classNode.ConstructorIDList))
 		}
-		for idx, objParam := range params {
-			propID := classNode.ConstructorIDList[idx].GetLiteral()
-			obj.PropList[propID] = objParam
+		for idx, objParamVal := range params {
+			param := classNode.ConstructorIDList[idx]
+			// if param is NOT a reference, then we need to copy its value
+			if !param.RefMark {
+				objParamVal = duplicateValue(objParamVal)
+			}
+			paramName := param.ID.GetLiteral()
+			obj.PropList[paramName] = objParamVal
 		}
 
 		return obj, nil
@@ -138,7 +149,7 @@ func NewClassRef(name string, classNode *syntax.ClassDeclareStmt) *ClassRef {
 	// add getters
 	for _, gNode := range classNode.GetterList {
 		getterTag := gNode.GetterName.GetLiteral()
-		ref.GetterList[getterTag] = NewClosureRef(getterTag, []*syntax.ID{}, gNode.ExecBlock)
+		ref.GetterList[getterTag] = NewClosureRef(getterTag, []*syntax.ParamItem{}, gNode.ExecBlock)
 	}
 
 	// add methods

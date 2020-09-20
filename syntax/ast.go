@@ -161,10 +161,9 @@ type BlockStmt struct {
 // FunctionDeclareStmt - function declaration
 type FunctionDeclareStmt struct {
 	StmtBase
-	FuncName    *ID
-	ParamList   []*ID
-	RefMarkList []bool // to show if this variable is "referenced" or not
-	ExecBlock   *BlockStmt
+	FuncName  *ID
+	ParamList []*ParamItem
+	ExecBlock *BlockStmt
 }
 
 // GetterDeclareStmt - getter declaration (何为)
@@ -187,7 +186,7 @@ type ClassDeclareStmt struct {
 	// 其XX为XX
 	PropertyList []*PropertyDeclareStmt
 	// 是为XX，YY，ZZ
-	ConstructorIDList []*ID
+	ConstructorIDList []*ParamItem
 	// 如何XXX？
 	MethodList []*FunctionDeclareStmt
 	// 何为XXX？
@@ -199,6 +198,12 @@ type PropertyDeclareStmt struct {
 	StmtBase
 	PropertyID *ID
 	InitValue  Expression
+}
+
+// ParamItem - parameter item
+type ParamItem struct {
+	ID      *ID
+	RefMark bool
 }
 
 //// Expressions (struct)
@@ -469,10 +474,16 @@ func ParseExpression(p *Parser, asVarAssign bool) Expression {
 	//// anynomous function definition
 	logicItemTailParser = func(idx int, leftExpr Expression) Expression {
 		var finalExpr Expression
+		var refMarkForLogicYes = false
 		// #1. consume keyword
 		match, tk := p.tryConsume(logicKeywords[idx]...)
 		if !match {
 			return leftExpr
+		}
+		if tk.Type == lex.TypeLogicYesW && asVarAssign {
+			if match2, _ := p.tryConsume(lex.TypeObjRef); match2 {
+				refMarkForLogicYes = true
+			}
 		}
 		// #2. consume Y
 		rightExpr := logicItemParser(idx + 1)
@@ -487,6 +498,7 @@ func ParseExpression(p *Parser, asVarAssign bool) Expression {
 			}
 			finalExpr = &VarAssignExpr{
 				TargetVar:  vid,
+				RefMark:    refMarkForLogicYes,
 				AssignExpr: rightExpr,
 			}
 		} else {
@@ -1123,8 +1135,7 @@ func ParseBranchStmt(p *Parser, mainIndent int) *BranchStmt {
 //
 func ParseFunctionDeclareStmt(p *Parser) *FunctionDeclareStmt {
 	var fdStmt = &FunctionDeclareStmt{
-		ParamList:   []*ID{},
-		RefMarkList: []bool{},
+		ParamList: []*ParamItem{},
 	}
 	// by definition, when 已知 statement exists, it should be at first line
 	// of function block
@@ -1156,8 +1167,10 @@ func ParseFunctionDeclareStmt(p *Parser) *FunctionDeclareStmt {
 						refMark = true
 					}
 					idItem := parseID(p)
-					fdStmt.ParamList = append(fdStmt.ParamList, idItem)
-					fdStmt.RefMarkList = append(fdStmt.RefMarkList, refMark)
+					fdStmt.ParamList = append(fdStmt.ParamList, &ParamItem{
+						RefMark: refMark,
+						ID:      idItem,
+					})
 				})
 
 				// then change state
@@ -1363,14 +1376,22 @@ func ParseClassDeclareStmt(p *Parser) *ClassDeclareStmt {
 // parseConstructor -
 // CFG:
 // Constructor  -> 是为 ID1，ID2 ...
-func parseConstructor(p *Parser) []*ID {
-	var idList = []*ID{}
+func parseConstructor(p *Parser) []*ParamItem {
+	var paramList = []*ParamItem{}
 	parseCommaList(p, func() {
+		refMark := false
+		if match, _ := p.tryConsume(lex.TypeObjRef); match {
+			refMark = true
+		}
+
 		idItem := parseID(p)
-		idList = append(idList, idItem)
+		paramList = append(paramList, &ParamItem{
+			ID:      idItem,
+			RefMark: refMark,
+		})
 	})
 
-	return idList
+	return paramList
 }
 
 // parsePropertyDeclareStmt -
@@ -1413,23 +1434,6 @@ func parseCommaList(p *Parser, consumer consumerFunc) {
 		}
 		consumer()
 	}
-}
-
-func parseParamDefList(p *Parser, allowBreak bool) []*ID {
-	defer func() {
-		if allowBreak {
-			p.resetLineTermFlag()
-		}
-	}()
-	var idList = []*ID{}
-
-	// parse param lists
-	parseCommaList(p, func() {
-		idItem := parseID(p)
-		idList = append(idList, idItem)
-	})
-
-	return idList
 }
 
 func parseItemListBlock(p *Parser, blockIndent int, consumer func()) {

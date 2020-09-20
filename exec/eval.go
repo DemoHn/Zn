@@ -285,11 +285,14 @@ func evalVarDeclareStmt(ctx *Context, scope Scope, node *syntax.VarDeclareStmt) 
 			if vpair.Type == syntax.VDTypeAssignConst {
 				isConst = true
 			}
+
 			for _, v := range vpair.Variables {
 				vtag := v.GetLiteral()
-				finalObj := duplicateValue(obj)
+				if !vpair.RefMark {
+					obj = duplicateValue(obj)
+				}
 
-				if err := bindValueDecl(ctx, scope, vtag, finalObj, isConst); err != nil {
+				if err := bindValueDecl(ctx, scope, vtag, obj, isConst); err != nil {
 					return err
 				}
 			}
@@ -760,22 +763,24 @@ func evalVarAssignExpr(ctx *Context, scope Scope, expr *syntax.VarAssignExpr) (Z
 	if err != nil {
 		return nil, err
 	}
-	// duplicate value
-	dupVal := duplicateValue(val)
+	// if var assignment is NOT by reference, then duplicate value
+	if !expr.RefMark {
+		val = duplicateValue(val)
+	}
 
 	// Left Side
 	switch v := expr.TargetVar.(type) {
 	case *syntax.ID:
 		// set ID
 		vtag := v.GetLiteral()
-		err2 := setValue(ctx, scope, vtag, dupVal)
+		err2 := setValue(ctx, scope, vtag, val)
 		return val, err2
 	case *syntax.MemberExpr:
 		iv, err := getMemberExprIV(ctx, scope, v)
 		if err != nil {
 			return nil, err
 		}
-		return iv.Reduce(ctx, scope, dupVal, true)
+		return iv.Reduce(ctx, scope, val, true)
 	default:
 		return nil, error.UnExpectedCase("被赋值", reflect.TypeOf(v).Name())
 	}
@@ -951,8 +956,7 @@ func exprsToValues(ctx *Context, scope Scope, exprs []syntax.Expression) ([]ZnVa
 		if err != nil {
 			return nil, err
 		}
-		dupVal := duplicateValue(pval)
-		params = append(params, dupVal)
+		params = append(params, pval)
 	}
 	return params, nil
 }
