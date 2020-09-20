@@ -859,7 +859,10 @@ $PG($BK(
 			$PD(id=($ID(名)) expr=($STR(小黄)))
 			$PD(id=($ID(年龄)) expr=($NUM(0)))
 		)
-		constructor=($ID(名) $ID(年龄))
+		constructor=(
+			$PM(id=($ID(名)) ref=(false))
+			$PM(id=($ID(年龄)) ref=(false))			
+		)
 		methods=()
 		getters=()
 	)
@@ -890,20 +893,21 @@ $PG($BK(
 			$PD(id=($ID(名)) expr=($STR(小黄)))
 			$PD(id=($ID(年龄)) expr=($NUM(0)))
 		)
-		constructor=($ID(名) $ID(年龄))
+		constructor=(
+			$PM(id=($ID(名)) ref=(false))
+			$PM(id=($ID(年龄)) ref=(false))			
+		)
 		methods=(
 			$FN(
 				name=($ID(狂吠))
-				params=()
-				refs=()
+				params=()				
 				blockTokens=($BK(
 					$RT($STR(汪汪汪))
 				))
 			)
 			$FN(
 				name=($ID(添加年龄))
-				params=()
-				refs=()
+				params=()				
 				blockTokens=($BK(
 					$RT($NUM(20))
 				))
@@ -949,20 +953,21 @@ $PG($BK(
 			$PD(id=($ID(名)) expr=($STR(小黄)))
 			$PD(id=($ID(年龄)) expr=($NUM(0)))
 		)
-		constructor=($ID(名) $ID(年龄))
+		constructor=(
+			$PM(id=($ID(名)) ref=(false))
+			$PM(id=($ID(年龄)) ref=(false))			
+		)
 		methods=(
 			$FN(
 				name=($ID(狂吠))
-				params=()
-				refs=()
+				params=()				
 				blockTokens=($BK($
 					$RT($STR(汪汪汪))
 				))
 			)
 			$FN(
 				name=($ID(添加年龄))
-				params=()
-				refs=()
+				params=()				
 				blockTokens=($BK(
 					$RT($NUM(20))
 				))
@@ -978,7 +983,30 @@ $PG($BK(
 		)
 	)
 ))
+========
+2. class definition with reference
+--------
+定义狗：
+	其名为“小黄”
+	其年龄为0
 
+	是为&名，年龄
+--------
+$PG($BK(
+	$CLS(
+		name=($ID(狗))
+		properties=(
+			$PD(id=($ID(名)) expr=($STR(小黄)))
+			$PD(id=($ID(年龄)) expr=($NUM(0)))
+		)
+		constructor=(
+			$PM(id=($ID(名)) ref=(true))
+			$PM(id=($ID(年龄)) ref=(false))			
+		)
+		methods=()
+		getters=()
+	)
+))
 `
 
 const functionDeclareCasesOK = `
@@ -991,8 +1019,7 @@ const functionDeclareCasesOK = `
 $PG($BK(
 	$FN(
 		name=($ID(搞个大新闻))
-		params=()
-		refs=()
+		params=()		
 		blockTokens=($BK(
 			$NUM(1024)
 		))
@@ -1008,8 +1035,7 @@ $PG($BK(
 $PG($BK(
 	$FN(
 		name=($ID(搞个大新闻))
-		params=($ID(变量1))
-		refs=(false)
+		params=($PM(id=($ID(变量1)) ref=(false)))		
 		blockTokens=($BK(
 			$NUM(1024)
 		))
@@ -1025,8 +1051,11 @@ $PG($BK(
 $PG($BK(
 	$FN(
 		name=($ID(搞个大新闻))
-		params=($ID(A) $ID(B) $ID(华为手机))
-		refs=(false false false)
+		params=(
+			$PM(id=($ID(A)) ref=(false))
+			$PM(id=($ID(B)) ref=(false))
+			$PM(id=($ID(华为手机)) ref=(false))			
+		)		
 		blockTokens=($BK(
 			$NUM(1024)
 		))
@@ -1042,8 +1071,11 @@ $PG($BK(
 $PG($BK(
 	$FN(
 		name=($ID(搞个大新闻))
-		params=($ID(A) $ID(B) $ID(华为手机))
-		refs=(false true true)
+		params=(
+			$PM(id=($ID(A)) ref=(false))
+			$PM(id=($ID(B)) ref=(true))
+			$PM(id=($ID(华为手机)) ref=(true))
+		)
 		blockTokens=($BK(
 			$NUM(1024)
 		))
@@ -1060,8 +1092,11 @@ $PG($BK(
 $PG($BK(
 	$FN(
 		name=($ID(搞个大新闻))
-		params=($ID(A) $ID(B) $ID(华为手机))
-		refs=(true true true)
+		params=(
+			$PM(id=($ID(A)) ref=(true))
+			$PM(id=($ID(B)) ref=(true))
+			$PM(id=($ID(华为手机)) ref=(true))
+		)
 		blockTokens=($BK(
 			$IF(
 				ifExpr=($EQ(L=($ID(C)) R=($ID(空))))
