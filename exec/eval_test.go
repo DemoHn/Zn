@@ -371,6 +371,113 @@ func Test_VarDeclareStmt(t *testing.T) {
 	}
 }
 
+func Test_VarAssignExpr(t *testing.T) {
+	suites := []programOKSuite{
+		{
+			name:    "normal var assign",
+			program: `A为200`,
+			symbols: map[string]ZnValue{
+				"A": NewZnBool(true),
+			},
+			expReturnValue: NewZnDecimalFromInt(200, 0),
+			expProbe:       map[string][][]string{},
+		},
+		{
+			name:    "normal var assign with computed value",
+			program: `A为（X+Y：100，200）`,
+			symbols: map[string]ZnValue{
+				"A": NewZnBool(true),
+			},
+			expReturnValue: NewZnDecimalFromInt(300, 0),
+			expProbe:       map[string][][]string{},
+		},
+		{
+			name:    "normal var assign with array value",
+			program: `A为【2，4，6，8】`,
+			symbols: map[string]ZnValue{
+				"A": NewZnBool(true),
+			},
+			expReturnValue: NewZnArray([]ZnValue{
+				NewZnDecimalFromInt(2, 0),
+				NewZnDecimalFromInt(4, 0),
+				NewZnDecimalFromInt(6, 0),
+				NewZnDecimalFromInt(8, 0),
+			}),
+			expProbe: map[string][][]string{},
+		},
+		{
+			name:    "normal var assign with reference",
+			program: `令B为【2，4，6，8】；A为&B；B#2为60；A`,
+			symbols: map[string]ZnValue{
+				"A": NewZnBool(true),
+			},
+			// value of A should be same as value of B, since A is B's reference
+			expReturnValue: NewZnArray([]ZnValue{
+				NewZnDecimalFromInt(2, 0),
+				NewZnDecimalFromInt(4, 0),
+				NewZnDecimalFromInt(60, 0),
+				NewZnDecimalFromInt(8, 0),
+			}),
+			expProbe: map[string][][]string{},
+		},
+		{
+			name:    "normal var assign without reference",
+			program: `令B为【2，4，6，8】；A为B；B#2为60；A`,
+			symbols: map[string]ZnValue{
+				"A": NewZnBool(true),
+			},
+			// value of A has been copied from value of B, so there's no changing effect
+			// when B's value has been changed
+			expReturnValue: NewZnArray([]ZnValue{
+				NewZnDecimalFromInt(2, 0),
+				NewZnDecimalFromInt(4, 0),
+				NewZnDecimalFromInt(6, 0),
+				NewZnDecimalFromInt(8, 0),
+			}),
+			expProbe: map[string][][]string{},
+		},
+		{
+			name: "var assign object with/without reference",
+			program: `
+定义城市：
+	其名为「正定」
+	是为名
+
+令A成为城市：「正定」
+B为A
+C为&A
+
+A之名为「保定」
+
+注： 显示结果，「B之名」 和 「C之名」 应都为 「保定」
+（__probe：「B」，B之名）
+（__probe：「C」，C之名）
+A之名
+`,
+			symbols: map[string]ZnValue{
+				"B": NewZnBool(true),
+				"C": NewZnBool(true),
+			},
+			// for objects, there's no difference between "assign by value" and "assign by reference"
+			// which means all objects are transferred by reference. Thus when A's property changes,
+			// B and C's properties also change.
+			expReturnValue: NewZnString("保定"),
+			expProbe: map[string][][]string{
+				"B": {
+					{"「保定」", "*exec.ZnString"},
+				},
+				"C": {
+					{"「保定」", "*exec.ZnString"},
+				},
+			},
+		},
+	}
+
+	for _, suite := range suites {
+		assertSuite(t, suite)
+	}
+}
+
 func Test_WhileLoopStmt(t *testing.T) {
 	suites := []programOKSuite{
 		{
