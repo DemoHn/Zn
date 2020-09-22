@@ -30,12 +30,6 @@ type ZnObject struct {
 
 //////// Primitive Types Definition
 
-// ZnString - string 「文本」型
-type ZnString struct {
-	*ZnObject
-	Value string
-}
-
 // ZnBool - (bool) 「二象」型
 type ZnBool struct {
 	*ZnObject
@@ -113,11 +107,6 @@ func (zo *ZnObject) FindGetter(name string) (bool, *ClosureRef) {
 	return true, getterRef
 }
 
-// String() - display those types
-func (zs *ZnString) String() string {
-	return fmt.Sprintf("「%s」", zs.Value)
-}
-
 func (zb *ZnBool) String() string {
 	data := "真"
 	if zb.Value == false {
@@ -150,13 +139,6 @@ func (zb *ZnBool) Rev() *ZnBool {
 }
 
 //////// New[Type] Constructors
-
-// NewZnString -
-func NewZnString(value string) *ZnString {
-	return &ZnString{
-		Value: value,
-	}
-}
 
 // NewZnBool -
 func NewZnBool(value bool) *ZnBool {
