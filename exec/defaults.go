@@ -127,132 +127,32 @@ var probeExecutor = func(ctx *Context, scope *FuncScope, params []ZnValue) (ZnVa
 	return params[1], nil
 }
 
-var defaultDecimalClassRef = &ClassRef{
-	Name: "数值",
-	Constructor: func(ctx *Context, scope *FuncScope, params []ZnValue) (ZnValue, *error.Error) {
-		return NewZnNull(), nil
-	},
-	// decimal to string
-	GetterList: map[string]*ClosureRef{
-		"文本": {
-			Name: "文本",
-			Executor: func(ctx *Context, scope *FuncScope, params []ZnValue) (ZnValue, *error.Error) {
-				this, ok := scope.GetTargetThis().(*ZnDecimal)
-				if !ok {
-					return nil, error.NewErrorSLOT("invalid object type")
-				}
-				return NewZnString(this.String()), nil
-			},
-		},
-	},
-}
-
-var defaultArrayClassRef = &ClassRef{
-	Name: "数组",
-	Constructor: func(ctx *Context, scope *FuncScope, params []ZnValue) (ZnValue, *error.Error) {
-		return NewZnNull(), nil
-	},
-	GetterList: map[string]*ClosureRef{
-		"和": {
-			// 【1，2，3】之和
-			Name: "和",
-			Executor: func(ctx *Context, scope *FuncScope, params []ZnValue) (ZnValue, *error.Error) {
-				this, ok := scope.GetTargetThis().(*ZnArray)
-				if !ok {
-					return nil, error.NewErrorSLOT("invalid object type")
-				}
-				return addValueExecutor(ctx, scope, this.Value)
-			},
-		},
-		"差": {
-			Name: "差",
-			Executor: func(ctx *Context, scope *FuncScope, params []ZnValue) (ZnValue, *error.Error) {
-				this, ok := scope.GetTargetThis().(*ZnArray)
-				if !ok {
-					return nil, error.NewErrorSLOT("invalid object type")
-				}
-				return subValueExecutor(ctx, scope, this.Value)
-			},
-		},
-		"积": {
-			Name: "积",
-			Executor: func(ctx *Context, scope *FuncScope, params []ZnValue) (ZnValue, *error.Error) {
-				this, ok := scope.GetTargetThis().(*ZnArray)
-				if !ok {
-					return nil, error.NewErrorSLOT("invalid object type")
-				}
-				return mulValueExecutor(ctx, scope, this.Value)
-			},
-		},
-		"商": {
-			Name: "商",
-			Executor: func(ctx *Context, scope *FuncScope, params []ZnValue) (ZnValue, *error.Error) {
-				this, ok := scope.GetTargetThis().(*ZnArray)
-				if !ok {
-					return nil, error.NewErrorSLOT("invalid object type")
-				}
-				return divValueExecutor(ctx, scope, this.Value)
-			},
-		},
-		// get first item of array
-		"首": {
-			Name: "首",
-			Executor: func(ctx *Context, scope *FuncScope, params []ZnValue) (ZnValue, *error.Error) {
-				this, ok := scope.GetTargetThis().(*ZnArray)
-				if !ok {
-					return nil, error.NewErrorSLOT("invalid object type")
-				}
-				if len(this.Value) == 0 {
-					return NewZnNull(), nil
-				}
-				return this.Value[0], nil
-			},
-		},
-		// get last item of array
-		"尾": {
-			Name: "尾",
-			Executor: func(ctx *Context, scope *FuncScope, params []ZnValue) (ZnValue, *error.Error) {
-				this, ok := scope.GetTargetThis().(*ZnArray)
-				if !ok {
-					return nil, error.NewErrorSLOT("invalid object type")
-				}
-				if len(this.Value) == 0 {
-					return NewZnNull(), nil
-				}
-				return this.Value[len(this.Value)-1], nil
-			},
-		},
-		"数目": {
-			Name: "数目",
-			Executor: func(ctx *Context, scope *FuncScope, params []ZnValue) (ZnValue, *error.Error) {
-				this, ok := scope.GetTargetThis().(*ZnArray)
-				if !ok {
-					return nil, error.NewErrorSLOT("invalid object type")
-				}
-				return NewZnDecimalFromInt(len(this.Value), 0), nil
-			},
-		},
-	},
-}
-
 // init function
 func init() {
+	var funcNameMap = map[string]funcExecutor{
+		"显示":      displayExecutor,
+		"X+Y":     addValueExecutor,
+		"相加":      addValueExecutor,
+		"X-Y":     subValueExecutor,
+		"相减":      subValueExecutor,
+		"X*Y":     mulValueExecutor,
+		"相乘":      mulValueExecutor,
+		"X/Y":     divValueExecutor,
+		"相除":      divValueExecutor,
+		"__probe": probeExecutor,
+	}
+
 	//// predefined values - those variables (symbols) are defined before
 	//// any execution procedure.
 	//// NOTICE: those variables are all constants!
 	predefinedValues = map[string]ZnValue{
-		"真":       NewZnBool(true),
-		"假":       NewZnBool(false),
-		"空":       NewZnNull(),
-		"显示":      NewZnNativeFunction("显示", displayExecutor),
-		"X+Y":     NewZnNativeFunction("X+Y", addValueExecutor),
-		"相加":      NewZnNativeFunction("X+Y", addValueExecutor),
-		"X-Y":     NewZnNativeFunction("X-Y", subValueExecutor),
-		"相减":      NewZnNativeFunction("X-Y", subValueExecutor),
-		"X*Y":     NewZnNativeFunction("X*Y", mulValueExecutor),
-		"相乘":      NewZnNativeFunction("X*Y", mulValueExecutor),
-		"X/Y":     NewZnNativeFunction("X/Y", divValueExecutor),
-		"相除":      NewZnNativeFunction("X/Y", divValueExecutor),
-		"__probe": NewZnNativeFunction("__probe", probeExecutor),
+		"真": NewZnBool(true),
+		"假": NewZnBool(false),
+		"空": NewZnNull(),
+	}
+
+	// append executor
+	for name, executor := range funcNameMap {
+		predefinedValues[name] = NewZnNativeFunction(name, executor)
 	}
 }

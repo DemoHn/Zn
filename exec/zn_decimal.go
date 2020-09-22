@@ -15,6 +15,8 @@ const (
 	maxSciDigitCount   = 8  // 2.XXXXXXXX *10^ N
 )
 
+var defaultDecimalClassRef *ClassRef
+
 // ZnDecimal - decimal number 「数值」型
 type ZnDecimal struct {
 	*ZnObject
@@ -191,4 +193,29 @@ func (zd *ZnDecimal) asInteger() (int, *error.Error) {
 		return 0, error.ToIntegerError(raw)
 	}
 	return int(zd.co.Int64()), nil
+}
+
+func init() {
+	var toStringGetter = func(ctx *Context, scope *FuncScope, params []ZnValue) (ZnValue, *error.Error) {
+		this, ok := scope.GetTargetThis().(*ZnDecimal)
+		if !ok {
+			return nil, error.InvalidParamType("decimal")
+		}
+		return NewZnString(this.String()), nil
+	}
+
+	var getterMap = map[string]funcExecutor{
+		"文本*": toStringGetter,
+	}
+
+	defaultDecimalClassRef = &ClassRef{
+		Name:       "数值",
+		GetterList: map[string]*ClosureRef{},
+	}
+	for key, executor := range getterMap {
+		defaultDecimalClassRef.GetterList[key] = &ClosureRef{
+			Name:     key,
+			Executor: executor,
+		}
+	}
 }

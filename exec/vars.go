@@ -42,12 +42,6 @@ type ZnBool struct {
 	Value bool
 }
 
-// ZnArray - Zn array type 「元组」型
-type ZnArray struct {
-	*ZnObject
-	Value []ZnValue
-}
-
 // ZnNull - Zn null type - a special marker indicates that
 // this value has neither type nor value
 type ZnNull struct {
@@ -132,15 +126,6 @@ func (zb *ZnBool) String() string {
 	return data
 }
 
-func (za *ZnArray) String() string {
-	strs := []string{}
-	for _, item := range za.Value {
-		strs = append(strs, item.String())
-	}
-
-	return fmt.Sprintf("【%s】", strings.Join(strs, "，"))
-}
-
 func (zn *ZnNull) String() string {
 	return "空"
 }
@@ -177,14 +162,6 @@ func NewZnString(value string) *ZnString {
 func NewZnBool(value bool) *ZnBool {
 	return &ZnBool{
 		Value: value,
-	}
-}
-
-// NewZnArray -
-func NewZnArray(values []ZnValue) *ZnArray {
-	return &ZnArray{
-		Value:    values,
-		ZnObject: NewZnObject(defaultArrayClassRef),
 	}
 }
 
