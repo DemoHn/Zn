@@ -30,12 +30,6 @@ type ZnObject struct {
 
 //////// Primitive Types Definition
 
-// ZnBool - (bool) 「二象」型
-type ZnBool struct {
-	*ZnObject
-	Value bool
-}
-
 // ZnNull - Zn null type - a special marker indicates that
 // this value has neither type nor value
 type ZnNull struct {
@@ -107,14 +101,6 @@ func (zo *ZnObject) FindGetter(name string) (bool, *ClosureRef) {
 	return true, getterRef
 }
 
-func (zb *ZnBool) String() string {
-	data := "真"
-	if zb.Value == false {
-		data = "假"
-	}
-	return data
-}
-
 func (zn *ZnNull) String() string {
 	return "空"
 }
@@ -132,20 +118,7 @@ func (zh *ZnHashMap) String() string {
 	return fmt.Sprintf("【%s】", strings.Join(strs, "，"))
 }
 
-// Rev - ZnBool
-func (zb *ZnBool) Rev() *ZnBool {
-	zb.Value = !zb.Value
-	return zb
-}
-
 //////// New[Type] Constructors
-
-// NewZnBool -
-func NewZnBool(value bool) *ZnBool {
-	return &ZnBool{
-		Value: value,
-	}
-}
 
 // NewZnNull - null value
 func NewZnNull() *ZnNull {
@@ -156,7 +129,7 @@ func NewZnNull() *ZnNull {
 // NewZnFunction -
 func NewZnFunction(node *syntax.FunctionDeclareStmt) *ZnFunction {
 	funcName := node.FuncName.GetLiteral()
-	closureRef := NewClosureRef(funcName, node.ParamList, node.ExecBlock)
+	closureRef := BuildClosureRefFromNode(funcName, node.ParamList, node.ExecBlock)
 	return &ZnFunction{
 		ClosureRef: closureRef,
 	}
@@ -164,7 +137,7 @@ func NewZnFunction(node *syntax.FunctionDeclareStmt) *ZnFunction {
 
 // NewZnNativeFunction - new Zn native function
 func NewZnNativeFunction(name string, executor funcExecutor) *ZnFunction {
-	closureRef := NewNativeClosureRef(name, executor)
+	closureRef := NewClosureRef(name, executor)
 	return &ZnFunction{
 		ClosureRef: closureRef,
 	}

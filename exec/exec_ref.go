@@ -18,8 +18,8 @@ type ClosureRef struct {
 	Executor     funcExecutor // actual execution logic
 }
 
-// NewClosureRef -
-func NewClosureRef(name string, paramTags []*syntax.ParamItem, stmtBlock *syntax.BlockStmt) *ClosureRef {
+// BuildClosureRefFromNode -
+func BuildClosureRefFromNode(name string, paramTags []*syntax.ParamItem, stmtBlock *syntax.BlockStmt) *ClosureRef {
 
 	var executor = func(ctx *Context, scope *FuncScope, params []ZnValue) (ZnValue, *error.Error) {
 		// iterate block round I - function hoisting
@@ -77,8 +77,8 @@ func NewClosureRef(name string, paramTags []*syntax.ParamItem, stmtBlock *syntax
 	}
 }
 
-// NewNativeClosureRef - define native function
-func NewNativeClosureRef(name string, executor funcExecutor) *ClosureRef {
+// NewClosureRef - define native function
+func NewClosureRef(name string, executor funcExecutor) *ClosureRef {
 	return &ClosureRef{
 		Name:         name,
 		ParamHandler: nil,
@@ -106,8 +106,18 @@ type ClassRef struct {
 	MethodList  map[string]*ClosureRef // stores defined methods inside the class
 }
 
-// NewClassRef -
-func NewClassRef(name string, classNode *syntax.ClassDeclareStmt) *ClassRef {
+// NewClassRef - create new empty ClassRef
+func NewClassRef(name string) *ClassRef {
+	return &ClassRef{
+		Name:        name,
+		Constructor: nil,
+		GetterList:  map[string]*ClosureRef{},
+		MethodList:  map[string]*ClosureRef{},
+	}
+}
+
+// BuildClassRefFromNode -
+func BuildClassRefFromNode(name string, classNode *syntax.ClassDeclareStmt) *ClassRef {
 	ref := &ClassRef{
 		Name:        name,
 		Constructor: nil,
@@ -149,13 +159,13 @@ func NewClassRef(name string, classNode *syntax.ClassDeclareStmt) *ClassRef {
 	// add getters
 	for _, gNode := range classNode.GetterList {
 		getterTag := gNode.GetterName.GetLiteral()
-		ref.GetterList[getterTag] = NewClosureRef(getterTag, []*syntax.ParamItem{}, gNode.ExecBlock)
+		ref.GetterList[getterTag] = BuildClosureRefFromNode(getterTag, []*syntax.ParamItem{}, gNode.ExecBlock)
 	}
 
 	// add methods
 	for _, mNode := range classNode.MethodList {
 		mTag := mNode.FuncName.GetLiteral()
-		ref.MethodList[mTag] = NewClosureRef(mTag, mNode.ParamList, mNode.ExecBlock)
+		ref.MethodList[mTag] = BuildClosureRefFromNode(mTag, mNode.ParamList, mNode.ExecBlock)
 	}
 
 	return ref
@@ -164,4 +174,11 @@ func NewClassRef(name string, classNode *syntax.ClassDeclareStmt) *ClassRef {
 // Construct - yield new instance of this class
 func (cr *ClassRef) Construct(ctx *Context, scope *FuncScope, params []ZnValue) (ZnValue, *error.Error) {
 	return cr.Constructor(ctx, scope, params)
+}
+
+//// helpers
+func bindClassGetters(ref *ClassRef, getterMap map[string]funcExecutor) {
+	for key, executor := range getterMap {
+		ref.GetterList[key] = NewClosureRef(key, executor)
+	}
 }
