@@ -920,7 +920,7 @@ func bindClassRef(ctx *Context, scope *RootScope, classStmt *syntax.ClassDeclare
 	if ok {
 		return error.NameRedeclared(name)
 	}
-	scope.classRefMap[name] = NewClassRef(name, classStmt)
+	scope.classRefMap[name] = BuildClassRefFromNode(name, classStmt)
 	return nil
 }
 

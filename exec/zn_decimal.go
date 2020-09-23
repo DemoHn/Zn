@@ -208,14 +208,6 @@ func init() {
 		"文本*": toStringGetter,
 	}
 
-	defaultDecimalClassRef = &ClassRef{
-		Name:       "数值",
-		GetterList: map[string]*ClosureRef{},
-	}
-	for key, executor := range getterMap {
-		defaultDecimalClassRef.GetterList[key] = &ClosureRef{
-			Name:     key,
-			Executor: executor,
-		}
-	}
+	defaultDecimalClassRef = NewClassRef("数值")
+	bindClassGetters(defaultDecimalClassRef, getterMap)
 }

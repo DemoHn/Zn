@@ -96,7 +96,7 @@ func init() {
 	}
 
 	// array's getter list
-	var arrayGetterList = map[string]funcExecutor{
+	var getterMap = map[string]funcExecutor{
 		"和":  arraySumGetter,
 		"差":  arraySubGetter,
 		"积":  arrayMulGetter,
@@ -107,16 +107,6 @@ func init() {
 		"长度": arrayCountGetter,
 	}
 
-	defaultArrayClassRef = &ClassRef{
-		Name:       "数组",
-		GetterList: map[string]*ClosureRef{},
-	}
-
-	// append getter list
-	for key, executor := range arrayGetterList {
-		defaultArrayClassRef.GetterList[key] = &ClosureRef{
-			Name:     key,
-			Executor: executor,
-		}
-	}
+	defaultArrayClassRef = NewClassRef("数组")
+	bindClassGetters(defaultArrayClassRef, getterMap)
 }
