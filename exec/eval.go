@@ -226,7 +226,7 @@ func evalStatement(ctx *Context, scope Scope, stmt syntax.Statement) *error.Erro
 	case *syntax.EmptyStmt:
 		return nil
 	case *syntax.FunctionDeclareStmt:
-		fn := NewZnFunction(v)
+		fn := BuildZnFunctionFromNode(v)
 		return bindValue(ctx, scope, v.FuncName.GetLiteral(), fn)
 	case *syntax.ClassDeclareStmt:
 		sp, ok := scope.(*RootScope)
@@ -383,7 +383,7 @@ func evalStmtBlock(ctx *Context, scope Scope, block *syntax.BlockStmt) *error.Er
 		for _, stmtI := range block.Children {
 			switch v := stmtI.(type) {
 			case *syntax.FunctionDeclareStmt:
-				fn := NewZnFunction(v)
+				fn := BuildZnFunctionFromNode(v)
 				if err := bindValue(ctx, scope, v.FuncName.GetLiteral(), fn); err != nil {
 					return err
 				}
