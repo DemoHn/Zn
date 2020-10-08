@@ -41,14 +41,6 @@ func init() {
 		"长度": stringCountGetter,
 	}
 
-	defaultStringClassRef = &ClassRef{
-		Name:       "文本",
-		GetterList: map[string]*ClosureRef{},
-	}
-	for key, executor := range getterMap {
-		defaultStringClassRef.GetterList[key] = &ClosureRef{
-			Name:     key,
-			Executor: executor,
-		}
-	}
+	defaultStringClassRef = NewClassRef("文本")
+	bindClassGetters(defaultStringClassRef, getterMap)
 }

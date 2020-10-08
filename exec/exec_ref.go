@@ -25,7 +25,7 @@ func BuildClosureRefFromNode(name string, paramTags []*syntax.ParamItem, stmtBlo
 		// iterate block round I - function hoisting
 		for _, stmtI := range stmtBlock.Children {
 			if v, ok := stmtI.(*syntax.FunctionDeclareStmt); ok {
-				fn := NewZnFunction(v)
+				fn := BuildZnFunctionFromNode(v)
 				if err := bindValue(ctx, scope, v.FuncName.GetLiteral(), fn); err != nil {
 					return nil, err
 				}

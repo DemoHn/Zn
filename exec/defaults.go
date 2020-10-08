@@ -153,6 +153,6 @@ func init() {
 
 	// append executor
 	for name, executor := range funcNameMap {
-		predefinedValues[name] = NewZnNativeFunction(name, executor)
+		predefinedValues[name] = NewZnFunction(name, executor)
 	}
 }
