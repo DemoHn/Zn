@@ -4,6 +4,38 @@ import (
 	"github.com/DemoHn/Zn/error"
 )
 
+// Value type is the base unit to present a value (aka. variable) - including number, string, array, function, object...
+// All kinds of values in Zn language SHOULD implement this interface.
+//
+// Basically there're 3 methods:
+//
+// 1. GetProperty - fetch the value from property list of a specific name
+// 2. SetProperty - set the value of some property
+// 3. ExecMethod - execute one method from method list
+type Value interface {
+	GetProperty(*Context, Scope, string) (Value, *error.Error)
+	SetProperty(*Context, Scope, string, Value) *error.Error
+	ExecMethod(*Context, Scope, string, []Value) (Value, *error.Error)
+}
+
+// ValueRef (aka. Value Model Reference) is an internal type that manages properties and
+// methods.
+type ValueRef struct {
+	getters map[string]*ClosureRef
+	setters map[string]*ClosureRef
+	methods map[string]*ClosureRef
+}
+
+// GetProperty -
+func (vr *ValueRef) GetProperty(ctx *Context, scope Scope, name string) (Value, *error.Error) {
+	getter, ok := vr.getters[name]
+	if !ok {
+		return nil, error.PropertyNotFound(name)
+	}
+	return getter.Exec(ctx, scope, []Value{})
+}
+
+/////// TODO: REMOVE OLD ONES
 //// General Value types
 
 // ZnValue - general value interface
