@@ -18,7 +18,7 @@ func NewArith(precision int) *Arith {
 }
 
 // Add - A + B + C + D + ... = ?
-func (ai *Arith) Add(decimal1 Decimal, others ...Decimal) Decimal {
+func (ai *Arith) Add(decimal1 *ZnDecimal, others ...*ZnDecimal) *ZnDecimal {
 	var result = copyZnDecimal(decimal1)
 	if len(others) == 0 {
 		return result
@@ -33,7 +33,7 @@ func (ai *Arith) Add(decimal1 Decimal, others ...Decimal) Decimal {
 }
 
 // Sub - A - B - C - D - ... = ?
-func (ai *Arith) Sub(decimal1 Decimal, others ...Decimal) Decimal {
+func (ai *Arith) Sub(decimal1 *ZnDecimal, others ...*ZnDecimal) *ZnDecimal {
 	var result = copyZnDecimal(decimal1)
 	if len(others) == 0 {
 		return result
@@ -48,7 +48,7 @@ func (ai *Arith) Sub(decimal1 Decimal, others ...Decimal) Decimal {
 }
 
 // Mul - A * B * C * D * ... = ?, ZnDeicmal value will be copied
-func (ai *Arith) Mul(decimal1 Decimal, others ...Decimal) Decimal {
+func (ai *Arith) Mul(decimal1 *ZnDecimal, others ...*ZnDecimal) *ZnDecimal {
 	// init result from decimal1
 	var result = copyZnDecimal(decimal1)
 	if len(others) == 0 {
@@ -65,7 +65,7 @@ func (ai *Arith) Mul(decimal1 Decimal, others ...Decimal) Decimal {
 
 // Div - A / B / C / D / ... = ?, ZnDecimal value will be copied
 // notice , when one of the dividends are 0, an ArithDivZeroError will be yield
-func (ai *Arith) Div(decimal1 Decimal, others ...Decimal) (Decimal, *error.Error) {
+func (ai *Arith) Div(decimal1 *ZnDecimal, others ...*ZnDecimal) (*ZnDecimal, *error.Error) {
 	var result = copyZnDecimal(decimal1)
 	var num10 = big.NewInt(10)
 	var num0 = big.NewInt(0)
@@ -80,7 +80,7 @@ func (ai *Arith) Div(decimal1 Decimal, others ...Decimal) (Decimal, *error.Error
 	for _, item := range others {
 		// check if divident is zero
 		if item.co.Cmp(num0) == 0 {
-			return Decimal{}, error.ArithDivZeroError()
+			return nil, error.ArithDivZeroError()
 		}
 		adjust := 0
 		// adjust bits
@@ -139,7 +139,7 @@ func (ai *Arith) Div(decimal1 Decimal, others ...Decimal) (Decimal, *error.Error
 //// arith helper
 
 // rescalePair - make exps to be same
-func rescalePair(d1 Decimal, d2 Decimal) (Decimal, Decimal) {
+func rescalePair(d1 *ZnDecimal, d2 *ZnDecimal) (*ZnDecimal, *ZnDecimal) {
 	intTen := big.NewInt(10)
 
 	if d1.exp == d2.exp {
@@ -150,7 +150,7 @@ func rescalePair(d1 Decimal, d2 Decimal) (Decimal, Decimal) {
 		diff := d1.exp - d2.exp
 
 		expVal := new(big.Int).Exp(intTen, big.NewInt(int64(diff)), nil)
-		nD1 := Decimal{
+		nD1 := &ZnDecimal{
 			co:  new(big.Int).Mul(d1.co, expVal),
 			exp: d2.exp,
 		}
@@ -161,7 +161,7 @@ func rescalePair(d1 Decimal, d2 Decimal) (Decimal, Decimal) {
 	diff := d2.exp - d1.exp
 
 	expVal := new(big.Int).Exp(intTen, big.NewInt(int64(diff)), nil)
-	nD2 := Decimal{
+	nD2 := &ZnDecimal{
 		co:  new(big.Int).Mul(d2.co, expVal),
 		exp: d1.exp,
 	}
@@ -169,7 +169,7 @@ func rescalePair(d1 Decimal, d2 Decimal) (Decimal, Decimal) {
 }
 
 // copyDecimal - duplicate deicmal value to a new variable
-func copyZnDecimal(old Decimal) Decimal {
-	result, _ := duplicateValue(old).(Decimal)
+func copyZnDecimal(old *ZnDecimal) *ZnDecimal {
+	result, _ := duplicateValue(old).(*ZnDecimal)
 	return result
 }
