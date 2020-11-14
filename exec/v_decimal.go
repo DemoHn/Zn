@@ -25,8 +25,8 @@ type Decimal struct {
 }
 
 // NewDecimal -
-func NewDecimal(value string) (Decimal, *error.Error) {
-	var decimal = Decimal{
+func NewDecimal(value string) (*Decimal, *error.Error) {
+	var decimal = &Decimal{
 		exp: 0,
 		co:  big.NewInt(0),
 	}
@@ -36,8 +36,8 @@ func NewDecimal(value string) (Decimal, *error.Error) {
 }
 
 // NewDecimalFromInt -
-func NewDecimalFromInt(value int, exp int) Decimal {
-	return Decimal{
+func NewDecimalFromInt(value int, exp int) *Decimal {
+	return &Decimal{
 		exp: exp,
 		co:  big.NewInt(int64(value)),
 	}
@@ -196,14 +196,14 @@ func (zd *Decimal) asInteger() (int, *error.Error) {
 func (zd *Decimal) GetProperty(ctx *Context, name string) (Value, *error.Error) {
 	switch name {
 	case "文本*":
-		return NewZnString(zd.String()), nil
+		return NewString(zd.String()), nil
 	}
 	return nil, error.PropertyNotFound(name)
 }
 
 // SetProperty - a null Value does not have ANY propreties.
-func (zd *Decimal) SetProperty(ctx *Context, name string, value Value) (Value, *error.Error) {
-	return nil, error.PropertyNotFound(name)
+func (zd *Decimal) SetProperty(ctx *Context, name string, value Value) *error.Error {
+	return error.PropertyNotFound(name)
 }
 
 // ExecMethod - a null value does not have ANY methods.
