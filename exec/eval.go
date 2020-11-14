@@ -1,6 +1,7 @@
 package exec
 
 import (
+	"fmt"
 	"math/big"
 	"reflect"
 	"strconv"
@@ -320,10 +321,10 @@ func evalNewObjectPart(ctx *Context, node syntax.VDAssignPair) *error.Error {
 
 // evalWhileLoopStmt -
 func evalWhileLoopStmt(ctx *Context, node *syntax.WhileLoopStmt) *error.Error {
-	loopScope := NewWhileScope(scope)
+	lctx := ctx.DuplicateNewScope()
 	for {
 		// #1. first execute expr
-		trueExpr, err := evalExpression(ctx, loopScope, node.TrueExpr)
+		trueExpr, err := evalExpression(lctx, node.TrueExpr)
 		if err != nil {
 			return err
 		}
@@ -337,7 +338,7 @@ func evalWhileLoopStmt(ctx *Context, node *syntax.WhileLoopStmt) *error.Error {
 			return nil
 		}
 		// #3. stmt block
-		if err := evalStmtBlock(ctx, loopScope, node.LoopBlock); err != nil {
+		if err := evalStmtBlock(lctx, node.LoopBlock); err != nil {
 			if err.GetCode() == error.ContinueBreakSignal {
 				// continue next turn
 				continue
@@ -354,8 +355,8 @@ func evalWhileLoopStmt(ctx *Context, node *syntax.WhileLoopStmt) *error.Error {
 // EvalStmtBlock -
 func evalStmtBlock(ctx *Context, block *syntax.BlockStmt) *error.Error {
 	enableHoist := false
-	rootScope, ok := scope.(*RootScope)
-	if ok {
+	// only rootScope could enable hoist
+	if ctx.scope.parent == nil {
 		enableHoist = true
 	}
 
@@ -364,12 +365,12 @@ func evalStmtBlock(ctx *Context, block *syntax.BlockStmt) *error.Error {
 		for _, stmtI := range block.Children {
 			switch v := stmtI.(type) {
 			case *syntax.FunctionDeclareStmt:
-				fn := BuildZnFunctionFromNode(v)
+				fn := BuildFunctionFromNode(v)
 				if err := bindValue(ctx, v.FuncName.GetLiteral(), fn); err != nil {
 					return err
 				}
 			case *syntax.ClassDeclareStmt:
-				if err := bindClassRef(ctx, rootScope, v); err != nil {
+				if err := bindClassRef(ctx, v); err != nil {
 					return err
 				}
 			}
@@ -436,7 +437,8 @@ func evalIterateStmt(ctx *Context, node *syntax.IterateStmt) *error.Error {
 	var keySlot, valueSlot string
 	var nameLen = len(node.IndexNames)
 
-	iterScope := NewIterateScope(scope)
+	// create new scope and return its context
+	ictx := ctx.DuplicateNewScope()
 	// 以A，B遍历C： D
 	// execute expr: C
 	targetExpr, err := evalExpression(ctx, node.IterateExpr)
@@ -452,34 +454,34 @@ func evalIterateStmt(ctx *Context, node *syntax.IterateStmt) *error.Error {
 
 		// set pre-defined value
 		if nameLen == 1 {
-			if err := setValue(ctx, iterScope, valueSlot, val); err != nil {
+			if err := setValue(ictx, valueSlot, val); err != nil {
 				return err
 			}
 		} else if nameLen == 2 {
-			if err := setValue(ctx, iterScope, keySlot, key); err != nil {
+			if err := setValue(ictx, keySlot, key); err != nil {
 				return err
 			}
-			if err := setValue(ctx, iterScope, valueSlot, val); err != nil {
+			if err := setValue(ictx, valueSlot, val); err != nil {
 				return err
 			}
 		}
-		return evalStmtBlock(ctx, iterScope, node.IterateBlock)
+		return evalStmtBlock(ctx, node.IterateBlock)
 	}
 
 	// define indication variables as "currentKey" and "currentValue" under new iterScope
 	// of course since there's no any iteration is executed yet, the initial values are all "Null"
 	if nameLen == 1 {
 		valueSlot = node.IndexNames[0].Literal
-		if err := bindValue(ctx, iterScope, valueSlot, NewZnNull()); err != nil {
+		if err := bindValue(ictx, valueSlot, NewNull()); err != nil {
 			return err
 		}
 	} else if nameLen == 2 {
 		keySlot = node.IndexNames[0].Literal
 		valueSlot = node.IndexNames[1].Literal
-		if err := bindValue(ctx, iterScope, keySlot, NewZnNull()); err != nil {
+		if err := bindValue(ictx, keySlot, NewNull()); err != nil {
 			return err
 		}
-		if err := bindValue(ctx, iterScope, valueSlot, NewZnNull()); err != nil {
+		if err := bindValue(ictx, valueSlot, NewNull()); err != nil {
 			return err
 		}
 	} else if nameLen > 2 {
@@ -489,8 +491,8 @@ func evalIterateStmt(ctx *Context, node *syntax.IterateStmt) *error.Error {
 	// execute iterations
 	switch tv := targetExpr.(type) {
 	case *Array:
-		for idx, val := range tv.Value {
-			idxVar := NewZnDecimalFromInt(idx, 0)
+		for idx, val := range tv.value {
+			idxVar := NewDecimalFromInt(idx, 0)
 			if err := execIterationBlockFn(idxVar, val); err != nil {
 				if err.GetCode() == error.ContinueBreakSignal {
 					// continue next turn
@@ -503,10 +505,10 @@ func evalIterateStmt(ctx *Context, node *syntax.IterateStmt) *error.Error {
 				return err
 			}
 		}
-	case *ZnHashMap:
-		for _, key := range tv.KeyOrder {
-			val := tv.Value[key]
-			keyVar := NewZnString(key)
+	case *HashMap:
+		for _, key := range tv.keyOrder {
+			val := tv.value[key]
+			keyVar := NewString(key)
 			// handle interrupts
 			if err := execIterationBlockFn(keyVar, val); err != nil {
 				if err.GetCode() == error.ContinueBreakSignal {
@@ -543,7 +545,7 @@ func evalExpression(ctx *Context, expr syntax.Expression) (Value, *error.Error) 
 		if err != nil {
 			return nil, err
 		}
-		return iv.Reduce(ctx, nil, false)
+		return iv.ReduceRHS(ctx)
 	case *syntax.Number, *syntax.String, *syntax.ID, *syntax.ArrayExpr, *syntax.HashMapExpr:
 		return evalPrimeExpr(ctx, e)
 	case *syntax.FuncCallExpr:
@@ -687,16 +689,16 @@ func evalLogicComparator(ctx *Context, expr *syntax.LogicExpr) (*Bool, *error.Er
 		return nil, error.UnExpectedCase("比较类型", strconv.Itoa(int(logicType)))
 	}
 
-	return NewZnBool(cmpRes), cmpErr
+	return NewBool(cmpRes), cmpErr
 }
 
 // eval prime expr
 func evalPrimeExpr(ctx *Context, expr syntax.Expression) (Value, *error.Error) {
 	switch e := expr.(type) {
 	case *syntax.Number:
-		return NewZnDecimal(e.GetLiteral())
+		return NewDecimal(e.GetLiteral())
 	case *syntax.String:
-		return NewZnString(e.GetLiteral()), nil
+		return NewString(e.GetLiteral()), nil
 	case *syntax.ID:
 		vtag := e.GetLiteral()
 		return getValue(ctx, vtag)
@@ -710,7 +712,7 @@ func evalPrimeExpr(ctx *Context, expr syntax.Expression) (Value, *error.Error) {
 			znObjs = append(znObjs, expr)
 		}
 
-		return NewZnArray(znObjs), nil
+		return NewArray(znObjs), nil
 	case *syntax.HashMapExpr:
 		znPairs := []KVPair{}
 		for _, item := range e.KVPair {
@@ -718,7 +720,7 @@ func evalPrimeExpr(ctx *Context, expr syntax.Expression) (Value, *error.Error) {
 			if err != nil {
 				return nil, err
 			}
-			exprKey, ok := expr.(*ZnString)
+			exprKey, ok := expr.(*String)
 			if !ok {
 				return nil, error.InvalidExprType("string")
 			}
@@ -727,11 +729,11 @@ func evalPrimeExpr(ctx *Context, expr syntax.Expression) (Value, *error.Error) {
 				return nil, err
 			}
 			znPairs = append(znPairs, KVPair{
-				Key:   exprKey.Value,
+				Key:   exprKey.value,
 				Value: exprVal,
 			})
 		}
-		return NewZnHashMap(znPairs), nil
+		return NewHashMap(znPairs), nil
 	default:
 		return nil, error.UnExpectedCase("表达式类型", reflect.TypeOf(e).Name())
 	}
@@ -761,18 +763,21 @@ func evalVarAssignExpr(ctx *Context, expr *syntax.VarAssignExpr) (Value, *error.
 		if err != nil {
 			return nil, err
 		}
-		return iv.Reduce(ctx, val, true)
+		return val, iv.ReduceLHS(ctx, val)
 	default:
-		return nil, error.UnExpectedCase("被赋值", reflect.TypeOf(v).Name())
+		return nil, error.UnExpectedCase("被赋值", fmt.Sprintf("%T", v))
 	}
 }
 
-func getMemberExprIV(ctx *Context, expr *syntax.MemberExpr) (ZnIV, *error.Error) {
+func getMemberExprIV(ctx *Context, expr *syntax.MemberExpr) (*IV, *error.Error) {
 	if expr.RootType == syntax.RootTypeScope { // 此之 XX
 		switch expr.MemberType {
 		case syntax.MemberID:
-			tag := expr.MemberID.Literal
-			return &ZnScopeMemberIV{tag}, nil
+			return &IV{
+				reduceType: IVTypeMember,
+				root:       ctx.scope.sgValue,
+				member:     expr.MemberID.Literal,
+			}, nil
 		case syntax.MemberMethod:
 			m := expr.MemberMethod
 			funcName := m.FuncName.Literal
@@ -782,7 +787,7 @@ func getMemberExprIV(ctx *Context, expr *syntax.MemberExpr) (ZnIV, *error.Error)
 			}
 			return &ZnScopeMethodIV{funcName, paramVals}, nil
 		}
-		return nil, error.UnExpectedCase("子项类型", strconv.Itoa(int(expr.MemberType)))
+		return nil, error.UnExpectedCase("子项类型", fmt.Sprintf("%d", expr.MemberType))
 	}
 
 	if expr.RootType == syntax.RootTypeProp { // 其 XX
@@ -800,8 +805,11 @@ func getMemberExprIV(ctx *Context, expr *syntax.MemberExpr) (ZnIV, *error.Error)
 	}
 	switch expr.MemberType {
 	case syntax.MemberID: // A 之 B
-		tag := expr.MemberID.Literal
-		return &ZnMemberIV{valRoot, tag}, nil
+		return &IV{
+			reduceType: IVTypeMember,
+			root:       valRoot,
+			member:     expr.MemberID.Literal,
+		}, nil
 	case syntax.MemberMethod:
 		m := expr.MemberMethod
 		funcName := m.FuncName.Literal
@@ -817,32 +825,43 @@ func getMemberExprIV(ctx *Context, expr *syntax.MemberExpr) (ZnIV, *error.Error)
 			return nil, err
 		}
 		switch v := valRoot.(type) {
-		case *ZnArray:
-			vr, ok := idx.(*ZnDecimal)
+		case *Array:
+			vr, ok := idx.(*Decimal)
 			if !ok {
 				return nil, error.InvalidExprType("integer")
 			}
-			return &ZnArrayIV{v, vr}, nil
-		case *ZnHashMap:
-			var s *ZnString
+			vri, e := vr.asInteger()
+			if e != nil {
+				return nil, error.InvalidExprType("integer")
+			}
+			return &IV{
+				reduceType: IVTypeArray,
+				root:       v,
+				index:      vri,
+			}, nil
+		case *HashMap:
+			var s string
 			switch x := idx.(type) {
 			// regard decimal value directly as string
-			case *ZnDecimal:
+			case *Decimal:
 				// transform decimal value to string
 				// x.exp < 0 express that its a decimal value with point mark, not an integer
 				if x.exp < 0 {
 					return nil, error.InvalidExprType("integer", "string")
 				}
-				s = NewZnString(x.String())
-			case *ZnString:
-				s = x
+				s = x.String()
+			case *String:
+				s = x.String()
 			default:
 				return nil, error.InvalidExprType("integer", "string")
 			}
-			return &ZnHashMapIV{v, s}, nil
-		default:
-			return nil, error.InvalidExprType("array", "hashmap")
+			return &IV{
+				reduceType: IVTypeHashMap,
+				root:       v,
+				member:     s,
+			}, nil
 		}
+		return nil, error.InvalidExprType("array", "hashmap")
 	}
 	return nil, error.UnExpectedCase("子项类型", reflect.TypeOf(expr.MemberType).Name())
 }
@@ -887,21 +906,21 @@ func setValue(ctx *Context, name string, value Value) *error.Error {
 	return error.NameNotDefined(name)
 }
 
-func getClassRef(ctx *Context, scope *RootScope, name string) (*ClassRef, *error.Error) {
-	ref, ok := scope.classRefMap[name]
+func getClassRef(ctx *Context, name string) (*ClassRef, *error.Error) {
+	ref, ok := ctx.scope.classRefMap[name]
 	if ok {
-		return ref, nil
+		return &ref, nil
 	}
 	return nil, error.NameNotDefined(name)
 }
 
-func bindClassRef(ctx *Context, scope *RootScope, classStmt *syntax.ClassDeclareStmt) *error.Error {
+func bindClassRef(ctx *Context, classStmt *syntax.ClassDeclareStmt) *error.Error {
 	name := classStmt.ClassName.GetLiteral()
-	_, ok := scope.classRefMap[name]
+	_, ok := ctx.scope.classRefMap[name]
 	if ok {
 		return error.NameRedeclared(name)
 	}
-	scope.classRefMap[name] = BuildClassRefFromNode(name, classStmt)
+	ctx.scope.classRefMap[name] = BuildClassFromNode(name, classStmt)
 	return nil
 }
 
