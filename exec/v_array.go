@@ -18,10 +18,13 @@ func NewArray(value []Value) *Array {
 func (ar *Array) GetProperty(ctx *Context, name string) (Value, *error.Error) {
 	switch name {
 	case "和":
-
+		return addValueExecutor(ctx, ar.value), nil
 	case "差":
+		return subValueExecutor(ctx, ar.value), nil
 	case "积":
+		return mulValueExecutor(ctx, ar.value), nil
 	case "商":
+		return divValueExecutor(ctx, ar.value), nil
 	case "首":
 		if len(ar.value) == 0 {
 			return NewNull(), nil

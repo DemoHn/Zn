@@ -61,7 +61,7 @@ type SymbolInfo struct {
 func NewContext() *Context {
 	return &Context{
 		globals: map[string]Value{}, // TODO
-		arith:   NewArith(defaultPrecision),
+		arith:   NewArith(arithPrecision),
 		_probe:  debug.NewProbe(),
 		scope:   nil,
 	}
