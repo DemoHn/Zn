@@ -39,7 +39,7 @@ func BuildClosureFromNode(paramTags []*syntax.ParamItem, stmtBlock *syntax.Block
 		// "function definition" statement.
 		for _, stmtI := range stmtBlock.Children {
 			if v, ok := stmtI.(*syntax.FunctionDeclareStmt); ok {
-				fn := BuildZnFunctionFromNode(v)
+				fn := BuildFunctionFromNode(v)
 				if err := bindValue(ctx, v.FuncName.GetLiteral(), fn); err != nil {
 					return nil, err
 				}
@@ -144,7 +144,7 @@ func BuildClassFromNode(name string, classNode *syntax.ClassDeclareStmt) ClassRe
 
 	// define default constrcutor
 	var constructor = func(ctx *Context, params []Value) (Value, *error.Error) {
-		obj := NewZnObject(ref)
+		obj := NewObject(ref)
 		// init prop list
 		for _, propPair := range classNode.PropertyList {
 			propID := propPair.PropertyID.GetLiteral()
@@ -152,7 +152,7 @@ func BuildClassFromNode(name string, classNode *syntax.ClassDeclareStmt) ClassRe
 			if err != nil {
 				return nil, err
 			}
-			obj.PropList[propID] = expr
+			obj.propList[propID] = expr
 			ref.PropList = append(ref.PropList, propID)
 		}
 		// constructor: set some properties' value
@@ -166,7 +166,7 @@ func BuildClassFromNode(name string, classNode *syntax.ClassDeclareStmt) ClassRe
 				objParamVal = duplicateValue(objParamVal)
 			}
 			paramName := param.ID.GetLiteral()
-			obj.PropList[paramName] = objParamVal
+			obj.propList[paramName] = objParamVal
 		}
 
 		return obj, nil
@@ -203,23 +203,4 @@ func NewClassRef(name string) ClassRef {
 // Construct - yield new instance of this class
 func (cr *ClassRef) Construct(ctx *Context, params []Value) (Value, *error.Error) {
 	return cr.Constructor(ctx, params)
-}
-
-// Null type - "null" is a special value that represents for "nothing".
-// a null value only "equals to" null. (XX 为 空)
-type Null struct{}
-
-// GetProperty - a null Value does not have ANY propreties.
-func (nl *Null) GetProperty(ctx *Context, name string) (Value, *error.Error) {
-	return nil, error.PropertyNotFound(name)
-}
-
-// SetProperty - a null Value does not have ANY propreties.
-func (nl *Null) SetProperty(ctx *Context, name string, value Value) (Value, *error.Error) {
-	return nil, error.PropertyNotFound(name)
-}
-
-// ExecMethod - a null value does not have ANY methods.
-func (nl *Null) ExecMethod(ctx *Context, name string, values []Value) (Value, *error.Error) {
-	return nil, error.MethodNotFound(name)
 }

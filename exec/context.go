@@ -33,8 +33,10 @@ type Scope struct {
 	// ONLY in root block
 	classRefMap map[string]ClassRef
 	// parent - parent Scope
-	parent      *Scope
-	symbolMap   map[string]SymbolInfo
+	parent    *Scope
+	symbolMap map[string]SymbolInfo
+	// sgValue - scope variable
+	sgValue     Value
 	returnValue Value
 }
 
@@ -79,6 +81,7 @@ func (ctx *Context) InitScope(l *lex.Lexer) {
 		classRefMap: map[string]ClassRef{},
 		parent:      nil,
 		symbolMap:   map[string]SymbolInfo{},
+		sgValue:     nil,
 		returnValue: nil,
 	}
 	ctx.scope = newScope
@@ -99,6 +102,7 @@ func createChildScope(old *Scope) *Scope {
 		classRefMap: old.classRefMap,
 		parent:      old,
 		symbolMap:   map[string]SymbolInfo{},
+		sgValue:     nil,
 		returnValue: nil,
 	}
 

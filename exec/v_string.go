@@ -16,6 +16,11 @@ func NewString(value string) *String {
 	return &String{value}
 }
 
+// String - display string value's string
+func (s *String) String() string {
+	return s.value
+}
+
 // GetProperty -
 func (s *String) GetProperty(ctx *Context, name string) (Value, *error.Error) {
 	switch name {
