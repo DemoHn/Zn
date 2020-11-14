@@ -8,6 +8,16 @@ import (
 	"github.com/DemoHn/Zn/syntax"
 )
 
+type compareVerb uint8
+
+// Define compareVerbs, for details of each verb, check the following comments
+// on compareValues() function.
+const (
+	CmpEq compareVerb = 1
+	CmpLt compareVerb = 2
+	CmpGt compareVerb = 3
+)
+
 // eval.go evaluates program from generated AST tree with specific scopes
 // common signature of eval functions:
 //
@@ -44,7 +54,7 @@ func evalStatement(ctx *Context, stmt syntax.Statement) *error.Error {
 	case *syntax.EmptyStmt:
 		return nil
 	case *syntax.FunctionDeclareStmt:
-		fn := BuildZnFunctionFromNode(v)
+		fn := BuildFunctionFromNode(v)
 		return bindValue(ctx, v.FuncName.GetLiteral(), fn)
 	case *syntax.ClassDeclareStmt:
 		if ctx.scope.parent != nil {
@@ -237,7 +247,7 @@ func evalBranchStmt(ctx *Context, node *syntax.BranchStmt) *error.Error {
 	if err != nil {
 		return err
 	}
-	vIfExpr, ok := ifExpr.(*ZnBool)
+	vIfExpr, ok := ifExpr.(*Bool)
 	if !ok {
 		return error.InvalidExprType("bool")
 	}
@@ -251,7 +261,7 @@ func evalBranchStmt(ctx *Context, node *syntax.BranchStmt) *error.Error {
 		if err != nil {
 			return err
 		}
-		vOtherExprI, ok := otherExprI.(*ZnBool)
+		vOtherExprI, ok := otherExprI.(*Bool)
 		if !ok {
 			return error.InvalidExprType("bool")
 		}
@@ -412,7 +422,7 @@ func evalFunctionCall(ctx *Context, expr *syntax.FuncCallExpr) (Value, *error.Er
 			return nil, err
 		}
 		// assert value
-		zval, ok := val.(*ZnFunction)
+		zval, ok := val.(*Function)
 		if !ok {
 			return nil, error.InvalidFuncVariable(vtag)
 		}
@@ -433,7 +443,7 @@ func evalFunctionCall(ctx *Context, expr *syntax.FuncCallExpr) (Value, *error.Er
 // evaluate logic combination expressions
 // such as A 且 B
 // or A 或 B
-func evalLogicCombiner(ctx *Context, expr *syntax.LogicExpr) (*ZnBool, *error.Error) {
+func evalLogicCombiner(ctx *Context, expr *syntax.LogicExpr) (*Bool, *error.Error) {
 	logicType := expr.Type
 	// #1. eval left
 	left, err := evalExpression(ctx, expr.LeftExpr)
@@ -441,7 +451,7 @@ func evalLogicCombiner(ctx *Context, expr *syntax.LogicExpr) (*ZnBool, *error.Er
 		return nil, err
 	}
 	// #2. assert left expr type to be ZnBool
-	vleft, ok := left.(*ZnBool)
+	vleft, ok := left.(*Bool)
 	if !ok {
 		return nil, error.InvalidExprType("bool")
 	}
@@ -451,33 +461,33 @@ func evalLogicCombiner(ctx *Context, expr *syntax.LogicExpr) (*ZnBool, *error.Er
 	// 2) for Y = A or  B, if A = true, then Y must be true
 	//
 	// for those cases, we can yield result directly
-	if logicType == syntax.LogicAND && vleft.Value == false {
-		return NewZnBool(false), nil
+	if logicType == syntax.LogicAND && vleft.value == false {
+		return NewBool(false), nil
 	}
-	if logicType == syntax.LogicOR && vleft.Value == true {
-		return NewZnBool(true), nil
+	if logicType == syntax.LogicOR && vleft.value == true {
+		return NewBool(true), nil
 	}
 	// #4. eval right
 	right, err := evalExpression(ctx, expr.RightExpr)
 	if err != nil {
 		return nil, err
 	}
-	vright, ok := right.(*ZnBool)
+	vright, ok := right.(*Bool)
 	if !ok {
 		return nil, error.InvalidExprType("bool")
 	}
 	// then evalute data
 	switch logicType {
 	case syntax.LogicAND:
-		return NewZnBool(vleft.Value && vright.Value), nil
+		return NewBool(vleft.value && vright.value), nil
 	default: // logicOR
-		return NewZnBool(vleft.Value || vright.Value), nil
+		return NewBool(vleft.value || vright.value), nil
 	}
 }
 
 // evaluate logic comparator
 // ensure both expressions are comparable (i.e. subtype of ZnComparable)
-func evalLogicComparator(ctx *Context, expr *syntax.LogicExpr) (*ZnBool, *error.Error) {
+func evalLogicComparator(ctx *Context, expr *syntax.LogicExpr) (*Bool, *error.Error) {
 	logicType := expr.Type
 	// #1. eval left
 	left, err := evalExpression(ctx, expr.LeftExpr)
@@ -690,14 +700,14 @@ func getValue(ctx *Context, name string) (Value, *error.Error) {
 		return symVal, nil
 	}
 	// ...then in symbols
-	sp := scope
+	sp := ctx.scope
 	for sp != nil {
-		sym, ok := sp.GetSymbol(name)
+		sym, ok := sp.symbolMap[name]
 		if ok {
-			return sym.Value, nil
+			return sym.value, nil
 		}
 		// if not found, search its parent
-		sp = sp.GetParent()
+		sp = sp.parent
 	}
 	return nil, error.NameNotDefined(name)
 }
@@ -707,18 +717,18 @@ func setValue(ctx *Context, name string, value Value) *error.Error {
 		return error.NameRedeclared(name)
 	}
 	// ...then in symbols
-	sp := scope
+	sp := ctx.scope
 	for sp != nil {
-		sym, ok := sp.GetSymbol(name)
+		sym, ok := sp.symbolMap[name]
 		if ok {
-			if sym.IsConstant {
+			if sym.isConst {
 				return error.AssignToConstant()
 			}
-			sp.SetSymbol(name, value, false)
+			sp.symbolMap[name] = SymbolInfo{value, false}
 			return nil
 		}
 		// if not found, search its parent
-		sp = sp.GetParent()
+		sp = sp.parent
 	}
 	return error.NameNotDefined(name)
 }
@@ -747,10 +757,10 @@ func bindValue(ctx *Context, name string, value Value) *error.Error {
 		return error.NameRedeclared(name)
 	}
 	// bind directly
-	if _, ok := scope.GetSymbol(name); ok {
+	if _, ok := ctx.GetSymbol(name); ok {
 		return error.NameRedeclared(name)
 	}
-	scope.SetSymbol(name, value, false)
+	ctx.SetSymbol(name, value, false)
 	return nil
 }
 
@@ -759,7 +769,7 @@ func bindValueDecl(ctx *Context, name string, value Value, isConst bool) *error.
 	if _, inGlobals := ctx.globals[name]; inGlobals {
 		return error.NameRedeclared(name)
 	}
-	scope.SetSymbol(name, value, isConst)
+	ctx.SetSymbol(name, value, isConst)
 	return nil
 }
 
