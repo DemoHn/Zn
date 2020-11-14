@@ -31,7 +31,7 @@ type Scope struct {
 	// classRefMap stores class definition template (reference) within the scope
 	// this item only exists on RootScope since class defition block IS allowed
 	// ONLY in root block
-	classRefMap map[string]*ClassRef
+	classRefMap map[string]ClassRef
 	// parent - parent Scope
 	parent      *Scope
 	symbolMap   map[string]SymbolInfo
@@ -76,7 +76,7 @@ func (ctx *Context) InitScope(l *lex.Lexer) {
 	}
 	newScope := &Scope{
 		fileInfo:    fileInfo,
-		classRefMap: map[string]*ClassRef{},
+		classRefMap: map[string]ClassRef{},
 		parent:      nil,
 		symbolMap:   map[string]SymbolInfo{},
 		returnValue: nil,
@@ -90,6 +90,24 @@ func (ctx *Context) DuplicateNewScope() *Context {
 	newContext.scope = createChildScope(ctx.scope)
 
 	return &newContext
+}
+
+//// scope helpers
+
+// GetSymbol -
+func (ctx *Context) GetSymbol(name string) (SymbolInfo, bool) {
+	if ctx.scope == nil {
+		return SymbolInfo{}, false
+	}
+	sym, ok := ctx.scope.symbolMap[name]
+	return sym, ok
+}
+
+// SetSymbol -
+func (ctx *Context) SetSymbol(name string, value Value, isConstant bool) {
+	if ctx.scope != nil {
+		ctx.scope.symbolMap[name] = SymbolInfo{value, isConstant}
+	}
 }
 
 //// helpers

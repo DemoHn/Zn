@@ -2,7 +2,7 @@ package exec
 
 import "github.com/DemoHn/Zn/error"
 
-// HashMap -
+// HashMap - represents for 列表类
 type HashMap struct {
 	value    map[string]Value
 	keyOrder []string
