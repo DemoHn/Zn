@@ -14,8 +14,8 @@ type KVPair struct {
 	Value Value
 }
 
-// NewZnHashMap -
-func NewZnHashMap(kvPairs []KVPair) *HashMap {
+// NewHashMap -
+func NewHashMap(kvPairs []KVPair) *HashMap {
 	hm := &HashMap{
 		value:    map[string]Value{},
 		keyOrder: []string{},

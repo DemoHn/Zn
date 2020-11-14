@@ -1,8 +1,10 @@
 package exec
 
 import (
+	"math/big"
 	"reflect"
 	"strconv"
+	"strings"
 
 	"github.com/DemoHn/Zn/error"
 	"github.com/DemoHn/Zn/syntax"
@@ -17,6 +19,158 @@ const (
 	CmpLt compareVerb = 2
 	CmpGt compareVerb = 3
 )
+
+// compareValues - some ZnValues are comparable from specific types of right value
+// otherwise it will throw error.
+//
+// There are three types of compare verbs (actions): Eq, Lt and Gt.
+//
+// Eq - compare if two values are "equal". Usually there are two rules:
+// 1. types of left and right value are same. A number MUST BE equals to a number, that means
+// (string) “2” won't be equals to (number) 2;
+// 2. each items SHOULD BE identical, even for composited types (i.e. array, hashmap)
+//
+// Lt - for two decimals ONLY. If leftValue < rightValue.
+//
+// Gt - for two decimals ONLY. If leftValue > rightValue.
+//
+func compareValues(left Value, right Value, verb compareVerb) (bool, *error.Error) {
+	switch vl := left.(type) {
+	case *Null:
+		if _, ok := right.(*Null); ok {
+			return true, nil
+		}
+		return false, nil
+	case *Decimal:
+		// compare right value - decimal only
+		if vr, ok := right.(*Decimal); ok {
+			r1, r2 := rescalePair(*vl, *vr)
+			cmpResult := false
+			switch verb {
+			case CmpEq:
+				cmpResult = (r1.co.Cmp(r2.co) == 0)
+			case CmpLt:
+				cmpResult = (r1.co.Cmp(r2.co) < 0)
+			case CmpGt:
+				cmpResult = (r1.co.Cmp(r2.co) > 0)
+			default:
+				return false, error.UnExpectedCase("比较原语", strconv.Itoa(int(verb)))
+			}
+			return cmpResult, nil
+		}
+		// if vert == CmbEq and rightValue is not decimal type
+		// then return `false` directly
+		if verb == CmpEq {
+			return false, nil
+		}
+		return false, error.InvalidCompareRType("decimal")
+	case *String:
+		// Only CmpEq is valid for comparison
+		if verb != CmpEq {
+			return false, error.InvalidCompareLType("decimal", "string", "bool", "array", "hashmap")
+		}
+		// compare right value - string only
+		if vr, ok := right.(*String); ok {
+			cmpResult := (strings.Compare(vl.value, vr.value) == 0)
+			return cmpResult, nil
+		}
+		return false, nil
+	case *Bool:
+		if verb != CmpEq {
+			return false, error.InvalidCompareLType("decimal", "string", "bool", "array", "hashmap")
+		}
+		// compare right value - bool only
+		if vr, ok := right.(*Bool); ok {
+			cmpResult := vl.value == vr.value
+			return cmpResult, nil
+		}
+		return false, nil
+	case *Array:
+		if verb != CmpEq {
+			return false, error.InvalidCompareLType("decimal", "string", "bool", "array", "hashmap")
+		}
+
+		if vr, ok := right.(*Array); ok {
+			if len(vl.value) != len(vr.value) {
+				return false, nil
+			}
+			// cmp each item
+			for idx := range vl.value {
+				cmpVal, err := compareValues(vl.value[idx], vr.value[idx], CmpEq)
+				if err != nil {
+					return false, err
+				}
+				return cmpVal, nil
+			}
+			return true, nil
+		}
+		return false, nil
+	case *HashMap:
+		if verb != CmpEq {
+			return false, error.InvalidCompareLType("decimal", "string", "bool", "array", "hashmap")
+		}
+
+		if vr, ok := right.(*HashMap); ok {
+			if len(vl.value) != len(vr.value) {
+				return false, nil
+			}
+			// cmp each item
+			for idx := range vl.value {
+				// ensure the key exists on vr
+				vrr, ok := vr.value[idx]
+				if !ok {
+					return false, nil
+				}
+				cmpVal, err := compareValues(vl.value[idx], vrr, CmpEq)
+				if err != nil {
+					return false, err
+				}
+				return cmpVal, nil
+			}
+			return true, nil
+		}
+		return false, nil
+	}
+	return false, error.InvalidCompareLType("decimal", "string", "bool", "array", "hashmap")
+}
+
+// duplicateValue - deepcopy values' structure, including bool, string, decimal, array, hashmap
+// for function or object or null, pass the original reference instead.
+// This is due to the 'copycat by default' policy
+func duplicateValue(in Value) Value {
+	switch v := in.(type) {
+	case *Bool:
+		return NewBool(v.value)
+	case *String:
+		return NewString(v.value)
+	case *Decimal:
+		x := new(big.Int)
+		return &Decimal{
+			co:  x.Set(v.co),
+			exp: v.exp,
+		}
+	case *Null:
+		return in // no need to copy since all "NULL" values are same
+	case *Array:
+		newArr := []Value{}
+		for _, val := range v.value {
+			newArr = append(newArr, duplicateValue(val))
+		}
+		return NewArray(newArr)
+	case *HashMap:
+		kvPairs := []KVPair{}
+		for _, key := range v.keyOrder {
+			dupVal := duplicateValue(v.value[key])
+			kvPairs = append(kvPairs, KVPair{key, dupVal})
+		}
+		return NewHashMap(kvPairs)
+	case *Function: // function itself is immutable, so return directly
+		return in
+	case *Object: // we don't copy object value at all
+		return in
+	}
+	return in
+}
 
 // eval.go evaluates program from generated AST tree with specific scopes
 // common signature of eval functions:
@@ -173,13 +327,13 @@ func evalWhileLoopStmt(ctx *Context, node *syntax.WhileLoopStmt) *error.Error {
 		if err != nil {
 			return err
 		}
-		// #2. assert trueExpr to be ZnBool
-		vTrueExpr, ok := trueExpr.(*ZnBool)
+		// #2. assert trueExpr to be Bool
+		vTrueExpr, ok := trueExpr.(*Bool)
 		if !ok {
 			return error.InvalidExprType("bool")
 		}
 		// break the loop if expr yields not true
-		if vTrueExpr.Value == false {
+		if vTrueExpr.value == false {
 			return nil
 		}
 		// #3. stmt block
@@ -252,7 +406,7 @@ func evalBranchStmt(ctx *Context, node *syntax.BranchStmt) *error.Error {
 		return error.InvalidExprType("bool")
 	}
 	// exec if-branch
-	if vIfExpr.Value == true {
+	if vIfExpr.value == true {
 		return evalStmtBlock(ctx, node.IfTrueBlock)
 	}
 	// exec else-if branches
@@ -266,7 +420,7 @@ func evalBranchStmt(ctx *Context, node *syntax.BranchStmt) *error.Error {
 			return error.InvalidExprType("bool")
 		}
 		// exec else-if branch
-		if vOtherExprI.Value == true {
+		if vOtherExprI.value == true {
 			return evalStmtBlock(ctx, node.OtherBlocks[idx])
 		}
 	}
@@ -334,7 +488,7 @@ func evalIterateStmt(ctx *Context, node *syntax.IterateStmt) *error.Error {
 
 	// execute iterations
 	switch tv := targetExpr.(type) {
-	case *ZnArray:
+	case *Array:
 		for idx, val := range tv.Value {
 			idxVar := NewZnDecimalFromInt(idx, 0)
 			if err := execIterationBlockFn(idxVar, val); err != nil {
@@ -757,10 +911,13 @@ func bindValue(ctx *Context, name string, value Value) *error.Error {
 		return error.NameRedeclared(name)
 	}
 	// bind directly
-	if _, ok := ctx.GetSymbol(name); ok {
-		return error.NameRedeclared(name)
+	if ctx.scope != nil {
+		if _, ok := ctx.scope.symbolMap[name]; ok {
+			return error.NameRedeclared(name)
+		}
+		// set value
+		ctx.scope.symbolMap[name] = SymbolInfo{value, false}
 	}
-	ctx.SetSymbol(name, value, false)
 	return nil
 }
 
@@ -769,7 +926,9 @@ func bindValueDecl(ctx *Context, name string, value Value, isConst bool) *error.
 	if _, inGlobals := ctx.globals[name]; inGlobals {
 		return error.NameRedeclared(name)
 	}
-	ctx.SetSymbol(name, value, isConst)
+	if ctx.scope != nil {
+		ctx.scope.symbolMap[name] = SymbolInfo{value, isConst}
+	}
 	return nil
 }
 
