@@ -92,24 +92,6 @@ func (ctx *Context) DuplicateNewScope() *Context {
 	return &newContext
 }
 
-//// scope helpers
-
-// GetSymbol -
-func (ctx *Context) GetSymbol(name string) (SymbolInfo, bool) {
-	if ctx.scope == nil {
-		return SymbolInfo{}, false
-	}
-	sym, ok := ctx.scope.symbolMap[name]
-	return sym, ok
-}
-
-// SetSymbol -
-func (ctx *Context) SetSymbol(name string, value Value, isConstant bool) {
-	if ctx.scope != nil {
-		ctx.scope.symbolMap[name] = SymbolInfo{value, isConstant}
-	}
-}
-
 //// helpers
 func createChildScope(old *Scope) *Scope {
 	newScope := &Scope{

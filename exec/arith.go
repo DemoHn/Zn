@@ -19,7 +19,7 @@ func NewArith(precision int) *Arith {
 
 // Add - A + B + C + D + ... = ?
 func (ai *Arith) Add(decimal1 Decimal, others ...Decimal) Decimal {
-	var result = copyZnDecimal(decimal1)
+	var result = copyDecimal(decimal1)
 	if len(others) == 0 {
 		return result
 	}
@@ -34,7 +34,7 @@ func (ai *Arith) Add(decimal1 Decimal, others ...Decimal) Decimal {
 
 // Sub - A - B - C - D - ... = ?
 func (ai *Arith) Sub(decimal1 Decimal, others ...Decimal) Decimal {
-	var result = copyZnDecimal(decimal1)
+	var result = copyDecimal(decimal1)
 	if len(others) == 0 {
 		return result
 	}
@@ -50,7 +50,7 @@ func (ai *Arith) Sub(decimal1 Decimal, others ...Decimal) Decimal {
 // Mul - A * B * C * D * ... = ?, ZnDeicmal value will be copied
 func (ai *Arith) Mul(decimal1 Decimal, others ...Decimal) Decimal {
 	// init result from decimal1
-	var result = copyZnDecimal(decimal1)
+	var result = copyDecimal(decimal1)
 	if len(others) == 0 {
 		return result
 	}
@@ -66,7 +66,7 @@ func (ai *Arith) Mul(decimal1 Decimal, others ...Decimal) Decimal {
 // Div - A / B / C / D / ... = ?, ZnDecimal value will be copied
 // notice , when one of the dividends are 0, an ArithDivZeroError will be yield
 func (ai *Arith) Div(decimal1 Decimal, others ...Decimal) (Decimal, *error.Error) {
-	var result = copyZnDecimal(decimal1)
+	var result = copyDecimal(decimal1)
 	var num10 = big.NewInt(10)
 	var num0 = big.NewInt(0)
 	if len(others) == 0 {
@@ -168,8 +168,10 @@ func rescalePair(d1 Decimal, d2 Decimal) (Decimal, Decimal) {
 	return d1, nD2
 }
 
-// copyDecimal - duplicate deicmal value to a new variable
-func copyZnDecimal(old Decimal) Decimal {
-	result, _ := duplicateValue(old).(Decimal)
-	return result
+func copyDecimal(in Decimal) Decimal {
+	x := new(big.Int)
+	return Decimal{
+		co:  x.Set(in.co),
+		exp: in.exp,
+	}
 }
