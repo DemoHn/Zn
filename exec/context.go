@@ -63,17 +63,6 @@ type SymbolInfo struct {
 	isConst bool
 }
 
-// Result - context execution result structure
-// NOTICE: when HasError = true, Value = nil, while execution yields error
-//         when HasError = false, Error = nil, Value = <result Value>
-//
-// Currently only one value is supported as return argument.
-type Result struct {
-	HasError bool
-	Value    Value
-	Error    *error.Error
-}
-
 // NewContext - create new Zn Context. Notice through the life-cycle
 // of one code execution, there's only one running context to store all states.
 func NewContext() *Context {
@@ -85,8 +74,79 @@ func NewContext() *Context {
 	}
 }
 
-// InitScope - init root scope
+// DuplicateNewScope - create a new Context with new scope which parent points to duplicator's scope.
+func (ctx *Context) DuplicateNewScope() *Context {
+	newContext := *ctx
+	newContext.scope = createChildScope(ctx.scope)
+
+	return &newContext
+}
+
+// ExecuteCode - execute program from input Zn code (whether from file or REPL)
+func (ctx *Context) ExecuteCode(in *lex.InputStream) (Value, *error.Error) {
+	program, err := ctx.parseCode(in)
+	if err != nil {
+		return nil, err
+	}
+	// init scope
+	ctx.initScope(program.Lexer)
+
+	// eval program
+	return ctx.execProgram(program)
+}
+
+// ParseCode -
+func (ctx *Context) ParseCode(in *lex.InputStream) (*syntax.Program, *error.Error) {
+	return ctx.parseCode(in)
+}
+
+// InitScope -
 func (ctx *Context) InitScope(l *lex.Lexer) {
+	ctx.initScope(l)
+}
+
+// ExecProgram -
+func (ctx *Context) ExecProgram(program *syntax.Program) (Value, *error.Error) {
+	return ctx.execProgram(program)
+}
+
+// parseCode - lex & parse code text
+func (ctx *Context) parseCode(in *lex.InputStream) (*syntax.Program, *error.Error) {
+	l := lex.NewLexer(in)
+	p := syntax.NewParser(l)
+	// start
+	block, err := p.Parse()
+	if err != nil {
+		return nil, err
+	}
+
+	return syntax.NewProgramNode(block, l), nil
+}
+
+func (ctx *Context) execProgram(program *syntax.Program) (Value, *error.Error) {
+	err := evalProgram(ctx, program)
+	if err != nil {
+		cursor := err.GetCursor()
+
+		// wrapError if lineInfo is missing (mostly for non-syntax errors)
+		// If lineInfo missing, then we will add current execution line and hide some part to
+		// display errors properly.
+		if cursor.LineNum == 0 {
+			fileInfo := ctx.scope.fileInfo
+			newCursor := error.Cursor{
+				File:    fileInfo.file,
+				LineNum: fileInfo.currentLine,
+				Text:    fileInfo.lineStack.GetLineText(fileInfo.currentLine, false),
+			}
+			err.SetCursor(newCursor)
+		}
+		return nil, err
+	}
+	return ctx.scope.returnValue, nil
+}
+
+// InitScope - init root scope
+func (ctx *Context) initScope(l *lex.Lexer) {
 	fileInfo := &FileInfo{
 		file:        l.InputStream.GetFile(),
 		currentLine: 0,
@@ -99,41 +159,9 @@ func (ctx *Context) InitScope(l *lex.Lexer) {
 		symbolMap:   map[string]SymbolInfo{},
 		sgValue:     nil,
 		thisValue:   nil,
-		returnValue: nil,
+		returnValue: NewNull(),
 	}
 	ctx.scope = newScope
-}
-
-// DuplicateNewScope - create a new Context with new scope which parent points to duplicator's scope.
-func (ctx *Context) DuplicateNewScope() *Context {
-	newContext := *ctx
-	newContext.scope = createChildScope(ctx.scope)
-
-	return &newContext
-}
-
-// ExecuteCode - execute program from input Zn code (whether from file or REPL)
-func (ctx *Context) ExecuteCode(in *lex.InputStream) Result {
-	l := lex.NewLexer(in)
-	p := syntax.NewParser(l)
-	// start
-	block, err := p.Parse()
-	if err != nil {
-		return Result{true, nil, err}
-	}
-
-	// init scope
-	ctx.InitScope(l)
-
-	// construct root (program) node
-	program := syntax.NewProgramNode(block)
-
-	// eval program
-	if err := evalProgram(ctx, program); err != nil {
-		wrapError(ctx, err)
-		return Result{true, nil, err}
-	}
-	return Result{false, ctx.scope.returnValue, nil}
 }
 
 //// helpers
@@ -144,25 +172,9 @@ func createChildScope(old *Scope) *Scope {
 		parent:      old,
 		symbolMap:   map[string]SymbolInfo{},
 		sgValue:     nil,
+		thisValue:   nil,
 		returnValue: nil,
 	}
 
 	return newScope
-}
-
-// wrapError if lineInfo is missing (mostly for non-syntax errors)
-// If lineInfo missing, then we will add current execution line and hide some part to
-// display errors properly.
-func wrapError(ctx *Context, err *error.Error) {
-	cursor := err.GetCursor()
-
-	if cursor.LineNum == 0 {
-		fileInfo := ctx.scope.fileInfo
-		newCursor := error.Cursor{
-			File:    fileInfo.file,
-			LineNum: fileInfo.currentLine,
-			Text:    fileInfo.lineStack.GetLineText(fileInfo.currentLine, false),
-		}
-		err.SetCursor(newCursor)
-	}
 }
