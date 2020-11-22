@@ -46,7 +46,8 @@ func evalProgram(ctx *Context, program *syntax.Program) *error.Error {
 
 // EvalStatement - eval statement
 func evalStatement(ctx *Context, stmt syntax.Statement) *error.Error {
-	// TODO: set current line
+	ctx.scope.fileInfo.currentLine = stmt.GetCurrentLine()
+
 	switch v := stmt.(type) {
 	case *syntax.VarDeclareStmt:
 		return evalVarDeclareStmt(ctx, v)
@@ -77,7 +78,7 @@ func evalStatement(ctx *Context, stmt syntax.Statement) *error.Error {
 		_, err := evalExpression(ctx, v)
 		return err
 	default:
-		return error.UnExpectedCase("语句类型", reflect.TypeOf(v).Name())
+		return error.UnExpectedCase("语句类型", fmt.Sprintf("%T", v))
 	}
 }
 
@@ -965,9 +966,39 @@ func compareValues(left Value, right Value, verb compareVerb) (bool, *error.Erro
 	return false, error.InvalidCompareLType("decimal", "string", "bool", "array", "hashmap")
 }
 
-// displayValue - yield a string from Value
-func displayValue(value Value) string {
+// StringifyValue - yield a string from Value
+func StringifyValue(value Value) string {
 	switch v := value.(type) {
+	case *String:
+		return v.value
+	case *Decimal:
+		return v.String()
+	case *Array:
+		strs := []string{}
+		for _, item := range v.value {
+			strs = append(strs, StringifyValue(item))
+		}
 
+		return fmt.Sprintf("【%s】", strings.Join(strs, "，"))
+	case *Bool:
+		data := "真"
+		if v.value == false {
+			data = "假"
+		}
+		return data
+	case *Function:
+		return fmt.Sprintf("[方法]")
+	case *Null:
+		return "空"
+	case *Object:
+		return fmt.Sprintf("[对象]")
+	case *HashMap:
+		strs := []string{}
+		for _, key := range v.keyOrder {
+			value := v.value[key]
+			strs = append(strs, fmt.Sprintf("%s == %s", key, StringifyValue(value)))
+		}
+		return fmt.Sprintf("【%s】", strings.Join(strs, "，"))
 	}
+	return ""
 }

@@ -15,11 +15,7 @@ var displayExecutor = func(ctx *Context, params []Value) (Value, *error.Error) {
 	var items = []string{}
 
 	for _, param := range params {
-		if v, ok := param.(*String); ok {
-			items = append(items, v.value)
-		} else {
-			items = append(items, param.String())
-		}
+		items = append(items, StringifyValue(param))
 	}
 	fmt.Printf("%s\n", strings.Join(items, " "))
 	return NewNull(), nil
