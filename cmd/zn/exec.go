@@ -77,23 +77,23 @@ func ShowVersion() {
 }
 
 //// display helpers
-func prettyDisplayValue(val exec.ZnValue, w io.Writer) {
+func prettyDisplayValue(val exec.Value, w io.Writer) {
 	var displayData = ""
-
-	switch v := val.(type) {
-	case *exec.ZnDecimal:
+	var valStr = exec.StringifyValue(val)
+	switch val.(type) {
+	case *exec.Decimal:
 		// FG color: Cyan (lightblue)
-		displayData = fmt.Sprintf("\x1b[38;5;147m%s\x1b[0m\n", v.String())
-	case *exec.ZnString:
+		displayData = fmt.Sprintf("\x1b[38;5;147m%s\x1b[0m\n", valStr)
+	case *exec.String:
 		// FG color: Green
-		displayData = fmt.Sprintf("\x1b[38;5;184m%s\x1b[0m\n", v.String())
-	case *exec.ZnBool:
+		displayData = fmt.Sprintf("\x1b[38;5;184m%s\x1b[0m\n", valStr)
+	case *exec.Bool:
 		// FG color: White
-		displayData = fmt.Sprintf("\x1b[38;5;231m%s\x1b[0m\n", v.String())
-	case *exec.ZnNull, *exec.ZnFunction:
-		displayData = fmt.Sprintf("‹\x1b[38;5;80m%s\x1b[0m›\n", v.String())
+		displayData = fmt.Sprintf("\x1b[38;5;231m%s\x1b[0m\n", valStr)
+	case *exec.Null, *exec.Function:
+		displayData = fmt.Sprintf("‹\x1b[38;5;80m%s\x1b[0m›\n", valStr)
 	default:
-		displayData = fmt.Sprintf("%s\n", v.String())
+		displayData = fmt.Sprintf("%s\n", valStr)
 	}
 
 	w.Write([]byte(displayData))
