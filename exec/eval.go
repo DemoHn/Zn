@@ -305,9 +305,9 @@ func evalNewObjectPart(ctx *Context, node syntax.VDAssignPair) *error.Error {
 	// assign new object to variables
 	for _, v := range node.Variables {
 		vtag := v.GetLiteral()
-		// compose a new object instance
-		fScope := NewFuncScope(scope, nil)
-		finalObj, err := classRef.Construct(ctx, cParams)
+		// TODO: optimize fctx
+		fctx := ctx.DuplicateNewScope()
+		finalObj, err := classRef.Construct(fctx, cParams)
 		if err != nil {
 			return err
 		}
@@ -591,9 +591,10 @@ func evalFunctionCall(ctx *Context, expr *syntax.FuncCallExpr) (Value, *error.Er
 		return nil, err
 	}
 
-	fScope := NewFuncScope(scope, nil)
+	fctx := ctx.DuplicateNewScope()
+	// TODO: ctx optimize
 	// exec function call via its ClosureRef
-	return zf.Exec(ctx, fScope, params)
+	return zf.Exec(fctx, params)
 }
 
 // evaluate logic combination expressions
@@ -792,6 +793,11 @@ func getMemberExprIV(ctx *Context, expr *syntax.MemberExpr) (*IV, *error.Error) 
 
 	if expr.RootType == syntax.RootTypeProp { // 其 XX
 		if expr.MemberType == syntax.MemberID {
+			return &IV{
+				reduceType: IVTypeMember,
+				root:       ctx.scope.thisValue,
+			}, nil
+
 			tag := expr.MemberID.Literal
 			return &ZnPropIV{tag}, nil
 		}
