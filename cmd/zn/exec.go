@@ -43,14 +43,13 @@ func EnterREPL() {
 
 		// execute program
 		in := lex.NewTextStream(text)
-		result := ctx.ExecuteCode(in)
-
-		if !result.HasError {
-			if result.Value != nil {
-				prettyDisplayValue(result.Value, os.Stdout)
-			}
+		result, err2 := ctx.ExecuteCode(in)
+		if err2 != nil {
+			fmt.Println(err2.Display())
 		} else {
-			fmt.Println(result.Error.Display())
+			if result != nil {
+				prettyDisplayValue(result, os.Stdout)
+			}
 		}
 	}
 }
@@ -64,10 +63,10 @@ func ExecProgram(file string) {
 		return
 	}
 
-	result := ctx.ExecuteCode(in)
+	_, err := ctx.ExecuteCode(in)
 	// when exec program, unlike REPL, it's not necessary to print last executed value
-	if result.HasError {
-		fmt.Println(result.Error.Display())
+	if err != nil {
+		fmt.Println(err.Display())
 	}
 }
 

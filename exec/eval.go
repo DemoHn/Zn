@@ -46,7 +46,24 @@ func evalProgram(ctx *Context, program *syntax.Program) *error.Error {
 
 // EvalStatement - eval statement
 func evalStatement(ctx *Context, stmt syntax.Statement) *error.Error {
+	var returnValue Value
+	// set current value
 	ctx.scope.fileInfo.currentLine = stmt.GetCurrentLine()
+
+	// set return value
+	defer func() {
+		var finalReturnValue Value = NewNull()
+		// set current return value
+		if returnValue != nil {
+			finalReturnValue = returnValue
+		}
+		ctx.scope.returnValue = finalReturnValue
+
+		// set parent return value
+		if ctx.scope.parent != nil {
+			ctx.scope.parent.returnValue = finalReturnValue
+		}
+	}()
 
 	switch v := stmt.(type) {
 	case *syntax.VarDeclareStmt:
@@ -75,7 +92,8 @@ func evalStatement(ctx *Context, stmt syntax.Statement) *error.Error {
 		// send RETURN break
 		return error.ReturnBreakError(val)
 	case syntax.Expression:
-		_, err := evalExpression(ctx, v)
+		expr, err := evalExpression(ctx, v)
+		returnValue = expr
 		return err
 	default:
 		return error.UnExpectedCase("语句类型", fmt.Sprintf("%T", v))
@@ -970,7 +988,7 @@ func compareValues(left Value, right Value, verb compareVerb) (bool, *error.Erro
 func StringifyValue(value Value) string {
 	switch v := value.(type) {
 	case *String:
-		return v.value
+		return fmt.Sprintf("「%s」", v.value)
 	case *Decimal:
 		return v.String()
 	case *Array:

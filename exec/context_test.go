@@ -1,7 +1,6 @@
 package exec
 
 import (
-	"fmt"
 	"reflect"
 	"testing"
 
@@ -42,14 +41,14 @@ func TestExecuteCode_OK(t *testing.T) {
 	for _, tt := range cases {
 		t.Run(tt.name, func(t *testing.T) {
 			in := lex.NewTextStream(tt.text)
-			res := ctx.ExecuteCode(in)
-			if res.HasError == true {
-				t.Errorf("expect no error, has got error: %v", res.Error)
+			res, err := ctx.ExecuteCode(in)
+			if err != nil {
+				t.Errorf("expect no error, has got error: %v", err)
 				return
 			}
 
-			if !reflect.DeepEqual(tt.resultValue, res.Value) {
-				t.Errorf("expect value: %v, got: %v", tt.resultValue, res.Value)
+			if !reflect.DeepEqual(tt.resultValue, res) {
+				t.Errorf("expect value: %v, got: %v", tt.resultValue, res)
 				return
 			}
 		})
@@ -64,9 +63,9 @@ func TestExecuteCode_FAIL(t *testing.T) {
 
 	in := lex.NewTextStream(text)
 	ctx := NewContext()
-	result := ctx.ExecuteCode(in)
+	_, err := ctx.ExecuteCode(in)
 
-	if result.HasError == false {
+	if err == nil {
 		t.Errorf("should got error, return no error")
 		return
 	}
@@ -76,10 +75,8 @@ func TestExecuteCode_FAIL(t *testing.T) {
     
 ‹2501› 标识错误：标识「变量名-未定」未有定义`
 
-	if result.Error.Display() != displayText {
-		t.Errorf("should return \n%s\n, got \n%s\n", displayText, result.Error.Display())
-		fmt.Println([]rune(result.Error.Display()))
-		fmt.Println([]rune(displayText))
+	if err.Display() != displayText {
+		t.Errorf("should return \n%s\n, got \n%s\n", displayText, err.Display())
 		return
 	}
 }

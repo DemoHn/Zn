@@ -79,7 +79,8 @@ type UnionMapList interface {
 // Program -
 type Program struct {
 	StmtBase
-	Content *BlockStmt
+	*lex.Lexer // include lexing info
+	Content    *BlockStmt
 }
 
 // NodeList - a simple struct that packs several nodes, with custom tag to indicate its feature.
@@ -1471,9 +1472,10 @@ func newString(tk *lex.Token) *String {
 // public helpers
 
 // NewProgramNode -
-func NewProgramNode(block *BlockStmt) *Program {
+func NewProgramNode(block *BlockStmt, lexer *lex.Lexer) *Program {
 	return &Program{
 		Content: block,
+		Lexer:   lexer,
 	}
 }
 

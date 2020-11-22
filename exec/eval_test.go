@@ -5,6 +5,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/DemoHn/Zn/error"
 	"github.com/DemoHn/Zn/lex"
 )
 
@@ -538,7 +539,17 @@ func Test_WhileLoopStmt(t *testing.T) {
 
 func assertSuite(t *testing.T, suite programOKSuite) {
 	t.Run(suite.name, func(t *testing.T) {
+		var e2 *error.Error
 		ctx := NewContext()
+		in := lex.NewTextStream(suite.program)
+		// parseCode
+		program, err := ctx.ParseCode(in)
+		if err != nil {
+			e2 = err
+		}
+		// init scope
+		ctx.InitScope(program.Lexer)
+
 		// impose symbols
 		for k, v := range suite.symbols {
 			ctx.scope.symbolMap[k] = SymbolInfo{
@@ -547,16 +558,18 @@ func assertSuite(t *testing.T, suite programOKSuite) {
 			}
 		}
 
-		in := lex.NewTextStream(suite.program)
-		result := ctx.ExecuteCode(in)
+		result, err := ctx.execProgram(program)
+		if err != nil {
+			e2 = err
+		}
 
 		// assert result
-		if result.HasError {
-			t.Errorf("program should have no error, got error: %s", result.Error.Display())
+		if e2 != nil {
+			t.Errorf("program should have no error, got error: %s", e2.Display())
 			return
 		}
-		if !reflect.DeepEqual(result.Value, suite.expReturnValue) {
-			t.Errorf("return value expect -> %s, got -> %s", suite.expReturnValue, result.Value)
+		if !reflect.DeepEqual(ctx.scope.returnValue, suite.expReturnValue) {
+			t.Errorf("return value expect -> %s, got -> %s", suite.expReturnValue, result)
 			return
 		}
 		// assert probe value
