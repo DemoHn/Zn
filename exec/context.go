@@ -36,7 +36,10 @@ type Scope struct {
 	parent    *Scope
 	symbolMap map[string]SymbolInfo
 	// sgValue - scope variable
-	sgValue     Value
+	sgValue Value
+	// thisValue - "this" variable of the scope
+	thisValue Value
+	// retrunValue - return value of scope
 	returnValue Value
 }
 
@@ -82,6 +85,7 @@ func (ctx *Context) InitScope(l *lex.Lexer) {
 		parent:      nil,
 		symbolMap:   map[string]SymbolInfo{},
 		sgValue:     nil,
+		thisValue:   nil,
 		returnValue: nil,
 	}
 	ctx.scope = newScope

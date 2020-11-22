@@ -59,7 +59,7 @@ func BuildClosureFromNode(paramTags []*syntax.ParamItem, stmtBlock *syntax.Block
 				}
 			}
 		}
-		return scope.GetReturnValue(), nil
+		return ctx.scope.returnValue, nil
 	}
 
 	var paramHandler = func(ctx *Context, params []Value) (Value, *error.Error) {
