@@ -152,16 +152,21 @@ func (ctx *Context) initScope(l *lex.Lexer) {
 		currentLine: 0,
 		lineStack:   l.LineStack,
 	}
-	newScope := &Scope{
-		fileInfo:    fileInfo,
-		classRefMap: map[string]ClassRef{},
-		parent:      nil,
-		symbolMap:   map[string]SymbolInfo{},
-		sgValue:     nil,
-		thisValue:   nil,
-		returnValue: NewNull(),
+	if ctx.scope == nil {
+		newScope := &Scope{
+			fileInfo:    fileInfo,
+			classRefMap: map[string]ClassRef{},
+			parent:      nil,
+			symbolMap:   map[string]SymbolInfo{},
+			sgValue:     nil,
+			thisValue:   nil,
+			returnValue: NewNull(),
+		}
+		ctx.scope = newScope
+	} else {
+		// refresh scope fileInfo
+		ctx.scope.fileInfo = fileInfo
 	}
-	ctx.scope = newScope
 }
 
 //// helpers
