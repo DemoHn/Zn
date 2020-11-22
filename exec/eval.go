@@ -21,158 +21,6 @@ const (
 	CmpGt compareVerb = 3
 )
 
-// compareValues - some ZnValues are comparable from specific types of right value
-// otherwise it will throw error.
-//
-// There are three types of compare verbs (actions): Eq, Lt and Gt.
-//
-// Eq - compare if two values are "equal". Usually there are two rules:
-// 1. types of left and right value are same. A number MUST BE equals to a number, that means
-// (string) “2” won't be equals to (number) 2;
-// 2. each items SHOULD BE identical, even for composited types (i.e. array, hashmap)
-//
-// Lt - for two decimals ONLY. If leftValue < rightValue.
-//
-// Gt - for two decimals ONLY. If leftValue > rightValue.
-//
-func compareValues(left Value, right Value, verb compareVerb) (bool, *error.Error) {
-	switch vl := left.(type) {
-	case *Null:
-		if _, ok := right.(*Null); ok {
-			return true, nil
-		}
-		return false, nil
-	case *Decimal:
-		// compare right value - decimal only
-		if vr, ok := right.(*Decimal); ok {
-			r1, r2 := rescalePair(*vl, *vr)
-			cmpResult := false
-			switch verb {
-			case CmpEq:
-				cmpResult = (r1.co.Cmp(r2.co) == 0)
-			case CmpLt:
-				cmpResult = (r1.co.Cmp(r2.co) < 0)
-			case CmpGt:
-				cmpResult = (r1.co.Cmp(r2.co) > 0)
-			default:
-				return false, error.UnExpectedCase("比较原语", strconv.Itoa(int(verb)))
-			}
-			return cmpResult, nil
-		}
-		// if vert == CmbEq and rightValue is not decimal type
-		// then return `false` directly
-		if verb == CmpEq {
-			return false, nil
-		}
-		return false, error.InvalidCompareRType("decimal")
-	case *String:
-		// Only CmpEq is valid for comparison
-		if verb != CmpEq {
-			return false, error.InvalidCompareLType("decimal", "string", "bool", "array", "hashmap")
-		}
-		// compare right value - string only
-		if vr, ok := right.(*String); ok {
-			cmpResult := (strings.Compare(vl.value, vr.value) == 0)
-			return cmpResult, nil
-		}
-		return false, nil
-	case *Bool:
-		if verb != CmpEq {
-			return false, error.InvalidCompareLType("decimal", "string", "bool", "array", "hashmap")
-		}
-		// compare right value - bool only
-		if vr, ok := right.(*Bool); ok {
-			cmpResult := vl.value == vr.value
-			return cmpResult, nil
-		}
-		return false, nil
-	case *Array:
-		if verb != CmpEq {
-			return false, error.InvalidCompareLType("decimal", "string", "bool", "array", "hashmap")
-		}
-
-		if vr, ok := right.(*Array); ok {
-			if len(vl.value) != len(vr.value) {
-				return false, nil
-			}
-			// cmp each item
-			for idx := range vl.value {
-				cmpVal, err := compareValues(vl.value[idx], vr.value[idx], CmpEq)
-				if err != nil {
-					return false, err
-				}
-				return cmpVal, nil
-			}
-			return true, nil
-		}
-		return false, nil
-	case *HashMap:
-		if verb != CmpEq {
-			return false, error.InvalidCompareLType("decimal", "string", "bool", "array", "hashmap")
-		}
-
-		if vr, ok := right.(*HashMap); ok {
-			if len(vl.value) != len(vr.value) {
-				return false, nil
-			}
-			// cmp each item
-			for idx := range vl.value {
-				// ensure the key exists on vr
-				vrr, ok := vr.value[idx]
-				if !ok {
-					return false, nil
-				}
-				cmpVal, err := compareValues(vl.value[idx], vrr, CmpEq)
-				if err != nil {
-					return false, err
-				}
-				return cmpVal, nil
-			}
-			return true, nil
-		}
-		return false, nil
-	}
-	return false, error.InvalidCompareLType("decimal", "string", "bool", "array", "hashmap")
-}
-
-// duplicateValue - deepcopy values' structure, including bool, string, decimal, array, hashmap
-// for function or object or null, pass the original reference instead.
-// This is due to the 'copycat by default' policy
-func duplicateValue(in Value) Value {
-	switch v := in.(type) {
-	case *Bool:
-		return NewBool(v.value)
-	case *String:
-		return NewString(v.value)
-	case *Decimal:
-		x := new(big.Int)
-		return &Decimal{
-			co:  x.Set(v.co),
-			exp: v.exp,
-		}
-	case *Null:
-		return in // no need to copy since all "NULL" values are same
-	case *Array:
-		newArr := []Value{}
-		for _, val := range v.value {
-			newArr = append(newArr, duplicateValue(val))
-		}
-		return NewArray(newArr)
-	case *HashMap:
-		kvPairs := []KVPair{}
-		for _, key := range v.keyOrder {
-			dupVal := duplicateValue(v.value[key])
-			kvPairs = append(kvPairs, KVPair{key, dupVal})
-		}
-		return NewHashMap(kvPairs)
-	case *Function: // function itself is immutable, so return directly
-		return in
-	case *Object: // we don't copy object value at all
-		return in
-	}
-	return in
-}
-
 // eval.go evaluates program from generated AST tree with specific scopes
 // common signature of eval functions:
 //
@@ -226,25 +74,8 @@ func evalStatement(ctx *Context, stmt syntax.Statement) *error.Error {
 		// send RETURN break
 		return error.ReturnBreakError(val)
 	case syntax.Expression:
-		resetLastValue = false
-		val, err := evalExpression(ctx, v)
-		if err != nil {
-			return err
-		}
-		// set last value (of rootScope or funcScope)
-		sp := scope
-		for sp != nil {
-			switch v := sp.(type) {
-			case *RootScope:
-				v.SetLastValue(val)
-				return nil
-			case *FuncScope:
-				v.SetReturnValue(val)
-				return nil
-			}
-			sp = sp.GetParent()
-		}
-		return nil
+		_, err := evalExpression(ctx, v)
+		return err
 	default:
 		return error.UnExpectedCase("语句类型", reflect.TypeOf(v).Name())
 	}
@@ -450,7 +281,8 @@ func evalIterateStmt(ctx *Context, node *syntax.IterateStmt) *error.Error {
 	// and preDefined indication variables
 	execIterationBlockFn := func(key Value, val Value) *error.Error {
 		// set values of 此之值 and 此之
-		iterScope.setCurrentKV(key, val)
+		// TODO:
+		//iterScope.setCurrentKV(key, val)
 
 		// set pre-defined value
 		if nameLen == 1 {
@@ -531,7 +363,8 @@ func evalIterateStmt(ctx *Context, node *syntax.IterateStmt) *error.Error {
 //// execute expressions
 
 func evalExpression(ctx *Context, expr syntax.Expression) (Value, *error.Error) {
-	scope.GetRoot().SetCurrentLine(expr.GetCurrentLine())
+	ctx.scope.fileInfo.currentLine = expr.GetCurrentLine()
+
 	switch e := expr.(type) {
 	case *syntax.VarAssignExpr:
 		return evalVarAssignExpr(ctx, e)
@@ -541,11 +374,41 @@ func evalExpression(ctx *Context, expr syntax.Expression) (Value, *error.Error) 
 		}
 		return evalLogicComparator(ctx, e)
 	case *syntax.MemberExpr:
-		iv, err := getMemberExprIV(ctx, e)
-		if err != nil {
-			return nil, err
+		// when MemberType = memberID or memberIndex, it's a typical "getter" expression;
+		// when MemberType = memberMethod, it's a method call, so we could not use IV logic
+		// to handle it
+		switch e.MemberType {
+		case syntax.MemberID, syntax.MemberIndex:
+			iv, err := getMemberExprIV(ctx, e)
+			if err != nil {
+				return nil, err
+			}
+			return iv.ReduceRHS(ctx)
+		case syntax.MemberMethod:
+			// get root expr
+			var rootValue Value
+			switch e.RootType {
+			case syntax.RootTypeExpr:
+				root, err := evalExpression(ctx, e.Root)
+				if err != nil {
+					return nil, err
+				}
+				rootValue = root
+			case syntax.RootTypeScope:
+				rootValue = ctx.scope.sgValue
+			default: // 其他 rootType 不支持
+				return nil, error.NewErrorSLOT("不支持的rootType")
+			}
+
+			// execute method
+			methodName := e.MemberMethod.FuncName.GetLiteral()
+			paramValues, err := exprsToValues(ctx, e.MemberMethod.Params)
+			if err != nil {
+				return nil, err
+			}
+			rootValue.ExecMethod(ctx, methodName, paramValues)
 		}
-		return iv.ReduceRHS(ctx)
+		return nil, error.UnExpectedCase("成员类型", fmt.Sprintf("%d", e.MemberType))
 	case *syntax.Number, *syntax.String, *syntax.ID, *syntax.ArrayExpr, *syntax.HashMapExpr:
 		return evalPrimeExpr(ctx, e)
 	case *syntax.FuncCallExpr:
@@ -558,14 +421,15 @@ func evalExpression(ctx *Context, expr syntax.Expression) (Value, *error.Error) 
 // （显示：A，B，C）
 func evalFunctionCall(ctx *Context, expr *syntax.FuncCallExpr) (Value, *error.Error) {
 	vtag := expr.FuncName.GetLiteral()
+
 	var zf *ClosureRef
 
-	// if current scope is FuncScope, find ID from funcScope's "targetThis" method list
-	if sp, ok := scope.(*FuncScope); ok {
-		targetThis := sp.GetTargetThis()
-		if targetThis != nil {
-			if val, err := targetThis.GetMethod(vtag); err == nil {
-				zf = val
+	// if thisValue exists, find ID from its method list
+	if ctx.scope.thisValue != nil {
+		if obj, ok := ctx.scope.thisValue.(*Object); ok {
+			// find value
+			if method, ok2 := obj.ref.MethodList[vtag]; ok2 {
+				zf = &method
 			}
 		}
 	}
@@ -582,7 +446,7 @@ func evalFunctionCall(ctx *Context, expr *syntax.FuncCallExpr) (Value, *error.Er
 		if !ok {
 			return nil, error.InvalidFuncVariable(vtag)
 		}
-		zf = zval.ClosureRef
+		zf = &zval.value
 	}
 
 	// exec params
@@ -760,116 +624,93 @@ func evalVarAssignExpr(ctx *Context, expr *syntax.VarAssignExpr) (Value, *error.
 		err2 := setValue(ctx, vtag, val)
 		return val, err2
 	case *syntax.MemberExpr:
-		iv, err := getMemberExprIV(ctx, v)
-		if err != nil {
-			return nil, err
+		if v.MemberType == syntax.MemberID || v.MemberType == syntax.MemberIndex {
+			iv, err := getMemberExprIV(ctx, v)
+			if err != nil {
+				return nil, err
+			}
+			return val, iv.ReduceLHS(ctx, val)
 		}
-		return val, iv.ReduceLHS(ctx, val)
+		return nil, error.NewErrorSLOT("方法不能被赋值")
 	default:
 		return nil, error.UnExpectedCase("被赋值", fmt.Sprintf("%T", v))
 	}
 }
 
 func getMemberExprIV(ctx *Context, expr *syntax.MemberExpr) (*IV, *error.Error) {
-	if expr.RootType == syntax.RootTypeScope { // 此之 XX
+	switch expr.RootType {
+	case syntax.RootTypeScope: // 此之 XX
+		return &IV{
+			reduceType: IVTypeMember,
+			root:       ctx.scope.sgValue,
+			member:     expr.MemberID.GetLiteral(),
+		}, nil
+
+	case syntax.RootTypeProp: // 其 XX
+		return &IV{
+			reduceType: IVTypeMember,
+			root:       ctx.scope.thisValue,
+		}, nil
+	case syntax.RootTypeExpr: // A 之 B
+		// RootType = RootTypeExpr
+		valRoot, err := evalExpression(ctx, expr.Root)
+		if err != nil {
+			return nil, err
+		}
 		switch expr.MemberType {
-		case syntax.MemberID:
+		case syntax.MemberID: // A 之 B
 			return &IV{
 				reduceType: IVTypeMember,
-				root:       ctx.scope.sgValue,
+				root:       valRoot,
 				member:     expr.MemberID.Literal,
 			}, nil
-		case syntax.MemberMethod:
-			m := expr.MemberMethod
-			funcName := m.FuncName.Literal
-			paramVals, err := exprsToValues(ctx, m.Params)
+		case syntax.MemberIndex:
+			idx, err := evalExpression(ctx, expr.MemberIndex)
 			if err != nil {
 				return nil, err
 			}
-			return &ZnScopeMethodIV{funcName, paramVals}, nil
-		}
-		return nil, error.UnExpectedCase("子项类型", fmt.Sprintf("%d", expr.MemberType))
-	}
-
-	if expr.RootType == syntax.RootTypeProp { // 其 XX
-		if expr.MemberType == syntax.MemberID {
-			return &IV{
-				reduceType: IVTypeMember,
-				root:       ctx.scope.thisValue,
-			}, nil
-
-			tag := expr.MemberID.Literal
-			return &ZnPropIV{tag}, nil
-		}
-		return nil, error.UnExpectedCase("子项类型", strconv.Itoa(int(expr.MemberType)))
-	}
-
-	// RootType = RootTypeExpr
-	valRoot, err := evalExpression(ctx, expr.Root)
-	if err != nil {
-		return nil, err
-	}
-	switch expr.MemberType {
-	case syntax.MemberID: // A 之 B
-		return &IV{
-			reduceType: IVTypeMember,
-			root:       valRoot,
-			member:     expr.MemberID.Literal,
-		}, nil
-	case syntax.MemberMethod:
-		m := expr.MemberMethod
-		funcName := m.FuncName.Literal
-		paramVals, err := exprsToValues(ctx, m.Params)
-		if err != nil {
-			return nil, err
-		}
-
-		return &ZnMethodIV{valRoot, funcName, paramVals}, nil
-	case syntax.MemberIndex:
-		idx, err := evalExpression(ctx, expr.MemberIndex)
-		if err != nil {
-			return nil, err
-		}
-		switch v := valRoot.(type) {
-		case *Array:
-			vr, ok := idx.(*Decimal)
-			if !ok {
-				return nil, error.InvalidExprType("integer")
-			}
-			vri, e := vr.asInteger()
-			if e != nil {
-				return nil, error.InvalidExprType("integer")
-			}
-			return &IV{
-				reduceType: IVTypeArray,
-				root:       v,
-				index:      vri,
-			}, nil
-		case *HashMap:
-			var s string
-			switch x := idx.(type) {
-			// regard decimal value directly as string
-			case *Decimal:
-				// transform decimal value to string
-				// x.exp < 0 express that its a decimal value with point mark, not an integer
-				if x.exp < 0 {
+			switch v := valRoot.(type) {
+			case *Array:
+				vr, ok := idx.(*Decimal)
+				if !ok {
+					return nil, error.InvalidExprType("integer")
+				}
+				vri, e := vr.asInteger()
+				if e != nil {
+					return nil, error.InvalidExprType("integer")
+				}
+				return &IV{
+					reduceType: IVTypeArray,
+					root:       v,
+					index:      vri,
+				}, nil
+			case *HashMap:
+				var s string
+				switch x := idx.(type) {
+				// regard decimal value directly as string
+				case *Decimal:
+					// transform decimal value to string
+					// x.exp < 0 express that its a decimal value with point mark, not an integer
+					if x.exp < 0 {
+						return nil, error.InvalidExprType("integer", "string")
+					}
+					s = x.String()
+				case *String:
+					s = x.String()
+				default:
 					return nil, error.InvalidExprType("integer", "string")
 				}
-				s = x.String()
-			case *String:
-				s = x.String()
-			default:
-				return nil, error.InvalidExprType("integer", "string")
+				return &IV{
+					reduceType: IVTypeHashMap,
+					root:       v,
+					member:     s,
+				}, nil
 			}
-			return &IV{
-				reduceType: IVTypeHashMap,
-				root:       v,
-				member:     s,
-			}, nil
+			return nil, error.InvalidExprType("array", "hashmap")
 		}
-		return nil, error.InvalidExprType("array", "hashmap")
 	}
-	return nil, error.UnExpectedCase("子项类型", reflect.TypeOf(expr.MemberType).Name())
+
+	return nil, error.UnExpectedCase("子项类型", fmt.Sprintf("%d", expr.MemberType))
 }
 
 //// scope value setters/getters
@@ -970,4 +811,163 @@ func exprsToValues(ctx *Context, exprs []syntax.Expression) ([]Value, *error.Err
 		params = append(params, pval)
 	}
 	return params, nil
+}
+
+// duplicateValue - deepcopy values' structure, including bool, string, decimal, array, hashmap
+// for function or object or null, pass the original reference instead.
+// This is due to the 'copycat by default' policy
+func duplicateValue(in Value) Value {
+	switch v := in.(type) {
+	case *Bool:
+		return NewBool(v.value)
+	case *String:
+		return NewString(v.value)
+	case *Decimal:
+		x := new(big.Int)
+		return &Decimal{
+			co:  x.Set(v.co),
+			exp: v.exp,
+		}
+	case *Null:
+		return in // no need to copy since all "NULL" values are same
+	case *Array:
+		newArr := []Value{}
+		for _, val := range v.value {
+			newArr = append(newArr, duplicateValue(val))
+		}
+		return NewArray(newArr)
+	case *HashMap:
+		kvPairs := []KVPair{}
+		for _, key := range v.keyOrder {
+			dupVal := duplicateValue(v.value[key])
+			kvPairs = append(kvPairs, KVPair{key, dupVal})
+		}
+		return NewHashMap(kvPairs)
+	case *Function: // function itself is immutable, so return directly
+		return in
+	case *Object: // we don't copy object value at all
+		return in
+	}
+	return in
+}
+
+// compareValues - some ZnValues are comparable from specific types of right value
+// otherwise it will throw error.
+//
+// There are three types of compare verbs (actions): Eq, Lt and Gt.
+//
+// Eq - compare if two values are "equal". Usually there are two rules:
+// 1. types of left and right value are same. A number MUST BE equals to a number, that means
+// (string) “2” won't be equals to (number) 2;
+// 2. each items SHOULD BE identical, even for composited types (i.e. array, hashmap)
+//
+// Lt - for two decimals ONLY. If leftValue < rightValue.
+//
+// Gt - for two decimals ONLY. If leftValue > rightValue.
+//
+func compareValues(left Value, right Value, verb compareVerb) (bool, *error.Error) {
+	switch vl := left.(type) {
+	case *Null:
+		if _, ok := right.(*Null); ok {
+			return true, nil
+		}
+		return false, nil
+	case *Decimal:
+		// compare right value - decimal only
+		if vr, ok := right.(*Decimal); ok {
+			r1, r2 := rescalePair(*vl, *vr)
+			cmpResult := false
+			switch verb {
+			case CmpEq:
+				cmpResult = (r1.co.Cmp(r2.co) == 0)
+			case CmpLt:
+				cmpResult = (r1.co.Cmp(r2.co) < 0)
+			case CmpGt:
+				cmpResult = (r1.co.Cmp(r2.co) > 0)
+			default:
+				return false, error.UnExpectedCase("比较原语", strconv.Itoa(int(verb)))
+			}
+			return cmpResult, nil
+		}
+		// if vert == CmbEq and rightValue is not decimal type
+		// then return `false` directly
+		if verb == CmpEq {
+			return false, nil
+		}
+		return false, error.InvalidCompareRType("decimal")
+	case *String:
+		// Only CmpEq is valid for comparison
+		if verb != CmpEq {
+			return false, error.InvalidCompareLType("decimal", "string", "bool", "array", "hashmap")
+		}
+		// compare right value - string only
+		if vr, ok := right.(*String); ok {
+			cmpResult := (strings.Compare(vl.value, vr.value) == 0)
+			return cmpResult, nil
+		}
+		return false, nil
+	case *Bool:
+		if verb != CmpEq {
+			return false, error.InvalidCompareLType("decimal", "string", "bool", "array", "hashmap")
+		}
+		// compare right value - bool only
+		if vr, ok := right.(*Bool); ok {
+			cmpResult := vl.value == vr.value
+			return cmpResult, nil
+		}
+		return false, nil
+	case *Array:
+		if verb != CmpEq {
+			return false, error.InvalidCompareLType("decimal", "string", "bool", "array", "hashmap")
+		}
+
+		if vr, ok := right.(*Array); ok {
+			if len(vl.value) != len(vr.value) {
+				return false, nil
+			}
+			// cmp each item
+			for idx := range vl.value {
+				cmpVal, err := compareValues(vl.value[idx], vr.value[idx], CmpEq)
+				if err != nil {
+					return false, err
+				}
+				return cmpVal, nil
+			}
+			return true, nil
+		}
+		return false, nil
+	case *HashMap:
+		if verb != CmpEq {
+			return false, error.InvalidCompareLType("decimal", "string", "bool", "array", "hashmap")
+		}
+
+		if vr, ok := right.(*HashMap); ok {
+			if len(vl.value) != len(vr.value) {
+				return false, nil
+			}
+			// cmp each item
+			for idx := range vl.value {
+				// ensure the key exists on vr
+				vrr, ok := vr.value[idx]
+				if !ok {
+					return false, nil
+				}
+				cmpVal, err := compareValues(vl.value[idx], vrr, CmpEq)
+				if err != nil {
+					return false, err
+				}
+				return cmpVal, nil
+			}
+			return true, nil
+		}
+		return false, nil
+	}
+	return false, error.InvalidCompareLType("decimal", "string", "bool", "array", "hashmap")
+}
+
+// displayValue - yield a string from Value
+func displayValue(value Value) string {
+	switch v := value.(type) {
+
+	}
 }
