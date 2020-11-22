@@ -2,7 +2,9 @@ package exec
 
 import (
 	"github.com/DemoHn/Zn/debug"
+	"github.com/DemoHn/Zn/error"
 	"github.com/DemoHn/Zn/lex"
+	"github.com/DemoHn/Zn/syntax"
 )
 
 const arithPrecision = 8
@@ -61,11 +63,22 @@ type SymbolInfo struct {
 	isConst bool
 }
 
+// Result - context execution result structure
+// NOTICE: when HasError = true, Value = nil, while execution yields error
+//         when HasError = false, Error = nil, Value = <result Value>
+//
+// Currently only one value is supported as return argument.
+type Result struct {
+	HasError bool
+	Value    Value
+	Error    *error.Error
+}
+
 // NewContext - create new Zn Context. Notice through the life-cycle
 // of one code execution, there's only one running context to store all states.
 func NewContext() *Context {
 	return &Context{
-		globals: map[string]Value{}, // TODO
+		globals: globalValues,
 		arith:   NewArith(arithPrecision),
 		_probe:  debug.NewProbe(),
 		scope:   nil,
@@ -99,6 +112,30 @@ func (ctx *Context) DuplicateNewScope() *Context {
 	return &newContext
 }
 
+// ExecuteCode - execute program from input Zn code (whether from file or REPL)
+func (ctx *Context) ExecuteCode(in *lex.InputStream) Result {
+	l := lex.NewLexer(in)
+	p := syntax.NewParser(l)
+	// start
+	block, err := p.Parse()
+	if err != nil {
+		return Result{true, nil, err}
+	}
+
+	// init scope
+	ctx.InitScope(l)
+
+	// construct root (program) node
+	program := syntax.NewProgramNode(block)
+
+	// eval program
+	if err := evalProgram(ctx, program); err != nil {
+		wrapError(ctx, err)
+		return Result{true, nil, err}
+	}
+	return Result{false, ctx.scope.returnValue, nil}
+}
+
 //// helpers
 func createChildScope(old *Scope) *Scope {
 	newScope := &Scope{
@@ -111,4 +148,21 @@ func createChildScope(old *Scope) *Scope {
 	}
 
 	return newScope
+}
+
+// wrapError if lineInfo is missing (mostly for non-syntax errors)
+// If lineInfo missing, then we will add current execution line and hide some part to
+// display errors properly.
+func wrapError(ctx *Context, err *error.Error) {
+	cursor := err.GetCursor()
+
+	if cursor.LineNum == 0 {
+		fileInfo := ctx.scope.fileInfo
+		newCursor := error.Cursor{
+			File:    fileInfo.file,
+			LineNum: fileInfo.currentLine,
+			Text:    fileInfo.lineStack.GetLineText(fileInfo.currentLine, false),
+		}
+		err.SetCursor(newCursor)
+	}
 }
