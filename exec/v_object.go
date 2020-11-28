@@ -1,6 +1,8 @@
 package exec
 
-import "github.com/DemoHn/Zn/error"
+import (
+	"github.com/DemoHn/Zn/error"
+)
 
 // Object - 对象型
 type Object struct {

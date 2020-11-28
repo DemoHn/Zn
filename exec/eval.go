@@ -433,6 +433,7 @@ func evalExpression(ctx *Context, expr syntax.Expression) (Value, *error.Error) 
 				return nil, err
 			}
 			fctx := ctx.DuplicateNewScope()
+			fctx.scope.thisValue = rootValue
 			return rootValue.ExecMethod(fctx, methodName, paramValues)
 		}
 		return nil, error.UnExpectedCase("成员类型", fmt.Sprintf("%d", e.MemberType))
@@ -447,12 +448,20 @@ func evalExpression(ctx *Context, expr syntax.Expression) (Value, *error.Error) 
 
 // （显示：A，B，C）
 func evalFunctionCall(ctx *Context, expr *syntax.FuncCallExpr) (Value, *error.Error) {
+	var zf *ClosureRef
 	vtag := expr.FuncName.GetLiteral()
 
-	var zf *ClosureRef
+	// for a function call, if thisValue NOT FOUND, that means the target closure is a FUNCTION
+	// instead of a METHOD (which is defined on class definition statement)
+	//
+	// If thisValue != nil, we will attempt to find clsoure from its method list;
+	// then look up from scope's values.
+	//
+	// If thisValue == nil, we will look up target closure from scope's values directly.
+	thisValue, _ := findThisValue(ctx)
 
 	// if thisValue exists, find ID from its method list
-	if ctx.scope.thisValue != nil {
+	if thisValue != nil {
 		if obj, ok := ctx.scope.thisValue.(*Object); ok {
 			// find value
 			if method, ok2 := obj.ref.MethodList[vtag]; ok2 {
@@ -678,12 +687,16 @@ func getMemberExprIV(ctx *Context, expr *syntax.MemberExpr) (*IV, *error.Error) 
 		}, nil
 
 	case syntax.RootTypeProp: // 其 XX
+		thisValue, err := findThisValue(ctx)
+		if err != nil {
+			return nil, err
+		}
 		return &IV{
 			reduceType: IVTypeMember,
-			root:       ctx.scope.thisValue,
+			root:       thisValue,
+			member:     expr.MemberID.GetLiteral(),
 		}, nil
 	case syntax.RootTypeExpr: // A 之 B
-		// RootType = RootTypeExpr
 		valRoot, err := evalExpression(ctx, expr.Root)
 		if err != nil {
 			return nil, err
@@ -693,9 +706,9 @@ func getMemberExprIV(ctx *Context, expr *syntax.MemberExpr) (*IV, *error.Error) 
 			return &IV{
 				reduceType: IVTypeMember,
 				root:       valRoot,
-				member:     expr.MemberID.Literal,
+				member:     expr.MemberID.GetLiteral(),
 			}, nil
-		case syntax.MemberIndex:
+		case syntax.MemberIndex: // A # 0
 			idx, err := evalExpression(ctx, expr.MemberIndex)
 			if err != nil {
 				return nil, err
@@ -862,6 +875,23 @@ func findSgValue(ctx *Context) (Value, *error.Error) {
 	}
 
 	return nil, error.PropertyNotFound("sgValue")
+}
+
+// findThisValue - similar with findSgValue(ctx), it looks up for nearest valid
+// thisValue value.
+func findThisValue(ctx *Context) (Value, *error.Error) {
+	sp := ctx.scope
+	for sp != nil {
+		thisValue := sp.thisValue
+		if thisValue != nil {
+			return thisValue, nil
+		}
+
+		// otherwise, find thisValue from parent scope
+		sp = sp.parent
+	}
+
+	return nil, error.PropertyNotFound("thisValue")
 }
 
 // duplicateValue - deepcopy values' structure, including bool, string, decimal, array, hashmap
