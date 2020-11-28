@@ -462,7 +462,7 @@ func evalFunctionCall(ctx *Context, expr *syntax.FuncCallExpr) (Value, *error.Er
 
 	// if thisValue exists, find ID from its method list
 	if thisValue != nil {
-		if obj, ok := ctx.scope.thisValue.(*Object); ok {
+		if obj, ok := thisValue.(*Object); ok {
 			// find value
 			if method, ok2 := obj.ref.MethodList[vtag]; ok2 {
 				zf = &method
