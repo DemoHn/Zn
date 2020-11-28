@@ -3,7 +3,6 @@ package exec
 import (
 	"fmt"
 	"math/big"
-	"reflect"
 	"strconv"
 	"strings"
 
@@ -47,7 +46,7 @@ func evalProgram(ctx *Context, program *syntax.Program) *error.Error {
 // EvalStatement - eval statement
 func evalStatement(ctx *Context, stmt syntax.Statement) *error.Error {
 	var returnValue Value
-	// set current value
+	// set currentLine
 	ctx.scope.fileInfo.currentLine = stmt.GetCurrentLine()
 
 	// set return value
@@ -155,7 +154,7 @@ func evalNewObjectPart(ctx *Context, node syntax.VDAssignPair) *error.Error {
 	// assign new object to variables
 	for _, v := range node.Variables {
 		vtag := v.GetLiteral()
-		// TODO: optimize fctx
+
 		fctx := ctx.DuplicateNewScope()
 		finalObj, err := classRef.Construct(fctx, cParams)
 		if err != nil {
@@ -172,6 +171,7 @@ func evalNewObjectPart(ctx *Context, node syntax.VDAssignPair) *error.Error {
 // evalWhileLoopStmt -
 func evalWhileLoopStmt(ctx *Context, node *syntax.WhileLoopStmt) *error.Error {
 	lctx := ctx.DuplicateNewScope()
+	lctx.scope.sgValue = NewLoopCtl()
 	for {
 		// #1. first execute expr
 		trueExpr, err := evalExpression(lctx, node.TrueExpr)
@@ -256,13 +256,15 @@ func evalBranchStmt(ctx *Context, node *syntax.BranchStmt) *error.Error {
 	if !ok {
 		return error.InvalidExprType("bool")
 	}
+
+	bctx := ctx.DuplicateNewScope()
 	// exec if-branch
 	if vIfExpr.value == true {
-		return evalStmtBlock(ctx, node.IfTrueBlock)
+		return evalStmtBlock(bctx, node.IfTrueBlock)
 	}
 	// exec else-if branches
 	for idx, otherExpr := range node.OtherExprs {
-		otherExprI, err := evalExpression(ctx, otherExpr)
+		otherExprI, err := evalExpression(bctx, otherExpr)
 		if err != nil {
 			return err
 		}
@@ -272,12 +274,12 @@ func evalBranchStmt(ctx *Context, node *syntax.BranchStmt) *error.Error {
 		}
 		// exec else-if branch
 		if vOtherExprI.value == true {
-			return evalStmtBlock(ctx, node.OtherBlocks[idx])
+			return evalStmtBlock(bctx, node.OtherBlocks[idx])
 		}
 	}
 	// exec else branch if possible
 	if node.HasElse == true {
-		return evalStmtBlock(ctx, node.IfFalseBlock)
+		return evalStmtBlock(bctx, node.IfFalseBlock)
 	}
 	return nil
 }
@@ -414,7 +416,11 @@ func evalExpression(ctx *Context, expr syntax.Expression) (Value, *error.Error) 
 				}
 				rootValue = root
 			case syntax.RootTypeScope:
-				rootValue = ctx.scope.sgValue
+				sgValue, err := findSgValue(ctx)
+				if err != nil {
+					return nil, err
+				}
+				rootValue = sgValue
 			default: // 其他 rootType 不支持
 				return nil, error.NewErrorSLOT("不支持的rootType")
 			}
@@ -425,7 +431,8 @@ func evalExpression(ctx *Context, expr syntax.Expression) (Value, *error.Error) 
 			if err != nil {
 				return nil, err
 			}
-			rootValue.ExecMethod(ctx, methodName, paramValues)
+			fctx := ctx.DuplicateNewScope()
+			return rootValue.ExecMethod(fctx, methodName, paramValues)
 		}
 		return nil, error.UnExpectedCase("成员类型", fmt.Sprintf("%d", e.MemberType))
 	case *syntax.Number, *syntax.String, *syntax.ID, *syntax.ArrayExpr, *syntax.HashMapExpr:
@@ -474,9 +481,8 @@ func evalFunctionCall(ctx *Context, expr *syntax.FuncCallExpr) (Value, *error.Er
 		return nil, err
 	}
 
-	fctx := ctx.DuplicateNewScope()
-	// TODO: ctx optimize
 	// exec function call via its ClosureRef
+	fctx := ctx.DuplicateNewScope()
 	return zf.Exec(fctx, params)
 }
 
@@ -570,7 +576,7 @@ func evalLogicComparator(ctx *Context, expr *syntax.LogicExpr) (*Bool, *error.Er
 		cmp2, cmpErr = compareValues(left, right, CmpEq)
 		cmpRes = cmp1 || cmp2
 	default:
-		return nil, error.UnExpectedCase("比较类型", strconv.Itoa(int(logicType)))
+		return nil, error.UnExpectedCase("比较类型", fmt.Sprintf("%d", logicType))
 	}
 
 	return NewBool(cmpRes), cmpErr
@@ -619,7 +625,7 @@ func evalPrimeExpr(ctx *Context, expr syntax.Expression) (Value, *error.Error) {
 		}
 		return NewHashMap(znPairs), nil
 	default:
-		return nil, error.UnExpectedCase("表达式类型", reflect.TypeOf(e).Name())
+		return nil, error.UnExpectedCase("表达式类型", fmt.Sprintf("%T", e))
 	}
 }
 
@@ -830,6 +836,26 @@ func exprsToValues(ctx *Context, exprs []syntax.Expression) ([]Value, *error.Err
 		params = append(params, pval)
 	}
 	return params, nil
+}
+
+/// findSgValue - find the suitable sgValue in current context
+// Rules:
+//
+// - if sgValue in current scope (ctx.scope.sgValue) != nil, returns the current one;
+// - if sgValue in current scope == nil, then look up its parent util to the root;
+func findSgValue(ctx *Context) (Value, *error.Error) {
+	sp := ctx.scope
+	for sp != nil {
+		sgValue := sp.sgValue
+		if sgValue != nil {
+			return sgValue, nil
+		}
+
+		// otherwise, find sgValue from parent scope
+		sp = sp.parent
+	}
+
+	return nil, error.PropertyNotFound("sgValue")
 }
 
 // duplicateValue - deepcopy values' structure, including bool, string, decimal, array, hashmap
