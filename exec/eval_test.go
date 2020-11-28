@@ -202,11 +202,11 @@ func Test_IterateStmt(t *testing.T) {
 					{"4", "*exec.Decimal"},
 				},
 				"$VAL": {
-					{"「一」", "*exec.String"},
-					{"「地」", "*exec.String"},
-					{"「在」", "*exec.String"},
-					{"「要」", "*exec.String"},
-					{"「工」", "*exec.String"},
+					{"一", "*exec.String"},
+					{"地", "*exec.String"},
+					{"在", "*exec.String"},
+					{"要", "*exec.String"},
+					{"工", "*exec.String"},
 				},
 				"$X": {
 					{"100", "*exec.Decimal"},
@@ -250,14 +250,14 @@ func Test_IterateStmt(t *testing.T) {
 			expReturnValue: NewNull(),
 			expProbe: map[string][][]string{
 				"$KEY": {
-					{"「积分」", "*exec.String"},
-					{"「年龄」", "*exec.String"},
-					{"「穿着」", "*exec.String"},
+					{"积分", "*exec.String"},
+					{"年龄", "*exec.String"},
+					{"穿着", "*exec.String"},
 				},
 				"$VAL": {
 					{"1000", "*exec.Decimal"},
 					{"24", "*exec.Decimal"},
-					{"「蕾丝边裙子」", "*exec.String"},
+					{"蕾丝边裙子", "*exec.String"},
 				},
 			},
 		},
@@ -300,8 +300,8 @@ func Test_IterateStmt(t *testing.T) {
 					{"1", "*exec.Decimal"},
 				},
 				"V1": {
-					{"「土」", "*exec.String"},
-					{"「地」", "*exec.String"},
+					{"土", "*exec.String"},
+					{"地", "*exec.String"},
 				},
 			},
 		},
@@ -315,12 +315,12 @@ func Test_IterateStmt(t *testing.T) {
 			expReturnValue: NewNull(),
 			expProbe: map[string][][]string{
 				"K1": {
-					{"「上」", "*exec.String"},
-					{"「左」", "*exec.String"},
+					{"上", "*exec.String"},
+					{"左", "*exec.String"},
 				},
 				"V1": {
-					{"「下」", "*exec.String"},
-					{"「右」", "*exec.String"},
+					{"下", "*exec.String"},
+					{"右", "*exec.String"},
 				},
 			},
 		},
@@ -340,7 +340,7 @@ func Test_VarDeclareStmt(t *testing.T) {
 			expReturnValue: NewString("森林"),
 			expProbe: map[string][][]string{
 				"$K1": {
-					{"「森林」", "*exec.String"},
+					{"森林", "*exec.String"},
 				},
 			},
 		},
@@ -465,10 +465,10 @@ A之名
 			expReturnValue: NewString("保定"),
 			expProbe: map[string][][]string{
 				"B": {
-					{"「保定」", "*exec.String"},
+					{"保定", "*exec.String"},
 				},
 				"C": {
-					{"「保定」", "*exec.String"},
+					{"保定", "*exec.String"},
 				},
 			},
 		},
