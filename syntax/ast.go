@@ -596,6 +596,8 @@ func ParseMemberExpr(p *Parser) Expression {
 
 	memberTailParser = func(expr Expression) Expression {
 		mExpr := &MemberExpr{}
+		// default rootType is RootTypeExpr
+		mExpr.RootType = RootTypeExpr
 
 		match, tk := p.tryConsume(lex.TypeMapHash, lex.TypeMapQHash, lex.TypeObjDotW)
 		if !match {

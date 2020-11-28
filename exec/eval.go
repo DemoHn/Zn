@@ -752,9 +752,10 @@ func getMemberExprIV(ctx *Context, expr *syntax.MemberExpr) (*IV, *error.Error) 
 			}
 			return nil, error.InvalidExprType("array", "hashmap")
 		}
+		return nil, error.UnExpectedCase("子项类型", fmt.Sprintf("%d", expr.MemberType))
 	}
 
-	return nil, error.UnExpectedCase("子项类型", fmt.Sprintf("%d", expr.MemberType))
+	return nil, error.UnExpectedCase("根元素类型", fmt.Sprintf("%d", expr.RootType))
 }
 
 //// scope value setters/getters
