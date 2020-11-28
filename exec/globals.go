@@ -15,7 +15,12 @@ var displayExecutor = func(ctx *Context, params []Value) (Value, *error.Error) {
 	var items = []string{}
 
 	for _, param := range params {
-		items = append(items, StringifyValue(param))
+		// if param is a string, display its value (without 「 」 quotes) directly
+		if str, ok := param.(*String); ok {
+			items = append(items, str.value)
+		} else {
+			items = append(items, StringifyValue(param))
+		}
 	}
 	fmt.Printf("%s\n", strings.Join(items, " "))
 	return NewNull(), nil
