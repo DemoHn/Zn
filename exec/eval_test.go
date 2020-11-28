@@ -662,6 +662,104 @@ func Test_BranchStmt(t *testing.T) {
 	}
 }
 
+func Test_FunctionCall(t *testing.T) {
+	suites := []programOKSuite{
+		{
+			name: "normal function call (with return value)",
+			program: `
+如何执行方法？
+	令A 为【20，30】
+	A#1 为 40
+	返回 A
+
+（执行方法）
+`,
+			symbols: map[string]Value{},
+			expReturnValue: NewArray([]Value{
+				NewDecimalFromInt(20, 0),
+				NewDecimalFromInt(40, 0),
+			}),
+			expProbe: map[string][][]string{},
+		},
+		{
+			name: "normal function call (without return value)",
+			program: `
+如何执行方法？
+	令A 为【20，30】
+	如果 A#1 为 40：
+		（X+Y：1，2）
+
+（执行方法）
+`,
+			symbols:        map[string]Value{},
+			expReturnValue: NewNull(),
+			expProbe:       map[string][][]string{},
+		},
+		{
+			name: "function call with args",
+			program: `
+如何执行方法？
+	已知A，B
+	返回（X+Y：A，B）
+
+（执行方法：10，30）
+`,
+			symbols:        map[string]Value{},
+			expReturnValue: NewDecimalFromInt(40, 0),
+			expProbe:       map[string][][]string{},
+		},
+		{
+			name: "function call (last expression as return value)",
+			program: `
+如何执行方法？
+	已知A，B
+	（X+Y：A，B）
+
+（执行方法：10，30）
+`,
+			symbols:        map[string]Value{},
+			expReturnValue: NewDecimalFromInt(40, 0),
+			expProbe:       map[string][][]string{},
+		},
+		{
+			name: "function call hoisting (call expr exceeds definition)",
+			program: `
+令A为（执行方法：10，30）
+
+如何执行方法？
+	已知A，B
+	（X+Y：A，B）
+
+A`,
+			symbols:        map[string]Value{},
+			expReturnValue: NewDecimalFromInt(40, 0),
+			expProbe:       map[string][][]string{},
+		},
+		{
+			name: "internal function declaration",
+			program: `
+如何执行方法？
+	已知A，B
+
+	如何加数据？
+		已知A，B
+		（X+Y：A，B）
+
+	（加数据：A，B）
+
+（执行方法：10，40）
+`,
+			symbols:        map[string]Value{},
+			expReturnValue: NewDecimalFromInt(50, 0),
+			expProbe:       map[string][][]string{},
+		},
+	}
+
+	for _, suite := range suites {
+		assertSuite(t, suite)
+	}
+}
+
 func assertSuite(t *testing.T, suite programOKSuite) {
 	t.Run(suite.name, func(t *testing.T) {
 		ctx := NewContext()
