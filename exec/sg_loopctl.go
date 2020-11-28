@@ -44,8 +44,8 @@ func (lc *LoopCtl) ExecMethod(ctx *Context, name string, values []Value) (Value,
 	return nil, error.MethodNotFound(name)
 }
 
-// SetCurrentValue - internal usage to set current value
-func (lc *LoopCtl) SetCurrentValue(index Value, value Value) {
+// SetCurrentKeyValue - internal usage to set current value
+func (lc *LoopCtl) SetCurrentKeyValue(index Value, value Value) {
 	lc.currentIndex = index
 	lc.currentValue = value
 }

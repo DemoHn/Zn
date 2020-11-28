@@ -289,8 +289,6 @@ func evalIterateStmt(ctx *Context, node *syntax.IterateStmt) *error.Error {
 	var keySlot, valueSlot string
 	var nameLen = len(node.IndexNames)
 
-	// create new scope and return its context
-	ictx := ctx.DuplicateNewScope()
 	// 以A，B遍历C： D
 	// execute expr: C
 	targetExpr, err := evalExpression(ctx, node.IterateExpr)
@@ -298,12 +296,15 @@ func evalIterateStmt(ctx *Context, node *syntax.IterateStmt) *error.Error {
 		return err
 	}
 
+	// create new child scope
+	ictx := ctx.DuplicateNewScope()
+	ictx.scope.sgValue = NewLoopCtl()
 	// execIterationBlock, including set "currentKey" and "currentValue" to scope,
 	// and preDefined indication variables
 	execIterationBlockFn := func(key Value, val Value) *error.Error {
 		// set values of 此之值 and 此之
-		// TODO:
-		//iterScope.setCurrentKV(key, val)
+		sgValue, _ := ictx.scope.sgValue.(*LoopCtl)
+		sgValue.SetCurrentKeyValue(key, val)
 
 		// set pre-defined value
 		if nameLen == 1 {
@@ -318,7 +319,7 @@ func evalIterateStmt(ctx *Context, node *syntax.IterateStmt) *error.Error {
 				return err
 			}
 		}
-		return evalStmtBlock(ctx, node.IterateBlock)
+		return evalStmtBlock(ictx, node.IterateBlock)
 	}
 
 	// define indication variables as "currentKey" and "currentValue" under new iterScope
@@ -665,9 +666,14 @@ func evalVarAssignExpr(ctx *Context, expr *syntax.VarAssignExpr) (Value, *error.
 func getMemberExprIV(ctx *Context, expr *syntax.MemberExpr) (*IV, *error.Error) {
 	switch expr.RootType {
 	case syntax.RootTypeScope: // 此之 XX
+		sgValue, err := findSgValue(ctx)
+		if err != nil {
+			return nil, err
+		}
+
 		return &IV{
 			reduceType: IVTypeMember,
-			root:       ctx.scope.sgValue,
+			root:       sgValue,
 			member:     expr.MemberID.GetLiteral(),
 		}, nil
 
