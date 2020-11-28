@@ -128,7 +128,7 @@ func evalVarDeclareStmt(ctx *Context, node *syntax.VarDeclareStmt) *error.Error 
 				}
 			}
 		case syntax.VDTypeObjNew: // 成为
-			if err := evalNewObjectPart(ctx, vpair); err != nil {
+			if err := evalNewObject(ctx, vpair); err != nil {
 				return err
 			}
 		}
@@ -138,7 +138,7 @@ func evalVarDeclareStmt(ctx *Context, node *syntax.VarDeclareStmt) *error.Error 
 
 // eval A,B 成为 C：P1，P2，P3，...
 // ensure VDAssignPair.Type MUST BE syntax.VDTypeObjNew
-func evalNewObjectPart(ctx *Context, node syntax.VDAssignPair) *error.Error {
+func evalNewObject(ctx *Context, node syntax.VDAssignPair) *error.Error {
 	vtag := node.ObjClass.GetLiteral()
 	// get class definition
 	classRef, err := getClassRef(ctx, vtag)
