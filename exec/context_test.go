@@ -51,6 +51,8 @@ func TestExecuteCode_OK(t *testing.T) {
 				t.Errorf("expect value: %v, got: %v", tt.resultValue, res)
 				return
 			}
+
+			ctx.resetScopeValue()
 		})
 	}
 }

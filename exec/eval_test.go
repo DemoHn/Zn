@@ -543,12 +543,12 @@ func assertSuite(t *testing.T, suite programOKSuite) {
 		ctx := NewContext()
 		in := lex.NewTextStream(suite.program)
 		// parseCode
-		program, err := ctx.ParseCode(in)
+		program, err := ctx.parseCode(in)
 		if err != nil {
 			e2 = err
 		}
 		// init scope
-		ctx.InitScope(program.Lexer)
+		ctx.initScope(program.Lexer)
 
 		// impose symbols
 		for k, v := range suite.symbols {

@@ -95,21 +95,6 @@ func (ctx *Context) ExecuteCode(in *lex.InputStream) (Value, *error.Error) {
 	return ctx.execProgram(program)
 }
 
-// ParseCode -
-func (ctx *Context) ParseCode(in *lex.InputStream) (*syntax.Program, *error.Error) {
-	return ctx.parseCode(in)
-}
-
-// InitScope -
-func (ctx *Context) InitScope(l *lex.Lexer) {
-	ctx.initScope(l)
-}
-
-// ExecProgram -
-func (ctx *Context) ExecProgram(program *syntax.Program) (Value, *error.Error) {
-	return ctx.execProgram(program)
-}
-
 // parseCode - lex & parse code text
 func (ctx *Context) parseCode(in *lex.InputStream) (*syntax.Program, *error.Error) {
 	l := lex.NewLexer(in)
@@ -166,6 +151,24 @@ func (ctx *Context) initScope(l *lex.Lexer) {
 	} else {
 		// refresh scope fileInfo
 		ctx.scope.fileInfo = fileInfo
+	}
+}
+
+// resetScopeValue - reset classRefMap, symbolMap, sgValue, thisValue, returnValue
+// to initial value
+func (ctx *Context) resetScopeValue() {
+	if ctx.scope != nil {
+		// preserve fileInfo
+		fileInfo := ctx.scope.fileInfo
+		ctx.scope = &Scope{
+			fileInfo:    fileInfo,
+			classRefMap: map[string]ClassRef{},
+			parent:      nil,
+			symbolMap:   map[string]SymbolInfo{},
+			sgValue:     nil,
+			thisValue:   nil,
+			returnValue: NewNull(),
+		}
 	}
 }
 
