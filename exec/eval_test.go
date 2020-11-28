@@ -5,7 +5,6 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/DemoHn/Zn/error"
 	"github.com/DemoHn/Zn/lex"
 )
 
@@ -537,15 +536,140 @@ func Test_WhileLoopStmt(t *testing.T) {
 	}
 }
 
+func Test_BranchStmt(t *testing.T) {
+	suites := []programOKSuite{
+		{
+			name: "exec true expr",
+			program: `
+如果 变量A 为 “真实”：
+	（__probe：“TAG”，变量A）	
+			`,
+			symbols: map[string]Value{
+				"变量A": NewString("真实"),
+			},
+			expReturnValue: NewNull(),
+			expProbe: map[string][][]string{
+				"TAG": {
+					{"真实", "*exec.String"},
+				},
+			},
+		},
+		{
+			name: "exec false expr",
+			program: `
+如果 变量A 为 “真实”：
+	（__probe：“TAG”， “走过真逻辑”）
+（__probe：“TAG”， “走过公共逻辑”）
+			`,
+			symbols: map[string]Value{
+				"变量A": NewString("不真实"),
+			},
+			expReturnValue: NewString("走过公共逻辑"),
+			expProbe: map[string][][]string{
+				"TAG": {
+					{"走过公共逻辑", "*exec.String"},
+				},
+			},
+		},
+		{
+			name: "if-else expr",
+			program: `
+如果 变量A 大于 100：
+	（__probe：“TAG_A”，真）
+否则：
+	（__probe：“TAG_A”，假）
+
+如果 变量B 大于 100：
+	（__probe：“TAG_B”，真）
+否则：
+	（__probe：“TAG_B”，假）
+			`,
+			symbols: map[string]Value{
+				"变量A": NewDecimalFromInt(120, 0), // true expression
+				"变量B": NewDecimalFromInt(80, 0),  // false expression
+			},
+			expReturnValue: NewNull(),
+			expProbe: map[string][][]string{
+				"TAG_A": {
+					{"真", "*exec.Bool"},
+				},
+				"TAG_B": {
+					{"假", "*exec.Bool"},
+				},
+			},
+		},
+		{
+			name: "if-elseif expr",
+			program: `
+以成绩遍历【40，95，70，82】：
+	如果 成绩 大于 90：
+		评级 为 “优秀”
+	再如 成绩 大于 80：
+		评级 为 “良好”
+	再如 成绩 大于 60：
+		评级 为 “及格”
+	否则：
+		评级 为 “不及格”
+
+	（__probe：“TAG”， 评级）
+			`,
+			symbols: map[string]Value{
+				"评级": NewString("一般"),
+			},
+			expReturnValue: NewNull(),
+			expProbe: map[string][][]string{
+				"TAG": {
+					{"不及格", "*exec.String"},
+					{"优秀", "*exec.String"},
+					{"及格", "*exec.String"},
+					{"良好", "*exec.String"},
+				},
+			},
+		},
+		{
+			name: "if-stmt: new scope",
+			program: `
+（__probe：“TAG”，评级）  注1：初始变量设置
+如果成绩大于70：
+	令评级为“优秀”
+	（__probe：“TAG”，评级） 注2：在新作用域内定义变量并赋值
+
+	成绩为85
+	（__probe：“TAG”，成绩）	
+
+（__probe：“TAG”，成绩） 注3：成绩 变量已经在全局作用域被修改，其值应为85
+（__probe：“TAG”，评级）
+			`,
+			symbols: map[string]Value{
+				"评级": NewString("一般"),
+				"成绩": NewDecimalFromInt(80, 0),
+			},
+			expReturnValue: NewString("一般"),
+			expProbe: map[string][][]string{
+				"TAG": {
+					{"一般", "*exec.String"},
+					{"优秀", "*exec.String"},
+					{"85", "*exec.Decimal"},
+					{"85", "*exec.Decimal"},
+					{"一般", "*exec.String"},
+				},
+			},
+		},
+	}
+
+	for _, suite := range suites {
+		assertSuite(t, suite)
+	}
+}
+
 func assertSuite(t *testing.T, suite programOKSuite) {
 	t.Run(suite.name, func(t *testing.T) {
-		var e2 *error.Error
 		ctx := NewContext()
 		in := lex.NewTextStream(suite.program)
 		// parseCode
 		program, err := ctx.parseCode(in)
 		if err != nil {
-			e2 = err
+			panic(err)
 		}
 		// init scope
 		ctx.initScope(program.Lexer)
@@ -560,14 +684,9 @@ func assertSuite(t *testing.T, suite programOKSuite) {
 
 		result, err := ctx.execProgram(program)
 		if err != nil {
-			e2 = err
+			panic(err)
 		}
 
-		// assert result
-		if e2 != nil {
-			t.Errorf("program should have no error, got error: %s", e2.Display())
-			return
-		}
 		if !reflect.DeepEqual(ctx.scope.returnValue, suite.expReturnValue) {
 			t.Errorf("return value expect -> %s, got -> %s", suite.expReturnValue, result)
 			return
