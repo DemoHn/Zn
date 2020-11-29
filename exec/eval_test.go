@@ -753,6 +753,80 @@ A`,
 			expReturnValue: NewDecimalFromInt(50, 0),
 			expProbe:       map[string][][]string{},
 		},
+		{
+			name: "function call another function",
+			program: `
+如何执行方法？
+	已知C，D
+	（乘数据：（乘数据：C，D），C）
+
+如何乘数据？
+	已知A，B
+	（X*Y：A，B）
+
+（执行方法：5，3）
+			`,
+			symbols:        map[string]Value{},
+			expReturnValue: NewDecimalFromInt(75, 0),
+			expProbe:       map[string][][]string{},
+		},
+		{
+			name: "function call new scope",
+			program: `
+如何执行方法？
+	已知A，B
+	令C为10
+	D为20
+
+	（X+Y：A，B，C）
+
+（__probe：“RETURN”，（执行方法：3，4））
+（__probe：“TAG_A”，A）
+（__probe：“TAG_B”，B）
+（__probe：“TAG_C”，C）
+（__probe：“TAG_D”，D）
+			`,
+			symbols: map[string]Value{
+				"A": NewDecimalFromInt(10, 0),
+				"B": NewDecimalFromInt(20, 0),
+				"C": NewDecimalFromInt(30, 0),
+				"D": NewDecimalFromInt(40, 0),
+			},
+			expReturnValue: NewDecimalFromInt(20, 0),
+			expProbe: map[string][][]string{
+				"RETURN": {
+					{"17", "*exec.Decimal"},
+				},
+				"TAG_A": {
+					{"10", "*exec.Decimal"},
+				},
+				"TAG_B": {
+					{"20", "*exec.Decimal"},
+				},
+				"TAG_C": {
+					{"30", "*exec.Decimal"},
+				},
+				"TAG_D": {
+					{"20", "*exec.Decimal"},
+				},
+			},
+		},
+		{
+			name: "function recursion call",
+			program: `
+如何调用FIB？
+	已知X
+	如果X不大于1：
+		返回1
+	否则：
+		返回【（调用FIB：【X，-1】之和），（调用FIB：【X，-2】之和）】之和
+
+
+（调用FIB：10）`,
+			symbols:        map[string]Value{},
+			expReturnValue: NewDecimalFromInt(89, 0),
+			expProbe:       map[string][][]string{},
+		},
 	}
 
 	for _, suite := range suites {
