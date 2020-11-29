@@ -196,6 +196,25 @@ func Test_MemberExpr(t *testing.T) {
 			expReturnValue: NewString("YY"),
 			expProbe:       map[string][][]string{},
 		},
+		{
+			name:           "hashmap index expr (normal)",
+			program:        `【“L” == 7，“M” == 8】# “L”`,
+			symbols:        map[string]Value{},
+			expReturnValue: NewDecimalFromInt(7, 0),
+			expProbe:       map[string][][]string{},
+		},
+		{
+			name:    "hashmap index expr (variable)",
+			program: `V # “L”`,
+			symbols: map[string]Value{
+				"V": NewHashMap([]KVPair{
+					{"L", NewDecimalFromInt(7, 0)},
+					{"M", NewDecimalFromInt(8, 0)},
+				}),
+			},
+			expReturnValue: NewDecimalFromInt(7, 0),
+			expProbe:       map[string][][]string{},
+		},
 	}
 
 	for _, suite := range suites {
