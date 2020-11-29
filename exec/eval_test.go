@@ -137,6 +137,13 @@ func Test_ExecPrimeExpr(t *testing.T) {
 			expProbe: map[string][][]string{},
 		},
 		{
+			name:           "empty array",
+			program:        "【】",
+			symbols:        map[string]Value{},
+			expReturnValue: NewArray([]Value{}),
+			expProbe:       map[string][][]string{},
+		},
+		{
 			name:    "simple empty hashmap",
 			program: "【==】",
 			symbols: map[string]Value{
@@ -160,6 +167,34 @@ func Test_ExecPrimeExpr(t *testing.T) {
 				},
 			}),
 			expProbe: map[string][][]string{},
+		},
+	}
+
+	for _, suite := range suites {
+		assertSuite(t, suite)
+	}
+}
+
+func Test_MemberExpr(t *testing.T) {
+	suites := []programOKSuite{
+		{
+			name:           "array index expr (normal)",
+			program:        `【3，5，7，9】#2`,
+			symbols:        map[string]Value{},
+			expReturnValue: NewDecimalFromInt(7, 0),
+			expProbe:       map[string][][]string{},
+		},
+		{
+			name:    "array index expr (variable)",
+			program: `A#1`,
+			symbols: map[string]Value{
+				"A": NewArray([]Value{
+					NewString("XX"),
+					NewString("YY"),
+				}),
+			},
+			expReturnValue: NewString("YY"),
+			expProbe:       map[string][][]string{},
 		},
 	}
 
