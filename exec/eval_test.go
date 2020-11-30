@@ -272,9 +272,6 @@ X之（得到总和）
 			expReturnValue: NewDecimalFromInt(45, 0),
 			expProbe:       map[string][][]string{},
 		},
-		{
-
-		}
 	}
 
 	for _, suite := range suites {
@@ -940,6 +937,57 @@ A`,
 			symbols:        map[string]Value{},
 			expReturnValue: NewDecimalFromInt(89, 0),
 			expProbe:       map[string][][]string{},
+		},
+	}
+
+	for _, suite := range suites {
+		assertSuite(t, suite)
+	}
+}
+
+func Test_CreateObject(t *testing.T) {
+	suites := []programOKSuite{
+		{
+			name: "create object with empty constructor",
+			program: `
+定义模型：
+	其名为 “乐高”
+
+令X，Y 成为 模型
+
+（__probe：“TAG”，X之名）
+（__probe：“TAG”，Y之名）
+			`,
+			symbols:        map[string]Value{},
+			expReturnValue: NewString("乐高"),
+			expProbe: map[string][][]string{
+				"TAG": {
+					{"乐高", "*exec.String"},
+					{"乐高", "*exec.String"},
+				},
+			},
+		},
+		{
+			name: "create object with one param",
+			program: `
+定义模型：
+	其名为 “乐高”
+
+	是为 名
+
+令X，Y 成为 模型：“香港记者”
+
+（__probe：“TAG”，X之名）
+（__probe：“TAG”，Y之名）
+			`,
+			symbols:        map[string]Value{},
+			expReturnValue: NewString("香港记者"),
+			expProbe: map[string][][]string{
+				"TAG": {
+					{"香港记者", "*exec.String"},
+					{"香港记者", "*exec.String"},
+				},
+			},
 		},
 	}
 
