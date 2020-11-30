@@ -20,6 +20,12 @@ func NewObject(ref ClassRef) *Object {
 
 // GetProperty -
 func (zo *Object) GetProperty(ctx *Context, name string) (Value, *error.Error) {
+	// internal properties
+	switch name {
+	case "自身":
+		return zo, nil
+	}
+
 	if prop, ok := zo.propList[name]; ok {
 		return prop, nil
 	}

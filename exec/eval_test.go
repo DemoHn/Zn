@@ -938,6 +938,19 @@ A`,
 			expReturnValue: NewDecimalFromInt(89, 0),
 			expProbe:       map[string][][]string{},
 		},
+		{
+			name: "function name alias",
+			program: `
+如何·乘以2·？
+	已知X
+	返回（X+Y：X，X）
+	
+令累加成双 为 ·乘以2· 
+（累加成双：24）`,
+			symbols:        map[string]Value{},
+			expReturnValue: NewDecimalFromInt(48, 0),
+			expProbe:       map[string][][]string{},
+		},
 	}
 
 	for _, suite := range suites {
