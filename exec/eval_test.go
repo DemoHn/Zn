@@ -176,6 +176,19 @@ func Test_ExecPrimeExpr(t *testing.T) {
 }
 
 func Test_MemberExpr(t *testing.T) {
+	var exampleClassDef = `
+定义示例：
+	其名 为 “示例”
+	其总和 为 0
+	
+	如何累加？
+		已知 累加数
+		其总和 为 【其总和，累加数】之和
+		返回空
+
+	如何得到总和？
+		返回 其总和
+`
 	suites := []programOKSuite{
 		{
 			name:           "array index expr (normal)",
@@ -197,6 +210,13 @@ func Test_MemberExpr(t *testing.T) {
 			expProbe:       map[string][][]string{},
 		},
 		{
+			name:           "consecutive array index expr",
+			program:        `【【30，40】，100】#0 #0`,
+			symbols:        map[string]Value{},
+			expReturnValue: NewDecimalFromInt(30, 0),
+			expProbe:       map[string][][]string{},
+		},
+		{
 			name:           "hashmap index expr (normal)",
 			program:        `【“L” == 7，“M” == 8】# “L”`,
 			symbols:        map[string]Value{},
@@ -215,6 +235,46 @@ func Test_MemberExpr(t *testing.T) {
 			expReturnValue: NewDecimalFromInt(7, 0),
 			expProbe:       map[string][][]string{},
 		},
+		{
+			name:           "consecutive hashmap index expr",
+			program:        `【“X” ==【“Y” == 20】】# “X” # “Y”`,
+			symbols:        map[string]Value{},
+			expReturnValue: NewDecimalFromInt(20, 0),
+			expProbe:       map[string][][]string{},
+		},
+		{
+			name:           "expr as index",
+			program:        `【3，5，7，9】#{（X-Y：8，7）}`,
+			symbols:        map[string]Value{},
+			expReturnValue: NewDecimalFromInt(5, 0),
+			expProbe:       map[string][][]string{},
+		},
+		{
+			name: "object get property",
+			program: exampleClassDef + `
+令X 成为示例
+
+X之名
+			`,
+			symbols:        map[string]Value{},
+			expReturnValue: NewString("示例"),
+			expProbe:       map[string][][]string{},
+		},
+		{
+			name: "object run methods",
+			program: exampleClassDef + `
+令X 成为示例
+X之总和为20
+X之（累加：25）
+X之（得到总和）
+			`,
+			symbols:        map[string]Value{},
+			expReturnValue: NewDecimalFromInt(45, 0),
+			expProbe:       map[string][][]string{},
+		},
+		{
+
+		}
 	}
 
 	for _, suite := range suites {
