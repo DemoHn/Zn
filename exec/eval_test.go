@@ -272,9 +272,6 @@ X之（得到总和）
 			expReturnValue: NewDecimalFromInt(45, 0),
 			expProbe:       map[string][][]string{},
 		},
-		{
-
-		}
 	}
 
 	for _, suite := range suites {
