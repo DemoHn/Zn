@@ -423,7 +423,7 @@ func evalExpression(ctx *Context, expr syntax.Expression) (Value, *error.Error) 
 				}
 				rootValue = sgValue
 			default: // 其他 rootType 不支持
-				return nil, error.NewErrorSLOT("不支持的rootType")
+				return nil, error.UnExpectedCase("根元素类型", fmt.Sprintf("%d", e.MemberType))
 			}
 
 			// execute method
