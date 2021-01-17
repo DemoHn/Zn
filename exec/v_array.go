@@ -78,5 +78,50 @@ func (ar *Array) SetProperty(ctx *Context, name string, value Value) *error.Erro
 
 // ExecMethod -
 func (ar *Array) ExecMethod(ctx *Context, name string, values []Value) (Value, *error.Error) {
+	switch name {
+	case "新增", "添加":
+		newValues := []Value{ar}
+		newValues = append(newValues, values...)
+		return addValueHandler.Exec(ctx, newValues)
+	}
 	return nil, error.MethodNotFound(name)
+}
+
+////// method handlers
+var addValueHandler = ClosureRef{
+	ParamHandler: validateExactParams(&Array{}, nil, NewDecimalFromInt(0, 0)),
+	Executor: func(ctx *Context, values []Value) (Value, *error.Error) {
+		var result = []Value{}
+		// VALUES: <array>, <insertValue>, <index>
+		//
+		// since param types has been validated before pass-in
+		// we can trust types here
+		vd, _ := values[2].(*Decimal)
+		vint, err := vd.asInteger()
+		if err != nil {
+			return nil, err
+		}
+
+		arr, _ := values[0].(*Array)
+		if vint >= len(arr.value) {
+			result = append(arr.value, values[1])
+			arr.value = result
+			return NewArray(result), nil
+		} else if vint >= 0 {
+			result = append(result, arr.value[:vint]...)
+			result = append(result, values[1])
+			result = append(result, arr.value[vint:]...)
+			arr.value = result
+			return NewArray(result), nil
+		} else {
+			newIdx := len(arr.value) + vint
+
+			result = append(result, arr.value[:newIdx]...)
+			result = append(result, values[1])
+			result = append(result, arr.value[newIdx:]...)
+
+			arr.value = result
+			return NewArray(result), nil
+		}
+	},
 }

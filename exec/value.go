@@ -1,6 +1,8 @@
 package exec
 
 import (
+	"reflect"
+
 	"github.com/DemoHn/Zn/error"
 	"github.com/DemoHn/Zn/syntax"
 )
@@ -203,4 +205,28 @@ func NewClassRef(name string) ClassRef {
 // Construct - yield new instance of this class
 func (cr *ClassRef) Construct(ctx *Context, params []Value) (Value, *error.Error) {
 	return cr.Constructor(ctx, params)
+}
+
+//// param validators
+
+// validateExactParams is a function wrapper that returns a validte function
+// which asserts each param's type
+func validateExactParams(types ...Value) funcExecutor {
+	executor := func(ctx *Context, values []Value) (Value, *error.Error) {
+		if len(values) != len(types) {
+			return nil, error.ExactParamsError(len(types))
+		}
+		for idx, v := range values {
+			if types[idx] == nil {
+				continue
+			}
+
+			if reflect.TypeOf(v) != reflect.TypeOf(types[idx]) {
+				return nil, error.InvalidParamType()
+			}
+		}
+		return nil, nil
+	}
+
+	return executor
 }
