@@ -80,48 +80,67 @@ func (ar *Array) SetProperty(ctx *Context, name string, value Value) *error.Erro
 func (ar *Array) ExecMethod(ctx *Context, name string, values []Value) (Value, *error.Error) {
 	switch name {
 	case "新增", "添加":
-		newValues := []Value{ar}
-		newValues = append(newValues, values...)
-		return addValueHandler.Exec(ctx, newValues)
+		if err := validateExactParams(values, "any", "decimal"); err != nil {
+			return nil, err
+		}
+		v, _ := values[1].(*Decimal)
+		idx, err := v.asInteger()
+		if err != nil {
+			return nil, err
+		}
+		ar.value = insertArrayValue(ar.value, idx, values[0])
+
+		return ar, nil
+	case "前增":
+		if err := validateExactParams(values, "any"); err != nil {
+			return nil, err
+		}
+		ar.value = insertArrayValue(ar.value, 0, values[0])
+		return ar, nil
+	case "后增":
+		if err := validateExactParams(values, "any"); err != nil {
+			return nil, err
+		}
+		ar.value = insertArrayValue(ar.value, len(ar.value), values[0])
+		return ar, nil
+	case "左移":
+		v, newData := shiftArrayValue(ar.value, true)
+		ar.value = newData
+		return v, nil
+	case "右移":
+		v, newData := shiftArrayValue(ar.value, false)
+		ar.value = newData
+		return v, nil
 	}
 	return nil, error.MethodNotFound(name)
 }
 
 ////// method handlers
-var addValueHandler = ClosureRef{
-	ParamHandler: validateExactParams(&Array{}, nil, NewDecimalFromInt(0, 0)),
-	Executor: func(ctx *Context, values []Value) (Value, *error.Error) {
-		var result = []Value{}
-		// VALUES: <array>, <insertValue>, <index>
-		//
-		// since param types has been validated before pass-in
-		// we can trust types here
-		vd, _ := values[2].(*Decimal)
-		vint, err := vd.asInteger()
-		if err != nil {
-			return nil, err
-		}
+func insertArrayValue(target []Value, idx int, insertItem Value) []Value {
+	result := []Value{}
 
-		arr, _ := values[0].(*Array)
-		if vint >= len(arr.value) {
-			result = append(arr.value, values[1])
-			arr.value = result
-			return NewArray(result), nil
-		} else if vint >= 0 {
-			result = append(result, arr.value[:vint]...)
-			result = append(result, values[1])
-			result = append(result, arr.value[vint:]...)
-			arr.value = result
-			return NewArray(result), nil
-		} else {
-			newIdx := len(arr.value) + vint
+	if idx >= len(target) {
+		result = append(target, insertItem)
+		return result
+	}
 
-			result = append(result, arr.value[:newIdx]...)
-			result = append(result, values[1])
-			result = append(result, arr.value[newIdx:]...)
+	if idx < 0 {
+		idx = len(target) + idx
+	}
+	result = append(result, target[:idx]...)
+	result = append(result, insertItem)
+	result = append(result, target[idx:]...)
+	return result
+}
 
-			arr.value = result
-			return NewArray(result), nil
-		}
-	},
+func shiftArrayValue(target []Value, left bool) (Value, []Value) {
+	if len(target) == 0 {
+		return NewNull(), []Value{}
+	}
+	if left == true {
+		return target[0], target[1:]
+	}
+	// shift right
+	lastIdx := len(target) - 1
+	return target[lastIdx], target[:lastIdx]
 }

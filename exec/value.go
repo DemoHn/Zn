@@ -1,8 +1,6 @@
 package exec
 
 import (
-	"reflect"
-
 	"github.com/DemoHn/Zn/error"
 	"github.com/DemoHn/Zn/syntax"
 )
@@ -209,24 +207,58 @@ func (cr *ClassRef) Construct(ctx *Context, params []Value) (Value, *error.Error
 
 //// param validators
 
-// validateExactParams is a function wrapper that returns a validte function
-// which asserts each param's type
-func validateExactParams(types ...Value) funcExecutor {
-	executor := func(ctx *Context, values []Value) (Value, *error.Error) {
-		if len(values) != len(types) {
-			return nil, error.ExactParamsError(len(types))
-		}
-		for idx, v := range values {
-			if types[idx] == nil {
-				continue
-			}
-
-			if reflect.TypeOf(v) != reflect.TypeOf(types[idx]) {
-				return nil, error.InvalidParamType()
-			}
-		}
-		return nil, nil
+// validateExactParams is a helper function that asserts input params type where each parameter
+// should exactly match the list of typeStr.
+// valid typeStr are one of the followings:
+//
+// 1. decimal  --> *Decimal
+// 2. string   --> *String
+// 3. array    --> *Array
+// 4. hashmap  --> *HashMap
+// 5. bool     --> *Bool
+// 6. object   --> *Object
+// 7. function --> *Function
+// 8. any      --> any value type
+func validateExactParams(values []Value, typeStr ...string) *error.Error {
+	if len(values) != len(typeStr) {
+		return error.ExactParamsError(len(typeStr))
 	}
+	for idx, v := range values {
+		valid := true
+		switch typeStr[idx] {
+		case "decimal":
+			if _, ok := v.(*Decimal); !ok {
+				valid = false
+			}
+		case "string":
+			if _, ok := v.(*String); !ok {
+				valid = false
+			}
+		case "array":
+			if _, ok := v.(*Array); !ok {
+				valid = false
+			}
+		case "hashmap":
+			if _, ok := v.(*HashMap); !ok {
+				valid = false
+			}
+		case "bool":
+			if _, ok := v.(*Bool); !ok {
+				valid = false
+			}
+		case "object":
+			if _, ok := v.(*Object); !ok {
+				valid = false
+			}
+		case "function":
+			if _, ok := v.(*Function); !ok {
+				valid = false
+			}
+		}
 
-	return executor
+		if valid == false {
+			return error.InvalidParamType(typeStr[idx])
+		}
+	}
+	return nil
 }
