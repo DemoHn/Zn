@@ -224,41 +224,59 @@ func validateExactParams(values []Value, typeStr ...string) *error.Error {
 		return error.ExactParamsError(len(typeStr))
 	}
 	for idx, v := range values {
-		valid := true
-		switch typeStr[idx] {
-		case "decimal":
-			if _, ok := v.(*Decimal); !ok {
-				valid = false
-			}
-		case "string":
-			if _, ok := v.(*String); !ok {
-				valid = false
-			}
-		case "array":
-			if _, ok := v.(*Array); !ok {
-				valid = false
-			}
-		case "hashmap":
-			if _, ok := v.(*HashMap); !ok {
-				valid = false
-			}
-		case "bool":
-			if _, ok := v.(*Bool); !ok {
-				valid = false
-			}
-		case "object":
-			if _, ok := v.(*Object); !ok {
-				valid = false
-			}
-		case "function":
-			if _, ok := v.(*Function); !ok {
-				valid = false
-			}
+		if err := validateOneParam(v, typeStr[idx]); err != nil {
+			return err
 		}
+	}
+	return nil
+}
 
-		if valid == false {
-			return error.InvalidParamType(typeStr[idx])
+// validateAllParams doesn't limit the length of input values; instead, it requires all the parameters
+// to have same value type denoted by `typeStr`
+// e.g. validateAllParams([]Value{“1”, “2”, “3”}, "string")
+func validateAllParams(values []Value, typeStr string) *error.Error {
+	for _, v := range values {
+		if err := validateOneParam(v, typeStr); err != nil {
+			return err
 		}
+	}
+	return nil
+}
+
+func validateOneParam(v Value, typeStr string) *error.Error {
+	valid := true
+	switch typeStr {
+	case "decimal":
+		if _, ok := v.(*Decimal); !ok {
+			valid = false
+		}
+	case "string":
+		if _, ok := v.(*String); !ok {
+			valid = false
+		}
+	case "array":
+		if _, ok := v.(*Array); !ok {
+			valid = false
+		}
+	case "hashmap":
+		if _, ok := v.(*HashMap); !ok {
+			valid = false
+		}
+	case "bool":
+		if _, ok := v.(*Bool); !ok {
+			valid = false
+		}
+	case "object":
+		if _, ok := v.(*Object); !ok {
+			valid = false
+		}
+	case "function":
+		if _, ok := v.(*Function); !ok {
+			valid = false
+		}
+	}
+	if valid == false {
+		return error.InvalidParamType(typeStr)
 	}
 	return nil
 }

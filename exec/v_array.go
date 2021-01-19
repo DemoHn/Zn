@@ -1,6 +1,8 @@
 package exec
 
 import (
+	"strings"
+
 	"github.com/DemoHn/Zn/error"
 )
 
@@ -83,7 +85,7 @@ func (ar *Array) ExecMethod(ctx *Context, name string, values []Value) (Value, *
 		if err := validateExactParams(values, "any", "decimal"); err != nil {
 			return nil, err
 		}
-		v, _ := values[1].(*Decimal)
+		v := values[1].(*Decimal)
 		idx, err := v.asInteger()
 		if err != nil {
 			return nil, err
@@ -111,6 +113,24 @@ func (ar *Array) ExecMethod(ctx *Context, name string, values []Value) (Value, *
 		v, newData := shiftArrayValue(ar.value, false)
 		ar.value = newData
 		return v, nil
+	case "连接":
+		// validate input array
+		if err := validateAllParams(ar.value, "string"); err != nil {
+			return nil, err
+		}
+		if err := validateExactParams(values, "string"); err != nil {
+			return nil, err
+		}
+		var strArr = []string{}
+		for _, v := range ar.value {
+			item := v.(*String).value
+			strArr = append(strArr, item)
+		}
+
+		connector := values[0].(*String).value
+		finalStr := strings.Join(strArr, connector)
+
+		return NewString(finalStr), nil
 	}
 	return nil, error.MethodNotFound(name)
 }
