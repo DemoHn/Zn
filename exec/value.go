@@ -1,6 +1,8 @@
 package exec
 
 import (
+	"regexp"
+
 	"github.com/DemoHn/Zn/error"
 	"github.com/DemoHn/Zn/syntax"
 )
@@ -245,9 +247,30 @@ func validateExactParams(values []Value, typeStr ...string) *error.Error {
 // ["decimal", "bool", "string*"] means the FIRST param is a decimal, the SECOND param is a bool, and the FOLLOWING params
 // are all strings (allow 0 string params)
 func validateLeastParams(values []Value, typeStr ...string) *error.Error {
-	for idx, v := range values {
-
+	for idx, t := range typeStr {
+		// find if there's wildcard
+		re := regexp.MustCompile(`(\w+)(\*|\+)?`)
+		matches := re.FindStringSubmatch(t)
+		// match: [_, name, wildcard]
+		switch matches[2] {
+		// matches 0 or more params
+		case "*", "+":
+			if matches[2] == "+" && idx > len(values) {
+				return error.NewErrorSLOT("通配符需要至少一个参数")
+			}
+			for i := idx; i < len(values); i++ {
+				if err := validateOneParam(values[i], matches[1]); err != nil {
+					return err
+				}
+			}
+			break // "break" HERE is to break the outer for-loop!
+		default:
+			if err := validateOneParam(values[idx], t); err != nil {
+				return err
+			}
+		}
 	}
+	return nil
 }
 
 // validateAllParams doesn't limit the length of input values; instead, it requires all the parameters
