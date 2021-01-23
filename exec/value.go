@@ -231,6 +231,25 @@ func validateExactParams(values []Value, typeStr ...string) *error.Error {
 	return nil
 }
 
+// validateLeastParams is a helper function similar to validateExactParams(),
+// however, it handles the situation that target params are variadic, like
+// [int, int, string...], the length of target params varies from 0~N.
+//
+// To validate variadic params, we introduce wildcard (* or +) at the end of typeStr to
+// mark variadic part, like "string+", "bool*"
+//
+// e.g.:
+// ["decimal", "string+"] means the FIRST param is a decimal, and the FOLLOWING params
+// are all strings (must have ONE string param)
+//
+// ["decimal", "bool", "string*"] means the FIRST param is a decimal, the SECOND param is a bool, and the FOLLOWING params
+// are all strings (allow 0 string params)
+func validateLeastParams(values []Value, typeStr ...string) *error.Error {
+	for idx, v := range values {
+
+	}
+}
+
 // validateAllParams doesn't limit the length of input values; instead, it requires all the parameters
 // to have same value type denoted by `typeStr`
 // e.g. validateAllParams([]Value{“1”, “2”, “3”}, "string")
