@@ -29,15 +29,13 @@ var displayExecutor = func(ctx *Context, params []Value) (Value, *error.Error) {
 // （递增）方法的执行逻辑
 var addValueExecutor = func(ctx *Context, params []Value) (Value, *error.Error) {
 	var decimals = []Decimal{}
-	if len(params) == 0 {
-		return nil, error.LeastParamsError(1)
+
+	if err := validateLeastParams(params, "decimal+"); err != nil {
+		return nil, err
 	}
 	// validate types
 	for _, param := range params {
-		vparam, ok := param.(*Decimal)
-		if !ok {
-			return nil, error.InvalidParamType("decimal")
-		}
+		vparam := param.(*Decimal)
 		decimals = append(decimals, *vparam)
 	}
 
@@ -52,15 +50,13 @@ var addValueExecutor = func(ctx *Context, params []Value) (Value, *error.Error) 
 // （递减）方法的执行逻辑
 var subValueExecutor = func(ctx *Context, params []Value) (Value, *error.Error) {
 	var decimals = []Decimal{}
-	if len(params) == 0 {
-		return nil, error.LeastParamsError(1)
+
+	if err := validateLeastParams(params, "decimal+"); err != nil {
+		return nil, err
 	}
 	// validate types
 	for _, param := range params {
-		vparam, ok := param.(*Decimal)
-		if !ok {
-			return nil, error.InvalidParamType("decimal")
-		}
+		vparam := param.(*Decimal)
 		decimals = append(decimals, *vparam)
 	}
 
@@ -74,15 +70,13 @@ var subValueExecutor = func(ctx *Context, params []Value) (Value, *error.Error) 
 
 var mulValueExecutor = func(ctx *Context, params []Value) (Value, *error.Error) {
 	var decimals = []Decimal{}
-	if len(params) == 0 {
-		return nil, error.LeastParamsError(1)
+
+	if err := validateLeastParams(params, "decimal+"); err != nil {
+		return nil, err
 	}
 	// validate types
 	for _, param := range params {
-		vparam, ok := param.(*Decimal)
-		if !ok {
-			return nil, error.InvalidParamType("decimal")
-		}
+		vparam := param.(*Decimal)
 		decimals = append(decimals, *vparam)
 	}
 
@@ -96,15 +90,13 @@ var mulValueExecutor = func(ctx *Context, params []Value) (Value, *error.Error) 
 
 var divValueExecutor = func(ctx *Context, params []Value) (Value, *error.Error) {
 	var decimals = []Decimal{}
-	if len(params) == 0 {
-		return nil, error.LeastParamsError(1)
+
+	if err := validateLeastParams(params, "decimal+"); err != nil {
+		return nil, err
 	}
 	// validate types
 	for _, param := range params {
-		vparam, ok := param.(*Decimal)
-		if !ok {
-			return nil, error.InvalidParamType("decimal")
-		}
+		vparam := param.(*Decimal)
 		decimals = append(decimals, *vparam)
 	}
 	if len(decimals) == 1 {

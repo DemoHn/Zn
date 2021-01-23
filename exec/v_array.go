@@ -131,6 +131,49 @@ func (ar *Array) ExecMethod(ctx *Context, name string, values []Value) (Value, *
 		finalStr := strings.Join(strArr, connector)
 
 		return NewString(finalStr), nil
+	case "合并":
+		if err := validateAllParams(values, "array"); err != nil {
+			return nil, err
+		}
+
+		result := []Value{}
+		result = append(result, ar.value...)
+		for _, v := range values {
+			varr := v.(*Array).value
+			result = append(result, varr...)
+		}
+		// update new array
+		ar.value = result
+
+		return NewArray(result), nil
+	case "包含":
+		result := false
+		if err := validateExactParams(values, "any"); err != nil {
+			return nil, err
+		}
+		for _, item := range ar.value {
+			if res, err := compareValues(item, values[0], CmpEq); err != nil {
+				return nil, err
+			} else if res == true {
+				result = true
+				break
+			}
+		}
+		return NewBool(result), nil
+	case "寻找":
+		idx := -1
+		if err := validateExactParams(values, "any"); err != nil {
+			return nil, err
+		}
+		for i, item := range ar.value {
+			if res, err := compareValues(item, values[0], CmpEq); err != nil {
+				return nil, err
+			} else if res == true {
+				idx = i
+				break
+			}
+		}
+		return NewDecimalFromInt(idx, 0), nil
 	}
 	return nil, error.MethodNotFound(name)
 }

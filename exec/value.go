@@ -316,6 +316,8 @@ func validateOneParam(v Value, typeStr string) *error.Error {
 		if _, ok := v.(*Function); !ok {
 			valid = false
 		}
+	case "any":
+		valid = true
 	}
 	if valid == false {
 		return error.InvalidParamType(typeStr)
