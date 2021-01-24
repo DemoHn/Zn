@@ -45,8 +45,8 @@ func (hm *HashMap) GetProperty(ctx *Context, name string) (Value, *error.Error) 
 		return NewArray(strs), nil
 	case "所有值":
 		vals := []Value{}
-		for _, val := range hm.value {
-			vals = append(vals, val)
+		for _, keyName := range hm.keyOrder {
+			vals = append(vals, hm.value[keyName])
 		}
 		return NewArray(vals), nil
 	}
