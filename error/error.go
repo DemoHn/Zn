@@ -234,7 +234,7 @@ const (
 
 // NewErrorSLOT - a tmp placeholder for adding errors quickly while the
 // details has not been thought carefully.
-// 简单来说就是临时错误加个坑位，等到正式写代码的时候再用
+// 简单来说就是临时错误加个坑位，等到正式写代码的时候再将其替换掉
 func NewErrorSLOT(text string) *Error {
 	return &Error{
 		code: 0xFFFE,
