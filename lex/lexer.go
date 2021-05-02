@@ -208,32 +208,8 @@ func isNumber(ch rune) bool {
 const maxIdentifierLength = 32
 
 // @params: ch - input char
-// @params: isFirst - is the first char of identifier
-func isIdentifierChar(ch rune, isFirst bool) bool {
-	// CJK unified ideograph
-	if ch >= 0x4E00 && ch <= 0x9FFF {
-		return true
-	}
-	// 〇, _
-	if ch == 0x3007 || ch == '_' {
-		return true
-	}
-	// A-Z
-	if ch >= 'A' && ch <= 'Z' {
-		return true
-	}
-	if ch >= 'a' && ch <= 'z' {
-		return true
-	}
-	if !isFirst {
-		if ch >= '0' && ch <= '9' {
-			return true
-		}
-		if util.Contains(ch, []rune{'*', '+', '-', '/'}) {
-			return true
-		}
-	}
-	return false
+func isIdentifierChar(ch rune) bool {
+	return idInRange(ch)
 }
 
 //// token consts and constructors (without keyword token)
@@ -625,7 +601,6 @@ func (l *Lexer) parseVarQuote(ch rune) (*Token, *error.Error) {
 	l.clearBuffer()
 	rg := newTokenRange(l)
 	// iterate
-	count := 0
 	for {
 		ch = l.next()
 		// we should ensure the following chars to satisfy the condition
@@ -643,12 +618,8 @@ func (l *Lexer) parseVarQuote(ch rune) (*Token, *error.Error) {
 			if isWhiteSpace(ch) {
 				continue
 			}
-			if isIdentifierChar(ch, count == 0) {
+			if isIdentifierChar(ch) {
 				l.pushBuffer(ch)
-				count++
-				if count > maxIdentifierLength {
-					return nil, error.IdentifierExceedLength(maxIdentifierLength)
-				}
 			} else {
 				return nil, error.InvalidIdentifier()
 			}
@@ -855,13 +826,13 @@ func (l *Lexer) consumeWhiteSpace(ch rune) {
 func (l *Lexer) parseIdentifier(ch rune) (*Token, *error.Error) {
 	// setup
 	l.clearBuffer()
-	var count = 0
+
 	var terminators = append([]rune{
 		EOF, CR, LF, LeftQuoteI, LeftQuoteII, LeftQuoteIII,
 		LeftQuoteIV, LeftQuoteV, MiddleDot,
 	}, MarkLeads...)
 
-	if !isIdentifierChar(ch, true) {
+	if !isIdentifierChar(ch) {
 		return nil, error.InvalidIdentifier()
 	}
 
@@ -871,7 +842,6 @@ func (l *Lexer) parseIdentifier(ch rune) (*Token, *error.Error) {
 	rg.setRangeEnd(l)
 	// push first char
 	l.pushBuffer(ch)
-	count++
 	// iterate
 	for {
 		prev := l.cursor
@@ -902,13 +872,9 @@ func (l *Lexer) parseIdentifier(ch rune) (*Token, *error.Error) {
 			return NewIdentifierToken(l.chBuffer, rg), nil
 		}
 
-		if isIdentifierChar(ch, false) {
-			if count >= maxIdentifierLength {
-				return nil, error.IdentifierExceedLength(maxIdentifierLength)
-			}
+		if isIdentifierChar(ch) {
 			l.pushBuffer(ch)
 			rg.setRangeEnd(l)
-			count++
 			continue
 		}
 		return nil, error.InvalidChar(ch)

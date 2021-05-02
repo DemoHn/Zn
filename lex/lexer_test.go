@@ -223,8 +223,11 @@ func TestNextToken_VarQuoteONLY(t *testing.T) {
 		{
 			name:        "invalid quote - number at first",
 			input:       "·123ABC·",
-			expectError: true,
-			errCursor:   1,
+			expectError: false,
+			token: Token{
+				Type:    TypeVarQuote,
+				Literal: []rune("123ABC"),
+			},
 		},
 		{
 			name:        "invalid quote - invalid punctuation",
@@ -233,10 +236,13 @@ func TestNextToken_VarQuoteONLY(t *testing.T) {
 			errCursor:   2,
 		},
 		{
-			name:        "invalid quote - char buffer overflow",
+			name:        "valid quote - long char buffer",
 			input:       "·这是一个很长变量这是一个很长变量这是一个很长变量这是一个很长变量这是一个很长变量·",
-			expectError: true,
-			errCursor:   33,
+			expectError: false,
+			token: Token{
+				Type:    TypeVarQuote,
+				Literal: []rune("这是一个很长变量这是一个很长变量这是一个很长变量这是一个很长变量这是一个很长变量"),
+			},
 		},
 		{
 			name:        "invalid quote - CR, LFs are not allowed inside quotes",
