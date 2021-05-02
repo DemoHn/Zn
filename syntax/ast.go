@@ -536,11 +536,15 @@ func ParseExpression(p *Parser, asVarAssign bool) Expression {
 //       -> 之  CallE' IdxE'
 //       ->
 //
-// CallE' -> ID
-//        -> （ID：E，E，...）
-//        -> 以 E，E，... （ID：E，E，...）
+// CallE' -> FuncID
+//        -> （FuncID：E，E，...）
+//        -> 以 E，E，... （FuncID：E，E，...）
 //
 // PropE' -> ID
+//        -> Number (as string)
+//
+// FuncID -> ID
+//        -> Number (as string)
 func ParseMemberExpr(p *Parser) Expression {
 	// internal functions
 	var calleeTailParser func(bool, rootTypeE, Expression) *MemberExpr
@@ -551,6 +555,7 @@ func ParseMemberExpr(p *Parser) Expression {
 		var validTypes = []lex.TokenType{
 			lex.TypeIdentifier,
 			lex.TypeVarQuote,
+			lex.TypeNumber,
 			lex.TypeFuncQuoteL,
 			lex.TypeVarOneW,
 		}
@@ -572,9 +577,8 @@ func ParseMemberExpr(p *Parser) Expression {
 		match, tk := p.tryConsume(validTypes...)
 		if match {
 			switch tk.Type {
-			case lex.TypeIdentifier, lex.TypeVarQuote:
-				id := newID(tk)
-				id.SetCurrentLine(tk)
+			case lex.TypeIdentifier, lex.TypeVarQuote, lex.TypeNumber:
+				id := parseFuncID(p)
 				memberExpr.MemberType = MemberID
 				memberExpr.MemberID = id
 			case lex.TypeFuncQuoteL:
@@ -658,12 +662,15 @@ func ParseMemberExpr(p *Parser) Expression {
 //
 // CFG:
 // BsE   -> { E }
-//       -> （ ID ： E，E，...）
-//       -> 以 E （ ID ： E，E，...）
+//       -> （ FuncID ： E，E，...）
+//       -> 以 E （ FuncID ： E，E，...）
 //       -> ID
 //       -> Number
 //       -> String
 //       -> ArrayList
+//
+// FuncID -> ID
+//        -> Number (as string)
 func ParseBasicExpr(p *Parser) Expression {
 	var validTypes = []lex.TokenType{
 		lex.TypeIdentifier,
@@ -814,16 +821,19 @@ func tryParseEmptyMapList(p *Parser) (bool, UnionMapList) {
 // ParseFuncCallExpr - yield FuncCallExpr node
 //
 // CFG:
-// FuncCallExpr  -> （ ID ： commaList ）
+// FuncCallExpr  -> （ FuncID ： commaList ）
 // commaList     -> E commaListTail
 // commaListTail -> ， E commaListTail
 //               ->
+//
+// FuncID   -> ID
+//          -> Number
 func ParseFuncCallExpr(p *Parser) *FuncCallExpr {
 	var callExpr = &FuncCallExpr{
 		Params: []Expression{},
 	}
 	// #1. parse ID
-	callExpr.FuncName = parseID(p)
+	callExpr.FuncName = parseFuncID(p)
 	// #2. parse colon (maybe there's no params)
 	match, _ := p.tryConsume(lex.TypeFuncCall)
 	if match {
@@ -844,7 +854,10 @@ func ParseFuncCallExpr(p *Parser) *FuncCallExpr {
 // CFG:
 //
 // FuncExpr -> 以 Expr，Expr， ... RawFuncExpr
-// RawFuncExpr -> （ ID ： commaList ）
+// RawFuncExpr -> （ FuncID ： commaList ）
+//
+// FuncID  -> ID
+//         -> Number
 func ParseVarOneLeadExpr(p *Parser) *FuncCallExpr {
 	// #1. parse exprs
 	exprList := []Expression{}
@@ -1418,6 +1431,15 @@ func parsePropertyDeclareStmt(p *Parser) *PropertyDeclareStmt {
 //// parse helpers
 func parseID(p *Parser) *ID {
 	match, tk := p.tryConsume(lex.TypeVarQuote, lex.TypeIdentifier)
+	if !match {
+		panic(error.InvalidSyntaxCurr())
+	}
+	return newID(tk)
+}
+
+// parseFuncID - allow parsing number (as string)
+func parseFuncID(p *Parser) *ID {
+	match, tk := p.tryConsume(lex.TypeVarQuote, lex.TypeIdentifier, lex.TypeNumber)
 	if !match {
 		panic(error.InvalidSyntaxCurr())
 	}

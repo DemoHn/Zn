@@ -204,9 +204,6 @@ func isNumber(ch rune) bool {
 	return (ch >= '0' && ch <= '9')
 }
 
-//// 7. identifiers
-const maxIdentifierLength = 32
-
 // @params: ch - input char
 func isIdentifierChar(ch rune) bool {
 	return idInRange(ch)
@@ -221,7 +218,7 @@ const (
 	TypeSpace      TokenType = 1 // 空格类Token 备用
 	TypeString     TokenType = 2 // 字符串
 	TypeVarQuote   TokenType = 3
-	TypeNumber     TokenType = 4 // 数值
+	TypeNumber     TokenType = 4 // 数值（标识符的一种特殊情况）
 	TypeIdentifier TokenType = 5 // 标识符
 
 	TypeComment     TokenType = 10 // 注：
