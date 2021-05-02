@@ -15,8 +15,6 @@ const (
 	maxSciDigitCount   = 8  // 2.XXXXXXXX *10^ N
 )
 
-var defaultDecimalClassRef *ClassRef
-
 // Decimal - decimal number 「数值」型
 type Decimal struct {
 	// decimal internal properties
@@ -74,11 +72,11 @@ func (zd *Decimal) String() string {
 	}
 	// CASE IV: sci format (1.23*10^-5)
 	if digitCount > maxSciDigitCount {
-		return fmt.Sprintf("%s%s.%s⏨%d", sflag, txt[0:1], txt[1:maxSciDigitCount+1], pointPos-1)
+		return fmt.Sprintf("%s%s.%s*10^%d", sflag, txt[0:1], txt[1:maxSciDigitCount+1], pointPos-1)
 	} else if digitCount > 1 {
-		return fmt.Sprintf("%s%s.%s⏨%d", sflag, txt[0:1], txt[1:], pointPos-1)
+		return fmt.Sprintf("%s%s.%s*10^%d", sflag, txt[0:1], txt[1:], pointPos-1)
 	}
-	return fmt.Sprintf("%s%s⏨%d", sflag, txt[0:1], pointPos-1)
+	return fmt.Sprintf("%s%s*10^%d", sflag, txt[0:1], pointPos-1)
 }
 
 // SetValue - set decimal value from raw string
@@ -197,6 +195,12 @@ func (zd *Decimal) GetProperty(ctx *Context, name string) (Value, *error.Error) 
 	switch name {
 	case "文本*":
 		return NewString(zd.String()), nil
+	case "+1":
+		v := ctx.arith.Add(*zd, *NewDecimalFromInt(1, 0))
+		return &v, nil
+	case "-1":
+		v := ctx.arith.Add(*zd, *NewDecimalFromInt(-1, 0))
+		return &v, nil
 	}
 	return nil, error.PropertyNotFound(name)
 }
@@ -208,5 +212,15 @@ func (zd *Decimal) SetProperty(ctx *Context, name string, value Value) *error.Er
 
 // ExecMethod - a null value does not have ANY methods.
 func (zd *Decimal) ExecMethod(ctx *Context, name string, values []Value) (Value, *error.Error) {
+	switch name {
+	case "+1":
+		v := ctx.arith.Add(*zd, *NewDecimalFromInt(1, 0))
+		*zd = v
+		return &v, nil
+	case "-1":
+		v := ctx.arith.Add(*zd, *NewDecimalFromInt(-1, 0))
+		*zd = v
+		return &v, nil
+	}
 	return nil, error.MethodNotFound(name)
 }
