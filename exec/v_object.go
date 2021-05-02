@@ -35,7 +35,9 @@ func (zo *Object) GetProperty(ctx *Context, name string) (Value, *error.Error) {
 		return nil, error.PropertyNotFound(name)
 	}
 	// execute computed props to get property result
-	return cprop.Exec(ctx, []Value{})
+	fctx := ctx.DuplicateNewScope()
+	fctx.scope.thisValue = zo
+	return cprop.Exec(fctx, []Value{})
 }
 
 // SetProperty -

@@ -579,7 +579,8 @@ func ParseMemberExpr(p *Parser) Expression {
 		if match {
 			switch tk.Type {
 			case lex.TypeIdentifier, lex.TypeVarQuote, lex.TypeNumber:
-				id := parseFuncID(p)
+				id := newID(tk)
+				id.SetCurrentLine(tk)
 				memberExpr.MemberType = MemberID
 				memberExpr.MemberID = id
 			case lex.TypeFuncQuoteL:
