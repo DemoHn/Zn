@@ -571,6 +571,7 @@ func ParseMemberExpr(p *Parser) Expression {
 			validTypes = []lex.TokenType{
 				lex.TypeIdentifier,
 				lex.TypeVarQuote,
+				lex.TypeNumber,
 			}
 		}
 
@@ -650,6 +651,7 @@ func ParseMemberExpr(p *Parser) Expression {
 		if tk.Type == lex.TypeObjThisW { // 其
 			rootType = RootTypeProp
 		}
+
 		newExpr := calleeTailParser(false, rootType, nil)
 		return memberTailParser(newExpr)
 	}
@@ -1162,7 +1164,7 @@ func ParseFunctionDeclareStmt(p *Parser) *FunctionDeclareStmt {
 	var hState = stateParamList
 
 	// #1. try to parse ID
-	fdStmt.FuncName = parseID(p)
+	fdStmt.FuncName = parseFuncID(p)
 	// #2. try to parse question mark
 	p.consume(lex.TypeFuncDeclare)
 
@@ -1212,7 +1214,7 @@ func ParseGetterDeclareStmt(p *Parser) *GetterDeclareStmt {
 	var fdStmt = &GetterDeclareStmt{}
 
 	// #1. try to parse ID
-	fdStmt.GetterName = parseID(p)
+	fdStmt.GetterName = parseFuncID(p)
 	// #2. try to parse question mark
 	p.consume(lex.TypeFuncDeclare)
 
@@ -1415,7 +1417,7 @@ func parseConstructor(p *Parser) []*ParamItem {
 // PropertyDeclareStmt -> 其 ID 为 Expression
 func parsePropertyDeclareStmt(p *Parser) *PropertyDeclareStmt {
 	// #1. parse ID
-	idItem := parseID(p)
+	idItem := parseFuncID(p)
 	// consume 为
 	p.consume(lex.TypeLogicYesW)
 
