@@ -22,7 +22,7 @@ func TestIdInRange(t *testing.T) {
 		},
 		{
 			name:   "dot and underscore",
-			ids:    []rune{'.', '^', '_'},
+			ids:    []rune{'.', '^', '_', '%', '$'},
 			expect: true,
 		},
 		{
@@ -67,7 +67,7 @@ func TestIdInRange(t *testing.T) {
 		},
 		{
 			name:   "other punctuators",
-			ids:    []rune{',', '@', '$'},
+			ids:    []rune{',', '@'},
 			expect: false,
 		},
 		{

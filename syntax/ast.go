@@ -723,7 +723,11 @@ func ParseBasicExpr(p *Parser) Expression {
 //           ->
 // ExprTail  -> ， Expr ExprTail
 //           ->
-// HashMapList -> Expr == Expr， Expr2 == Expr2， ...
+// HashMapList -> KeyID == Expr， KeyID2 == Expr2， ...
+//
+// KeyID     -> ID
+//           -> String
+//           -> Number
 func ParseArrayExpr(p *Parser) UnionMapList {
 	// #0. try to match if empty
 	if match, emptyExpr := tryParseEmptyMapList(p); match {

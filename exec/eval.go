@@ -616,20 +616,34 @@ func evalPrimeExpr(ctx *Context, expr syntax.Expression) (Value, *error.Error) {
 	case *syntax.HashMapExpr:
 		znPairs := []KVPair{}
 		for _, item := range e.KVPair {
-			expr, err := evalExpression(ctx, item.Key)
-			if err != nil {
-				return nil, err
+			// the key of KVPair MUST BE one of the following types
+			//   - Number (its literal as key)
+			//   - ID (its literal as key)
+			//   - String
+			// Other types are NOT ACCEPTED.
+			// Specially, we regard all those exprs as literals, i.e.
+			// Number 123    <==> “123”
+			// Number 1.5*10^8 <==> “1.5*10^8”
+			// ID 标识符      <==> “标识符”
+			// String “世界”  <==> “世界”
+			var exprKey string
+			switch k := item.Key.(type) {
+			case *syntax.String:
+				exprKey = k.GetLiteral()
+			case *syntax.ID:
+				exprKey = k.GetLiteral()
+			case *syntax.Number:
+				exprKey = k.GetLiteral()
+			default:
+				return nil, error.InvalidExprType("string", "decimal", "id")
 			}
-			exprKey, ok := expr.(*String)
-			if !ok {
-				return nil, error.InvalidExprType("string")
-			}
+
 			exprVal, err := evalExpression(ctx, item.Value)
 			if err != nil {
 				return nil, err
 			}
 			znPairs = append(znPairs, KVPair{
-				Key:   exprKey.value,
+				Key:   exprKey,
 				Value: exprVal,
 			})
 		}
