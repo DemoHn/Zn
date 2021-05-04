@@ -40,6 +40,8 @@ ZAI     再
 BIAN    遍
 LI      历
 HENG    恒
+DAO     导
+RUy     入
 ================================
 # Part II： 定义每一个关键词及其对应的 tokenType。
 # 使用说明：
@@ -74,3 +76,4 @@ ObjConstructW   73      是为
 LogicEqualW     74      等于
 StaticSelfW     75      此之
 IteratorW       76      遍历
+ImportW         77      导入
