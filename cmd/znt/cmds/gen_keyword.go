@@ -363,6 +363,13 @@ func genKeywordParsingLogic(leadsMap map[rune][]int, keywordMap map[int]kwItem, 
 				})
 			}
 		}
+		// sort nestMap.twoChars & nestMap.threeChars
+		sort.Slice(nestMap.twoChars, func(i, j int) bool {
+			return strings.Compare(nestMap.twoChars[i][0], nestMap.twoChars[j][0]) < 0
+		})
+		sort.Slice(nestMap.threeChars, func(i, j int) bool {
+			return strings.Compare(nestMap.threeChars[i][0], nestMap.threeChars[j][0]) < 0
+		})
 
 		// generate blocks
 		// CASE I: only one char valid

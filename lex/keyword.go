@@ -166,15 +166,15 @@ func (l *Lexer) parseKeyword(ch rune, moveForward bool) (bool, *Token) {
 		if l.peek() == GlyphWEI {
 			wordLen = 2
 			tk = NewKeywordToken(TypeLogicNotW)
-		} else if l.peek() == GlyphXIAO && l.peek2() == GlyphYU {
-			wordLen = 3
-			tk = NewKeywordToken(TypeLogicGteW)
 		} else if l.peek() == GlyphDA && l.peek2() == GlyphYU {
 			wordLen = 3
 			tk = NewKeywordToken(TypeLogicLteW)
 		} else if l.peek() == GlyphDENG && l.peek2() == GlyphYU {
 			wordLen = 3
 			tk = NewKeywordToken(TypeLogicNotEqW)
+		} else if l.peek() == GlyphXIAO && l.peek2() == GlyphYU {
+			wordLen = 3
+			tk = NewKeywordToken(TypeLogicGteW)
 		} else {
 			return false, nil
 		}
@@ -219,12 +219,12 @@ func (l *Lexer) parseKeyword(ch rune, moveForward bool) (bool, *Token) {
 			return false, nil
 		}
 	case GlyphRU:
-		if l.peek() == GlyphHE {
-			wordLen = 2
-			tk = NewKeywordToken(TypeFuncW)
-		} else if l.peek() == GlyphGUO {
+		if l.peek() == GlyphGUO {
 			wordLen = 2
 			tk = NewKeywordToken(TypeCondW)
+		} else if l.peek() == GlyphHE {
+			wordLen = 2
+			tk = NewKeywordToken(TypeFuncW)
 		} else {
 			return false, nil
 		}
