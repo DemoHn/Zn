@@ -445,7 +445,7 @@ func ParseExpression(p *Parser, asVarAssign bool) Expression {
 			lex.TypeLogicLtW,
 			lex.TypeLogicLteW,
 		},
-		{lex.TypeLogicYesW, lex.TypeLogicNotW},
+		{lex.TypeLogicYesW, lex.TypeLogicYesIIW, lex.TypeLogicNotW},
 	}
 	var logicTypeMap = map[lex.TokenType]LogicTypeE{
 		lex.TypeLogicOrW:    LogicOR,
@@ -458,6 +458,7 @@ func ParseExpression(p *Parser, asVarAssign bool) Expression {
 		lex.TypeLogicLteW:   LogicLTE,
 		lex.TypeLogicNotW:   LogicNEQ,
 		lex.TypeLogicYesW:   LogicEQ,
+		lex.TypeLogicYesIIW: LogicEQ,
 	}
 	var logicAllowTails = [4]bool{true, true, false, false}
 
@@ -481,7 +482,7 @@ func ParseExpression(p *Parser, asVarAssign bool) Expression {
 		if !match {
 			return leftExpr
 		}
-		if tk.Type == lex.TypeLogicYesW && asVarAssign {
+		if (tk.Type == lex.TypeLogicYesW || tk.Type == lex.TypeLogicYesIIW) && asVarAssign {
 			if match2, _ := p.tryConsume(lex.TypeObjRef); match2 {
 				refMarkForLogicYes = true
 			}
@@ -490,7 +491,7 @@ func ParseExpression(p *Parser, asVarAssign bool) Expression {
 		rightExpr := logicItemParser(idx + 1)
 
 		// compose logic expr
-		if tk.Type == lex.TypeLogicYesW && asVarAssign {
+		if (tk.Type == lex.TypeLogicYesW || tk.Type == lex.TypeLogicYesIIW) && asVarAssign {
 			// if 为 (LogicYes) is interpreted as varAssign
 			// usually for normal expressions (except 如果，每当 expr)
 			vid, ok := leftExpr.(Assignable)
@@ -605,7 +606,7 @@ func ParseMemberExpr(p *Parser) Expression {
 		// default rootType is RootTypeExpr
 		mExpr.RootType = RootTypeExpr
 
-		match, tk := p.tryConsume(lex.TypeMapHash, lex.TypeMapQHash, lex.TypeObjDotW)
+		match, tk := p.tryConsume(lex.TypeMapHash, lex.TypeMapQHash, lex.TypeObjDotW, lex.TypeObjDotIIW)
 		if !match {
 			return expr
 		}
@@ -636,7 +637,7 @@ func ParseMemberExpr(p *Parser) Expression {
 			p.consume(lex.TypeStmtQuoteR)
 
 			return memberTailParser(mExpr)
-		case lex.TypeObjDotW:
+		case lex.TypeObjDotW, lex.TypeObjDotIIW:
 			newExpr := calleeTailParser(true, RootTypeExpr, expr)
 			// replace current memberExpr as newExpr
 			return memberTailParser(newExpr)
@@ -941,6 +942,7 @@ func parseVDAssignPair(p *Parser) VDAssignPair {
 	// parse keyword
 	validKeywords := []lex.TokenType{
 		lex.TypeLogicYesW,
+		lex.TypeLogicYesIIW,
 		lex.TypeAssignConstW,
 		lex.TypeObjNewW,
 	}
@@ -950,7 +952,7 @@ func parseVDAssignPair(p *Parser) VDAssignPair {
 	}
 
 	switch tk.Type {
-	case lex.TypeLogicYesW:
+	case lex.TypeLogicYesW, lex.TypeLogicYesIIW:
 		refMark := false
 		if match, _ := p.tryConsume(lex.TypeObjRef); match {
 			refMark = true
@@ -1423,8 +1425,8 @@ func parseConstructor(p *Parser) []*ParamItem {
 func parsePropertyDeclareStmt(p *Parser) *PropertyDeclareStmt {
 	// #1. parse ID
 	idItem := parseFuncID(p)
-	// consume 为
-	p.consume(lex.TypeLogicYesW)
+	// consume 为 or 是
+	p.consume(lex.TypeLogicYesW, lex.TypeLogicYesIIW)
 
 	// #2. parse expr
 	initExpr := ParseExpression(p, true)
