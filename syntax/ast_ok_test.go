@@ -120,6 +120,17 @@ $PG($BK(
 		expr[]=($NUM(100))
 	))
 ))
+========
+1a. inline one var: 是
+--------
+令某变量是100
+--------
+$PG($BK(
+	$VD($VP(
+		vars[]=($ID(某变量))
+		expr[]=($NUM(100))
+	))
+))
 
 ========
 2. two variables
@@ -442,6 +453,34 @@ $PG($BK(
 				params=()
 			)
 		))		
+	)
+))
+========
+5. if block - 为 as compar instead of var assignment
+--------
+如果A为100：
+    （X+Y：20，30）
+再如B是200：
+    （显示）
+--------
+$PG($BK(
+	$IF(
+		ifExpr=($EQ(L=($ID(A)) R=($NUM(100))))
+		ifBlock=($BK(			
+			$FN(
+				name=($ID(X+Y))
+				params=($NUM(20) $NUM(30))
+			)
+		))
+		otherExpr[]=(
+			$EQ(L=($ID(B)) R=($NUM(200)))
+		)
+		otherBlock[]=($BK(
+			$FN(
+				name=($ID(显示))
+				params=()
+			)
+		))
 	)
 ))
 `
@@ -829,6 +868,26 @@ const classDeclareCasesOK = `
 定义狗：
 	其名为“小黄”
 	其品种为“拉布拉多”
+--------
+$PG($BK(
+	$CLS(
+		name=($ID(狗))
+		properties=(
+			$PD(id=($ID(名)) expr=($STR(小黄)))
+			$PD(id=($ID(品种)) expr=($STR(拉布拉多)))
+		)
+		constructor=()
+		methods=()
+		getters=()
+	)
+))
+
+========
+1a. simplist class definition using 是
+--------
+定义狗：
+	其名是“小黄”
+	其品种是“拉布拉多”
 --------
 $PG($BK(
 	$CLS(
