@@ -235,7 +235,7 @@ func matchColorScheme(tkType lex.TokenType, lastTok *lex.Token) string {
 	case lex.TypeIdentifier:
 		if lastTok != nil {
 			// if lastToken is （ or 之 or 如何, that means the identifier is a member or a function name
-			if lastTok.Type == lex.TypeObjDotW || lastTok.Type == lex.TypeFuncQuoteL || lastTok.Type == lex.TypeFuncW {
+			if lastTok.Type == lex.TypeObjDotW || lastTok.Type == lex.TypeObjDotIIW || lastTok.Type == lex.TypeFuncQuoteL || lastTok.Type == lex.TypeFuncW {
 				colorScheme = csMember
 			}
 		}

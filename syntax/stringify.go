@@ -142,6 +142,12 @@ func StringifyAST(node Node) string {
 		return fmt.Sprintf("$IF(%s)", strings.Join(conds, " "))
 	case *WhileLoopStmt:
 		return fmt.Sprintf("$WL(expr=(%s) block=(%s))", StringifyAST(v.TrueExpr), StringifyAST(v.LoopBlock))
+	case *ImportStmt:
+		itemsStr := []string{}
+		for _, vi := range v.ImportItems {
+			itemsStr = append(itemsStr, StringifyAST(vi))
+		}
+		return fmt.Sprintf("$IM(name=(%s) items=(%s))", StringifyAST(v.ImportName), strings.Join(itemsStr, " "))
 	case *FunctionReturnStmt:
 		return fmt.Sprintf("$RT(%s)", StringifyAST(v.ReturnExpr))
 	case *FunctionDeclareStmt:

@@ -42,12 +42,14 @@ LI      历
 HENG    恒
 DAO     导
 RUy     入
+DE      的
 ================================
 # Part II： 定义每一个关键词及其对应的 tokenType。
 # 使用说明：
 #
 # 类型名    类型ID      关键词
 #
+LogicYesIIW     39      是
 DeclareW        40      令
 LogicYesW       41      为
 AssignConstW    42      恒为
@@ -72,6 +74,7 @@ ObjThisW        65      其
 LogicOrW        69      或
 LogicAndW       70      且
 ObjDotW         71      之
+ObjDotIIW       72      的
 ObjConstructW   73      是为
 LogicEqualW     74      等于
 StaticSelfW     75      此之

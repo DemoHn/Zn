@@ -153,6 +153,22 @@ type IterateStmt struct {
 	IterateBlock *BlockStmt
 }
 
+// ImportStmt - 导入《 ... 》 statement
+type ImportStmt struct {
+	StmtBase
+	ImportLibType libTypeE
+	ImportName    *String
+	ImportItems   []*ID
+}
+
+type libTypeE uint8
+
+// declare import libType enum
+const (
+	// LibTypeStd - standard lib
+	LibTypeStd libTypeE = 1
+)
+
 // BlockStmt -
 type BlockStmt struct {
 	StmtBase
@@ -363,6 +379,7 @@ func ParseStatement(p *Parser) Statement {
 		lex.TypeVarOneW,
 		lex.TypeIteratorW,
 		lex.TypeObjDefineW,
+		lex.TypeImportW,
 	}
 	match, tk := p.tryConsume(validTypes...)
 	if match {
@@ -388,6 +405,8 @@ func ParseStatement(p *Parser) Statement {
 			s = ParseIteratorStmt(p)
 		case lex.TypeObjDefineW:
 			s = ParseClassDeclareStmt(p)
+		case lex.TypeImportW:
+			s = ParseImportStmt(p)
 		}
 		s.SetCurrentLine(tk)
 		return s
@@ -445,7 +464,7 @@ func ParseExpression(p *Parser, asVarAssign bool) Expression {
 			lex.TypeLogicLtW,
 			lex.TypeLogicLteW,
 		},
-		{lex.TypeLogicYesW, lex.TypeLogicNotW},
+		{lex.TypeLogicYesW, lex.TypeLogicYesIIW, lex.TypeLogicNotW},
 	}
 	var logicTypeMap = map[lex.TokenType]LogicTypeE{
 		lex.TypeLogicOrW:    LogicOR,
@@ -458,6 +477,7 @@ func ParseExpression(p *Parser, asVarAssign bool) Expression {
 		lex.TypeLogicLteW:   LogicLTE,
 		lex.TypeLogicNotW:   LogicNEQ,
 		lex.TypeLogicYesW:   LogicEQ,
+		lex.TypeLogicYesIIW: LogicEQ,
 	}
 	var logicAllowTails = [4]bool{true, true, false, false}
 
@@ -481,7 +501,7 @@ func ParseExpression(p *Parser, asVarAssign bool) Expression {
 		if !match {
 			return leftExpr
 		}
-		if tk.Type == lex.TypeLogicYesW && asVarAssign {
+		if (tk.Type == lex.TypeLogicYesW || tk.Type == lex.TypeLogicYesIIW) && asVarAssign {
 			if match2, _ := p.tryConsume(lex.TypeObjRef); match2 {
 				refMarkForLogicYes = true
 			}
@@ -490,7 +510,7 @@ func ParseExpression(p *Parser, asVarAssign bool) Expression {
 		rightExpr := logicItemParser(idx + 1)
 
 		// compose logic expr
-		if tk.Type == lex.TypeLogicYesW && asVarAssign {
+		if (tk.Type == lex.TypeLogicYesW || tk.Type == lex.TypeLogicYesIIW) && asVarAssign {
 			// if 为 (LogicYes) is interpreted as varAssign
 			// usually for normal expressions (except 如果，每当 expr)
 			vid, ok := leftExpr.(Assignable)
@@ -605,7 +625,7 @@ func ParseMemberExpr(p *Parser) Expression {
 		// default rootType is RootTypeExpr
 		mExpr.RootType = RootTypeExpr
 
-		match, tk := p.tryConsume(lex.TypeMapHash, lex.TypeMapQHash, lex.TypeObjDotW)
+		match, tk := p.tryConsume(lex.TypeMapHash, lex.TypeMapQHash, lex.TypeObjDotW, lex.TypeObjDotIIW)
 		if !match {
 			return expr
 		}
@@ -636,7 +656,7 @@ func ParseMemberExpr(p *Parser) Expression {
 			p.consume(lex.TypeStmtQuoteR)
 
 			return memberTailParser(mExpr)
-		case lex.TypeObjDotW:
+		case lex.TypeObjDotW, lex.TypeObjDotIIW:
 			newExpr := calleeTailParser(true, RootTypeExpr, expr)
 			// replace current memberExpr as newExpr
 			return memberTailParser(newExpr)
@@ -941,6 +961,7 @@ func parseVDAssignPair(p *Parser) VDAssignPair {
 	// parse keyword
 	validKeywords := []lex.TokenType{
 		lex.TypeLogicYesW,
+		lex.TypeLogicYesIIW,
 		lex.TypeAssignConstW,
 		lex.TypeObjNewW,
 	}
@@ -950,7 +971,7 @@ func parseVDAssignPair(p *Parser) VDAssignPair {
 	}
 
 	switch tk.Type {
-	case lex.TypeLogicYesW:
+	case lex.TypeLogicYesW, lex.TypeLogicYesIIW:
 		refMark := false
 		if match, _ := p.tryConsume(lex.TypeObjRef); match {
 			refMark = true
@@ -1323,6 +1344,42 @@ func ParseFunctionReturnStmt(p *Parser) *FunctionReturnStmt {
 	}
 }
 
+// ParseImportStmt - parse import statement
+// CFG:
+// ImportStmt  ->  导入 String ImportTail
+//
+// ImportTail  -> 之 ID IDTail
+//             ->
+//
+// IDTail      -> ，ID IDTail
+//             ->
+func ParseImportStmt(p *Parser) *ImportStmt {
+	stmt := &ImportStmt{
+		ImportLibType: LibTypeStd, // 目前只支持标准库的导入
+	}
+	match, tk := p.tryConsume(lex.TypeString)
+	if !match {
+		panic(error.InvalidSyntaxCurr())
+	}
+	// currently, string must be starts with '《' (LeftQuoteI)
+	if tk.Literal[0] != lex.LeftQuoteI {
+		panic(error.InvalidSyntaxCurr())
+	}
+	stmt.ImportName = newString(tk)
+
+	match2, _ := p.tryConsume(lex.TypeObjDotW, lex.TypeObjDotIIW)
+	if !match2 {
+		return stmt
+	}
+	// if match 导入 xxx 之 yyy，zzz
+	parseCommaList(p, func() {
+		tk := parseFuncID(p)
+		stmt.ImportItems = append(stmt.ImportItems, tk)
+	})
+
+	return stmt
+}
+
 // ParseClassDeclareStmt - define class structure
 // A typical class may look like this:
 //
@@ -1423,8 +1480,8 @@ func parseConstructor(p *Parser) []*ParamItem {
 func parsePropertyDeclareStmt(p *Parser) *PropertyDeclareStmt {
 	// #1. parse ID
 	idItem := parseFuncID(p)
-	// consume 为
-	p.consume(lex.TypeLogicYesW)
+	// consume 为 or 是
+	p.consume(lex.TypeLogicYesW, lex.TypeLogicYesIIW)
 
 	// #2. parse expr
 	initExpr := ParseExpression(p, true)
