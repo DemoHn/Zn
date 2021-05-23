@@ -14,6 +14,7 @@ var testFailSuites = []string{
 	funcCallCasesFAIL,
 	arrayListCasesFAIL,
 	funcDeclareCasesFAIL,
+	importStmtCasesFAIL,
 }
 
 const varDeclCasesFAIL = `
@@ -252,6 +253,23 @@ code=2250 line=3 col=0
     已知A，&&B	
 --------
 code=2250 line=2 col=4
+`
+
+const importStmtCasesFAIL = `
+========
+1. invalid quote
+--------
+导入“ASDF”
+--------
+code=2250 line=1 col=2
+
+========
+2. incomplete 之
+--------
+导入《ASDF》 之
+令代码为空
+--------
+code=2250 line=1 col=9
 `
 
 type astFailCase struct {

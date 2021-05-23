@@ -818,7 +818,6 @@ $PG($BK(
 $PG($BK(
 	$IM(name=($STR(对象)) items=($ID(名称) $ID(内容)))	
 ))
-
 `
 
 const iterateCasesOK = `
