@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/DemoHn/Zn/error"
+	"github.com/DemoHn/Zn/exec/ctx"
 )
 
 const (
@@ -190,8 +191,8 @@ func (zd *Decimal) asInteger() (int, *error.Error) {
 	return int(zd.co.Int64()), nil
 }
 
-// GetProperty - a null Value does not have ANY propreties.
-func (zd *Decimal) GetProperty(ctx *Context, name string) (Value, *error.Error) {
+// GetProperty - a null ctx.Value does not have ANY propreties.
+func (zd *Decimal) GetProperty(ctx *ctx.Context, name string) (ctx.Value, *error.Error) {
 	switch name {
 	case "文本*":
 		return NewString(zd.String()), nil
@@ -205,13 +206,13 @@ func (zd *Decimal) GetProperty(ctx *Context, name string) (Value, *error.Error) 
 	return nil, error.PropertyNotFound(name)
 }
 
-// SetProperty - a null Value does not have ANY propreties.
-func (zd *Decimal) SetProperty(ctx *Context, name string, value Value) *error.Error {
+// SetProperty - a null ctx.Value does not have ANY propreties.
+func (zd *Decimal) SetProperty(ctx *ctx.Context, name string, value ctx.Value) *error.Error {
 	return error.PropertyNotFound(name)
 }
 
 // ExecMethod - a null value does not have ANY methods.
-func (zd *Decimal) ExecMethod(ctx *Context, name string, values []Value) (Value, *error.Error) {
+func (zd *Decimal) ExecMethod(ctx *ctx.Context, name string, values []ctx.Value) (ctx.Value, *error.Error) {
 	switch name {
 	case "+1":
 		v := ctx.arith.Add(*zd, *NewDecimalFromInt(1, 0))

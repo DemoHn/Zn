@@ -4,20 +4,20 @@ import "github.com/DemoHn/Zn/error"
 
 // HashMap - represents for 列表类
 type HashMap struct {
-	value    map[string]Value
+	value    map[string]ctx.Value
 	keyOrder []string
 }
 
 // KVPair - key-value pair, used for ZnHashMap
 type KVPair struct {
 	Key   string
-	Value Value
+	ctx.Value ctx.Value
 }
 
 // NewHashMap -
 func NewHashMap(kvPairs []KVPair) *HashMap {
 	hm := &HashMap{
-		value:    map[string]Value{},
+		value:    map[string]ctx.Value{},
 		keyOrder: []string{},
 	}
 
@@ -26,25 +26,25 @@ func NewHashMap(kvPairs []KVPair) *HashMap {
 			// append distinct value
 			hm.keyOrder = append(hm.keyOrder, kvPair.Key)
 		}
-		hm.value[kvPair.Key] = kvPair.Value
+		hm.value[kvPair.Key] = kvPair.ctx.Value
 	}
 
 	return hm
 }
 
 // GetProperty -
-func (hm *HashMap) GetProperty(ctx *Context, name string) (Value, *error.Error) {
+func (hm *HashMap) GetProperty(ctx *ctx.Context, name string) (ctx.Value, *error.Error) {
 	switch name {
 	case "数目", "长度":
 		return NewDecimalFromInt(len(hm.value), 0), nil
 	case "所有索引":
-		strs := []Value{}
+		strs := []ctx.Value{}
 		for _, keyName := range hm.keyOrder {
 			strs = append(strs, NewString(keyName))
 		}
 		return NewArray(strs), nil
 	case "所有值":
-		vals := []Value{}
+		vals := []ctx.Value{}
 		for _, keyName := range hm.keyOrder {
 			vals = append(vals, hm.value[keyName])
 		}
@@ -54,12 +54,12 @@ func (hm *HashMap) GetProperty(ctx *Context, name string) (Value, *error.Error) 
 }
 
 // SetProperty -
-func (hm *HashMap) SetProperty(ctx *Context, name string, value Value) *error.Error {
+func (hm *HashMap) SetProperty(ctx *ctx.Context, name string, value ctx.Value) *error.Error {
 	return error.PropertyNotFound(name)
 }
 
 // ExecMethod -
-func (hm *HashMap) ExecMethod(ctx *Context, name string, values []Value) (Value, *error.Error) {
+func (hm *HashMap) ExecMethod(ctx *ctx.Context, name string, values []ctx.Value) (ctx.Value, *error.Error) {
 	switch name {
 	case "读取":
 		if err := validateExactParams(values, "string"); err != nil {

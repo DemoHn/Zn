@@ -1,13 +1,16 @@
 package val
 
-import "github.com/DemoHn/Zn/error"
+import (
+	"github.com/DemoHn/Zn/error"
+	"github.com/DemoHn/Zn/exec/ctx"
+)
 
 // Bool - represents for Zn's 二象型
 type Bool struct {
 	value bool
 }
 
-// NewBool - new bool Value Object from raw bool
+// NewBool - new bool ctx.Value Object from raw bool
 func NewBool(value bool) *Bool {
 	return &Bool{value}
 }
@@ -22,7 +25,7 @@ func (b *Bool) String() string {
 }
 
 // GetProperty -
-func (b *Bool) GetProperty(ctx *Context, name string) (Value, *error.Error) {
+func (b *Bool) GetProperty(ctx *ctx.Context, name string) (ctx.Value, *error.Error) {
 	switch name {
 	case "文本*":
 		return NewString(b.String()), nil
@@ -31,11 +34,11 @@ func (b *Bool) GetProperty(ctx *Context, name string) (Value, *error.Error) {
 }
 
 // SetProperty -
-func (b *Bool) SetProperty(ctx *Context, name string, value Value) *error.Error {
+func (b *Bool) SetProperty(ctx *ctx.Context, name string, value ctx.Value) *error.Error {
 	return error.PropertyNotFound(name)
 }
 
 // ExecMethod -
-func (b *Bool) ExecMethod(ctx *Context, name string, values []Value) (Value, *error.Error) {
+func (b *Bool) ExecMethod(ctx *ctx.Context, name string, values []ctx.Value) (ctx.Value, *error.Error) {
 	return nil, error.MethodNotFound(name)
 }

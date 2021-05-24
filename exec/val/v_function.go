@@ -2,6 +2,7 @@ package val
 
 import (
 	"github.com/DemoHn/Zn/error"
+	"github.com/DemoHn/Zn/exec/ctx"
 	"github.com/DemoHn/Zn/syntax"
 )
 
@@ -23,16 +24,16 @@ func BuildFunctionFromNode(node *syntax.FunctionDeclareStmt) *Function {
 }
 
 // GetProperty -
-func (fn *Function) GetProperty(ctx *Context, name string) (Value, *error.Error) {
+func (fn *Function) GetProperty(ctx *ctx.Context, name string) (ctx.Value, *error.Error) {
 	return nil, error.PropertyNotFound(name)
 }
 
 // SetProperty -
-func (fn *Function) SetProperty(ctx *Context, name string, value Value) *error.Error {
+func (fn *Function) SetProperty(ctx *ctx.Context, name string, value ctx.Value) *error.Error {
 	return error.PropertyNotFound(name)
 }
 
 // ExecMethod -
-func (fn *Function) ExecMethod(ctx *Context, name string, values []Value) (Value, *error.Error) {
+func (fn *Function) ExecMethod(ctx *ctx.Context, name string, values []ctx.Value) (ctx.Value, *error.Error) {
 	return nil, error.MethodNotFound(name)
 }

@@ -4,20 +4,21 @@ import (
 	"strings"
 
 	"github.com/DemoHn/Zn/error"
+	"github.com/DemoHn/Zn/exec/ctx"
 )
 
 // Array - represents for Zn's 数组型
 type Array struct {
-	value []Value
+	value []ctx.Value
 }
 
-// NewArray - new array Value Object
-func NewArray(value []Value) *Array {
+// NewArray - new array ctx.Value Object
+func NewArray(value []ctx.Value) *Array {
 	return &Array{value}
 }
 
 // GetProperty -
-func (ar *Array) GetProperty(ctx *Context, name string) (Value, *error.Error) {
+func (ar *Array) GetProperty(ctx *ctx.Context, name string) (ctx.Value, *error.Error) {
 	switch name {
 	case "和":
 		return addValueExecutor(ctx, ar.value)
@@ -44,7 +45,7 @@ func (ar *Array) GetProperty(ctx *Context, name string) (Value, *error.Error) {
 		valStr := StringifyValue(ar)
 		return NewString(valStr), nil
 	case "逆":
-		result := []Value{}
+		result := []ctx.Value{}
 		l := len(ar.value)
 		for i := 0; i < l; i++ {
 			result = append(result, result[l-1-i])
@@ -56,11 +57,11 @@ func (ar *Array) GetProperty(ctx *Context, name string) (Value, *error.Error) {
 }
 
 // SetProperty -
-func (ar *Array) SetProperty(ctx *Context, name string, value Value) *error.Error {
+func (ar *Array) SetProperty(ctx *ctx.Context, name string, value ctx.Value) *error.Error {
 	switch name {
 	case "首", "首项", "第一项":
 		if len(ar.value) == 0 {
-			result := []Value{value}
+			result := []ctx.Value{value}
 			ar.value = result
 			return nil
 		}
@@ -68,7 +69,7 @@ func (ar *Array) SetProperty(ctx *Context, name string, value Value) *error.Erro
 		return nil
 	case "尾", "末项", "最后项":
 		if len(ar.value) == 0 {
-			result := []Value{value}
+			result := []ctx.Value{value}
 			ar.value = result
 			return nil
 		}
@@ -79,7 +80,7 @@ func (ar *Array) SetProperty(ctx *Context, name string, value Value) *error.Erro
 }
 
 // ExecMethod -
-func (ar *Array) ExecMethod(ctx *Context, name string, values []Value) (Value, *error.Error) {
+func (ar *Array) ExecMethod(ctx *ctx.Context, name string, values []ctx.Value) (ctx.Value, *error.Error) {
 	switch name {
 	case "新增", "添加":
 		if err := validateExactParams(values, "any", "decimal"); err != nil {
@@ -136,7 +137,7 @@ func (ar *Array) ExecMethod(ctx *Context, name string, values []Value) (Value, *
 			return nil, err
 		}
 
-		result := []Value{}
+		result := []ctx.Value{}
 		result = append(result, ar.value...)
 		for _, v := range values {
 			varr := v.(*Array).value
@@ -179,8 +180,8 @@ func (ar *Array) ExecMethod(ctx *Context, name string, values []Value) (Value, *
 }
 
 ////// method handlers
-func insertArrayValue(target []Value, idx int, insertItem Value) []Value {
-	result := []Value{}
+func insertArrayValue(target []ctx.Value, idx int, insertItem ctx.Value) []ctx.Value {
+	result := []ctx.Value{}
 
 	if idx >= len(target) {
 		result = append(target, insertItem)
@@ -196,9 +197,9 @@ func insertArrayValue(target []Value, idx int, insertItem Value) []Value {
 	return result
 }
 
-func shiftArrayValue(target []Value, left bool) (Value, []Value) {
+func shiftArrayValue(target []ctx.Value, left bool) (ctx.Value, []ctx.Value) {
 	if len(target) == 0 {
-		return NewNull(), []Value{}
+		return NewNull(), []ctx.Value{}
 	}
 	if left == true {
 		return target[0], target[1:]

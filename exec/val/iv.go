@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/DemoHn/Zn/error"
+	"github.com/DemoHn/Zn/exec/ctx"
 )
 
 type ivTypeE uint8
@@ -15,9 +16,9 @@ const (
 	IVTypeMember  ivTypeE = 3
 )
 
-// IV stands for Intermediate Value, which is a compound state of an expression.
+// IV stands for Intermediate ctx.Value, which is a compound state of an expression.
 // There're two elements inside an IV:
-//   1. Root - root is a Value Object from which can set/get members.
+//   1. Root - root is a ctx.Value Object from which can set/get members.
 //   2. Member - a string / int that represents for the "key" of root object
 //
 // IV could be reduced, either yields a result or the member value be chaned.
@@ -27,7 +28,7 @@ type IV struct {
 	// reduceType - value type
 	reduceType ivTypeE
 	// root Object
-	root Value
+	root ctx.Value
 	// member value
 	member string
 	// index is used ONLY when ivType = IVTypeArray,
@@ -37,7 +38,7 @@ type IV struct {
 
 // ReduceLHS - Reduce IV to value when IV on left-hand side
 // usually for setters
-func (iv *IV) ReduceLHS(ctx *Context, input Value) *error.Error {
+func (iv *IV) ReduceLHS(ctx *ctx.Context, input ctx.Value) *error.Error {
 	switch iv.reduceType {
 	case IVTypeArray:
 		arr, ok := iv.root.(*Array)
@@ -63,7 +64,7 @@ func (iv *IV) ReduceLHS(ctx *Context, input Value) *error.Error {
 }
 
 // ReduceRHS -
-func (iv *IV) ReduceRHS(ctx *Context) (Value, *error.Error) {
+func (iv *IV) ReduceRHS(ctx *ctx.Context) (ctx.Value, *error.Error) {
 	switch iv.reduceType {
 	case IVTypeArray:
 		arr, ok := iv.root.(*Array)

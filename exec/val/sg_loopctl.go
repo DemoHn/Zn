@@ -1,12 +1,15 @@
 package val
 
-import "github.com/DemoHn/Zn/error"
+import (
+	"github.com/DemoHn/Zn/error"
+	"github.com/DemoHn/Zn/exec/ctx"
+)
 
 // LoopCtl - a sgValue type used to control loop flow (aka. continue/break)
 // and record values of current iteration.
 type LoopCtl struct {
-	currentIndex Value
-	currentValue Value
+	currentIndex ctx.Value
+	currentValue ctx.Value
 }
 
 // NewLoopCtl -
@@ -18,7 +21,7 @@ func NewLoopCtl() *LoopCtl {
 }
 
 // GetProperty -
-func (lc *LoopCtl) GetProperty(ctx *Context, name string) (Value, *error.Error) {
+func (lc *LoopCtl) GetProperty(ctx *ctx.Context, name string) (ctx.Value, *error.Error) {
 	switch name {
 	case "值":
 		return lc.currentValue, nil
@@ -29,12 +32,12 @@ func (lc *LoopCtl) GetProperty(ctx *Context, name string) (Value, *error.Error) 
 }
 
 // SetProperty -
-func (lc *LoopCtl) SetProperty(ctx *Context, name string, value Value) *error.Error {
+func (lc *LoopCtl) SetProperty(ctx *ctx.Context, name string, value ctx.Value) *error.Error {
 	return error.PropertyNotFound(name)
 }
 
 // ExecMethod -
-func (lc *LoopCtl) ExecMethod(ctx *Context, name string, values []Value) (Value, *error.Error) {
+func (lc *LoopCtl) ExecMethod(ctx *ctx.Context, name string, values []ctx.Value) (ctx.Value, *error.Error) {
 	switch name {
 	case "结束":
 		return NewNull(), error.BreakBreakError()
@@ -45,7 +48,7 @@ func (lc *LoopCtl) ExecMethod(ctx *Context, name string, values []Value) (Value,
 }
 
 // SetCurrentKeyValue - internal usage to set current value
-func (lc *LoopCtl) SetCurrentKeyValue(index Value, value Value) {
+func (lc *LoopCtl) SetCurrentKeyValue(index ctx.Value, value ctx.Value) {
 	lc.currentIndex = index
 	lc.currentValue = value
 }

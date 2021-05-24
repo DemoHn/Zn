@@ -4,6 +4,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/DemoHn/Zn/error"
+	"github.com/DemoHn/Zn/exec/ctx"
 )
 
 // String - represents for Zn's 文本型
@@ -11,7 +12,7 @@ type String struct {
 	value string
 }
 
-// NewString - new string Value Object from raw string
+// NewString - new string ctx.Value Object from raw string
 func NewString(value string) *String {
 	return &String{value}
 }
@@ -22,7 +23,7 @@ func (s *String) String() string {
 }
 
 // GetProperty -
-func (s *String) GetProperty(ctx *Context, name string) (Value, *error.Error) {
+func (s *String) GetProperty(ctx *ctx.ctx.Context, name string) (ctx.Value, *error.Error) {
 	switch name {
 	case "长度":
 		l := utf8.RuneCountInString(s.value)
@@ -32,11 +33,11 @@ func (s *String) GetProperty(ctx *Context, name string) (Value, *error.Error) {
 }
 
 // SetProperty -
-func (s *String) SetProperty(ctx *Context, name string, value Value) *error.Error {
+func (s *String) SetProperty(ctx *ctx.Context, name string, value ctx.Value) *error.Error {
 	return error.PropertyNotFound(name)
 }
 
 // ExecMethod -
-func (s *String) ExecMethod(ctx *Context, name string, values []Value) (Value, *error.Error) {
+func (s *String) ExecMethod(ctx *ctx.Context, name string, values []ctx.Value) (ctx.Value, *error.Error) {
 	return nil, error.MethodNotFound(name)
 }

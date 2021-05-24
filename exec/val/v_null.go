@@ -1,6 +1,9 @@
 package val
 
-import "github.com/DemoHn/Zn/error"
+import (
+	"github.com/DemoHn/Zn/error"
+	"github.com/DemoHn/Zn/exec/ctx"
+)
 
 // Null -
 type Null struct{}
@@ -11,16 +14,16 @@ func NewNull() *Null {
 }
 
 // GetProperty -
-func (nl *Null) GetProperty(ctx *Context, name string) (Value, *error.Error) {
+func (nl *Null) GetProperty(ctx *ctx.Context, name string) (ctx.Value, *error.Error) {
 	return nil, error.PropertyNotFound(name)
 }
 
 // SetProperty -
-func (nl *Null) SetProperty(ctx *Context, name string, value Value) *error.Error {
+func (nl *Null) SetProperty(ctx *ctx.Context, name string, value ctx.Value) *error.Error {
 	return error.PropertyNotFound(name)
 }
 
 // ExecMethod -
-func (nl *Null) ExecMethod(ctx *Context, name string, values []Value) (Value, *error.Error) {
+func (nl *Null) ExecMethod(ctx *ctx.Context, name string, values []ctx.Value) (ctx.Value, *error.Error) {
 	return nil, error.MethodNotFound(name)
 }

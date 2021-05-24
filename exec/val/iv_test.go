@@ -3,18 +3,20 @@ package val
 import (
 	"reflect"
 	"testing"
+
+	"github.com/DemoHn/Zn/exec/ctx"
 )
 
 func TestReduce_Array_RHS_OK(t *testing.T) {
 	cases := []struct {
 		name   string
-		array  []Value
+		array  []ctx.Value
 		index  int
-		expect Value
+		expect ctx.Value
 	}{
 		{
 			"normal RHS value",
-			[]Value{
+			[]ctx.Value{
 				NewString("64"),
 				NewString("128"),
 			},
@@ -23,16 +25,16 @@ func TestReduce_Array_RHS_OK(t *testing.T) {
 		},
 		{
 			"normal RHS value #2",
-			[]Value{
+			[]ctx.Value{
 				NewBool(true),
 				NewString("Hello World"),
-				NewArray([]Value{
+				NewArray([]ctx.Value{
 					NewString("A"),
 					NewString("B"),
 				}),
 			},
 			2,
-			NewArray([]Value{
+			NewArray([]ctx.Value{
 				NewString("A"),
 				NewString("B"),
 			}),
@@ -65,13 +67,13 @@ func TestReduce_Array_RHS_OK(t *testing.T) {
 func TestReduce_Array_RHS_FAIL(t *testing.T) {
 	cases := []struct {
 		name    string
-		array   []Value
+		array   []ctx.Value
 		index   int
 		errCode int
 	}{
 		{
 			"negative index",
-			[]Value{
+			[]ctx.Value{
 				NewString("64"),
 			},
 			-1,
@@ -79,8 +81,8 @@ func TestReduce_Array_RHS_FAIL(t *testing.T) {
 		},
 		{
 			"exceed range",
-			[]Value{
-				NewArray([]Value{}),
+			[]ctx.Value{
+				NewArray([]ctx.Value{}),
 			},
 			2,
 			0x2401,
@@ -113,13 +115,13 @@ func TestReduce_Array_RHS_FAIL(t *testing.T) {
 func TestReduace_Array_LHS_OK(t *testing.T) {
 	cases := []struct {
 		name  string
-		array []Value
+		array []ctx.Value
 		index int
-		input Value
+		input ctx.Value
 	}{
 		{
 			"change first value",
-			[]Value{
+			[]ctx.Value{
 				NewString("First Item"),
 			},
 			0,
@@ -127,7 +129,7 @@ func TestReduace_Array_LHS_OK(t *testing.T) {
 		},
 		{
 			"change value #2",
-			[]Value{
+			[]ctx.Value{
 				NewString("First Item"),
 				NewString("Second Item"),
 				NewString("Third Item"),
@@ -167,13 +169,13 @@ func TestReduace_Array_LHS_OK(t *testing.T) {
 func TestReduce_Array_LHS_FAIL(t *testing.T) {
 	cases := []struct {
 		name    string
-		array   []Value
+		array   []ctx.Value
 		index   int
 		errCode int
 	}{
 		{
 			"negative index",
-			[]Value{
+			[]ctx.Value{
 				NewString("64"),
 			},
 			-1,
@@ -181,8 +183,8 @@ func TestReduce_Array_LHS_FAIL(t *testing.T) {
 		},
 		{
 			"exceed range",
-			[]Value{
-				NewArray([]Value{}),
+			[]ctx.Value{
+				NewArray([]ctx.Value{}),
 			},
 			2,
 			0x2401,

@@ -2,24 +2,25 @@ package val
 
 import (
 	"github.com/DemoHn/Zn/error"
+	"github.com/DemoHn/Zn/exec/ctx"
 )
 
 // Object - 对象型
 type Object struct {
-	propList map[string]Value
+	propList map[string]ctx.Value
 	ref      ClassRef
 }
 
 // NewObject -
 func NewObject(ref ClassRef) *Object {
 	return &Object{
-		propList: map[string]Value{},
+		propList: map[string]ctx.Value{},
 		ref:      ref,
 	}
 }
 
 // GetProperty -
-func (zo *Object) GetProperty(ctx *Context, name string) (Value, *error.Error) {
+func (zo *Object) GetProperty(ctx *ctx.Context, name string) (ctx.Value, *error.Error) {
 	// internal properties
 	switch name {
 	case "自身":
@@ -37,25 +38,25 @@ func (zo *Object) GetProperty(ctx *Context, name string) (Value, *error.Error) {
 	// execute computed props to get property result
 	fctx := ctx.DuplicateNewScope()
 	fctx.scope.thisValue = zo
-	return cprop.Exec(fctx, []Value{})
+	return cprop.Exec(fctx, []ctx.Value{})
 }
 
 // SetProperty -
-func (zo *Object) SetProperty(ctx *Context, name string, value Value) *error.Error {
+func (zo *Object) SetProperty(ctx *ctx.Context, name string, value ctx.Value) *error.Error {
 	if _, ok := zo.propList[name]; ok {
 		zo.propList[name] = value
 		return nil
 	}
 	// execute computed properites
 	if cprop, ok2 := zo.ref.CompPropList[name]; ok2 {
-		_, err := cprop.Exec(ctx, []Value{})
+		_, err := cprop.Exec(ctx, []ctx.Value{})
 		return err
 	}
 	return error.PropertyNotFound(name)
 }
 
 // ExecMethod -
-func (zo *Object) ExecMethod(ctx *Context, name string, values []Value) (Value, *error.Error) {
+func (zo *Object) ExecMethod(ctx *ctx.Context, name string, values []ctx.Value) (ctx.Value, *error.Error) {
 	if method, ok := zo.ref.MethodList[name]; ok {
 		return method.Exec(ctx, values)
 	}

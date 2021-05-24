@@ -1,11 +1,15 @@
-package exec
+package ctx
 
 import (
 	"math"
 	"math/big"
 
 	"github.com/DemoHn/Zn/error"
+	"github.com/DemoHn/Zn/exec/val"
 )
+
+// type alias
+type Decimal = val.Decimal
 
 // Arith - arithmetic calculation (including + - * /) instance
 type Arith struct {
