@@ -25,7 +25,7 @@ func (b *Bool) String() string {
 }
 
 // GetProperty -
-func (b *Bool) GetProperty(ctx *ctx.Context, name string) (ctx.Value, *error.Error) {
+func (b *Bool) GetProperty(c *ctx.Context, name string) (ctx.Value, *error.Error) {
 	switch name {
 	case "文本*":
 		return NewString(b.String()), nil
@@ -34,11 +34,11 @@ func (b *Bool) GetProperty(ctx *ctx.Context, name string) (ctx.Value, *error.Err
 }
 
 // SetProperty -
-func (b *Bool) SetProperty(ctx *ctx.Context, name string, value ctx.Value) *error.Error {
+func (b *Bool) SetProperty(c *ctx.Context, name string, value ctx.Value) *error.Error {
 	return error.PropertyNotFound(name)
 }
 
 // ExecMethod -
-func (b *Bool) ExecMethod(ctx *ctx.Context, name string, values []ctx.Value) (ctx.Value, *error.Error) {
+func (b *Bool) ExecMethod(c *ctx.Context, name string, values []ctx.Value) (ctx.Value, *error.Error) {
 	return nil, error.MethodNotFound(name)
 }

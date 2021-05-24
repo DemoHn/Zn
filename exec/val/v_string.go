@@ -23,7 +23,7 @@ func (s *String) String() string {
 }
 
 // GetProperty -
-func (s *String) GetProperty(ctx *ctx.ctx.Context, name string) (ctx.Value, *error.Error) {
+func (s *String) GetProperty(c *ctx.Context, name string) (ctx.Value, *error.Error) {
 	switch name {
 	case "长度":
 		l := utf8.RuneCountInString(s.value)
@@ -33,11 +33,11 @@ func (s *String) GetProperty(ctx *ctx.ctx.Context, name string) (ctx.Value, *err
 }
 
 // SetProperty -
-func (s *String) SetProperty(ctx *ctx.Context, name string, value ctx.Value) *error.Error {
+func (s *String) SetProperty(c *ctx.Context, name string, value ctx.Value) *error.Error {
 	return error.PropertyNotFound(name)
 }
 
 // ExecMethod -
-func (s *String) ExecMethod(ctx *ctx.Context, name string, values []ctx.Value) (ctx.Value, *error.Error) {
+func (s *String) ExecMethod(c *ctx.Context, name string, values []ctx.Value) (ctx.Value, *error.Error) {
 	return nil, error.MethodNotFound(name)
 }

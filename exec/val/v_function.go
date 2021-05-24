@@ -8,7 +8,7 @@ import (
 
 // Function - 方法类
 type Function struct {
-	value ClosureRef
+	value ctx.ClosureRef
 }
 
 // NewFunction - new Zn native function
@@ -24,16 +24,16 @@ func BuildFunctionFromNode(node *syntax.FunctionDeclareStmt) *Function {
 }
 
 // GetProperty -
-func (fn *Function) GetProperty(ctx *ctx.Context, name string) (ctx.Value, *error.Error) {
+func (fn *Function) GetProperty(c *ctx.Context, name string) (ctx.Value, *error.Error) {
 	return nil, error.PropertyNotFound(name)
 }
 
 // SetProperty -
-func (fn *Function) SetProperty(ctx *ctx.Context, name string, value ctx.Value) *error.Error {
+func (fn *Function) SetProperty(c *ctx.Context, name string, value ctx.Value) *error.Error {
 	return error.PropertyNotFound(name)
 }
 
 // ExecMethod -
-func (fn *Function) ExecMethod(ctx *ctx.Context, name string, values []ctx.Value) (ctx.Value, *error.Error) {
+func (fn *Function) ExecMethod(c *ctx.Context, name string, values []ctx.Value) (ctx.Value, *error.Error) {
 	return nil, error.MethodNotFound(name)
 }

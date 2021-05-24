@@ -8,11 +8,11 @@ import (
 // Object - 对象型
 type Object struct {
 	propList map[string]ctx.Value
-	ref      ClassRef
+	ref      ctx.ClassRef
 }
 
 // NewObject -
-func NewObject(ref ClassRef) *Object {
+func NewObject(ref ctx.ClassRef) *Object {
 	return &Object{
 		propList: map[string]ctx.Value{},
 		ref:      ref,
@@ -20,7 +20,7 @@ func NewObject(ref ClassRef) *Object {
 }
 
 // GetProperty -
-func (zo *Object) GetProperty(ctx *ctx.Context, name string) (ctx.Value, *error.Error) {
+func (zo *Object) GetProperty(c *ctx.Context, name string) (ctx.Value, *error.Error) {
 	// internal properties
 	switch name {
 	case "自身":
@@ -42,7 +42,7 @@ func (zo *Object) GetProperty(ctx *ctx.Context, name string) (ctx.Value, *error.
 }
 
 // SetProperty -
-func (zo *Object) SetProperty(ctx *ctx.Context, name string, value ctx.Value) *error.Error {
+func (zo *Object) SetProperty(c *ctx.Context, name string, value ctx.Value) *error.Error {
 	if _, ok := zo.propList[name]; ok {
 		zo.propList[name] = value
 		return nil
@@ -56,7 +56,7 @@ func (zo *Object) SetProperty(ctx *ctx.Context, name string, value ctx.Value) *e
 }
 
 // ExecMethod -
-func (zo *Object) ExecMethod(ctx *ctx.Context, name string, values []ctx.Value) (ctx.Value, *error.Error) {
+func (zo *Object) ExecMethod(c *ctx.Context, name string, values []ctx.Value) (ctx.Value, *error.Error) {
 	if method, ok := zo.ref.MethodList[name]; ok {
 		return method.Exec(ctx, values)
 	}

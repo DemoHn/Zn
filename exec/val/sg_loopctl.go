@@ -21,7 +21,7 @@ func NewLoopCtl() *LoopCtl {
 }
 
 // GetProperty -
-func (lc *LoopCtl) GetProperty(ctx *ctx.Context, name string) (ctx.Value, *error.Error) {
+func (lc *LoopCtl) GetProperty(c *ctx.Context, name string) (ctx.Value, *error.Error) {
 	switch name {
 	case "值":
 		return lc.currentValue, nil
@@ -32,12 +32,12 @@ func (lc *LoopCtl) GetProperty(ctx *ctx.Context, name string) (ctx.Value, *error
 }
 
 // SetProperty -
-func (lc *LoopCtl) SetProperty(ctx *ctx.Context, name string, value ctx.Value) *error.Error {
+func (lc *LoopCtl) SetProperty(c *ctx.Context, name string, value ctx.Value) *error.Error {
 	return error.PropertyNotFound(name)
 }
 
 // ExecMethod -
-func (lc *LoopCtl) ExecMethod(ctx *ctx.Context, name string, values []ctx.Value) (ctx.Value, *error.Error) {
+func (lc *LoopCtl) ExecMethod(c *ctx.Context, name string, values []ctx.Value) (ctx.Value, *error.Error) {
 	switch name {
 	case "结束":
 		return NewNull(), error.BreakBreakError()

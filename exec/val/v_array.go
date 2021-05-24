@@ -18,7 +18,7 @@ func NewArray(value []ctx.Value) *Array {
 }
 
 // GetProperty -
-func (ar *Array) GetProperty(ctx *ctx.Context, name string) (ctx.Value, *error.Error) {
+func (ar *Array) GetProperty(c *ctx.Context, name string) (ctx.Value, *error.Error) {
 	switch name {
 	case "和":
 		return addValueExecutor(ctx, ar.value)
@@ -57,7 +57,7 @@ func (ar *Array) GetProperty(ctx *ctx.Context, name string) (ctx.Value, *error.E
 }
 
 // SetProperty -
-func (ar *Array) SetProperty(ctx *ctx.Context, name string, value ctx.Value) *error.Error {
+func (ar *Array) SetProperty(c *ctx.Context, name string, value ctx.Value) *error.Error {
 	switch name {
 	case "首", "首项", "第一项":
 		if len(ar.value) == 0 {
@@ -80,7 +80,7 @@ func (ar *Array) SetProperty(ctx *ctx.Context, name string, value ctx.Value) *er
 }
 
 // ExecMethod -
-func (ar *Array) ExecMethod(ctx *ctx.Context, name string, values []ctx.Value) (ctx.Value, *error.Error) {
+func (ar *Array) ExecMethod(c *ctx.Context, name string, values []ctx.Value) (ctx.Value, *error.Error) {
 	switch name {
 	case "新增", "添加":
 		if err := validateExactParams(values, "any", "decimal"); err != nil {

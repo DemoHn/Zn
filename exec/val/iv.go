@@ -38,7 +38,7 @@ type IV struct {
 
 // ReduceLHS - Reduce IV to value when IV on left-hand side
 // usually for setters
-func (iv *IV) ReduceLHS(ctx *ctx.Context, input ctx.Value) *error.Error {
+func (iv *IV) ReduceLHS(c *ctx.Context, input ctx.Value) *error.Error {
 	switch iv.reduceType {
 	case IVTypeArray:
 		arr, ok := iv.root.(*Array)
@@ -64,7 +64,7 @@ func (iv *IV) ReduceLHS(ctx *ctx.Context, input ctx.Value) *error.Error {
 }
 
 // ReduceRHS -
-func (iv *IV) ReduceRHS(ctx *ctx.Context) (ctx.Value, *error.Error) {
+func (iv *IV) ReduceRHS(c *ctx.Context) (ctx.Value, *error.Error) {
 	switch iv.reduceType {
 	case IVTypeArray:
 		arr, ok := iv.root.(*Array)

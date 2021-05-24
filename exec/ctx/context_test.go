@@ -4,7 +4,6 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/DemoHn/Zn/exec/val"
 	"github.com/DemoHn/Zn/lex"
 )
 
@@ -86,6 +85,6 @@ func TestExecuteCode_FAIL(t *testing.T) {
 
 // create decimal (and ignore errors)
 func newDecimal(value string) *Decimal {
-	dat, _ := val.NewDecimal(value)
+	dat, _ := NewDecimal(value)
 	return dat
 }

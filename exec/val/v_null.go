@@ -14,16 +14,16 @@ func NewNull() *Null {
 }
 
 // GetProperty -
-func (nl *Null) GetProperty(ctx *ctx.Context, name string) (ctx.Value, *error.Error) {
+func (nl *Null) GetProperty(c *ctx.Context, name string) (ctx.Value, *error.Error) {
 	return nil, error.PropertyNotFound(name)
 }
 
 // SetProperty -
-func (nl *Null) SetProperty(ctx *ctx.Context, name string, value ctx.Value) *error.Error {
+func (nl *Null) SetProperty(c *ctx.Context, name string, value ctx.Value) *error.Error {
 	return error.PropertyNotFound(name)
 }
 
 // ExecMethod -
-func (nl *Null) ExecMethod(ctx *ctx.Context, name string, values []ctx.Value) (ctx.Value, *error.Error) {
+func (nl *Null) ExecMethod(c *ctx.Context, name string, values []ctx.Value) (ctx.Value, *error.Error) {
 	return nil, error.MethodNotFound(name)
 }

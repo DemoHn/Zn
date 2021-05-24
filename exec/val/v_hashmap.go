@@ -1,6 +1,9 @@
 package val
 
-import "github.com/DemoHn/Zn/error"
+import (
+	"github.com/DemoHn/Zn/error"
+	"github.com/DemoHn/Zn/exec/ctx"
+)
 
 // HashMap - represents for 列表类
 type HashMap struct {
@@ -11,7 +14,7 @@ type HashMap struct {
 // KVPair - key-value pair, used for ZnHashMap
 type KVPair struct {
 	Key   string
-	ctx.Value ctx.Value
+	Value ctx.Value
 }
 
 // NewHashMap -
@@ -26,14 +29,14 @@ func NewHashMap(kvPairs []KVPair) *HashMap {
 			// append distinct value
 			hm.keyOrder = append(hm.keyOrder, kvPair.Key)
 		}
-		hm.value[kvPair.Key] = kvPair.ctx.Value
+		hm.value[kvPair.Key] = kvPair.Value
 	}
 
 	return hm
 }
 
 // GetProperty -
-func (hm *HashMap) GetProperty(ctx *ctx.Context, name string) (ctx.Value, *error.Error) {
+func (hm *HashMap) GetProperty(c *ctx.Context, name string) (ctx.Value, *error.Error) {
 	switch name {
 	case "数目", "长度":
 		return NewDecimalFromInt(len(hm.value), 0), nil
@@ -54,12 +57,12 @@ func (hm *HashMap) GetProperty(ctx *ctx.Context, name string) (ctx.Value, *error
 }
 
 // SetProperty -
-func (hm *HashMap) SetProperty(ctx *ctx.Context, name string, value ctx.Value) *error.Error {
+func (hm *HashMap) SetProperty(c *ctx.Context, name string, value ctx.Value) *error.Error {
 	return error.PropertyNotFound(name)
 }
 
 // ExecMethod -
-func (hm *HashMap) ExecMethod(ctx *ctx.Context, name string, values []ctx.Value) (ctx.Value, *error.Error) {
+func (hm *HashMap) ExecMethod(c *ctx.Context, name string, values []ctx.Value) (ctx.Value, *error.Error) {
 	switch name {
 	case "读取":
 		if err := validateExactParams(values, "string"); err != nil {
