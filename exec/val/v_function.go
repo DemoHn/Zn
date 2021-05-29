@@ -49,6 +49,11 @@ func (cs *ClosureRef) Exec(c *ctx.Context, params []ctx.Value) (ctx.Value, *erro
 	return cs.Executor(c, params)
 }
 
+// GetValue -
+func (fn *Function) GetValue() *ClosureRef {
+	return &fn.value
+}
+
 // GetProperty -
 func (fn *Function) GetProperty(c *ctx.Context, name string) (ctx.Value, *error.Error) {
 	return nil, error.PropertyNotFound(name)

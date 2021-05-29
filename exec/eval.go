@@ -66,7 +66,7 @@ func evalStatement(c *ctx.Context, stmt syntax.Statement) *error.Error {
 		return nil
 	case *syntax.FunctionDeclareStmt:
 		fn := BuildFunctionFromNode(v)
-		return bindValue(c, v.FuncName.GetLiteral(), fn)
+		return c.BindSymbol(v.FuncName.GetLiteral(), fn)
 	case *syntax.ClassDeclareStmt:
 		if sp.FindParentScope() != nil {
 			return error.NewErrorSLOT("只能在代码主层级定义类")
@@ -114,7 +114,7 @@ func evalVarDeclareStmt(c *ctx.Context, node *syntax.VarDeclareStmt) *error.Erro
 					obj = val.DuplicateValue(obj)
 				}
 
-				if err := bindValueDecl(c, vtag, obj, isConst); err != nil {
+				if err := c.BindSymbolDecl(vtag, obj, isConst); err != nil {
 					return err
 				}
 			}
@@ -152,7 +152,7 @@ func evalNewObject(c *ctx.Context, node syntax.VDAssignPair) *error.Error {
 			return err
 		}
 
-		if bindValue(c, vtag, finalObj); err != nil {
+		if c.BindSymbol(vtag, finalObj); err != nil {
 			return err
 		}
 	}
@@ -214,7 +214,7 @@ func evalStmtBlock(c *ctx.Context, block *syntax.BlockStmt) *error.Error {
 			switch v := stmtI.(type) {
 			case *syntax.FunctionDeclareStmt:
 				fn := BuildFunctionFromNode(v)
-				if err := bindValue(c, v.FuncName.GetLiteral(), fn); err != nil {
+				if err := c.BindSymbol(v.FuncName.GetLiteral(), fn); err != nil {
 					return err
 				}
 			case *syntax.ClassDeclareStmt:
@@ -315,14 +315,14 @@ func evalIterateStmt(c *ctx.Context, node *syntax.IterateStmt) *error.Error {
 
 		// set pre-defined value
 		if nameLen == 1 {
-			if err := setValue(c, valueSlot, v); err != nil {
+			if err := c.SetSymbol(valueSlot, v); err != nil {
 				return err
 			}
 		} else if nameLen == 2 {
-			if err := setValue(c, keySlot, key); err != nil {
+			if err := c.SetSymbol(keySlot, key); err != nil {
 				return err
 			}
-			if err := setValue(c, valueSlot, v); err != nil {
+			if err := c.SetSymbol(valueSlot, v); err != nil {
 				return err
 			}
 		}
@@ -333,16 +333,16 @@ func evalIterateStmt(c *ctx.Context, node *syntax.IterateStmt) *error.Error {
 	// of course since there's no any iteration is executed yet, the initial values are all "Null"
 	if nameLen == 1 {
 		valueSlot = node.IndexNames[0].Literal
-		if err := bindValue(c, valueSlot, val.NewNull()); err != nil {
+		if err := c.BindSymbol(valueSlot, val.NewNull()); err != nil {
 			return err
 		}
 	} else if nameLen == 2 {
 		keySlot = node.IndexNames[0].Literal
 		valueSlot = node.IndexNames[1].Literal
-		if err := bindValue(c, keySlot, val.NewNull()); err != nil {
+		if err := c.BindSymbol(keySlot, val.NewNull()); err != nil {
 			return err
 		}
-		if err := bindValue(c, valueSlot, val.NewNull()); err != nil {
+		if err := c.BindSymbol(valueSlot, val.NewNull()); err != nil {
 			return err
 		}
 	} else if nameLen > 2 {
@@ -480,7 +480,7 @@ func evalFunctionCall(c *ctx.Context, expr *syntax.FuncCallExpr) (ctx.Value, *er
 	// if function value not found from object scope, look up from local scope
 	if zf == nil {
 		// find function definction
-		v, err := getValue(c, vtag)
+		v, err := c.FindSymbol(vtag)
 		if err != nil {
 			return nil, err
 		}
@@ -489,7 +489,7 @@ func evalFunctionCall(c *ctx.Context, expr *syntax.FuncCallExpr) (ctx.Value, *er
 		if !ok {
 			return nil, error.InvalidFuncVariable(vtag)
 		}
-		zf = &zval.value
+		zf = zval.GetValue()
 	}
 
 	// exec params
@@ -608,7 +608,7 @@ func evalPrimeExpr(c *ctx.Context, expr syntax.Expression) (ctx.Value, *error.Er
 		return val.NewString(e.GetLiteral()), nil
 	case *syntax.ID:
 		vtag := e.GetLiteral()
-		return getValue(c, vtag)
+		return c.FindSymbol(vtag)
 	case *syntax.ArrayExpr:
 		znObjs := []ctx.Value{}
 		for _, item := range e.Items {
@@ -677,7 +677,7 @@ func evalVarAssignExpr(c *ctx.Context, expr *syntax.VarAssignExpr) (ctx.Value, *
 	case *syntax.ID:
 		// set ID
 		vtag := v.GetLiteral()
-		err2 := setValue(c, vtag, vr)
+		err2 := c.SetSymbol(vtag, vr)
 		return vr, err2
 	case *syntax.MemberExpr:
 		if v.MemberType == syntax.MemberID || v.MemberType == syntax.MemberIndex {
@@ -757,46 +757,6 @@ func getMemberExprIV(c *ctx.Context, expr *syntax.MemberExpr) (*val.IV, *error.E
 	return nil, error.UnExpectedCase("根元素类型", fmt.Sprintf("%d", expr.RootType))
 }
 
-//// scope value setters/getters
-func getValue(c *ctx.Context, name string) (ctx.Value, *error.Error) {
-	// find on globals first
-	if symVal, inGlobals := c.globals[name]; inGlobals {
-		return symVal, nil
-	}
-	// ...then in symbols
-	sp := c.scope
-	for sp != nil {
-		sym, ok := sp.symbolMap[name]
-		if ok {
-			return sym.value, nil
-		}
-		// if not found, search its parent
-		sp = sp.parent
-	}
-	return nil, error.NameNotDefined(name)
-}
-
-func setValue(c *ctx.Context, name string, value ctx.Value) *error.Error {
-	if _, inGlobals := c.globals[name]; inGlobals {
-		return error.NameRedeclared(name)
-	}
-	// ...then in symbols
-	sp := c.scope
-	for sp != nil {
-		sym, ok := sp.symbolMap[name]
-		if ok {
-			if sym.isConst {
-				return error.AssignToConstant()
-			}
-			sp.symbolMap[name] = SymbolInfo{value, false}
-			return nil
-		}
-		// if not found, search its parent
-		sp = sp.parent
-	}
-	return error.NameNotDefined(name)
-}
-
 func getClassRef(c *ctx.Context, name string) (*ClassRef, *error.Error) {
 	ref, ok := c.scope.classRefMap[name]
 	if ok {
@@ -815,35 +775,7 @@ func bindClassRef(c *ctx.Context, classStmt *syntax.ClassDeclareStmt) *error.Err
 	return nil
 }
 
-// bind non-const value with re-declaration check on same scope
-func bindValue(c *ctx.Context, name string, value ctx.Value) *error.Error {
-	if _, inGlobals := c.globals[name]; inGlobals {
-		return error.NameRedeclared(name)
-	}
-	// bind directly
-	if c.scope != nil {
-		if _, ok := c.scope.symbolMap[name]; ok {
-			return error.NameRedeclared(name)
-		}
-		// set value
-		c.scope.symbolMap[name] = SymbolInfo{value, false}
-	}
-	return nil
-}
-
-// bind value for declaration statement - that variables could be re-bind.
-func bindValueDecl(c *ctx.Context, name string, value ctx.Value, isConst bool) *error.Error {
-	if _, inGlobals := c.globals[name]; inGlobals {
-		return error.NameRedeclared(name)
-	}
-	if c.scope != nil {
-		c.scope.symbolMap[name] = SymbolInfo{value, isConst}
-	}
-	return nil
-}
-
 //// helpers
-
 // exprsToValues - []syntax.Expression -> []eval.ctx.Value
 func exprsToValues(c *ctx.Context, exprs []syntax.Expression) ([]ctx.Value, *error.Error) {
 	params := []ctx.Value{}
@@ -905,7 +837,7 @@ func BuildClosureFromNode(paramTags []*syntax.ParamItem, stmtBlock *syntax.Block
 		for _, stmtI := range stmtBlock.Children {
 			if v, ok := stmtI.(*syntax.FunctionDeclareStmt); ok {
 				fn := BuildFunctionFromNode(v)
-				if err := bindValue(c, v.FuncName.GetLiteral(), fn); err != nil {
+				if err := c.BindSymbol(v.FuncName.GetLiteral(), fn); err != nil {
 					return nil, err
 				}
 			}
@@ -924,7 +856,7 @@ func BuildClosureFromNode(paramTags []*syntax.ParamItem, stmtBlock *syntax.Block
 				}
 			}
 		}
-		return ctx.scope.returnValue, nil
+		return c.GetScope().GetReturnValue(), nil
 	}
 
 	var paramHandler = func(c *ctx.Context, params []ctx.Value) (ctx.Value, *error.Error) {
@@ -942,7 +874,7 @@ func BuildClosureFromNode(paramTags []*syntax.ParamItem, stmtBlock *syntax.Block
 				paramVal = val.DuplicateValue(paramVal)
 			}
 			paramName := param.ID.GetLiteral()
-			if err := bindValue(ctx, paramName, paramVal); err != nil {
+			if err := c.BindSymbol(paramName, paramVal); err != nil {
 				return nil, err
 			}
 		}

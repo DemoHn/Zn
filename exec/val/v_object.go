@@ -49,6 +49,11 @@ func NewClassRef(name string) ClassRef {
 	}
 }
 
+// GetPropList -
+func (zo *Object) GetPropList() map[string]ctx.Value {
+	return zo.propList
+}
+
 // Construct - yield new instance of this class
 func (cr *ClassRef) Construct(c *ctx.Context, params []ctx.Value) (ctx.Value, *error.Error) {
 	return cr.Constructor(c, params)

@@ -2,6 +2,7 @@ package ctx
 
 import (
 	"github.com/DemoHn/Zn/debug"
+	"github.com/DemoHn/Zn/error"
 )
 
 // Context is a global variable that stores current execution
@@ -51,4 +52,76 @@ func (ctx *Context) SetFileInfo(fileInfo *FileInfo) {
 // GetFileInfo -
 func (ctx *Context) GetFileInfo() *FileInfo {
 	return ctx.fileInfo
+}
+
+//// scope symbols getters / setters
+
+// FindSymbol - find symbol in the context from current scope
+// up to its root scope
+func (ctx *Context) FindSymbol(name string) (Value, *error.Error) {
+	// find on globals first
+	if symVal, inGlobals := ctx.globals[name]; inGlobals {
+		return symVal, nil
+	}
+	// ...then in symbols
+	sp := ctx.scope
+	for sp != nil {
+		sym, ok := sp.symbolMap[name]
+		if ok {
+			return sym.value, nil
+		}
+		// if not found, search its parent
+		sp = sp.parent
+	}
+	return nil, error.NameNotDefined(name)
+}
+
+// SetSymbol -
+func (ctx *Context) SetSymbol(name string, value Value) *error.Error {
+	if _, inGlobals := ctx.globals[name]; inGlobals {
+		return error.NameRedeclared(name)
+	}
+	// ...then in symbols
+	sp := ctx.scope
+	for sp != nil {
+		sym, ok := sp.symbolMap[name]
+		if ok {
+			if sym.isConst {
+				return error.AssignToConstant()
+			}
+			sp.symbolMap[name] = SymbolInfo{value, false}
+			return nil
+		}
+		// if not found, search its parent
+		sp = sp.parent
+	}
+	return error.NameNotDefined(name)
+}
+
+// BindSymbol - bind non-const value with re-declaration check on same scope
+func (ctx *Context) BindSymbol(name string, value Value) *error.Error {
+	if _, inGlobals := ctx.globals[name]; inGlobals {
+		return error.NameRedeclared(name)
+	}
+	// bind directly
+	if ctx.scope != nil {
+		if _, ok := ctx.scope.symbolMap[name]; ok {
+			return error.NameRedeclared(name)
+		}
+		// set value
+		ctx.scope.symbolMap[name] = SymbolInfo{value, false}
+	}
+	return nil
+}
+
+// BindSymbolDecl - bind value for declaration statement - that variables could be re-bind.
+func (ctx *Context) BindSymbolDecl(name string, value Value, isConst bool) *error.Error {
+	if _, inGlobals := ctx.globals[name]; inGlobals {
+		return error.NameRedeclared(name)
+	}
+	if ctx.scope != nil {
+		ctx.scope.symbolMap[name] = SymbolInfo{value, isConst}
+	}
+	return nil
+
 }

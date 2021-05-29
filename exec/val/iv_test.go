@@ -43,7 +43,7 @@ func TestReduce_Array_RHS_OK(t *testing.T) {
 
 	for _, tt := range cases {
 		t.Run(tt.name, func(t *testing.T) {
-			ctx := NewContext()
+			c := ctx.NewContext(nil)
 
 			iv := &IV{
 				reduceType: IVTypeArray,
@@ -51,7 +51,7 @@ func TestReduce_Array_RHS_OK(t *testing.T) {
 				index:      tt.index,
 			}
 
-			v, err := iv.ReduceRHS(ctx)
+			v, err := iv.ReduceRHS(c)
 			if err != nil {
 				t.Errorf("reduce() should have no error - but error: %s occured", err.Error())
 				return
@@ -91,7 +91,7 @@ func TestReduce_Array_RHS_FAIL(t *testing.T) {
 
 	for _, tt := range cases {
 		t.Run(tt.name, func(t *testing.T) {
-			ctx := NewContext()
+			c := ctx.NewContext(nil)
 
 			iv := &IV{
 				reduceType: IVTypeArray,
@@ -99,7 +99,7 @@ func TestReduce_Array_RHS_FAIL(t *testing.T) {
 				index:      tt.index,
 			}
 
-			_, err := iv.ReduceRHS(ctx)
+			_, err := iv.ReduceRHS(c)
 			if err == nil {
 				t.Errorf("reduce() expect error - but no error")
 				return
@@ -142,7 +142,7 @@ func TestReduace_Array_LHS_OK(t *testing.T) {
 
 	for _, tt := range cases {
 		t.Run(tt.name, func(t *testing.T) {
-			ctx := NewContext()
+			c := ctx.NewContext(nil)
 
 			root := NewArray(tt.array)
 			// construct IV
@@ -152,7 +152,7 @@ func TestReduace_Array_LHS_OK(t *testing.T) {
 				index:      tt.index,
 			}
 
-			err := iv.ReduceLHS(ctx, tt.input)
+			err := iv.ReduceLHS(c, tt.input)
 			if err != nil {
 				t.Errorf("reduceLHS() should have no error - but error: %s occured", err.Error())
 				return
