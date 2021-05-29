@@ -6,7 +6,7 @@ import (
 	"github.com/DemoHn/Zn/syntax"
 )
 
-type funcExecutor func(*ctx.Context, []ctx.Value) (ctx.Value, *error.Error)
+type funcExecutor = func(*ctx.Context, []ctx.Value) (ctx.Value, *error.Error)
 
 // BuildClosureFromNode - create a closure (with default param handler logic)
 // from Zn code (*syntax.BlockStmt). It's the constructor of 如何XX or (anoymous function in the future)
@@ -19,7 +19,7 @@ func BuildClosureFromNode(paramTags []*syntax.ParamItem, stmtBlock *syntax.Block
 		for _, stmtI := range stmtBlock.Children {
 			if v, ok := stmtI.(*syntax.FunctionDeclareStmt); ok {
 				fn := BuildFunctionFromNode(v)
-				if err := bindValue(ctx, v.FuncName.GetLiteral(), fn); err != nil {
+				if err := bindValue(c, v.FuncName.GetLiteral(), fn); err != nil {
 					return nil, err
 				}
 			}
@@ -27,7 +27,7 @@ func BuildClosureFromNode(paramTags []*syntax.ParamItem, stmtBlock *syntax.Block
 		// iterate block round II - execution of rest code blocks
 		for _, stmtII := range stmtBlock.Children {
 			if _, ok := stmtII.(*syntax.FunctionDeclareStmt); !ok {
-				if err := evalStatement(ctx, stmtII); err != nil {
+				if err := evalStatement(c, stmtII); err != nil {
 					// if recv breaks
 					if err.GetCode() == error.ReturnBreakSignal {
 						if extra, ok := err.GetExtra().(ctx.Value); ok {
@@ -75,19 +75,4 @@ func NewClosure(paramHandler funcExecutor, executor funcExecutor) ctx.ClosureRef
 		ParamHandler: paramHandler,
 		Executor:     executor,
 	}
-}
-
-// Exec - execute a closure - accepts input params, execute from closure exeuctor and
-// yields final result
-func (cs *ctx.ClosureRef) Exec(c *ctx.Context, params []ctx.Value) (ctx.Value, *error.Error) {
-	if cs.ParamHandler != nil {
-		if _, err := cs.ParamHandler(ctx, params); err != nil {
-			return nil, err
-		}
-	}
-	if cs.Executor == nil {
-		return nil, error.NewErrorSLOT("执行逻辑不能为空")
-	}
-	// do execution
-	return cs.Executor(ctx, params)
 }

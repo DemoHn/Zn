@@ -4,6 +4,8 @@ import (
 	"github.com/DemoHn/Zn/error"
 )
 
+type funcExecutor func(*Context, []Value) (Value, *error.Error)
+
 // Value is the base unit to present a value (aka. variable) - including number, string, array, function, object...
 // All kinds of values in Zn language SHOULD implement this interface.
 //
@@ -43,4 +45,19 @@ type ClassRef struct {
 	CompPropList map[string]ClosureRef
 	// MethodList - stores all available methods defintion of class
 	MethodList map[string]ClosureRef
+}
+
+// Exec - execute a closure - accepts input params, execute from closure exeuctor and
+// yields final result
+func (cs *ClosureRef) Exec(c *Context, params []Value) (Value, *error.Error) {
+	if cs.ParamHandler != nil {
+		if _, err := cs.ParamHandler(c, params); err != nil {
+			return nil, err
+		}
+	}
+	if cs.Executor == nil {
+		return nil, error.NewErrorSLOT("执行逻辑不能为空")
+	}
+	// do execution
+	return cs.Executor(c, params)
 }
