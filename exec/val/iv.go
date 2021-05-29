@@ -58,7 +58,7 @@ func (iv *IV) ReduceLHS(c *ctx.Context, input ctx.Value) *error.Error {
 		}
 		hm.value[iv.member] = input
 	case IVTypeMember:
-		return iv.root.SetProperty(ctx, iv.member, input)
+		return iv.root.SetProperty(c, iv.member, input)
 	}
 	return error.UnExpectedCase("IVReduceType", fmt.Sprintf("%d", iv.reduceType))
 }
@@ -87,7 +87,7 @@ func (iv *IV) ReduceRHS(c *ctx.Context) (ctx.Value, *error.Error) {
 		}
 		return result, nil
 	case IVTypeMember:
-		return iv.root.GetProperty(ctx, iv.member)
+		return iv.root.GetProperty(c, iv.member)
 	}
 	return nil, error.UnExpectedCase("IVReduceType", fmt.Sprintf("%d", iv.reduceType))
 }

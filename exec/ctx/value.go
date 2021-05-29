@@ -4,8 +4,6 @@ import (
 	"github.com/DemoHn/Zn/error"
 )
 
-type funcExecutor func(*Context, []Value) (Value, *error.Error)
-
 // Value is the base unit to present a value (aka. variable) - including number, string, array, function, object...
 // All kinds of values in Zn language SHOULD implement this interface.
 //
@@ -18,46 +16,4 @@ type Value interface {
 	GetProperty(*Context, string) (Value, *error.Error)
 	SetProperty(*Context, string, Value) *error.Error
 	ExecMethod(*Context, string, []Value) (Value, *error.Error)
-}
-
-// ClosureRef - aka. Closure Exection Reference
-// It's the structure of a closure which wraps execution logic.
-// The executor could be either a bunch of code or some native code.
-type ClosureRef struct {
-	ParamHandler funcExecutor
-	Executor     funcExecutor // closure execution logic
-}
-
-// ClassRef - aka. Class Definition Reference
-// It defines the structure of a class, including compPropList, methodList and propList.
-// All instances created from this class MUST inherits from those configurations.
-type ClassRef struct {
-	// Name - class name
-	Name string
-	// Constructor defines default logic (mostly for initialization) when a new instance
-	// is created by "x 成为 C：P，Q，R"
-	Constructor funcExecutor
-	// PropList defines all property name of a class, each item COULD NOT BE neither append nor removed
-	PropList []string
-	// CompPropList - CompProp stands for "Computed Property", which means the value is get or set
-	// from a pre-defined function. Computed property offers more extensions for manipulations
-	// of properties.
-	CompPropList map[string]ClosureRef
-	// MethodList - stores all available methods defintion of class
-	MethodList map[string]ClosureRef
-}
-
-// Exec - execute a closure - accepts input params, execute from closure exeuctor and
-// yields final result
-func (cs *ClosureRef) Exec(c *Context, params []Value) (Value, *error.Error) {
-	if cs.ParamHandler != nil {
-		if _, err := cs.ParamHandler(c, params); err != nil {
-			return nil, err
-		}
-	}
-	if cs.Executor == nil {
-		return nil, error.NewErrorSLOT("执行逻辑不能为空")
-	}
-	// do execution
-	return cs.Executor(c, params)
 }

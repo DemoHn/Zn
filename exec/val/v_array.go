@@ -21,13 +21,13 @@ func NewArray(value []ctx.Value) *Array {
 func (ar *Array) GetProperty(c *ctx.Context, name string) (ctx.Value, *error.Error) {
 	switch name {
 	case "和":
-		return addValueExecutor(ctx, ar.value)
+		return AddValueExecutor(c, ar.value)
 	case "差":
-		return subValueExecutor(ctx, ar.value)
+		return SubValueExecutor(c, ar.value)
 	case "积":
-		return mulValueExecutor(ctx, ar.value)
+		return MulValueExecutor(c, ar.value)
 	case "商":
-		return divValueExecutor(ctx, ar.value)
+		return DivValueExecutor(c, ar.value)
 	case "首", "首项", "第一项":
 		if len(ar.value) == 0 {
 			return NewNull(), nil
@@ -87,7 +87,7 @@ func (ar *Array) ExecMethod(c *ctx.Context, name string, values []ctx.Value) (ct
 			return nil, err
 		}
 		v := values[1].(*Decimal)
-		idx, err := v.asInteger()
+		idx, err := v.AsInteger()
 		if err != nil {
 			return nil, err
 		}
@@ -153,7 +153,7 @@ func (ar *Array) ExecMethod(c *ctx.Context, name string, values []ctx.Value) (ct
 			return nil, err
 		}
 		for _, item := range ar.value {
-			if res, err := compareValues(item, values[0], CmpEq); err != nil {
+			if res, err := CompareValues(item, values[0], CmpEq); err != nil {
 				return nil, err
 			} else if res == true {
 				result = true
@@ -167,7 +167,7 @@ func (ar *Array) ExecMethod(c *ctx.Context, name string, values []ctx.Value) (ct
 			return nil, err
 		}
 		for i, item := range ar.value {
-			if res, err := compareValues(item, values[0], CmpEq); err != nil {
+			if res, err := CompareValues(item, values[0], CmpEq); err != nil {
 				return nil, err
 			} else if res == true {
 				idx = i

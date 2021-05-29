@@ -81,3 +81,13 @@ func (sp *Scope) GetReturnValue() Value {
 func (sp *Scope) SetReturnValue(v Value) {
 	sp.returnValue = v
 }
+
+// SetSgValue -
+func (sp *Scope) SetSgValue(v Value) {
+	sp.sgValue = v
+}
+
+// GetSgValue -
+func (sp *Scope) GetSgValue() Value {
+	return sp.sgValue
+}

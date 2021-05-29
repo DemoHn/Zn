@@ -3,23 +3,11 @@ package exec
 import (
 	"fmt"
 	"math/big"
-	"strconv"
-	"strings"
 
 	"github.com/DemoHn/Zn/error"
 	"github.com/DemoHn/Zn/exec/ctx"
 	"github.com/DemoHn/Zn/exec/val"
 	"github.com/DemoHn/Zn/syntax"
-)
-
-type compareVerb uint8
-
-// Define compareVerbs, for details of each verb, check the following comments
-// on compareValues() function.
-const (
-	CmpEq compareVerb = 1
-	CmpLt compareVerb = 2
-	CmpGt compareVerb = 3
 )
 
 // eval.go evaluates program from generated AST tree with specific scopes
@@ -48,8 +36,9 @@ func evalProgram(c *ctx.Context, program *syntax.Program) *error.Error {
 // EvalStatement - eval statement
 func evalStatement(c *ctx.Context, stmt syntax.Statement) *error.Error {
 	var returnValue ctx.Value
+	var sp = c.GetScope()
 	// set currentLine
-	c.scope.fileInfo.currentLine = stmt.GetCurrentLine()
+	c.GetFileInfo().SetCurrentLine(stmt.GetCurrentLine())
 
 	// set return value
 	defer func() {
@@ -58,11 +47,12 @@ func evalStatement(c *ctx.Context, stmt syntax.Statement) *error.Error {
 		if returnValue != nil {
 			finalReturnValue = returnValue
 		}
-		c.scope.returnValue = finalReturnValue
+		sp.SetReturnValue(finalReturnValue)
 
 		// set parent return value
-		if c.scope.parent != nil {
-			c.scope.parent.returnValue = finalReturnValue
+		parentScope := sp.FindParentScope()
+		if parentScope != nil {
+			parentScope.SetReturnValue(finalReturnValue)
 		}
 	}()
 
@@ -79,7 +69,7 @@ func evalStatement(c *ctx.Context, stmt syntax.Statement) *error.Error {
 		fn := BuildFunctionFromNode(v)
 		return bindValue(c, v.FuncName.GetLiteral(), fn)
 	case *syntax.ClassDeclareStmt:
-		if c.scope.parent != nil {
+		if sp.FindParentScope() != nil {
 			return error.NewErrorSLOT("只能在代码主层级定义类")
 		}
 		return bindClassRef(c, v)
@@ -172,25 +162,25 @@ func evalNewObject(c *ctx.Context, node syntax.VDAssignPair) *error.Error {
 
 // evalWhileLoopStmt -
 func evalWhileLoopStmt(c *ctx.Context, node *syntax.WhileLoopStmt) *error.Error {
-	lctx := c.DuplicateNewScope()
-	lctx.scope.sgValue = NewLoopCtl()
+	newScope := c.ShiftChildScope()
+	newScope.SetSgValue(val.NewLoopCtl())
 	for {
 		// #1. first execute expr
-		trueExpr, err := evalExpression(lctx, node.TrueExpr)
+		trueExpr, err := evalExpression(c, node.TrueExpr)
 		if err != nil {
 			return err
 		}
 		// #2. assert trueExpr to be Bool
-		vTrueExpr, ok := trueExpr.(*Bool)
+		vTrueExpr, ok := trueExpr.(*val.Bool)
 		if !ok {
 			return error.InvalidExprType("bool")
 		}
 		// break the loop if expr yields not true
-		if vTrueExpr.value == false {
+		if vTrueExpr.GetValue() == false {
 			return nil
 		}
 		// #3. stmt block
-		if err := evalStmtBlock(lctx, node.LoopBlock); err != nil {
+		if err := evalStmtBlock(c, node.LoopBlock); err != nil {
 			if err.GetCode() == error.ContinueBreakSignal {
 				// continue next turn
 				continue
@@ -208,7 +198,7 @@ func evalWhileLoopStmt(c *ctx.Context, node *syntax.WhileLoopStmt) *error.Error 
 func evalStmtBlock(c *ctx.Context, block *syntax.BlockStmt) *error.Error {
 	enableHoist := false
 	// only rootScope could enable hoist
-	if c.scope.parent == nil {
+	if c.GetScope().FindChildScope() == nil {
 		enableHoist = true
 	}
 
@@ -254,34 +244,34 @@ func evalBranchStmt(c *ctx.Context, node *syntax.BranchStmt) *error.Error {
 	if err != nil {
 		return err
 	}
-	vIfExpr, ok := ifExpr.(*Bool)
+	vIfExpr, ok := ifExpr.(*val.Bool)
 	if !ok {
 		return error.InvalidExprType("bool")
 	}
 
-	bctx := c.DuplicateNewScope()
+	c.ShiftChildScope()
 	// exec if-branch
-	if vIfExpr.value == true {
-		return evalStmtBlock(bctx, node.IfTrueBlock)
+	if vIfExpr.GetValue() == true {
+		return evalStmtBlock(c, node.IfTrueBlock)
 	}
 	// exec else-if branches
 	for idx, otherExpr := range node.OtherExprs {
-		otherExprI, err := evalExpression(bctx, otherExpr)
+		otherExprI, err := evalExpression(c, otherExpr)
 		if err != nil {
 			return err
 		}
-		vOtherExprI, ok := otherExprI.(*Bool)
+		vOtherExprI, ok := otherExprI.(*val.Bool)
 		if !ok {
 			return error.InvalidExprType("bool")
 		}
 		// exec else-if branch
-		if vOtherExprI.value == true {
-			return evalStmtBlock(bctx, node.OtherBlocks[idx])
+		if vOtherExprI.GetValue() == true {
+			return evalStmtBlock(c, node.OtherBlocks[idx])
 		}
 	}
 	// exec else branch if possible
 	if node.HasElse == true {
-		return evalStmtBlock(bctx, node.IfFalseBlock)
+		return evalStmtBlock(c, node.IfFalseBlock)
 	}
 	return nil
 }
@@ -298,46 +288,47 @@ func evalIterateStmt(c *ctx.Context, node *syntax.IterateStmt) *error.Error {
 		return err
 	}
 
-	// create new child scope
-	ictx := c.DuplicateNewScope()
-	ictx.scope.sgValue = NewLoopCtl()
+	// shift child scope
+	newScope := c.ShiftChildScope()
+	newScope.SetSgValue(val.NewLoopCtl())
 	// execIterationBlock, including set "currentKey" and "currentValue" to scope,
 	// and preDefined indication variables
-	execIterationBlockFn := func(key ctx.Value, val ctx.Value) *error.Error {
+	execIterationBlockFn := func(key ctx.Value, v ctx.Value) *error.Error {
 		// set values of 此之值 and 此之
-		sgValue, _ := ictx.scope.sgValue.(*LoopCtl)
-		sgValue.SetCurrentKeyValue(key, val)
+		sgValueT := newScope.GetSgValue()
+		sgValue, _ := sgValueT.(*val.LoopCtl)
+		sgValue.SetCurrentKeyValue(key, v)
 
 		// set pre-defined value
 		if nameLen == 1 {
-			if err := setValue(ictx, valueSlot, val); err != nil {
+			if err := setValue(c, valueSlot, v); err != nil {
 				return err
 			}
 		} else if nameLen == 2 {
-			if err := setValue(ictx, keySlot, key); err != nil {
+			if err := setValue(c, keySlot, key); err != nil {
 				return err
 			}
-			if err := setValue(ictx, valueSlot, val); err != nil {
+			if err := setValue(c, valueSlot, v); err != nil {
 				return err
 			}
 		}
-		return evalStmtBlock(ictx, node.IterateBlock)
+		return evalStmtBlock(c, node.IterateBlock)
 	}
 
 	// define indication variables as "currentKey" and "currentValue" under new iterScope
 	// of course since there's no any iteration is executed yet, the initial values are all "Null"
 	if nameLen == 1 {
 		valueSlot = node.IndexNames[0].Literal
-		if err := bindValue(ictx, valueSlot, NewNull()); err != nil {
+		if err := bindValue(c, valueSlot, val.NewNull()); err != nil {
 			return err
 		}
 	} else if nameLen == 2 {
 		keySlot = node.IndexNames[0].Literal
 		valueSlot = node.IndexNames[1].Literal
-		if err := bindValue(ictx, keySlot, NewNull()); err != nil {
+		if err := bindValue(c, keySlot, val.NewNull()); err != nil {
 			return err
 		}
-		if err := bindValue(ictx, valueSlot, NewNull()); err != nil {
+		if err := bindValue(c, valueSlot, val.NewNull()); err != nil {
 			return err
 		}
 	} else if nameLen > 2 {
@@ -346,10 +337,10 @@ func evalIterateStmt(c *ctx.Context, node *syntax.IterateStmt) *error.Error {
 
 	// execute iterations
 	switch tv := targetExpr.(type) {
-	case *Array:
-		for idx, val := range tv.value {
-			idxVar := NewDecimalFromInt(idx, 0)
-			if err := execIterationBlockFn(idxVar, val); err != nil {
+	case *val.Array:
+		for idx, v := range tv.value {
+			idxVar := val.NewDecimalFromInt(idx, 0)
+			if err := execIterationBlockFn(idxVar, v); err != nil {
 				if err.GetCode() == error.ContinueBreakSignal {
 					// continue next turn
 					continue
@@ -361,7 +352,7 @@ func evalIterateStmt(c *ctx.Context, node *syntax.IterateStmt) *error.Error {
 				return err
 			}
 		}
-	case *HashMap:
+	case *val.HashMap:
 		for _, key := range tv.keyOrder {
 			val := tv.value[key]
 			keyVar := NewString(key)
@@ -387,7 +378,7 @@ func evalIterateStmt(c *ctx.Context, node *syntax.IterateStmt) *error.Error {
 //// execute expressions
 
 func evalExpression(c *ctx.Context, expr syntax.Expression) (ctx.Value, *error.Error) {
-	c.scope.fileInfo.currentLine = expr.GetCurrentLine()
+	c.GetFileInfo().SetCurrentLine(expr.GetCurrentLine())
 
 	switch e := expr.(type) {
 	case *syntax.VarAssignExpr:
@@ -450,7 +441,7 @@ func evalExpression(c *ctx.Context, expr syntax.Expression) (ctx.Value, *error.E
 
 // （显示：A，B，C）
 func evalFunctionCall(c *ctx.Context, expr *syntax.FuncCallExpr) (ctx.Value, *error.Error) {
-	var zf *ClosureRef
+	var zf *val.ClosureRef
 	vtag := expr.FuncName.GetLiteral()
 
 	// for a function call, if thisValue NOT FOUND, that means the target closure is a FUNCTION
@@ -464,7 +455,7 @@ func evalFunctionCall(c *ctx.Context, expr *syntax.FuncCallExpr) (ctx.Value, *er
 
 	// if thisValue exists, find ID from its method list
 	if thisValue != nil {
-		if obj, ok := thisValue.(*Object); ok {
+		if obj, ok := thisValue.(*val.Object); ok {
 			// find value
 			if method, ok2 := obj.ref.MethodList[vtag]; ok2 {
 				zf = &method
@@ -475,12 +466,12 @@ func evalFunctionCall(c *ctx.Context, expr *syntax.FuncCallExpr) (ctx.Value, *er
 	// if function value not found from object scope, look up from local scope
 	if zf == nil {
 		// find function definction
-		val, err := getValue(c, vtag)
+		v, err := getValue(c, vtag)
 		if err != nil {
 			return nil, err
 		}
 		// assert value
-		zval, ok := val.(*Function)
+		zval, ok := v.(*val.Function)
 		if !ok {
 			return nil, error.InvalidFuncVariable(vtag)
 		}
@@ -501,7 +492,7 @@ func evalFunctionCall(c *ctx.Context, expr *syntax.FuncCallExpr) (ctx.Value, *er
 // evaluate logic combination expressions
 // such as A 且 B
 // or A 或 B
-func evalLogicCombiner(c *ctx.Context, expr *syntax.LogicExpr) (*Bool, *error.Error) {
+func evalLogicCombiner(c *ctx.Context, expr *syntax.LogicExpr) (*val.Bool, *error.Error) {
 	logicType := expr.Type
 	// #1. eval left
 	left, err := evalExpression(c, expr.LeftExpr)
@@ -509,7 +500,7 @@ func evalLogicCombiner(c *ctx.Context, expr *syntax.LogicExpr) (*Bool, *error.Er
 		return nil, err
 	}
 	// #2. assert left expr type to be ZnBool
-	vleft, ok := left.(*Bool)
+	vleft, ok := left.(*val.Bool)
 	if !ok {
 		return nil, error.InvalidExprType("bool")
 	}
@@ -519,33 +510,33 @@ func evalLogicCombiner(c *ctx.Context, expr *syntax.LogicExpr) (*Bool, *error.Er
 	// 2) for Y = A or  B, if A = true, then Y must be true
 	//
 	// for those cases, we can yield result directly
-	if logicType == syntax.LogicAND && vleft.value == false {
-		return NewBool(false), nil
+	if logicType == syntax.LogicAND && vleft.GetValue() == false {
+		return val.NewBool(false), nil
 	}
-	if logicType == syntax.LogicOR && vleft.value == true {
-		return NewBool(true), nil
+	if logicType == syntax.LogicOR && vleft.GetValue() == true {
+		return val.NewBool(true), nil
 	}
 	// #4. eval right
 	right, err := evalExpression(c, expr.RightExpr)
 	if err != nil {
 		return nil, err
 	}
-	vright, ok := right.(*Bool)
+	vright, ok := right.(*val.Bool)
 	if !ok {
 		return nil, error.InvalidExprType("bool")
 	}
 	// then evalute data
 	switch logicType {
 	case syntax.LogicAND:
-		return NewBool(vleft.value && vright.value), nil
+		return val.NewBool(vleft.GetValue() && vright.GetValue()), nil
 	default: // logicOR
-		return NewBool(vleft.value || vright.value), nil
+		return val.NewBool(vleft.GetValue() || vright.GetValue()), nil
 	}
 }
 
 // evaluate logic comparator
 // ensure both expressions are comparable (i.e. subtype of ZnComparable)
-func evalLogicComparator(c *ctx.Context, expr *syntax.LogicExpr) (*Bool, *error.Error) {
+func evalLogicComparator(c *ctx.Context, expr *syntax.LogicExpr) (*val.Bool, *error.Error) {
 	logicType := expr.Type
 	// #1. eval left
 	left, err := evalExpression(c, expr.LeftExpr)
@@ -563,44 +554,44 @@ func evalLogicComparator(c *ctx.Context, expr *syntax.LogicExpr) (*Bool, *error.
 	// #3. do comparison
 	switch logicType {
 	case syntax.LogicEQ:
-		cmpRes, cmpErr = compareValues(left, right, CmpEq)
+		cmpRes, cmpErr = val.CompareValues(left, right, val.CmpEq)
 	case syntax.LogicNEQ:
-		cmpRes, cmpErr = compareValues(left, right, CmpEq)
+		cmpRes, cmpErr = val.CompareValues(left, right, val.CmpEq)
 		cmpRes = !cmpRes // reverse result
 	case syntax.LogicGT:
-		cmpRes, cmpErr = compareValues(left, right, CmpGt)
+		cmpRes, cmpErr = val.CompareValues(left, right, val.CmpGt)
 	case syntax.LogicGTE:
 		var cmp1, cmp2 bool
-		cmp1, cmpErr = compareValues(left, right, CmpGt)
+		cmp1, cmpErr = val.CompareValues(left, right, val.CmpGt)
 		if cmpErr != nil {
 			return nil, cmpErr
 		}
-		cmp2, cmpErr = compareValues(left, right, CmpEq)
+		cmp2, cmpErr = val.CompareValues(left, right, val.CmpEq)
 		cmpRes = cmp1 || cmp2
 	case syntax.LogicLT:
-		cmpRes, cmpErr = compareValues(left, right, CmpLt)
+		cmpRes, cmpErr = val.CompareValues(left, right, val.CmpLt)
 	case syntax.LogicLTE:
 		var cmp1, cmp2 bool
-		cmp1, cmpErr = compareValues(left, right, CmpLt)
+		cmp1, cmpErr = val.CompareValues(left, right, val.CmpLt)
 		if cmpErr != nil {
 			return nil, cmpErr
 		}
-		cmp2, cmpErr = compareValues(left, right, CmpEq)
+		cmp2, cmpErr = val.CompareValues(left, right, val.CmpEq)
 		cmpRes = cmp1 || cmp2
 	default:
 		return nil, error.UnExpectedCase("比较类型", fmt.Sprintf("%d", logicType))
 	}
 
-	return NewBool(cmpRes), cmpErr
+	return val.NewBool(cmpRes), cmpErr
 }
 
 // eval prime expr
 func evalPrimeExpr(c *ctx.Context, expr syntax.Expression) (ctx.Value, *error.Error) {
 	switch e := expr.(type) {
 	case *syntax.Number:
-		return NewDecimal(e.GetLiteral())
+		return val.NewDecimal(e.GetLiteral())
 	case *syntax.String:
-		return NewString(e.GetLiteral()), nil
+		return val.NewString(e.GetLiteral()), nil
 	case *syntax.ID:
 		vtag := e.GetLiteral()
 		return getValue(c, vtag)
@@ -614,9 +605,9 @@ func evalPrimeExpr(c *ctx.Context, expr syntax.Expression) (ctx.Value, *error.Er
 			znObjs = append(znObjs, expr)
 		}
 
-		return NewArray(znObjs), nil
+		return val.NewArray(znObjs), nil
 	case *syntax.HashMapExpr:
-		znPairs := []KVPair{}
+		znPairs := []val.KVPair{}
 		for _, item := range e.KVPair {
 			// the key of KVPair MUST BE one of the following types
 			//   - Number (its literal as key)
@@ -640,16 +631,16 @@ func evalPrimeExpr(c *ctx.Context, expr syntax.Expression) (ctx.Value, *error.Er
 				return nil, error.InvalidExprType("string", "decimal", "id")
 			}
 
-			exprVal, err := evalExpression(c, item.ctx.Value)
+			exprVal, err := evalExpression(c, item.Value)
 			if err != nil {
 				return nil, err
 			}
-			znPairs = append(znPairs, KVPair{
-				Key:       exprKey,
-				ctx.Value: exprVal,
+			znPairs = append(znPairs, val.KVPair{
+				Key:   exprKey,
+				Value: exprVal,
 			})
 		}
-		return NewHashMap(znPairs), nil
+		return val.NewHashMap(znPairs), nil
 	default:
 		return nil, error.UnExpectedCase("表达式类型", fmt.Sprintf("%T", e))
 	}
@@ -688,7 +679,7 @@ func evalVarAssignExpr(c *ctx.Context, expr *syntax.VarAssignExpr) (ctx.Value, *
 	}
 }
 
-func getMemberExprIV(c *ctx.Context, expr *syntax.MemberExpr) (*IV, *error.Error) {
+func getMemberExprIV(c *ctx.Context, expr *syntax.MemberExpr) (*val.IV, *error.Error) {
 	switch expr.RootType {
 	case syntax.RootTypeScope: // 此之 XX
 		sgValue, err := findSgValue(c)
@@ -696,8 +687,8 @@ func getMemberExprIV(c *ctx.Context, expr *syntax.MemberExpr) (*IV, *error.Error
 			return nil, err
 		}
 
-		return &IV{
-			reduceType: IVTypeMember,
+		return &val.IV{
+			reduceType: val.IVTypeMember,
 			root:       sgValue,
 			member:     expr.MemberID.GetLiteral(),
 		}, nil
@@ -707,8 +698,8 @@ func getMemberExprIV(c *ctx.Context, expr *syntax.MemberExpr) (*IV, *error.Error
 		if err != nil {
 			return nil, err
 		}
-		return &IV{
-			reduceType: IVTypeMember,
+		return &val.IV{
+			reduceType: val.IVTypeMember,
 			root:       thisValue,
 			member:     expr.MemberID.GetLiteral(),
 		}, nil
@@ -719,8 +710,8 @@ func getMemberExprIV(c *ctx.Context, expr *syntax.MemberExpr) (*IV, *error.Error
 		}
 		switch expr.MemberType {
 		case syntax.MemberID: // A 之 B
-			return &IV{
-				reduceType: IVTypeMember,
+			return &val.IV{
+				reduceType: val.IVTypeMember,
 				root:       valRoot,
 				member:     expr.MemberID.GetLiteral(),
 			}, nil
@@ -730,37 +721,37 @@ func getMemberExprIV(c *ctx.Context, expr *syntax.MemberExpr) (*IV, *error.Error
 				return nil, err
 			}
 			switch v := valRoot.(type) {
-			case *Array:
-				vr, ok := idx.(*Decimal)
+			case *val.Array:
+				vr, ok := idx.(*val.Decimal)
 				if !ok {
 					return nil, error.InvalidExprType("integer")
 				}
-				vri, e := vr.asInteger()
+				vri, e := vr.AsInteger()
 				if e != nil {
 					return nil, error.InvalidExprType("integer")
 				}
-				return &IV{
-					reduceType: IVTypeArray,
+				return &val.IV{
+					reduceType: val.IVTypeArray,
 					root:       v,
 					index:      vri,
 				}, nil
-			case *HashMap:
+			case *val.HashMap:
 				var s string
 				switch x := idx.(type) {
 				// regard decimal value directly as string
-				case *Decimal:
+				case *val.Decimal:
 					// transform decimal value to string
 					// x.exp < 0 express that its a decimal value with point mark, not an integer
 					if x.exp < 0 {
 						return nil, error.InvalidExprType("integer", "string")
 					}
 					s = x.String()
-				case *String:
+				case *val.String:
 					s = x.String()
 				default:
 					return nil, error.InvalidExprType("integer", "string")
 				}
-				return &IV{
+				return &val.IV{
 					reduceType: IVTypeHashMap,
 					root:       v,
 					member:     s,
@@ -916,186 +907,156 @@ func findThisValue(c *ctx.Context) (ctx.Value, *error.Error) {
 // This is due to the 'copycat by default' policy
 func duplicateValue(in ctx.Value) ctx.Value {
 	switch v := in.(type) {
-	case *Bool:
-		return NewBool(v.value)
-	case *String:
-		return NewString(v.value)
-	case *Decimal:
+	case *val.Bool:
+		return val.NewBool(v.value)
+	case *val.String:
+		return val.NewString(v.value)
+	case *val.Decimal:
 		x := new(big.Int)
-		return &Decimal{
+		return &val.Decimal{
 			co:  x.Set(v.co),
 			exp: v.exp,
 		}
-	case *Null:
+	case *val.Null:
 		return in // no need to copy since all "NULL" values are same
-	case *Array:
+	case *val.Array:
 		newArr := []ctx.Value{}
 		for _, val := range v.value {
 			newArr = append(newArr, duplicateValue(val))
 		}
-		return NewArray(newArr)
-	case *HashMap:
-		kvPairs := []KVPair{}
+		return val.NewArray(newArr)
+	case *val.HashMap:
+		kvPairs := []val.KVPair{}
 		for _, key := range v.keyOrder {
 			dupVal := duplicateValue(v.value[key])
 			kvPairs = append(kvPairs, KVPair{key, dupVal})
 		}
-		return NewHashMap(kvPairs)
-	case *Function: // function itself is immutable, so return directly
+		return val.NewHashMap(kvPairs)
+	case *val.Function: // function itself is immutable, so return directly
 		return in
-	case *Object: // we don't copy object value at all
+	case *val.Object: // we don't copy object value at all
 		return in
 	}
 	return in
 }
 
-// compareValues - some ZnValues are comparable from specific types of right value
-// otherwise it will throw error.
-//
-// There are three types of compare verbs (actions): Eq, Lt and Gt.
-//
-// Eq - compare if two values are "equal". Usually there are two rules:
-// 1. types of left and right value are same. A number MUST BE equals to a number, that means
-// (string) “2” won't be equals to (number) 2;
-// 2. each items SHOULD BE identical, even for composited types (i.e. array, hashmap)
-//
-// Lt - for two decimals ONLY. If leftValue < rightValue.
-//
-// Gt - for two decimals ONLY. If leftValue > rightValue.
-//
-func compareValues(left ctx.Value, right ctx.Value, verb compareVerb) (bool, *error.Error) {
-	switch vl := left.(type) {
-	case *Null:
-		if _, ok := right.(*Null); ok {
-			return true, nil
-		}
-		return false, nil
-	case *Decimal:
-		// compare right value - decimal only
-		if vr, ok := right.(*Decimal); ok {
-			r1, r2 := rescalePair(*vl, *vr)
-			cmpResult := false
-			switch verb {
-			case CmpEq:
-				cmpResult = (r1.co.Cmp(r2.co) == 0)
-			case CmpLt:
-				cmpResult = (r1.co.Cmp(r2.co) < 0)
-			case CmpGt:
-				cmpResult = (r1.co.Cmp(r2.co) > 0)
-			default:
-				return false, error.UnExpectedCase("比较原语", strconv.Itoa(int(verb)))
-			}
-			return cmpResult, nil
-		}
-		// if vert == CmbEq and rightValue is not decimal type
-		// then return `false` directly
-		if verb == CmpEq {
-			return false, nil
-		}
-		return false, error.InvalidCompareRType("decimal")
-	case *String:
-		// Only CmpEq is valid for comparison
-		if verb != CmpEq {
-			return false, error.InvalidCompareLType("decimal", "string", "bool", "array", "hashmap")
-		}
-		// compare right value - string only
-		if vr, ok := right.(*String); ok {
-			cmpResult := (strings.Compare(vl.value, vr.value) == 0)
-			return cmpResult, nil
-		}
-		return false, nil
-	case *Bool:
-		if verb != CmpEq {
-			return false, error.InvalidCompareLType("decimal", "string", "bool", "array", "hashmap")
-		}
-		// compare right value - bool only
-		if vr, ok := right.(*Bool); ok {
-			cmpResult := vl.value == vr.value
-			return cmpResult, nil
-		}
-		return false, nil
-	case *Array:
-		if verb != CmpEq {
-			return false, error.InvalidCompareLType("decimal", "string", "bool", "array", "hashmap")
-		}
-
-		if vr, ok := right.(*Array); ok {
-			if len(vl.value) != len(vr.value) {
-				return false, nil
-			}
-			// cmp each item
-			for idx := range vl.value {
-				cmpVal, err := compareValues(vl.value[idx], vr.value[idx], CmpEq)
-				if err != nil {
-					return false, err
+// BuildClosureFromNode - create a closure (with default param handler logic)
+// from Zn code (*syntax.BlockStmt). It's the constructor of 如何XX or (anoymous function in the future)
+func BuildClosureFromNode(paramTags []*syntax.ParamItem, stmtBlock *syntax.BlockStmt) val.ClosureRef {
+	var executor = func(c *ctx.Context, params []ctx.Value) (ctx.Value, *error.Error) {
+		// iterate block round I - function hoisting
+		// NOTE: function hoisting means bind function definitions at the beginning
+		// of execution so that even if "function execution" statement is before
+		// "function definition" statement.
+		for _, stmtI := range stmtBlock.Children {
+			if v, ok := stmtI.(*syntax.FunctionDeclareStmt); ok {
+				fn := BuildFunctionFromNode(v)
+				if err := bindValue(c, v.FuncName.GetLiteral(), fn); err != nil {
+					return nil, err
 				}
-				return cmpVal, nil
 			}
-			return true, nil
 		}
-		return false, nil
-	case *HashMap:
-		if verb != CmpEq {
-			return false, error.InvalidCompareLType("decimal", "string", "bool", "array", "hashmap")
-		}
-
-		if vr, ok := right.(*HashMap); ok {
-			if len(vl.value) != len(vr.value) {
-				return false, nil
-			}
-			// cmp each item
-			for idx := range vl.value {
-				// ensure the key exists on vr
-				vrr, ok := vr.value[idx]
-				if !ok {
-					return false, nil
+		// iterate block round II - execution of rest code blocks
+		for _, stmtII := range stmtBlock.Children {
+			if _, ok := stmtII.(*syntax.FunctionDeclareStmt); !ok {
+				if err := evalStatement(c, stmtII); err != nil {
+					// if recv breaks
+					if err.GetCode() == error.ReturnBreakSignal {
+						if extra, ok := err.GetExtra().(ctx.Value); ok {
+							return extra, nil
+						}
+					}
+					return nil, err
 				}
-				cmpVal, err := compareValues(vl.value[idx], vrr, CmpEq)
-				if err != nil {
-					return false, err
-				}
-				return cmpVal, nil
 			}
-			return true, nil
 		}
-		return false, nil
+		return ctx.scope.returnValue, nil
 	}
-	return false, error.InvalidCompareLType("decimal", "string", "bool", "array", "hashmap")
+
+	var paramHandler = func(c *ctx.Context, params []ctx.Value) (ctx.Value, *error.Error) {
+		// check param length
+		if len(params) != len(paramTags) {
+			return nil, error.MismatchParamLengthError(len(paramTags), len(params))
+		}
+
+		// bind params (as variable) to function scope
+		for idx, paramVal := range params {
+			param := paramTags[idx]
+			// if param is NOT a reference type, then we need additionally
+			// copy its value
+			if !param.RefMark {
+				paramVal = duplicateValue(paramVal)
+			}
+			paramName := param.ID.GetLiteral()
+			if err := bindValue(ctx, paramName, paramVal); err != nil {
+				return nil, err
+			}
+		}
+		return nil, nil
+	}
+
+	return val.NewClosure(paramHandler, executor)
 }
 
-// StringifyValue - yield a string from ctx.Value
-func StringifyValue(value ctx.Value) string {
-	switch v := value.(type) {
-	case *String:
-		return fmt.Sprintf("「%s」", v.value)
-	case *Decimal:
-		return v.String()
-	case *Array:
-		strs := []string{}
-		for _, item := range v.value {
-			strs = append(strs, StringifyValue(item))
+// BuildClassFromNode -
+func BuildClassFromNode(name string, classNode *syntax.ClassDeclareStmt) val.ClassRef {
+	ref := val.ClassRef{
+		Name:         name,
+		Constructor:  nil,
+		PropList:     []string{},
+		CompPropList: map[string]val.ClosureRef{},
+		MethodList:   map[string]val.ClosureRef{},
+	}
+
+	// define default constrcutor
+	var constructor = func(c *ctx.Context, params []ctx.Value) (ctx.Value, *error.Error) {
+		obj := val.NewObject(ref)
+		// init prop list
+		for _, propPair := range classNode.PropertyList {
+			propID := propPair.PropertyID.GetLiteral()
+			expr, err := evalExpression(c, propPair.InitValue)
+			if err != nil {
+				return nil, err
+			}
+			obj.propList[propID] = expr
+			ref.PropList = append(ref.PropList, propID)
+		}
+		// constructor: set some properties' value
+		if len(params) != len(classNode.ConstructorIDList) {
+			return nil, error.MismatchParamLengthError(len(params), len(classNode.ConstructorIDList))
+		}
+		for idx, objParamVal := range params {
+			param := classNode.ConstructorIDList[idx]
+			// if param is NOT a reference, then we need to copy its value
+			if !param.RefMark {
+				objParamVal = duplicateValue(objParamVal)
+			}
+			paramName := param.ID.GetLiteral()
+			obj.propList[paramName] = objParamVal
 		}
 
-		return fmt.Sprintf("【%s】", strings.Join(strs, "，"))
-	case *Bool:
-		data := "真"
-		if v.value == false {
-			data = "假"
-		}
-		return data
-	case *Function:
-		return fmt.Sprintf("[方法]")
-	case *Null:
-		return "空"
-	case *Object:
-		return fmt.Sprintf("[对象]")
-	case *HashMap:
-		strs := []string{}
-		for _, key := range v.keyOrder {
-			value := v.value[key]
-			strs = append(strs, fmt.Sprintf("%s == %s", key, StringifyValue(value)))
-		}
-		return fmt.Sprintf("【%s】", strings.Join(strs, "，"))
+		return obj, nil
 	}
-	return ""
+	// set constructor
+	ref.Constructor = constructor
+
+	// add getters
+	for _, gNode := range classNode.GetterList {
+		getterTag := gNode.GetterName.GetLiteral()
+		ref.CompPropList[getterTag] = BuildClosureFromNode([]*syntax.ParamItem{}, gNode.ExecBlock)
+	}
+
+	// add methods
+	for _, mNode := range classNode.MethodList {
+		mTag := mNode.FuncName.GetLiteral()
+		ref.MethodList[mTag] = BuildClosureFromNode(mNode.ParamList, mNode.ExecBlock)
+	}
+
+	return ref
+}
+
+// BuildFunctionFromNode -
+func BuildFunctionFromNode(node *syntax.FunctionDeclareStmt) *val.Function {
+	closureRef := BuildClosureFromNode(node.ParamList, node.ExecBlock)
+	return val.NewFunction("", closureRef.Exec)
 }

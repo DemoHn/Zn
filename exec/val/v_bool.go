@@ -24,6 +24,11 @@ func (b *Bool) String() string {
 	return data
 }
 
+// GetValue -
+func (b *Bool) GetValue() bool {
+	return b.value
+}
+
 // GetProperty -
 func (b *Bool) GetProperty(c *ctx.Context, name string) (ctx.Value, *error.Error) {
 	switch name {
