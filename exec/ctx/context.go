@@ -43,16 +43,6 @@ func (ctx *Context) SetScope(sp *Scope) {
 	ctx.scope = sp
 }
 
-// ShiftChildScope -
-func (ctx *Context) ShiftChildScope() *Scope {
-	if ctx.scope != nil {
-		newScope := ctx.scope.CreateChildScope()
-		ctx.scope = newScope
-		return newScope
-	}
-	return nil
-}
-
 // SetFileInfo
 func (ctx *Context) SetFileInfo(fileInfo *FileInfo) {
 	ctx.fileInfo = fileInfo

@@ -17,6 +17,11 @@ func NewArray(value []ctx.Value) *Array {
 	return &Array{value}
 }
 
+// GetValue -
+func (ar *Array) GetValue() []ctx.Value {
+	return ar.value
+}
+
 // GetProperty -
 func (ar *Array) GetProperty(c *ctx.Context, name string) (ctx.Value, *error.Error) {
 	switch name {

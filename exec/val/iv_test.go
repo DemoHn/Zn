@@ -193,7 +193,7 @@ func TestReduce_Array_LHS_FAIL(t *testing.T) {
 
 	for _, tt := range cases {
 		t.Run(tt.name, func(t *testing.T) {
-			ctx := NewContext()
+			c := ctx.NewContext(nil)
 
 			iv := &IV{
 				reduceType: IVTypeArray,
@@ -201,7 +201,7 @@ func TestReduce_Array_LHS_FAIL(t *testing.T) {
 				index:      tt.index,
 			}
 
-			err := iv.ReduceLHS(ctx, NewString(""))
+			err := iv.ReduceLHS(c, NewString(""))
 			if err == nil {
 				t.Errorf("reduce() expect error - but no error")
 				return

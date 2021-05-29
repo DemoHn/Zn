@@ -36,6 +36,33 @@ type IV struct {
 	index int
 }
 
+// NewMemberIV -
+func NewMemberIV(root ctx.Value, member string) *IV {
+	return &IV{
+		reduceType: IVTypeMember,
+		root:       root,
+		member:     member,
+	}
+}
+
+// NewArrayIV -
+func NewArrayIV(root ctx.Value, index int) *IV {
+	return &IV{
+		reduceType: IVTypeArray,
+		root:       root,
+		index:      index,
+	}
+}
+
+// NewHashMapIV -
+func NewHashMapIV(root ctx.Value, member string) *IV {
+	return &IV{
+		reduceType: IVTypeHashMap,
+		root:       root,
+		member:     member,
+	}
+}
+
 // ReduceLHS - Reduce IV to value when IV on left-hand side
 // usually for setters
 func (iv *IV) ReduceLHS(c *ctx.Context, input ctx.Value) *error.Error {
