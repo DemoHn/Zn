@@ -7,6 +7,7 @@ import (
 
 	"github.com/DemoHn/Zn/exec"
 	"github.com/DemoHn/Zn/exec/ctx"
+	"github.com/DemoHn/Zn/exec/val"
 	"github.com/DemoHn/Zn/lex"
 	"github.com/peterh/liner"
 )
@@ -44,7 +45,7 @@ func EnterREPL() {
 
 		// execute program
 		in := lex.NewTextStream(text)
-		result, err2 := ExecuteCode(c, in)
+		result, err2 := exec.ExecuteCode(c, in)
 		if err2 != nil {
 			fmt.Println(err2.Display())
 		} else {
@@ -64,7 +65,7 @@ func ExecProgram(file string) {
 		return
 	}
 
-	_, err := ExecuteCode(c, in)
+	_, err := exec.ExecuteCode(c, in)
 	// when exec program, unlike REPL, it's not necessary to print last executed value
 	if err != nil {
 		fmt.Println(err.Display())
@@ -77,20 +78,20 @@ func ShowVersion() {
 }
 
 //// display helpers
-func prettyDisplayValue(val exec.Value, w io.Writer) {
+func prettyDisplayValue(v ctx.Value, w io.Writer) {
 	var displayData = ""
-	var valStr = exec.StringifyValue(val)
-	switch val.(type) {
-	case *exec.Decimal:
+	var valStr = val.StringifyValue(v)
+	switch v.(type) {
+	case *val.Decimal:
 		// FG color: Cyan (lightblue)
 		displayData = fmt.Sprintf("\x1b[38;5;147m%s\x1b[0m\n", valStr)
-	case *exec.String:
+	case *val.String:
 		// FG color: Green
 		displayData = fmt.Sprintf("\x1b[38;5;184m%s\x1b[0m\n", valStr)
-	case *exec.Bool:
+	case *val.Bool:
 		// FG color: White
 		displayData = fmt.Sprintf("\x1b[38;5;231m%s\x1b[0m\n", valStr)
-	case *exec.Null, *exec.Function:
+	case *val.Null, *val.Function:
 		displayData = fmt.Sprintf("‹\x1b[38;5;80m%s\x1b[0m›\n", valStr)
 	default:
 		displayData = fmt.Sprintf("%s\n", valStr)

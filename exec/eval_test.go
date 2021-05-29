@@ -88,7 +88,7 @@ func Test_DuplicateValue(t *testing.T) {
 	for _, suite := range suites {
 		t.Run(suite.name, func(t *testing.T) {
 			out := duplicateValue(suite.input)
-			expectStr := StringifyValue(out)
+			expectStr := val.StringifyValue(out)
 			if expectStr != suite.outputStr {
 				t.Errorf("duplicateValue() result expect -> %s, got -> %s", suite.outputStr, expectStr)
 			}
