@@ -125,3 +125,54 @@ func (ctx *Context) BindSymbolDecl(name string, value Value, isConst bool) *erro
 	return nil
 
 }
+
+// FindThisValue -
+func (ctx *Context) FindThisValue() (Value, *error.Error) {
+	sp := ctx.scope
+	for sp != nil {
+		thisValue := sp.thisValue
+		if thisValue != nil {
+			return thisValue, nil
+		}
+
+		// otherwise, find thisValue from parent scope
+		sp = sp.parent
+	}
+
+	return nil, error.PropertyNotFound("thisValue")
+}
+
+// FindSgValue -
+func (ctx *Context) FindSgValue() (Value, *error.Error) {
+	sp := ctx.scope
+	for sp != nil {
+		sgValue := sp.sgValue
+		if sgValue != nil {
+			return sgValue, nil
+		}
+
+		// otherwise, find thisValue from parent scope
+		sp = sp.parent
+	}
+
+	return nil, error.PropertyNotFound("sgValue")
+}
+
+// fetch from imports
+// GetImportValue -
+func (ctx *Context) GetImportValue(name string) (Value, *error.Error) {
+	// find on globals first
+	if symVal, inImports := ctx.imports[name]; inImports {
+		return symVal, nil
+	}
+
+	return nil, error.NameNotDefined(name)
+}
+
+func (ctx *Context) SetImportValue(name string, value Value) *error.Error {
+	if _, inImports := ctx.imports[name]; inImports {
+		return error.NameRedeclared(name)
+	}
+	ctx.imports[name] = value
+	return nil
+}

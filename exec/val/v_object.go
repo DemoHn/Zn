@@ -54,9 +54,9 @@ func (zo *Object) GetPropList() map[string]ctx.Value {
 	return zo.propList
 }
 
-// Construct - yield new instance of this class
-func (cr *ClassRef) Construct(c *ctx.Context, params []ctx.Value) (ctx.Value, *error.Error) {
-	return cr.Constructor(c, params)
+// GetRef -
+func (zo *Object) GetRef() ClassRef {
+	return zo.ref
 }
 
 // GetProperty -
@@ -76,9 +76,7 @@ func (zo *Object) GetProperty(c *ctx.Context, name string) (ctx.Value, *error.Er
 		return nil, error.PropertyNotFound(name)
 	}
 	// execute computed props to get property result
-	sp := c.ShiftChildScope()
-	sp.SetThisValue(zo)
-	return cprop.Exec(c, []ctx.Value{})
+	return cprop.Exec(c, zo, []ctx.Value{})
 }
 
 // SetProperty -
@@ -89,7 +87,7 @@ func (zo *Object) SetProperty(c *ctx.Context, name string, value ctx.Value) *err
 	}
 	// execute computed properites
 	if cprop, ok2 := zo.ref.CompPropList[name]; ok2 {
-		_, err := cprop.Exec(c, []ctx.Value{})
+		_, err := cprop.Exec(c, zo, []ctx.Value{})
 		return err
 	}
 	return error.PropertyNotFound(name)
@@ -98,7 +96,32 @@ func (zo *Object) SetProperty(c *ctx.Context, name string, value ctx.Value) *err
 // ExecMethod -
 func (zo *Object) ExecMethod(c *ctx.Context, name string, values []ctx.Value) (ctx.Value, *error.Error) {
 	if method, ok := zo.ref.MethodList[name]; ok {
-		return method.Exec(c, values)
+		return method.Exec(c, zo, values)
 	}
+	return nil, error.MethodNotFound(name)
+}
+
+//// NOTE: ClassRef is also a type of Value
+// Construct - yield new instance of this class
+func (cr *ClassRef) Construct(c *ctx.Context, params []ctx.Value) (ctx.Value, *error.Error) {
+	currentScope := c.GetScope()
+	newScope := currentScope.CreateChildScope()
+	// set and revert scope
+	c.SetScope(newScope)
+	defer c.SetScope(currentScope)
+
+	return cr.Constructor(c, params)
+}
+
+// GetProperty - currently there's NO any property inside classRef Value
+func (cr *ClassRef) GetProperty(c *ctx.Context, name string) (ctx.Value, *error.Error) {
+	return nil, error.PropertyNotFound(name)
+}
+
+func (cr *ClassRef) SetProperty(c *ctx.Context, name string, value ctx.Value) *error.Error {
+	return error.PropertyNotFound(name)
+}
+
+func (cr *ClassRef) ExecMethod(c *ctx.Context, name string, values []ctx.Value) (ctx.Value, *error.Error) {
 	return nil, error.MethodNotFound(name)
 }

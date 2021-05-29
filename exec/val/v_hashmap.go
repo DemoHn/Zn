@@ -35,6 +35,16 @@ func NewHashMap(kvPairs []KVPair) *HashMap {
 	return hm
 }
 
+// GetKeyOrder -
+func (hm *HashMap) GetKeyOrder() []string {
+	return hm.keyOrder
+}
+
+// GetValue -
+func (hm *HashMap) GetValue() map[string]ctx.Value {
+	return hm.value
+}
+
 // GetProperty -
 func (hm *HashMap) GetProperty(c *ctx.Context, name string) (ctx.Value, *error.Error) {
 	switch name {

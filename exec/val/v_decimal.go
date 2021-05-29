@@ -44,6 +44,11 @@ func NewDecimalFromInt(value int, exp int) *Decimal {
 	}
 }
 
+// GetExp -
+func (zd *Decimal) GetExp() int {
+	return zd.exp
+}
+
 // String - show decimal display string
 func (zd *Decimal) String() string {
 	var sflag = ""

@@ -71,7 +71,11 @@ func evalStatement(c *ctx.Context, stmt syntax.Statement) *error.Error {
 		if sp.FindParentScope() != nil {
 			return error.NewErrorSLOT("只能在代码主层级定义类")
 		}
-		return bindClassRef(c, v)
+		// bind classRef
+		className := v.ClassName.GetLiteral()
+		classRef := BuildClassFromNode(className, v)
+
+		return c.SetImportValue(className, &classRef)
 	case *syntax.IterateStmt:
 		return evalIterateStmt(c, v)
 	case *syntax.FunctionReturnStmt:
@@ -132,9 +136,13 @@ func evalVarDeclareStmt(c *ctx.Context, node *syntax.VarDeclareStmt) *error.Erro
 func evalNewObject(c *ctx.Context, node syntax.VDAssignPair) *error.Error {
 	vtag := node.ObjClass.GetLiteral()
 	// get class definition
-	classRef, err := getClassRef(c, vtag)
+	importVal, err := c.GetImportValue(vtag)
 	if err != nil {
 		return err
+	}
+	classRef, ok := importVal.(*val.ClassRef)
+	if !ok {
+		return error.InvalidParamType("classRef")
 	}
 
 	cParams, err := exprsToValues(c, node.ObjParams)
@@ -146,8 +154,7 @@ func evalNewObject(c *ctx.Context, node syntax.VDAssignPair) *error.Error {
 	for _, v := range node.Variables {
 		vtag := v.GetLiteral()
 
-		fctx := c.DuplicateNewScope()
-		finalObj, err := classRef.Construct(fctx, cParams)
+		finalObj, err := classRef.Construct(c, cParams)
 		if err != nil {
 			return err
 		}
@@ -218,7 +225,11 @@ func evalStmtBlock(c *ctx.Context, block *syntax.BlockStmt) *error.Error {
 					return err
 				}
 			case *syntax.ClassDeclareStmt:
-				if err := bindClassRef(c, v); err != nil {
+
+				// bind classRef
+				className := v.ClassName.GetLiteral()
+				classRef := BuildClassFromNode(className, v)
+				if err := c.SetImportValue(className, &classRef); err != nil {
 					return err
 				}
 			}
@@ -367,8 +378,8 @@ func evalIterateStmt(c *ctx.Context, node *syntax.IterateStmt) *error.Error {
 			}
 		}
 	case *val.HashMap:
-		for _, key := range tv.keyOrder {
-			v := tv.value[key]
+		for _, key := range tv.GetKeyOrder() {
+			v := tv.GetValue()[key]
 			keyVar := val.NewString(key)
 			// handle interrupts
 			if err := execIterationBlockFn(keyVar, v); err != nil {
@@ -424,7 +435,7 @@ func evalExpression(c *ctx.Context, expr syntax.Expression) (ctx.Value, *error.E
 				}
 				rootValue = root
 			case syntax.RootTypeScope:
-				sgValue, err := findSgValue(c)
+				sgValue, err := c.FindSgValue()
 				if err != nil {
 					return nil, err
 				}
@@ -439,9 +450,8 @@ func evalExpression(c *ctx.Context, expr syntax.Expression) (ctx.Value, *error.E
 			if err != nil {
 				return nil, err
 			}
-			fctx := c.DuplicateNewScope()
-			fctx.scope.thisValue = rootValue
-			return rootValue.ExecMethod(fctx, methodName, paramValues)
+
+			return rootValue.ExecMethod(c, methodName, paramValues)
 		}
 		return nil, error.UnExpectedCase("成员类型", fmt.Sprintf("%d", e.MemberType))
 	case *syntax.Number, *syntax.String, *syntax.ID, *syntax.ArrayExpr, *syntax.HashMapExpr:
@@ -465,13 +475,13 @@ func evalFunctionCall(c *ctx.Context, expr *syntax.FuncCallExpr) (ctx.Value, *er
 	// then look up from scope's values.
 	//
 	// If thisValue == nil, we will look up target closure from scope's values directly.
-	thisValue, _ := findThisValue(c)
+	thisValue, _ := c.FindThisValue()
 
 	// if thisValue exists, find ID from its method list
 	if thisValue != nil {
 		if obj, ok := thisValue.(*val.Object); ok {
 			// find value
-			if method, ok2 := obj.ref.MethodList[vtag]; ok2 {
+			if method, ok2 := obj.GetRef().MethodList[vtag]; ok2 {
 				zf = &method
 			}
 		}
@@ -499,8 +509,7 @@ func evalFunctionCall(c *ctx.Context, expr *syntax.FuncCallExpr) (ctx.Value, *er
 	}
 
 	// exec function call via its ClosureRef
-	fctx := c.DuplicateNewScope()
-	return zf.Exec(fctx, params)
+	return zf.Exec(c, thisValue, params)
 }
 
 // evaluate logic combination expressions
@@ -696,13 +705,13 @@ func evalVarAssignExpr(c *ctx.Context, expr *syntax.VarAssignExpr) (ctx.Value, *
 func getMemberExprIV(c *ctx.Context, expr *syntax.MemberExpr) (*val.IV, *error.Error) {
 	switch expr.RootType {
 	case syntax.RootTypeScope: // 此之 XX
-		sgValue, err := findSgValue(c)
+		sgValue, err := c.FindSgValue()
 		if err != nil {
 			return nil, err
 		}
 		return val.NewMemberIV(sgValue, expr.MemberID.GetLiteral()), nil
 	case syntax.RootTypeProp: // 其 XX
-		thisValue, err := findThisValue(c)
+		thisValue, err := c.FindThisValue()
 		if err != nil {
 			return nil, err
 		}
@@ -738,7 +747,7 @@ func getMemberExprIV(c *ctx.Context, expr *syntax.MemberExpr) (*val.IV, *error.E
 				case *val.Decimal:
 					// transform decimal value to string
 					// x.exp < 0 express that its a decimal value with point mark, not an integer
-					if x.exp < 0 {
+					if x.GetExp() < 0 {
 						return nil, error.InvalidExprType("integer", "string")
 					}
 					s = x.String()
@@ -757,24 +766,6 @@ func getMemberExprIV(c *ctx.Context, expr *syntax.MemberExpr) (*val.IV, *error.E
 	return nil, error.UnExpectedCase("根元素类型", fmt.Sprintf("%d", expr.RootType))
 }
 
-func getClassRef(c *ctx.Context, name string) (*ClassRef, *error.Error) {
-	ref, ok := c.scope.classRefMap[name]
-	if ok {
-		return &ref, nil
-	}
-	return nil, error.NameNotDefined(name)
-}
-
-func bindClassRef(c *ctx.Context, classStmt *syntax.ClassDeclareStmt) *error.Error {
-	name := classStmt.ClassName.GetLiteral()
-	_, ok := c.scope.classRefMap[name]
-	if ok {
-		return error.NameRedeclared(name)
-	}
-	c.scope.classRefMap[name] = BuildClassFromNode(name, classStmt)
-	return nil
-}
-
 //// helpers
 // exprsToValues - []syntax.Expression -> []eval.ctx.Value
 func exprsToValues(c *ctx.Context, exprs []syntax.Expression) ([]ctx.Value, *error.Error) {
@@ -787,43 +778,6 @@ func exprsToValues(c *ctx.Context, exprs []syntax.Expression) ([]ctx.Value, *err
 		params = append(params, pval)
 	}
 	return params, nil
-}
-
-/// findSgValue - find the suitable sgValue in current context
-// Rules:
-//
-// - if sgValue in current scope (c.scope.sgValue) != nil, returns the current one;
-// - if sgValue in current scope == nil, then look up its parent util to the root;
-func findSgValue(c *ctx.Context) (ctx.Value, *error.Error) {
-	sp := c.scope
-	for sp != nil {
-		sgValue := sp.sgValue
-		if sgValue != nil {
-			return sgValue, nil
-		}
-
-		// otherwise, find sgValue from parent scope
-		sp = sp.parent
-	}
-
-	return nil, error.PropertyNotFound("sgValue")
-}
-
-// findThisValue - similar with findSgValue(c), it looks up for nearest valid
-// thisValue value.
-func findThisValue(c *ctx.Context) (ctx.Value, *error.Error) {
-	sp := c.GetScope()
-	for sp != nil {
-		thisValue := sp.GetThisValue()
-		if thisValue != nil {
-			return thisValue, nil
-		}
-
-		// otherwise, find thisValue from parent scope
-		sp = sp.FindParentScope()
-	}
-
-	return nil, error.PropertyNotFound("thisValue")
 }
 
 // BuildClosureFromNode - create a closure (with default param handler logic)
@@ -897,6 +851,7 @@ func BuildClassFromNode(name string, classNode *syntax.ClassDeclareStmt) val.Cla
 	// define default constrcutor
 	var constructor = func(c *ctx.Context, params []ctx.Value) (ctx.Value, *error.Error) {
 		obj := val.NewObject(ref)
+		propMap := obj.GetPropList()
 		// init prop list
 		for _, propPair := range classNode.PropertyList {
 			propID := propPair.PropertyID.GetLiteral()
@@ -904,7 +859,8 @@ func BuildClassFromNode(name string, classNode *syntax.ClassDeclareStmt) val.Cla
 			if err != nil {
 				return nil, err
 			}
-			obj.propList[propID] = expr
+
+			propMap[propID] = expr
 			ref.PropList = append(ref.PropList, propID)
 		}
 		// constructor: set some properties' value
@@ -918,7 +874,7 @@ func BuildClassFromNode(name string, classNode *syntax.ClassDeclareStmt) val.Cla
 				objParamVal = val.DuplicateValue(objParamVal)
 			}
 			paramName := param.ID.GetLiteral()
-			obj.propList[paramName] = objParamVal
+			propMap[paramName] = objParamVal
 		}
 
 		return obj, nil
@@ -944,5 +900,5 @@ func BuildClassFromNode(name string, classNode *syntax.ClassDeclareStmt) val.Cla
 // BuildFunctionFromNode -
 func BuildFunctionFromNode(node *syntax.FunctionDeclareStmt) *val.Function {
 	closureRef := BuildClosureFromNode(node.ParamList, node.ExecBlock)
-	return val.NewFunction("", closureRef.Exec)
+	return val.NewFunctionFromClosure(closureRef)
 }

@@ -26,6 +26,11 @@ func NewFunction(name string, executor funcExecutor) *Function {
 	return &Function{closureRef}
 }
 
+// NewFunctionFromClosure
+func NewFunctionFromClosure(closure ClosureRef) *Function {
+	return &Function{closure}
+}
+
 // NewClosure - wraps a closure from native code (Golang code)
 func NewClosure(paramHandler funcExecutor, executor funcExecutor) ClosureRef {
 	return ClosureRef{
@@ -36,7 +41,15 @@ func NewClosure(paramHandler funcExecutor, executor funcExecutor) ClosureRef {
 
 // Exec - execute a closure - accepts input params, execute from closure exeuctor and
 // yields final result
-func (cs *ClosureRef) Exec(c *ctx.Context, params []ctx.Value) (ctx.Value, *error.Error) {
+func (cs *ClosureRef) Exec(c *ctx.Context, thisValue ctx.Value, params []ctx.Value) (ctx.Value, *error.Error) {
+	// init scope
+	currentScope := c.GetScope()
+	newScope := currentScope.CreateChildScope()
+	newScope.SetThisValue(thisValue)
+	// set and revert scope
+	c.SetScope(newScope)
+	defer c.SetScope(currentScope)
+
 	if cs.ParamHandler != nil {
 		if _, err := cs.ParamHandler(c, params); err != nil {
 			return nil, err
