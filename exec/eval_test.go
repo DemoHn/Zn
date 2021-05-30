@@ -228,8 +228,8 @@ func Test_MemberExpr(t *testing.T) {
 			program: `V # “L”`,
 			symbols: map[string]ctx.Value{
 				"V": val.NewHashMap([]val.KVPair{
-					{"L", val.NewDecimalFromInt(7, 0)},
-					{"M", val.NewDecimalFromInt(8, 0)},
+					{Key: "L", Value: val.NewDecimalFromInt(7, 0)},
+					{Key: "M", Value: val.NewDecimalFromInt(8, 0)},
 				}),
 			},
 			expReturnValue: val.NewDecimalFromInt(7, 0),

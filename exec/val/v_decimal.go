@@ -246,11 +246,11 @@ func (zd *Decimal) ExecMethod(c *ctx.Context, name string, values []ctx.Value) (
 	switch name {
 	case "+1":
 		v := zd.Add(NewDecimalFromInt(1, 0))
-		zd = v
+		*zd = *v
 		return v, nil
 	case "-1":
 		v := zd.Add(NewDecimalFromInt(-1, 0))
-		zd = v
+		*zd = *v
 		return v, nil
 	}
 	return nil, error.MethodNotFound(name)

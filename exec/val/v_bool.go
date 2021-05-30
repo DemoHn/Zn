@@ -18,7 +18,7 @@ func NewBool(value bool) *Bool {
 // String - show displayed value
 func (b *Bool) String() string {
 	data := "真"
-	if b.value == false {
+	if !b.value {
 		data = "假"
 	}
 	return data

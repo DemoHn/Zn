@@ -160,7 +160,7 @@ func (ar *Array) ExecMethod(c *ctx.Context, name string, values []ctx.Value) (ct
 		for _, item := range ar.value {
 			if res, err := CompareValues(item, values[0], CmpEq); err != nil {
 				return nil, err
-			} else if res == true {
+			} else if res {
 				result = true
 				break
 			}
@@ -174,7 +174,7 @@ func (ar *Array) ExecMethod(c *ctx.Context, name string, values []ctx.Value) (ct
 		for i, item := range ar.value {
 			if res, err := CompareValues(item, values[0], CmpEq); err != nil {
 				return nil, err
-			} else if res == true {
+			} else if res {
 				idx = i
 				break
 			}
@@ -206,7 +206,7 @@ func shiftArrayValue(target []ctx.Value, left bool) (ctx.Value, []ctx.Value) {
 	if len(target) == 0 {
 		return NewNull(), []ctx.Value{}
 	}
-	if left == true {
+	if left {
 		return target[0], target[1:]
 	}
 	// shift right
