@@ -5,6 +5,7 @@ import (
 
 	"github.com/DemoHn/Zn/error"
 	"github.com/DemoHn/Zn/exec/ctx"
+	"github.com/DemoHn/Zn/exec/stdlib"
 	"github.com/DemoHn/Zn/exec/val"
 	"github.com/DemoHn/Zn/syntax"
 )
@@ -27,7 +28,11 @@ import (
 // This is due to the 'copycat by default' policy
 
 func evalProgram(c *ctx.Context, program *syntax.Program) *error.Error {
-	return evalStmtBlock(c, program.Content)
+	otherStmts, err := evalPreStmtBlock(c, program.Content)
+	if err != nil {
+		return err
+	}
+	return evalStmtBlock(c, otherStmts)
 }
 
 //// eval statements
@@ -207,51 +212,56 @@ func evalWhileLoopStmt(c *ctx.Context, node *syntax.WhileLoopStmt) *error.Error 
 	}
 }
 
+// evalPreStmtBlock - execute classRef, functionDeclare, imports first, then other statements inside the block
+func evalPreStmtBlock(c *ctx.Context, block *syntax.BlockStmt) (*syntax.BlockStmt, *error.Error) {
+	otherStmts := &syntax.BlockStmt{
+		Children: []syntax.Statement{},
+	}
+
+	for _, stmtI := range block.Children {
+		switch v := stmtI.(type) {
+		case *syntax.FunctionDeclareStmt:
+			fn := BuildFunctionFromNode(v)
+			if err := c.BindSymbol(v.FuncName.GetLiteral(), fn); err != nil {
+				return nil, err
+			}
+		case *syntax.ClassDeclareStmt:
+			// bind classRef
+			className := v.ClassName.GetLiteral()
+			classRef := BuildClassFromNode(className, v)
+			if err := c.SetImportValue(className, &classRef); err != nil {
+				return nil, err
+			}
+		case *syntax.ImportStmt:
+			// TODO: support non-stdlib imports
+			libName := v.ImportName.GetLiteral()
+			libData, ok := stdlib.PackageList[libName]
+			if !ok {
+				return nil, error.NewErrorSLOT("对应的类库不存在")
+			}
+			// import name globally
+			for _, item := range v.ImportItems {
+				itemName := item.GetLiteral()
+				libItem, ok2 := libData[itemName]
+				if ok2 {
+					c.SetImportValue(itemName, libItem)
+				}
+			}
+		default:
+			otherStmts.Children = append(otherStmts.Children, stmtI)
+		}
+	}
+	return otherStmts, nil
+}
+
 // EvalStmtBlock -
 func evalStmtBlock(c *ctx.Context, block *syntax.BlockStmt) *error.Error {
-	enableHoist := false
-	// only rootScope could enable hoist
-	if c.GetScope().FindChildScope() == nil {
-		enableHoist = true
-	}
-
-	if enableHoist {
-		// ROUND I: declare function stmt FIRST
-		for _, stmtI := range block.Children {
-			switch v := stmtI.(type) {
-			case *syntax.FunctionDeclareStmt:
-				fn := BuildFunctionFromNode(v)
-				if err := c.BindSymbol(v.FuncName.GetLiteral(), fn); err != nil {
-					return err
-				}
-			case *syntax.ClassDeclareStmt:
-
-				// bind classRef
-				className := v.ClassName.GetLiteral()
-				classRef := BuildClassFromNode(className, v)
-				if err := c.SetImportValue(className, &classRef); err != nil {
-					return err
-				}
-			}
-		}
-		// ROUND II: exec statement except functionDecl stmt
-		for _, stmtII := range block.Children {
-			switch stmtII.(type) {
-			case *syntax.FunctionDeclareStmt, *syntax.ClassDeclareStmt:
-				continue
-			default:
-				if err := evalStatement(c, stmtII); err != nil {
-					return err
-				}
-			}
-		}
-	} else {
-		for _, stmt := range block.Children {
-			if err := evalStatement(c, stmt); err != nil {
-				return err
-			}
+	for _, stmt := range block.Children {
+		if err := evalStatement(c, stmt); err != nil {
+			return err
 		}
 	}
+
 	return nil
 }
 
