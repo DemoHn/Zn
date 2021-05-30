@@ -1,7 +1,6 @@
 package ctx
 
 import (
-	"github.com/DemoHn/Zn/debug"
 	"github.com/DemoHn/Zn/error"
 )
 
@@ -18,7 +17,7 @@ type Context struct {
 	// usage: call （__probe：「tagName」，variable）
 	// it will record all logs (including variable value, curernt scope, etc.)
 	// the value is deep-copied so don't worry - the value logged won't be changed
-	_probe *debug.Probe
+	probe *Probe
 	// Scope -
 	scope *Scope
 }
@@ -29,9 +28,14 @@ func NewContext(globalsMap map[string]Value) *Context {
 	return &Context{
 		globals: globalsMap,
 		imports: map[string]Value{},
-		_probe:  debug.NewProbe(),
+		probe:   NewProbe(),
 		scope:   NewScope(),
 	}
+}
+
+// GetProbe -
+func (ctx *Context) GetProbe() *Probe {
+	return ctx.probe
 }
 
 // GetScope -

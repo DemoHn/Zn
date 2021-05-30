@@ -305,32 +305,32 @@ func Test_IterateStmt(t *testing.T) {
 			expReturnValue: val.NewNull(),
 			expProbe: map[string][][]string{
 				"$KEY": {
-					{"0", "*exec.Decimal"},
-					{"1", "*exec.Decimal"},
-					{"2", "*exec.Decimal"},
-					{"3", "*exec.Decimal"},
-					{"4", "*exec.Decimal"},
+					{"0", "*val.Decimal"},
+					{"1", "*val.Decimal"},
+					{"2", "*val.Decimal"},
+					{"3", "*val.Decimal"},
+					{"4", "*val.Decimal"},
 				},
 				"$VAL": {
-					{"一", "*exec.String"},
-					{"地", "*exec.String"},
-					{"在", "*exec.String"},
-					{"要", "*exec.String"},
-					{"工", "*exec.String"},
+					{"一", "*val.String"},
+					{"地", "*val.String"},
+					{"在", "*val.String"},
+					{"要", "*val.String"},
+					{"工", "*val.String"},
 				},
 				"$X": {
-					{"100", "*exec.Decimal"},
-					{"100", "*exec.Decimal"},
-					{"100", "*exec.Decimal"},
-					{"100", "*exec.Decimal"},
-					{"100", "*exec.Decimal"},
+					{"100", "*val.Decimal"},
+					{"100", "*val.Decimal"},
+					{"100", "*val.Decimal"},
+					{"100", "*val.Decimal"},
+					{"100", "*val.Decimal"},
 				},
 				"$Y": {
-					{"30.5", "*exec.Decimal"},
-					{"35.5", "*exec.Decimal"},
-					{"40.5", "*exec.Decimal"},
-					{"45.5", "*exec.Decimal"},
-					{"50.5", "*exec.Decimal"},
+					{"30.5", "*val.Decimal"},
+					{"35.5", "*val.Decimal"},
+					{"40.5", "*val.Decimal"},
+					{"45.5", "*val.Decimal"},
+					{"50.5", "*val.Decimal"},
 				},
 			},
 		},
@@ -360,14 +360,14 @@ func Test_IterateStmt(t *testing.T) {
 			expReturnValue: val.NewNull(),
 			expProbe: map[string][][]string{
 				"$KEY": {
-					{"积分", "*exec.String"},
-					{"年龄", "*exec.String"},
-					{"穿着", "*exec.String"},
+					{"积分", "*val.String"},
+					{"年龄", "*val.String"},
+					{"穿着", "*val.String"},
 				},
 				"$VAL": {
-					{"1000", "*exec.Decimal"},
-					{"24", "*exec.Decimal"},
-					{"蕾丝边裙子", "*exec.String"},
+					{"1000", "*val.Decimal"},
+					{"24", "*val.Decimal"},
+					{"蕾丝边裙子", "*val.String"},
 				},
 			},
 		},
@@ -382,17 +382,17 @@ func Test_IterateStmt(t *testing.T) {
 			expReturnValue: val.NewNull(),
 			expProbe: map[string][][]string{
 				"$L1V": {
-					{"30", "*exec.Decimal"},
-					{"40", "*exec.Decimal"},
-					{"50", "*exec.Decimal"},
+					{"30", "*val.Decimal"},
+					{"40", "*val.Decimal"},
+					{"50", "*val.Decimal"},
 				},
 				"$L2V": {
-					{"20", "*exec.Decimal"},
-					{"30", "*exec.Decimal"},
-					{"20", "*exec.Decimal"},
-					{"30", "*exec.Decimal"},
-					{"20", "*exec.Decimal"},
-					{"30", "*exec.Decimal"},
+					{"20", "*val.Decimal"},
+					{"30", "*val.Decimal"},
+					{"20", "*val.Decimal"},
+					{"30", "*val.Decimal"},
+					{"20", "*val.Decimal"},
+					{"30", "*val.Decimal"},
 				},
 			},
 		},
@@ -406,12 +406,12 @@ func Test_IterateStmt(t *testing.T) {
 			expReturnValue: val.NewNull(),
 			expProbe: map[string][][]string{
 				"K1": {
-					{"0", "*exec.Decimal"},
-					{"1", "*exec.Decimal"},
+					{"0", "*val.Decimal"},
+					{"1", "*val.Decimal"},
 				},
 				"V1": {
-					{"土", "*exec.String"},
-					{"地", "*exec.String"},
+					{"土", "*val.String"},
+					{"地", "*val.String"},
 				},
 			},
 		},
@@ -425,12 +425,12 @@ func Test_IterateStmt(t *testing.T) {
 			expReturnValue: val.NewNull(),
 			expProbe: map[string][][]string{
 				"K1": {
-					{"上", "*exec.String"},
-					{"左", "*exec.String"},
+					{"上", "*val.String"},
+					{"左", "*val.String"},
 				},
 				"V1": {
-					{"下", "*exec.String"},
-					{"右", "*exec.String"},
+					{"下", "*val.String"},
+					{"右", "*val.String"},
 				},
 			},
 		},
@@ -450,7 +450,7 @@ func Test_VarDeclareStmt(t *testing.T) {
 			expReturnValue: val.NewString("森林"),
 			expProbe: map[string][][]string{
 				"$K1": {
-					{"森林", "*exec.String"},
+					{"森林", "*val.String"},
 				},
 			},
 		},
@@ -575,10 +575,10 @@ A之名
 			expReturnValue: val.NewString("保定"),
 			expProbe: map[string][][]string{
 				"B": {
-					{"保定", "*exec.String"},
+					{"保定", "*val.String"},
 				},
 				"C": {
-					{"保定", "*exec.String"},
+					{"保定", "*val.String"},
 				},
 			},
 		},
@@ -603,9 +603,9 @@ func Test_WhileLoopStmt(t *testing.T) {
 			expReturnValue: val.NewNull(),
 			expProbe: map[string][][]string{
 				"$X": {
-					{"3", "*exec.Decimal"},
-					{"2", "*exec.Decimal"},
-					{"1", "*exec.Decimal"},
+					{"3", "*val.Decimal"},
+					{"2", "*val.Decimal"},
+					{"1", "*val.Decimal"},
 				},
 			},
 		},
@@ -630,14 +630,14 @@ func Test_WhileLoopStmt(t *testing.T) {
 			expReturnValue: val.NewNull(),
 			expProbe: map[string][][]string{
 				"VY": {
-					{"2", "*exec.Decimal"},
-					{"3", "*exec.Decimal"},
-					{"2", "*exec.Decimal"},
-					{"3", "*exec.Decimal"},
+					{"2", "*val.Decimal"},
+					{"3", "*val.Decimal"},
+					{"2", "*val.Decimal"},
+					{"3", "*val.Decimal"},
 				},
 				"VX": {
-					{"1", "*exec.Decimal"},
-					{"0", "*exec.Decimal"},
+					{"1", "*val.Decimal"},
+					{"0", "*val.Decimal"},
 				},
 			},
 		},
@@ -661,7 +661,7 @@ func Test_BranchStmt(t *testing.T) {
 			expReturnValue: val.NewNull(),
 			expProbe: map[string][][]string{
 				"TAG": {
-					{"真实", "*exec.String"},
+					{"真实", "*val.String"},
 				},
 			},
 		},
@@ -678,7 +678,7 @@ func Test_BranchStmt(t *testing.T) {
 			expReturnValue: val.NewString("走过公共逻辑"),
 			expProbe: map[string][][]string{
 				"TAG": {
-					{"走过公共逻辑", "*exec.String"},
+					{"走过公共逻辑", "*val.String"},
 				},
 			},
 		},
@@ -702,10 +702,10 @@ func Test_BranchStmt(t *testing.T) {
 			expReturnValue: val.NewNull(),
 			expProbe: map[string][][]string{
 				"TAG_A": {
-					{"真", "*exec.Bool"},
+					{"真", "*val.Bool"},
 				},
 				"TAG_B": {
-					{"假", "*exec.Bool"},
+					{"假", "*val.Bool"},
 				},
 			},
 		},
@@ -730,10 +730,10 @@ func Test_BranchStmt(t *testing.T) {
 			expReturnValue: val.NewNull(),
 			expProbe: map[string][][]string{
 				"TAG": {
-					{"不及格", "*exec.String"},
-					{"优秀", "*exec.String"},
-					{"及格", "*exec.String"},
-					{"良好", "*exec.String"},
+					{"不及格", "*val.String"},
+					{"优秀", "*val.String"},
+					{"及格", "*val.String"},
+					{"良好", "*val.String"},
 				},
 			},
 		},
@@ -758,11 +758,11 @@ func Test_BranchStmt(t *testing.T) {
 			expReturnValue: val.NewString("一般"),
 			expProbe: map[string][][]string{
 				"TAG": {
-					{"一般", "*exec.String"},
-					{"优秀", "*exec.String"},
-					{"85", "*exec.Decimal"},
-					{"85", "*exec.Decimal"},
-					{"一般", "*exec.String"},
+					{"一般", "*val.String"},
+					{"优秀", "*val.String"},
+					{"85", "*val.Decimal"},
+					{"85", "*val.Decimal"},
+					{"一般", "*val.String"},
 				},
 			},
 		},
@@ -906,19 +906,19 @@ A`,
 			expReturnValue: val.NewDecimalFromInt(20, 0),
 			expProbe: map[string][][]string{
 				"RETURN": {
-					{"17", "*exec.Decimal"},
+					{"17", "*val.Decimal"},
 				},
 				"TAG_A": {
-					{"10", "*exec.Decimal"},
+					{"10", "*val.Decimal"},
 				},
 				"TAG_B": {
-					{"20", "*exec.Decimal"},
+					{"20", "*val.Decimal"},
 				},
 				"TAG_C": {
-					{"30", "*exec.Decimal"},
+					{"30", "*val.Decimal"},
 				},
 				"TAG_D": {
-					{"20", "*exec.Decimal"},
+					{"20", "*val.Decimal"},
 				},
 			},
 		},
@@ -975,8 +975,8 @@ func Test_CreateObject(t *testing.T) {
 			expReturnValue: val.NewString("乐高"),
 			expProbe: map[string][][]string{
 				"TAG": {
-					{"乐高", "*exec.String"},
-					{"乐高", "*exec.String"},
+					{"乐高", "*val.String"},
+					{"乐高", "*val.String"},
 				},
 			},
 		},
@@ -997,8 +997,8 @@ func Test_CreateObject(t *testing.T) {
 			expReturnValue: val.NewString("香港记者"),
 			expProbe: map[string][][]string{
 				"TAG": {
-					{"香港记者", "*exec.String"},
-					{"香港记者", "*exec.String"},
+					{"香港记者", "*val.String"},
+					{"香港记者", "*val.String"},
 				},
 			},
 		},
@@ -1011,36 +1011,25 @@ func Test_CreateObject(t *testing.T) {
 
 func assertSuite(t *testing.T, suite programOKSuite) {
 	t.Run(suite.name, func(t *testing.T) {
-		c := ctx.NewContext()
+		c := ctx.NewContext(GlobalValues)
 		in := lex.NewTextStream(suite.program)
-		// parseCode
-		program, err := c.parseCode(in)
-		if err != nil {
-			panic(err)
-		}
-		// init scope
-		ctx.initScope(program.Lexer)
-
 		// impose symbols
 		for k, v := range suite.symbols {
-			ctx.scope.symbolMap[k] = val.SymbolInfo{
-				value:   v,
-				isConst: false,
-			}
+			c.BindSymbol(k, v)
 		}
 
-		result, err := ctx.execProgram(program)
+		result, err := ExecuteCode(c, in)
 		if err != nil {
 			panic(err)
 		}
 
-		if !reflect.DeepEqual(ctx.scope.returnValue, suite.expReturnValue) {
+		if !reflect.DeepEqual(c.GetScope().GetReturnValue(), suite.expReturnValue) {
 			t.Errorf("return value expect -> %s, got -> %s", suite.expReturnValue, result)
 			return
 		}
 		// assert probe value
 		for tag, pLog := range suite.expProbe {
-			gotLog := ctx._probe.GetProbeLog(tag)
+			gotLog := c.GetProbe().GetProbeLog(tag)
 			// ensure length is same
 			if len(gotLog) != len(pLog) {
 				t.Errorf("probe log [%s] length not match, expect -> %d, got -> %d", tag, len(pLog), len(gotLog))

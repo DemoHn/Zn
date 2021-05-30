@@ -26,7 +26,7 @@ func NewFunction(name string, executor funcExecutor) *Function {
 	return &Function{closureRef}
 }
 
-// NewFunctionFromClosure
+// NewFunctionFromClosure -
 func NewFunctionFromClosure(closure ClosureRef) *Function {
 	return &Function{closure}
 }

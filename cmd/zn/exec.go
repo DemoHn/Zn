@@ -18,7 +18,7 @@ const version = "rev04"
 func EnterREPL() {
 	linerR := liner.NewLiner()
 	linerR.SetCtrlCAborts(true)
-	c := ctx.NewContext(nil) // TODO:
+	c := ctx.NewContext(exec.GlobalValues)
 
 	// REPL loop
 	for {
@@ -58,7 +58,7 @@ func EnterREPL() {
 
 // ExecProgram - exec program from file directly
 func ExecProgram(file string) {
-	c := ctx.NewContext(nil)
+	c := ctx.NewContext(exec.GlobalValues)
 	in, errF := lex.NewFileStream(file)
 	if errF != nil {
 		fmt.Println(errF.Display())

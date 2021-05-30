@@ -189,7 +189,7 @@ func evalWhileLoopStmt(c *ctx.Context, node *syntax.WhileLoopStmt) *error.Error 
 			return error.InvalidExprType("bool")
 		}
 		// break the loop if expr yields not true
-		if vTrueExpr.GetValue() == false {
+		if !vTrueExpr.GetValue() {
 			return nil
 		}
 		// #3. stmt block
@@ -272,7 +272,7 @@ func evalBranchStmt(c *ctx.Context, node *syntax.BranchStmt) *error.Error {
 	}
 
 	// exec if-branch
-	if vIfExpr.GetValue() == true {
+	if vIfExpr.GetValue() {
 		return evalStmtBlock(c, node.IfTrueBlock)
 	}
 	// exec else-if branches
@@ -286,12 +286,12 @@ func evalBranchStmt(c *ctx.Context, node *syntax.BranchStmt) *error.Error {
 			return error.InvalidExprType("bool")
 		}
 		// exec else-if branch
-		if vOtherExprI.GetValue() == true {
+		if vOtherExprI.GetValue() {
 			return evalStmtBlock(c, node.OtherBlocks[idx])
 		}
 	}
 	// exec else branch if possible
-	if node.HasElse == true {
+	if node.HasElse {
 		return evalStmtBlock(c, node.IfFalseBlock)
 	}
 	return nil
@@ -533,10 +533,10 @@ func evalLogicCombiner(c *ctx.Context, expr *syntax.LogicExpr) (*val.Bool, *erro
 	// 2) for Y = A or  B, if A = true, then Y must be true
 	//
 	// for those cases, we can yield result directly
-	if logicType == syntax.LogicAND && vleft.GetValue() == false {
+	if logicType == syntax.LogicAND && !vleft.GetValue() {
 		return val.NewBool(false), nil
 	}
-	if logicType == syntax.LogicOR && vleft.GetValue() == true {
+	if logicType == syntax.LogicOR && vleft.GetValue() {
 		return val.NewBool(true), nil
 	}
 	// #4. eval right
