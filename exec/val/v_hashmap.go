@@ -75,7 +75,7 @@ func (hm *HashMap) SetProperty(c *ctx.Context, name string, value ctx.Value) *er
 func (hm *HashMap) ExecMethod(c *ctx.Context, name string, values []ctx.Value) (ctx.Value, *error.Error) {
 	switch name {
 	case "读取":
-		if err := validateExactParams(values, "string"); err != nil {
+		if err := ValidateExactParams(values, "string"); err != nil {
 			return nil, err
 		}
 		// key name
@@ -86,7 +86,7 @@ func (hm *HashMap) ExecMethod(c *ctx.Context, name string, values []ctx.Value) (
 		}
 		return NewNull(), nil
 	case "写入":
-		if err := validateExactParams(values, "string", "any"); err != nil {
+		if err := ValidateExactParams(values, "string", "any"); err != nil {
 			return nil, err
 		}
 		// key name
@@ -101,7 +101,7 @@ func (hm *HashMap) ExecMethod(c *ctx.Context, name string, values []ctx.Value) (
 		hm.keyOrder = append(hm.keyOrder, keyName)
 		return val, nil
 	case "移除":
-		if err := validateExactParams(values, "string"); err != nil {
+		if err := ValidateExactParams(values, "string"); err != nil {
 			return nil, err
 		}
 		// key name

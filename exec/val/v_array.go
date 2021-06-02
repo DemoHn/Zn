@@ -88,7 +88,7 @@ func (ar *Array) SetProperty(c *ctx.Context, name string, value ctx.Value) *erro
 func (ar *Array) ExecMethod(c *ctx.Context, name string, values []ctx.Value) (ctx.Value, *error.Error) {
 	switch name {
 	case "新增", "添加":
-		if err := validateExactParams(values, "any", "decimal"); err != nil {
+		if err := ValidateExactParams(values, "any", "decimal"); err != nil {
 			return nil, err
 		}
 		v := values[1].(*Decimal)
@@ -100,13 +100,13 @@ func (ar *Array) ExecMethod(c *ctx.Context, name string, values []ctx.Value) (ct
 
 		return ar, nil
 	case "前增":
-		if err := validateExactParams(values, "any"); err != nil {
+		if err := ValidateExactParams(values, "any"); err != nil {
 			return nil, err
 		}
 		ar.value = insertArrayValue(ar.value, 0, values[0])
 		return ar, nil
 	case "后增":
-		if err := validateExactParams(values, "any"); err != nil {
+		if err := ValidateExactParams(values, "any"); err != nil {
 			return nil, err
 		}
 		ar.value = insertArrayValue(ar.value, len(ar.value), values[0])
@@ -121,10 +121,10 @@ func (ar *Array) ExecMethod(c *ctx.Context, name string, values []ctx.Value) (ct
 		return v, nil
 	case "连接":
 		// validate input array
-		if err := validateAllParams(ar.value, "string"); err != nil {
+		if err := ValidateAllParams(ar.value, "string"); err != nil {
 			return nil, err
 		}
-		if err := validateExactParams(values, "string"); err != nil {
+		if err := ValidateExactParams(values, "string"); err != nil {
 			return nil, err
 		}
 		var strArr = []string{}
@@ -138,7 +138,7 @@ func (ar *Array) ExecMethod(c *ctx.Context, name string, values []ctx.Value) (ct
 
 		return NewString(finalStr), nil
 	case "合并":
-		if err := validateAllParams(values, "array"); err != nil {
+		if err := ValidateAllParams(values, "array"); err != nil {
 			return nil, err
 		}
 
@@ -154,7 +154,7 @@ func (ar *Array) ExecMethod(c *ctx.Context, name string, values []ctx.Value) (ct
 		return NewArray(result), nil
 	case "包含":
 		result := false
-		if err := validateExactParams(values, "any"); err != nil {
+		if err := ValidateExactParams(values, "any"); err != nil {
 			return nil, err
 		}
 		for _, item := range ar.value {
@@ -168,7 +168,7 @@ func (ar *Array) ExecMethod(c *ctx.Context, name string, values []ctx.Value) (ct
 		return NewBool(result), nil
 	case "寻找":
 		idx := -1
-		if err := validateExactParams(values, "any"); err != nil {
+		if err := ValidateExactParams(values, "any"); err != nil {
 			return nil, err
 		}
 		for i, item := range ar.value {

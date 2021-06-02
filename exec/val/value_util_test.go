@@ -94,7 +94,7 @@ func TestValidateLeastParams(t *testing.T) {
 
 	for _, tt := range cases {
 		t.Run(tt.name, func(t *testing.T) {
-			err := validateLeastParams(tt.values, tt.types...)
+			err := ValidateLeastParams(tt.values, tt.types...)
 			if err != nil {
 				if tt.expectError == false {
 					t.Errorf("expect no error, got error: %s", err.Error())

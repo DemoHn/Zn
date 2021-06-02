@@ -215,7 +215,7 @@ func StringifyValue(value ctx.Value) string {
 
 //// param validators
 
-// validateExactParams is a helper function that asserts input params type where each parameter
+// ValidateExactParams is a helper function that asserts input params type where each parameter
 // should exactly match the list of typeStr.
 // valid typeStr are one of the followings:
 //
@@ -227,7 +227,7 @@ func StringifyValue(value ctx.Value) string {
 // 6. object   --> *Object
 // 7. function --> *Function
 // 8. any      --> any value type
-func validateExactParams(values []ctx.Value, typeStr ...string) *error.Error {
+func ValidateExactParams(values []ctx.Value, typeStr ...string) *error.Error {
 	if len(values) != len(typeStr) {
 		return error.ExactParamsError(len(typeStr))
 	}
@@ -239,7 +239,7 @@ func validateExactParams(values []ctx.Value, typeStr ...string) *error.Error {
 	return nil
 }
 
-// validateLeastParams is a helper function similar to validateExactParams(),
+// ValidateLeastParams is a helper function similar to ValidateExactParams(),
 // however, it handles the situation that target params are variadic, like
 // [int, int, string...], the length of target params varies from 0~N.
 //
@@ -252,7 +252,7 @@ func validateExactParams(values []ctx.Value, typeStr ...string) *error.Error {
 //
 // ["decimal", "bool", "string*"] means the FIRST param is a decimal, the SECOND param is a bool, and the FOLLOWING params
 // are all strings (allow 0 string params)
-func validateLeastParams(values []ctx.Value, typeStr ...string) *error.Error {
+func ValidateLeastParams(values []ctx.Value, typeStr ...string) *error.Error {
 Loop:
 	for idx, t := range typeStr {
 		// find if there's wildcard
@@ -280,10 +280,10 @@ Loop:
 	return nil
 }
 
-// validateAllParams doesn't limit the length of input values; instead, it requires all the parameters
+// ValidateAllParams doesn't limit the length of input values; instead, it requires all the parameters
 // to have same value type denoted by `typeStr`
-// e.g. validateAllParams([]Value{“1”, “2”, “3”}, "string")
-func validateAllParams(values []ctx.Value, typeStr string) *error.Error {
+// e.g. ValidateAllParams([]Value{“1”, “2”, “3”}, "string")
+func ValidateAllParams(values []ctx.Value, typeStr string) *error.Error {
 	for _, v := range values {
 		if err := validateOneParam(v, typeStr); err != nil {
 			return err
@@ -355,7 +355,7 @@ var DisplayExecutor = func(c *ctx.Context, params []ctx.Value) (ctx.Value, *erro
 var AddValueExecutor = func(c *ctx.Context, params []ctx.Value) (ctx.Value, *error.Error) {
 	var decimals = []*Decimal{}
 
-	if err := validateLeastParams(params, "decimal+"); err != nil {
+	if err := ValidateLeastParams(params, "decimal+"); err != nil {
 		return nil, err
 	}
 	// validate types
@@ -376,7 +376,7 @@ var AddValueExecutor = func(c *ctx.Context, params []ctx.Value) (ctx.Value, *err
 var SubValueExecutor = func(c *ctx.Context, params []ctx.Value) (ctx.Value, *error.Error) {
 	var decimals = []*Decimal{}
 
-	if err := validateLeastParams(params, "decimal+"); err != nil {
+	if err := ValidateLeastParams(params, "decimal+"); err != nil {
 		return nil, err
 	}
 	// validate types
@@ -396,7 +396,7 @@ var SubValueExecutor = func(c *ctx.Context, params []ctx.Value) (ctx.Value, *err
 var MulValueExecutor = func(c *ctx.Context, params []ctx.Value) (ctx.Value, *error.Error) {
 	var decimals = []*Decimal{}
 
-	if err := validateLeastParams(params, "decimal+"); err != nil {
+	if err := ValidateLeastParams(params, "decimal+"); err != nil {
 		return nil, err
 	}
 	// validate types
@@ -416,7 +416,7 @@ var MulValueExecutor = func(c *ctx.Context, params []ctx.Value) (ctx.Value, *err
 var DivValueExecutor = func(c *ctx.Context, params []ctx.Value) (ctx.Value, *error.Error) {
 	var decimals = []*Decimal{}
 
-	if err := validateLeastParams(params, "decimal+"); err != nil {
+	if err := ValidateLeastParams(params, "decimal+"); err != nil {
 		return nil, err
 	}
 	// validate types
