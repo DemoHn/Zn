@@ -45,6 +45,20 @@ func (hm *HashMap) GetValue() map[string]ctx.Value {
 	return hm.value
 }
 
+// AppendKVPair -
+func (hm *HashMap) AppendKVPair(pair KVPair) {
+	key := pair.Key
+	value := pair.Value
+	_, ok := hm.value[key]
+	if ok {
+		hm.value[key] = value
+		return
+	}
+	// insert new key
+	hm.value[key] = value
+	hm.keyOrder = append(hm.keyOrder, key)
+}
+
 // GetProperty -
 func (hm *HashMap) GetProperty(c *ctx.Context, name string) (ctx.Value, *error.Error) {
 	switch name {
@@ -91,15 +105,8 @@ func (hm *HashMap) ExecMethod(c *ctx.Context, name string, values []ctx.Value) (
 		}
 		// key name
 		keyName := values[0].(*String).value
-		val, ok := hm.value[keyName]
-		if ok {
-			hm.value[keyName] = values[1] // update value
-			return val, nil
-		}
-		// insert new key
-		hm.value[keyName] = values[1]
-		hm.keyOrder = append(hm.keyOrder, keyName)
-		return val, nil
+		hm.AppendKVPair(KVPair{keyName, values[1]})
+		return values[1], nil
 	case "移除":
 		if err := ValidateExactParams(values, "string"); err != nil {
 			return nil, err

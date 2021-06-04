@@ -22,6 +22,11 @@ func (ar *Array) GetValue() []ctx.Value {
 	return ar.value
 }
 
+// AppendValue -
+func (ar *Array) AppendValue(value ctx.Value) {
+	ar.value = append(ar.value, value)
+}
+
 // GetProperty -
 func (ar *Array) GetProperty(c *ctx.Context, name string) (ctx.Value, *error.Error) {
 	switch name {

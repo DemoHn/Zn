@@ -67,6 +67,10 @@ func (ctx *Context) FindSymbol(name string) (Value, *error.Error) {
 	if symVal, inGlobals := ctx.globals[name]; inGlobals {
 		return symVal, nil
 	}
+	// next in imports
+	if imVal, inImports := ctx.imports[name]; inImports {
+		return imVal, nil
+	}
 	// ...then in symbols
 	sp := ctx.scope
 	for sp != nil {
@@ -173,6 +177,7 @@ func (ctx *Context) GetImportValue(name string) (Value, *error.Error) {
 	return nil, error.NameNotDefined(name)
 }
 
+// SetImportValue -
 func (ctx *Context) SetImportValue(name string, value Value) *error.Error {
 	if _, inImports := ctx.imports[name]; inImports {
 		return error.NameRedeclared(name)

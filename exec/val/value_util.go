@@ -188,7 +188,6 @@ func StringifyValue(value ctx.Value) string {
 		for _, item := range v.value {
 			strs = append(strs, StringifyValue(item))
 		}
-
 		return fmt.Sprintf("【%s】", strings.Join(strs, "，"))
 	case *Bool:
 		data := "真"

@@ -239,9 +239,21 @@ func evalPreStmtBlock(c *ctx.Context, block *syntax.BlockStmt) (*syntax.BlockStm
 			if !ok {
 				return nil, error.NewErrorSLOT("对应的类库不存在")
 			}
+
+			itemsList := []string{}
+			// if itemList is [] (e.g. 导入《 ... 》)
+			// then we import all itmes in this libaray
+			if len(v.ImportItems) == 0 {
+				for k := range libData {
+					itemsList = append(itemsList, k)
+				}
+			} else {
+				for _, id := range v.ImportItems {
+					itemsList = append(itemsList, id.GetLiteral())
+				}
+			}
 			// import name globally
-			for _, item := range v.ImportItems {
-				itemName := item.GetLiteral()
+			for _, itemName := range itemsList {
 				libItem, ok2 := libData[itemName]
 				if ok2 {
 					c.SetImportValue(itemName, libItem)
