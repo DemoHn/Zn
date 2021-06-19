@@ -35,6 +35,11 @@ func TestDecimal_ParseValue(t *testing.T) {
 			value: "(0, 0)",
 		},
 		{
+			name:  "0.00",
+			input: "0.00",
+			value: "(0, 0)",
+		},
+		{
 			name:  "positive-sign number",
 			input: "+123456",
 			value: "(123456, 0)",

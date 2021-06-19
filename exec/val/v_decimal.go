@@ -166,6 +166,7 @@ func (zd *Decimal) Div(others ...*Decimal) (*Decimal, *error.Error) {
 
 	// if divisor is zero, return 0 directly
 	if result.co.Sign() == 0 {
+		result.exp = 0
 		return result, nil
 	}
 	// ensure divisor and all divients are postive
