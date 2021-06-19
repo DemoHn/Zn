@@ -44,6 +44,13 @@ func NewDecimalFromInt(value int, exp int) *Decimal {
 	}
 }
 
+// NewDecimalFromFloat64 -
+func NewDecimalFromFloat64(value float64) *Decimal {
+	valStr := fmt.Sprintf("%v", value)
+	d, _ := NewDecimal(valStr)
+	return d
+}
+
 // GetExp -
 func (zd *Decimal) GetExp() int {
 	return zd.exp

@@ -3,6 +3,9 @@ package stdlib
 import (
 	"encoding/json"
 	"fmt"
+	"math"
+	"strconv"
+	"strings"
 
 	"github.com/DemoHn/Zn/error"
 	"github.com/DemoHn/Zn/exec/ctx"
@@ -51,7 +54,7 @@ func buildHashMapItem(item interface{}) ctx.Value {
 	}
 	switch vv := item.(type) {
 	case float64:
-		return val.NewDecimalFromInt(int(vv), 0)
+		return val.NewDecimalFromFloat64(vv)
 	case string:
 		return val.NewString(vv)
 	case bool:
@@ -87,7 +90,16 @@ func buildPlainStrItem(item ctx.Value) interface{} {
 	case *val.Bool:
 		return vv.GetValue()
 	case *val.Decimal:
-		return 0 // TODO: fix
+		valStr := vv.String()
+		valStr = strings.Replace(valStr, "*10^", "e", 1)
+		// replace *10^ -> e
+		result, err := strconv.ParseFloat(valStr, 64)
+		// Sometimes parseFloat may fail due to overflow, underflow etc.
+		// For those invalid numbers, return NaN instead.
+		if err != nil {
+			return math.NaN()
+		}
+		return result
 	case *val.Array:
 		resultList := []interface{}{}
 		for _, vi := range vv.GetValue() {
