@@ -152,7 +152,7 @@ func (zd *Decimal) Mul(others ...*Decimal) *Decimal {
 		result.exp = result.exp + item.exp
 	}
 
-	return result
+	return normalizeTailZero(result)
 }
 
 // Div - A / B / C / D / ... = ?, ZnDecimal value will be copied
@@ -160,19 +160,29 @@ func (zd *Decimal) Mul(others ...*Decimal) *Decimal {
 func (zd *Decimal) Div(others ...*Decimal) (*Decimal, *error.Error) {
 	var result = copyDecimal(zd)
 	var num10 = big.NewInt(10)
-	var num0 = big.NewInt(0)
 	if len(others) == 0 {
 		return result, nil
 	}
 
 	// if divisor is zero, return 0 directly
-	if zd.co.Cmp(num0) == 0 {
+	if result.co.Sign() == 0 {
 		return result, nil
 	}
+	// ensure divisor and all divients are postive
+	neg := false
+	if result.co.Sign() < 0 {
+		result.co.Neg(zd.co) // co := -co
+		neg = !neg
+	}
+
 	for _, item := range others {
 		// check if divident is zero
-		if item.co.Cmp(num0) == 0 {
+		if item.co.Sign() == 0 {
 			return &Decimal{}, error.ArithDivZeroError()
+		}
+		if item.co.Sign() < 0 {
+			item.co.Neg(item.co)
+			neg = !neg
 		}
 		adjust := 0
 		// adjust bits
@@ -225,6 +235,11 @@ func (zd *Decimal) Div(others ...*Decimal) (*Decimal, *error.Error) {
 		result.co = xq
 		result.exp = result.exp - item.exp - adjust - precFactor
 	}
+	// if final result is negative, invert result.co's sign
+	if neg {
+		result.co.Neg(result.co)
+	}
+	result = normalizeTailZero(result)
 	return result, nil
 }
 
@@ -264,6 +279,22 @@ func (zd *Decimal) ExecMethod(c *ctx.Context, name string, values []ctx.Value) (
 }
 
 //// arith helper
+// normalizeTailZero - remove tail zero of an integer.
+// e.g: 12.500 (12500 * 10^-3)  -->  12.5 (125 * 10^-1)
+func normalizeTailZero(d1 *Decimal) *Decimal {
+	intTen := big.NewInt(10)
+	modResult := big.NewInt(0)
+	divResult := copyDecimal(d1)
+	for modResult.Sign() == 0 {
+		d1.co.Set(divResult.co)
+		d1.exp = divResult.exp
+
+		divResult.co.DivMod(divResult.co, intTen, modResult)
+		divResult.exp += 1
+	}
+
+	return d1
+}
 
 // rescalePair - make exps to be same
 func rescalePair(d1 *Decimal, d2 *Decimal) (*Decimal, *Decimal) {
