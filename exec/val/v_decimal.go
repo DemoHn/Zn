@@ -14,8 +14,8 @@ import (
 const (
 	maxDigitCount      = 18 // XXXXXXXX.XXXXXXXXXX
 	maxLeadDecimalZero = 6  // 0.XXXXXX1234
-	maxSciDigitCount   = 8  // 2.XXXXXXXX *10^ N
-	arithPrecision     = 8
+	maxSciDigitCount   = 12 // 2.XXXXXXXX *10^ N
+	arithPrecision     = 16
 )
 
 // Decimal - decimal number 「数值」型
@@ -152,6 +152,10 @@ func (zd *Decimal) Mul(others ...*Decimal) *Decimal {
 		result.exp = result.exp + item.exp
 	}
 
+	// normalize 0
+	if result.co.Sign() == 0 {
+		result.exp = 0
+	}
 	return normalizeTailZero(result)
 }
 
@@ -286,7 +290,7 @@ func normalizeTailZero(d1 *Decimal) *Decimal {
 	intTen := big.NewInt(10)
 	modResult := big.NewInt(0)
 	divResult := copyDecimal(d1)
-	for modResult.Sign() == 0 {
+	for modResult.Sign() == 0 && divResult.co.Sign() != 0 {
 		d1.co.Set(divResult.co)
 		d1.exp = divResult.exp
 
