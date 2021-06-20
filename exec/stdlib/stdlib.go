@@ -8,5 +8,6 @@ type valueMap map[string]ctx.Value
 
 // PackageList -
 var PackageList = map[string]valueMap{
-	"JSON": libjsonMethodMap,
+	"JSON": libjsonValueMap,
+	"文件":   libfileValueMap,
 }

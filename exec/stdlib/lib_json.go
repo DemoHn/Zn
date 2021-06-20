@@ -12,7 +12,7 @@ import (
 	"github.com/DemoHn/Zn/exec/val"
 )
 
-var libjsonMethodMap = map[string]ctx.Value{
+var libjsonValueMap = map[string]ctx.Value{
 	"解析JSON": val.NewFunction("解析JSON", parseJsonFunc),
 	"生成JSON": val.NewFunction("生成JSON", generateJsonFunc),
 }
