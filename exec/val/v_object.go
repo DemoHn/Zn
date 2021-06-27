@@ -54,6 +54,11 @@ func (zo *Object) GetPropList() map[string]ctx.Value {
 	return zo.propList
 }
 
+// SetPropList -
+func (zo *Object) SetPropList(propList map[string]ctx.Value) {
+	zo.propList = propList
+}
+
 // GetRef -
 func (zo *Object) GetRef() ClassRef {
 	return zo.ref
@@ -110,7 +115,10 @@ func (cr *ClassRef) Construct(c *ctx.Context, params []ctx.Value) (ctx.Value, *e
 	c.SetScope(newScope)
 	defer c.SetScope(currentScope)
 
-	return cr.Constructor(c, params)
+	if cr.Constructor != nil {
+		return cr.Constructor(c, params)
+	}
+	return nil, nil
 }
 
 // GetProperty - currently there's NO any property inside classRef Value
