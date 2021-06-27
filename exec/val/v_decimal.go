@@ -259,6 +259,36 @@ func (zd *Decimal) GetProperty(c *ctx.Context, name string) (ctx.Value, *error.E
 	case "-1":
 		v := zd.Add(NewDecimalFromInt(-1, 0))
 		return v, nil
+	case "1倍":
+		v := zd.Mul(NewDecimalFromInt(1, 0))
+		return v, nil
+	case "2倍":
+		v := zd.Mul(NewDecimalFromInt(2, 0))
+		return v, nil
+	case "3倍":
+		v := zd.Mul(NewDecimalFromInt(3, 0))
+		return v, nil
+	case "4倍":
+		v := zd.Mul(NewDecimalFromInt(4, 0))
+		return v, nil
+	case "5倍":
+		v := zd.Mul(NewDecimalFromInt(5, 0))
+		return v, nil
+	case "6倍":
+		v := zd.Mul(NewDecimalFromInt(6, 0))
+		return v, nil
+	case "7倍":
+		v := zd.Mul(NewDecimalFromInt(7, 0))
+		return v, nil
+	case "8倍":
+		v := zd.Mul(NewDecimalFromInt(8, 0))
+		return v, nil
+	case "9倍":
+		v := zd.Mul(NewDecimalFromInt(9, 0))
+		return v, nil
+	case "10倍":
+		v := zd.Mul(NewDecimalFromInt(10, 0))
+		return v, nil
 	}
 	return nil, error.PropertyNotFound(name)
 }
