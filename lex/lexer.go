@@ -93,6 +93,7 @@ const EOF rune = 0
 // declare marks
 const (
 	Comma             rune = 0xFF0C //，
+	PasueComma        rune = 0x3001 //、
 	Colon             rune = 0xFF1A //：
 	Semicolon         rune = 0xFF1B //；
 	QuestionMark      rune = 0xFF1F //？
@@ -109,6 +110,7 @@ const (
 	DoubleArrow       rune = 0x27FA // ⟺
 	LeftCurlyBracket  rune = 0x007B // {
 	RightCurlyBracket rune = 0x007D // }
+
 )
 
 // MarkLeads -
