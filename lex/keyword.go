@@ -14,7 +14,7 @@ const (
 	GlyphYIy rune = 0x4E49
 	// GlyphZHI - 之 - 此之，之
 	GlyphZHI rune = 0x4E4B
-	// GlyphYU - 于 - 等于，小于，大于，不等于，不小于，不大于
+	// GlyphYU - 于 - 等于，小于，对于，大于，不等于，不小于，不大于
 	GlyphYU rune = 0x4E8E
 	// GlyphLING - 令 - 令
 	GlyphLING rune = 0x4EE4
@@ -30,6 +30,8 @@ const (
 	GlyphZAI rune = 0x518D
 	// GlyphZE - 则 - 否则
 	GlyphZE rune = 0x5219
+	// GlyphDAOy - 到 - 得到
+	GlyphDAOy rune = 0x5230
 	// GlyphLI - 历 - 遍历
 	GlyphLI rune = 0x5386
 	// GlyphFOU - 否 - 否则
@@ -42,6 +44,8 @@ const (
 	GlyphRU rune = 0x5982
 	// GlyphDING - 定 - 定义
 	GlyphDING rune = 0x5B9A
+	// GlyphDUI - 对 - 对于
+	GlyphDUI rune = 0x5BF9
 	// GlyphDAO - 导 - 导入
 	GlyphDAO rune = 0x5BFC
 	// GlyphXIAO - 小 - 小于，不小于
@@ -50,6 +54,8 @@ const (
 	GlyphYI rune = 0x5DF2
 	// GlyphDANG - 当 - 每当
 	GlyphDANG rune = 0x5F53
+	// GlyphDEy - 得 - 得到
+	GlyphDEy rune = 0x5F97
 	// GlyphHENG - 恒 - 恒为
 	GlyphHENG rune = 0x6052
 	// GlyphCHENG - 成 - 成为
@@ -84,11 +90,12 @@ var KeywordLeads = []rune{
 	GlyphZHI, GlyphLING, GlyphYIi,
 	GlyphHE, GlyphQI, GlyphZAI,
 	GlyphFOU, GlyphDA, GlyphRU,
-	GlyphDING, GlyphDAO, GlyphXIAO,
-	GlyphYI, GlyphHENG, GlyphCHENG,
-	GlyphHUO, GlyphSHI, GlyphCI,
-	GlyphMEI, GlyphDE, GlyphDENG,
-	GlyphFAN, GlyphBIAN,
+	GlyphDING, GlyphDUI, GlyphDAO,
+	GlyphXIAO, GlyphYI, GlyphDEy,
+	GlyphHENG, GlyphCHENG, GlyphHUO,
+	GlyphSHI, GlyphCI, GlyphMEI,
+	GlyphDE, GlyphDENG, GlyphFAN,
+	GlyphBIAN,
 }
 
 // Keyword token types
@@ -124,6 +131,8 @@ const (
 	TypeStaticSelfW   TokenType = 75 // 此之
 	TypeIteratorW     TokenType = 76 // 遍历
 	TypeImportW       TokenType = 77 // 导入
+	TypeGetResultW    TokenType = 78 // 得到
+	TypeObjDenoteW    TokenType = 79 // 对于
 )
 
 // KeywordTypeMap -
@@ -159,6 +168,8 @@ var KeywordTypeMap = map[TokenType][]rune{
 	TypeStaticSelfW:   {GlyphCI, GlyphZHI},
 	TypeIteratorW:     {GlyphBIAN, GlyphLI},
 	TypeImportW:       {GlyphDAO, GlyphRUy},
+	TypeGetResultW:    {GlyphDEy, GlyphDAOy},
+	TypeObjDenoteW:    {GlyphDUI, GlyphYU},
 }
 
 // parseKeyword -
@@ -248,6 +259,13 @@ func (l *Lexer) parseKeyword(ch rune, moveForward bool) (bool, *Token) {
 		} else {
 			return false, nil
 		}
+	case GlyphDUI:
+		if l.peek() == GlyphYU {
+			wordLen = 2
+			tk = NewKeywordToken(TypeObjDenoteW)
+		} else {
+			return false, nil
+		}
 	case GlyphDAO:
 		if l.peek() == GlyphRUy {
 			wordLen = 2
@@ -266,6 +284,13 @@ func (l *Lexer) parseKeyword(ch rune, moveForward bool) (bool, *Token) {
 		if l.peek() == GlyphZHIy {
 			wordLen = 2
 			tk = NewKeywordToken(TypeParamAssignW)
+		} else {
+			return false, nil
+		}
+	case GlyphDEy:
+		if l.peek() == GlyphDAOy {
+			wordLen = 2
+			tk = NewKeywordToken(TypeGetResultW)
 		} else {
 			return false, nil
 		}

@@ -43,7 +43,10 @@ HENG    恒
 DAO     导
 RUy     入
 DE      的
-================================
+DUI     对
+DEy     得
+DAOy    到
+===============================
 # Part II： 定义每一个关键词及其对应的 tokenType。
 # 使用说明：
 #
@@ -80,3 +83,5 @@ LogicEqualW     74      等于
 StaticSelfW     75      此之
 IteratorW       76      遍历
 ImportW         77      导入
+GetResultW      78      得到
+ObjDenoteW      79      对于
