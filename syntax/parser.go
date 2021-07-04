@@ -12,10 +12,6 @@ type Parser struct {
 	lineTermFlag bool
 }
 
-const (
-	modeInline uint16 = 0x01
-)
-
 // NewParser -
 func NewParser(l *lex.Lexer) *Parser {
 	return &Parser{
@@ -102,12 +98,12 @@ func (p *Parser) peek2() *lex.Token {
 // should meet StmtLineBreak, which means meetStmtLineBreak() = true. Still, there're some
 // exceptions listed below:
 //
-//   1.    token type is one of the following 5 punctuations:  ，  {  【  ：  ？
+//   1.    token type is one of the following 6 punctuations:  ， 、  {  【  ：  ？
 //   or
 //   2.    the next token type if one of the following 3 marks:  】  }  EOF
 //
 // Example 1#, 2#, 3# illustrates those exceptions that even if there're two or more lines, it's still
-// a valid and complete statement:
+// *ONE* valid and complete statement:
 //
 // Example 1#
 //
@@ -135,6 +131,7 @@ func (p *Parser) meetStmtLineBreak() bool {
 
 	exceptCurrentTokenTypes := []lex.TokenType{
 		lex.TypeCommaSep,
+		lex.TypePauseCommaSep,
 		lex.TypeStmtQuoteL,
 		lex.TypeArrayQuoteL,
 		lex.TypeFuncCall,

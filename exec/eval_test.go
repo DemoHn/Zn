@@ -186,7 +186,7 @@ func Test_MemberExpr(t *testing.T) {
 		其总和 为 【其总和，累加数】之和
 		返回空
 
-	如何得到总和？
+	如何获取总和？
 		返回 其总和
 `
 	suites := []programOKSuite{
@@ -244,7 +244,7 @@ func Test_MemberExpr(t *testing.T) {
 		},
 		{
 			name:           "expr as index",
-			program:        `【3，5，7，9】#{（X-Y：8，7）}`,
+			program:        `【3，5，7，9】#{（X-Y：8、7）}`,
 			symbols:        map[string]ctx.Value{},
 			expReturnValue: val.NewDecimalFromInt(5, 0),
 			expProbe:       map[string][][]string{},
@@ -266,7 +266,7 @@ X之名
 令X 成为示例
 X之总和为20
 X之（累加：25）
-X之（得到总和）
+X之（获取总和）
 			`,
 			symbols:        map[string]ctx.Value{},
 			expReturnValue: val.NewDecimalFromInt(45, 0),
@@ -286,11 +286,11 @@ func Test_IterateStmt(t *testing.T) {
 			program: `
 遍历诸变量：
 	令X为100
-	Y为（X+Y：Y，5）
-	（__probe：「$KEY」，此之索引）
-	（__probe：「$VAL」，此之值）
-	（__probe：「$X」，X）
-	（__probe：「$Y」，Y）
+	Y为（X+Y：Y、5）
+	（__probe：「$KEY」、此之索引）
+	（__probe：「$VAL」、此之值）
+	（__probe：「$X」、X）
+	（__probe：「$Y」、Y）
 			`,
 			symbols: map[string]ctx.Value{
 				"Y": val.NewDecimalFromInt(255, -1), // 25.5
@@ -338,8 +338,8 @@ func Test_IterateStmt(t *testing.T) {
 			name: "with no lead variables (hashmap)",
 			program: `
 遍历示例列表：
-	（__probe：「$KEY」，此之索引）
-	（__probe：「$VAL」，此之值）
+	（__probe：「$KEY」、此之索引）
+	（__probe：「$VAL」、此之值）
 			`,
 			symbols: map[string]ctx.Value{
 				"示例列表": val.NewHashMap([]val.KVPair{
@@ -375,9 +375,9 @@ func Test_IterateStmt(t *testing.T) {
 			name: "with one var lead (array, hashmap)",
 			program: `
 以V遍历【30， 40， 50】：
-    （__probe：「$L1V」，V）
+    （__probe：「$L1V」、V）
     以V遍历【「甲」 == 20，「乙」 == 30】：
-        （__probe：「$L2V」，V）`,
+        （__probe：「$L2V」、V）`,
 			symbols:        map[string]ctx.Value{},
 			expReturnValue: val.NewNull(),
 			expProbe: map[string][][]string{
@@ -399,9 +399,9 @@ func Test_IterateStmt(t *testing.T) {
 		{
 			name: "with two vars lead (array)",
 			program: `
-以K，V遍历【「土」，「地」】：
-    （__probe：「K1」，K）
-    （__probe：「V1」，V）`,
+以K、V遍历【「土」，「地」】：
+    （__probe：「K1」、K）
+    （__probe：「V1」、V）`,
 			symbols:        map[string]ctx.Value{},
 			expReturnValue: val.NewNull(),
 			expProbe: map[string][][]string{
@@ -418,9 +418,9 @@ func Test_IterateStmt(t *testing.T) {
 		{
 			name: "with two vars lead (hashmap)",
 			program: `
-以K，V遍历【「上」==「下」，「左」==「右」】：
-    （__probe：「K1」，K）
-    （__probe：「V1」，V）`,
+以K、V遍历【「上」==「下」，「左」==「右」】：
+    （__probe：「K1」、K）
+    （__probe：「V1」、V）`,
 			symbols:        map[string]ctx.Value{},
 			expReturnValue: val.NewNull(),
 			expProbe: map[string][][]string{
@@ -445,7 +445,7 @@ func Test_VarDeclareStmt(t *testing.T) {
 	suites := []programOKSuite{
 		{
 			name:           "normal one var declaration",
-			program:        `令金克木为「森林」；（__probe：「$K1」，金克木）`,
+			program:        `令金克木为「森林」；（__probe：「$K1」、金克木）`,
 			symbols:        map[string]ctx.Value{},
 			expReturnValue: val.NewString("森林"),
 			expProbe: map[string][][]string{
@@ -456,21 +456,21 @@ func Test_VarDeclareStmt(t *testing.T) {
 		},
 		{
 			name:           "normal one var with compound expression",
-			program:        `令_B52为（X+Y：2008，1963）；_B52`,
+			program:        `令_B52为（X+Y：2008、1963）；_B52`,
 			symbols:        map[string]ctx.Value{},
 			expReturnValue: val.NewDecimalFromInt(3971, 0),
 			expProbe:       map[string][][]string{},
 		},
 		{
 			name:           "normal multiple vars",
-			program:        "令A为5；令B为2；令C为3；（X*Y：A，B，C）",
+			program:        "令A为5；令B为2；令C为3；（X*Y：A、B、C）",
 			symbols:        map[string]ctx.Value{},
 			expReturnValue: val.NewDecimalFromInt(3, 1),
 			expProbe:       map[string][][]string{},
 		},
 		{
 			name:           "normal multiple vars (with reference)",
-			program:        "令A为10；令B为A；令C为B；（X*Y：A，B，C）",
+			program:        "令A为10；令B为A；令C为B；（X*Y：A、B、C）",
 			symbols:        map[string]ctx.Value{},
 			expReturnValue: val.NewDecimalFromInt(1, 3),
 			expProbe:       map[string][][]string{},
@@ -495,7 +495,7 @@ func Test_VarAssignExpr(t *testing.T) {
 		},
 		{
 			name:    "normal var assign with computed value",
-			program: `A为（X+Y：100，200）`,
+			program: `A为（X+Y：100、200）`,
 			symbols: map[string]ctx.Value{
 				"A": val.NewBool(true),
 			},
@@ -561,8 +561,8 @@ C为&A
 A之名为「保定」
 
 注： 显示结果，「B之名」 和 「C之名」 应都为 「保定」
-（__probe：「B」，B之名）
-（__probe：「C」，C之名）
+（__probe：「B」、B之名）
+（__probe：「C」、C之名）
 A之名
 `,
 			symbols: map[string]ctx.Value{
@@ -595,8 +595,8 @@ func Test_WhileLoopStmt(t *testing.T) {
 			name: "simple while loop",
 			program: `
 每当X大于0：
-	（__probe：「$X」，X）
-	X为（X-Y：X，1）`,
+	（__probe：「$X」、X）
+	X为（X-Y：X、1）`,
 			symbols: map[string]ctx.Value{
 				"X": val.NewDecimalFromInt(3, 0),
 			},
@@ -615,13 +615,13 @@ func Test_WhileLoopStmt(t *testing.T) {
 每当X大于0：
 	Y为1
 	每当Y大于0：
-		Y为（X+Y：Y，1）
+		Y为（X+Y：Y、1）
 		如果Y为4：
 			此之（结束）
-		（__probe：「VY」，Y）
+		（__probe：「VY」、Y）
 		
-	X为（X+Y：X，-1）
-	（__probe：「VX」，X）
+	X为（X+Y：X、-1）
+	（__probe：「VX」、X）
 			`,
 			symbols: map[string]ctx.Value{
 				"X": val.NewDecimalFromInt(2, 0),
@@ -653,7 +653,7 @@ func Test_BranchStmt(t *testing.T) {
 			name: "exec true expr",
 			program: `
 如果 变量A 为 “真实”：
-	（__probe：“TAG”，变量A）	
+	（__probe：“TAG”、变量A）	
 			`,
 			symbols: map[string]ctx.Value{
 				"变量A": val.NewString("真实"),
@@ -669,8 +669,8 @@ func Test_BranchStmt(t *testing.T) {
 			name: "exec false expr",
 			program: `
 如果 变量A 为 “真实”：
-	（__probe：“TAG”， “走过真逻辑”）
-（__probe：“TAG”， “走过公共逻辑”）
+	（__probe：“TAG”、 “走过真逻辑”）
+（__probe：“TAG”、 “走过公共逻辑”）
 			`,
 			symbols: map[string]ctx.Value{
 				"变量A": val.NewString("不真实"),
@@ -686,14 +686,14 @@ func Test_BranchStmt(t *testing.T) {
 			name: "if-else expr",
 			program: `
 如果 变量A 大于 100：
-	（__probe：“TAG_A”，真）
+	（__probe：“TAG_A”、真）
 否则：
-	（__probe：“TAG_A”，假）
+	（__probe：“TAG_A”、假）
 
 如果 变量B 大于 100：
-	（__probe：“TAG_B”，真）
+	（__probe：“TAG_B”、真）
 否则：
-	（__probe：“TAG_B”，假）
+	（__probe：“TAG_B”、假）
 			`,
 			symbols: map[string]ctx.Value{
 				"变量A": val.NewDecimalFromInt(120, 0), // true expression
@@ -722,7 +722,7 @@ func Test_BranchStmt(t *testing.T) {
 	否则：
 		评级 为 “不及格”
 
-	（__probe：“TAG”， 评级）
+	（__probe：“TAG”、 评级）
 			`,
 			symbols: map[string]ctx.Value{
 				"评级": val.NewString("一般"),
@@ -740,16 +740,16 @@ func Test_BranchStmt(t *testing.T) {
 		{
 			name: "if-stmt: new scope",
 			program: `
-（__probe：“TAG”，评级）  注1：初始变量设置
+（__probe：“TAG”、评级）  注1：初始变量设置
 如果成绩大于70：
 	令评级为“优秀”
-	（__probe：“TAG”，评级） 注2：在新作用域内定义变量并赋值
+	（__probe：“TAG”、评级） 注2：在新作用域内定义变量并赋值
 
 	成绩为85
-	（__probe：“TAG”，成绩）	
+	（__probe：“TAG”、成绩）	
 
-（__probe：“TAG”，成绩） 注3：成绩 变量已经在全局作用域被修改，其值应为85
-（__probe：“TAG”，评级）
+（__probe：“TAG”、成绩） 注3：成绩 变量已经在全局作用域被修改，其值应为85
+（__probe：“TAG”、评级）
 			`,
 			symbols: map[string]ctx.Value{
 				"评级": val.NewString("一般"),
@@ -798,7 +798,7 @@ func Test_FunctionCall(t *testing.T) {
 如何执行方法？
 	令A 为【20，30】
 	如果 A#1 为 40：
-		（X+Y：1，2）
+		（X+Y：1、2）
 
 （执行方法）
 `,
@@ -810,10 +810,10 @@ func Test_FunctionCall(t *testing.T) {
 			name: "function call with args",
 			program: `
 如何执行方法？
-	已知A，B
-	返回（X+Y：A，B）
+	已知A、B
+	返回（X+Y：A、B）
 
-（执行方法：10，30）
+（执行方法：10、30）
 `,
 			symbols:        map[string]ctx.Value{},
 			expReturnValue: val.NewDecimalFromInt(40, 0),
@@ -823,10 +823,10 @@ func Test_FunctionCall(t *testing.T) {
 			name: "function call (last expression as return value)",
 			program: `
 如何执行方法？
-	已知A，B
-	（X+Y：A，B）
+	已知A、B
+	（X+Y：A、B）
 
-（执行方法：10，30）
+（执行方法：10、30）
 `,
 			symbols:        map[string]ctx.Value{},
 			expReturnValue: val.NewDecimalFromInt(40, 0),
@@ -835,11 +835,11 @@ func Test_FunctionCall(t *testing.T) {
 		{
 			name: "function call hoisting (call expr exceeds definition)",
 			program: `
-令A为（执行方法：10，30）
+令A为（执行方法：10、30）
 
 如何执行方法？
-	已知A，B
-	（X+Y：A，B）
+	已知A、B
+	（X+Y：A、B）
 
 A`,
 			symbols:        map[string]ctx.Value{},
@@ -850,15 +850,15 @@ A`,
 			name: "internal function declaration",
 			program: `
 如何执行方法？
-	已知A，B
+	已知A、B
 
 	如何加数据？
-		已知A，B
-		（X+Y：A，B）
+		已知A、B
+		（X+Y：A、B）
 
-	（加数据：A，B）
+	（加数据：A、B）
 
-（执行方法：10，40）
+（执行方法：10、40）
 `,
 			symbols:        map[string]ctx.Value{},
 			expReturnValue: val.NewDecimalFromInt(50, 0),
@@ -868,14 +868,14 @@ A`,
 			name: "function call another function",
 			program: `
 如何执行方法？
-	已知C，D
-	（乘数据：（乘数据：C，D），C）
+	已知C、D
+	（乘数据：（乘数据：C、D）、C）
 
 如何乘数据？
-	已知A，B
-	（X*Y：A，B）
+	已知A、B
+	（X*Y：A、B）
 
-（执行方法：5，3）
+（执行方法：5、3）
 			`,
 			symbols:        map[string]ctx.Value{},
 			expReturnValue: val.NewDecimalFromInt(75, 0),
@@ -885,17 +885,17 @@ A`,
 			name: "function call new scope",
 			program: `
 如何执行方法？
-	已知A，B
+	已知A、B
 	令C为10
 	D为20
 
-	（X+Y：A，B，C）
+	（X+Y：A、B、C）
 
-（__probe：“RETURN”，（执行方法：3，4））
-（__probe：“TAG_A”，A）
-（__probe：“TAG_B”，B）
-（__probe：“TAG_C”，C）
-（__probe：“TAG_D”，D）
+（__probe：“RETURN”、（执行方法：3、4））
+（__probe：“TAG_A”、A）
+（__probe：“TAG_B”、B）
+（__probe：“TAG_C”、C）
+（__probe：“TAG_D”、D）
 			`,
 			symbols: map[string]ctx.Value{
 				"A": val.NewDecimalFromInt(10, 0),
@@ -943,7 +943,7 @@ A`,
 			program: `
 如何·乘以2·？
 	已知X
-	返回（X+Y：X，X）
+	返回（X+Y：X、X）
 	
 令累加成双 为 ·乘以2· 
 （累加成双：24）`,
@@ -968,8 +968,8 @@ func Test_CreateObject(t *testing.T) {
 
 令X，Y 成为 模型
 
-（__probe：“TAG”，X之名）
-（__probe：“TAG”，Y之名）
+（__probe：“TAG”、X之名）
+（__probe：“TAG”、Y之名）
 			`,
 			symbols:        map[string]ctx.Value{},
 			expReturnValue: val.NewString("乐高"),
@@ -990,8 +990,8 @@ func Test_CreateObject(t *testing.T) {
 
 令X，Y 成为 模型：“香港记者”
 
-（__probe：“TAG”，X之名）
-（__probe：“TAG”，Y之名）
+（__probe：“TAG”、X之名）
+（__probe：“TAG”、Y之名）
 			`,
 			symbols:        map[string]ctx.Value{},
 			expReturnValue: val.NewString("香港记者"),

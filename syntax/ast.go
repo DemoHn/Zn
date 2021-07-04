@@ -848,9 +848,9 @@ func tryParseEmptyMapList(p *Parser) (bool, UnionMapList) {
 // ParseFuncCallExpr - yield FuncCallExpr node
 //
 // CFG:
-// FuncCallExpr  -> （ FuncID ： commaList ）
-// commaList     -> E commaListTail
-// commaListTail -> ， E commaListTail
+// FuncCallExpr  -> （ FuncID ： pcommaList ）
+// pcommaList     -> E pcommaListTail
+// pcommaListTail -> 、 E pcommaListTail
 //               ->
 //
 // FuncID   -> ID
@@ -864,8 +864,8 @@ func ParseFuncCallExpr(p *Parser) *FuncCallExpr {
 	// #2. parse colon (maybe there's no params)
 	match, _ := p.tryConsume(lex.TypeFuncCall)
 	if match {
-		// #2.1 parse comma list
-		parseCommaList(p, func() {
+		// #2.1 parse pcomma list
+		parsePauseCommaList(p, func() {
 			expr := ParseExpression(p, true)
 			callExpr.Params = append(callExpr.Params, expr)
 		})
@@ -880,7 +880,7 @@ func ParseFuncCallExpr(p *Parser) *FuncCallExpr {
 // ParseVarOneLeadExpr - 以 ... （‹方法名›）
 // CFG:
 //
-// FuncExpr -> 以 Expr，Expr， ... RawFuncExpr
+// FuncExpr -> 以 Expr、Expr、 ... RawFuncExpr
 // RawFuncExpr -> （ FuncID ： commaList ）
 //
 // FuncID  -> ID
@@ -888,7 +888,7 @@ func ParseFuncCallExpr(p *Parser) *FuncCallExpr {
 func ParseVarOneLeadExpr(p *Parser) *FuncCallExpr {
 	// #1. parse exprs
 	exprList := []Expression{}
-	parseCommaList(p, func() {
+	parsePauseCommaList(p, func() {
 		expr := ParseExpression(p, true)
 		exprList = append(exprList, expr)
 	})
@@ -911,7 +911,7 @@ func ParseVarOneLeadExpr(p *Parser) *FuncCallExpr {
 // VarDeclare -> 令 VDItem
 //
 // VDItem     -> IdfList 为 Expr
-//            -> IdfList 成为 Idf ： Expr1， Expr2， ...
+//            -> IdfList 成为 Idf ： Expr1、 Expr2、 ...
 //            -> IdfList 恒为 Expr
 //
 //    IdfList -> I I'
@@ -1011,7 +1011,7 @@ func parseVDAssignPair(p *Parser) VDAssignPair {
 		}
 		// param param list
 		params := []Expression{}
-		parseCommaList(p, func() {
+		parsePauseCommaList(p, func() {
 			e := ParseExpression(p, true)
 			params = append(params, e)
 		})
@@ -1169,7 +1169,7 @@ func ParseBranchStmt(p *Parser, mainIndent int) *BranchStmt {
 // ParseFunctionDeclareStmt - yield FunctionDeclareStmt node
 // CFG:
 // FunctionDeclareStmt -> 如何 FuncName ？
-//       ...     已知 ID1， & ID2， ...
+//       ...     已知 ID1、 & ID2、 ...
 //       ...     ExecBlock
 //       ...     ....
 //
@@ -1205,7 +1205,7 @@ func ParseFunctionDeclareStmt(p *Parser) *FunctionDeclareStmt {
 		case stateParamList:
 			// parse 已知 expr
 			if match, _ := p.tryConsume(lex.TypeParamAssignW); match {
-				parseCommaList(p, func() {
+				parsePauseCommaList(p, func() {
 					refMark := false
 					if ok, _ := p.tryConsume(lex.TypeObjRef); ok {
 						refMark = true
@@ -1265,15 +1265,15 @@ func ParseGetterDeclareStmt(p *Parser) *GetterDeclareStmt {
 //
 // CFG:
 //
-// VOStmt -> 以 ID ， ID ... 遍历 IStmtT'
-//        -> 以 Expr ， Expr ... FuncExprT'
+// VOStmt -> 以 ID 、 ID ... 遍历 IStmtT'
+//        -> 以 Expr 、 Expr ... FuncExprT'
 func ParseVarOneLeadStmt(p *Parser) Statement {
 	validTypes := []lex.TokenType{
 		lex.TypeIteratorW,
 		lex.TypeFuncQuoteL,
 	}
 	exprList := []Expression{}
-	parseCommaList(p, func() {
+	parsePauseCommaList(p, func() {
 		exprList = append(exprList, ParseExpression(p, true))
 	})
 
@@ -1351,7 +1351,7 @@ func ParseFunctionReturnStmt(p *Parser) *FunctionReturnStmt {
 // ImportTail  -> 之 ID IDTail
 //             ->
 //
-// IDTail      -> ，ID IDTail
+// IDTail      -> 、 ID IDTail
 //             ->
 func ParseImportStmt(p *Parser) *ImportStmt {
 	stmt := &ImportStmt{
@@ -1371,8 +1371,8 @@ func ParseImportStmt(p *Parser) *ImportStmt {
 	if !match2 {
 		return stmt
 	}
-	// if match 导入 xxx 之 yyy，zzz
-	parseCommaList(p, func() {
+	// if match 导入 xxx 之 yyy、zzz
+	parsePauseCommaList(p, func() {
 		tk := parseFuncID(p)
 		stmt.ImportItems = append(stmt.ImportItems, tk)
 	})
@@ -1455,10 +1455,10 @@ func ParseClassDeclareStmt(p *Parser) *ClassDeclareStmt {
 
 // parseConstructor -
 // CFG:
-// Constructor  -> 是为 ID1，ID2 ...
+// Constructor  -> 是为 ID1、ID2 ...
 func parseConstructor(p *Parser) []*ParamItem {
 	var paramList = []*ParamItem{}
-	parseCommaList(p, func() {
+	parsePauseCommaList(p, func() {
 		refMark := false
 		if match, _ := p.tryConsume(lex.TypeObjRef); match {
 			refMark = true
@@ -1518,6 +1518,22 @@ func parseCommaList(p *Parser, consumer consumerFunc) {
 	for {
 		// consume comma
 		if match, _ := p.tryConsume(lex.TypeCommaSep); !match {
+			// stop parsing immediately
+			return
+		}
+		consumer()
+	}
+}
+
+// parsePauseCommaList - 使用顿号来分隔
+func parsePauseCommaList(p *Parser, consumer consumerFunc) {
+	// first item MUST be consumed!
+	consumer()
+
+	// iterate to get value
+	for {
+		// consume comma
+		if match, _ := p.tryConsume(lex.TypePauseCommaSep); !match {
 			// stop parsing immediately
 			return
 		}

@@ -184,9 +184,9 @@ code=2250 line=1 col=5
 code=2250 line=1 col=13
 
 ========
-5. additional comma
+5. additional pause comma
 --------
-（显示时间：「2020」，，500）
+（显示时间：「2020」、、500）
 --------
 code=2250 line=1 col=13
 `
@@ -250,7 +250,7 @@ code=2250 line=3 col=0
 3. more than one ref mark
 --------
 如何搞个大新闻？
-    已知A，&&B	
+    已知A、&&B	
 --------
 code=2250 line=2 col=4
 `

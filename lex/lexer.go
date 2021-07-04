@@ -93,7 +93,7 @@ const EOF rune = 0
 // declare marks
 const (
 	Comma             rune = 0xFF0C //，
-	PasueComma        rune = 0x3001 //、
+	PauseComma        rune = 0x3001 //、
 	Colon             rune = 0xFF1A //：
 	Semicolon         rune = 0xFF1B //；
 	QuestionMark      rune = 0xFF1F //？
@@ -115,7 +115,7 @@ const (
 
 // MarkLeads -
 var MarkLeads = []rune{
-	Comma, Colon, Semicolon, QuestionMark, RefMark, BangMark,
+	Comma, PauseComma, Colon, Semicolon, QuestionMark, RefMark, BangMark,
 	AnnotationMark, HashMark, EllipsisMark, LeftBracket,
 	RightBracket, LeftParen, RightParen, Equal, DoubleArrow,
 	LeftCurlyBracket, RightCurlyBracket,
@@ -223,24 +223,25 @@ const (
 	TypeNumber     TokenType = 4 // 数值（标识符的一种特殊情况）
 	TypeIdentifier TokenType = 5 // 标识符
 
-	TypeComment     TokenType = 10 // 注：
-	TypeCommaSep    TokenType = 11 // ，
-	TypeStmtSep     TokenType = 12 // ；
-	TypeFuncCall    TokenType = 13 // ：
-	TypeFuncDeclare TokenType = 14 // ？
-	TypeObjRef      TokenType = 15 // &
-	TypeMustT       TokenType = 16 // ！
-	TypeAnnoT       TokenType = 17 // @
-	TypeMapHash     TokenType = 18 // #
-	TypeMoreParam   TokenType = 19 // ……
-	TypeArrayQuoteL TokenType = 20 // 【
-	TypeArrayQuoteR TokenType = 21 // 】
-	TypeFuncQuoteL  TokenType = 22 // （
-	TypeFuncQuoteR  TokenType = 23 // ）
-	TypeMapData     TokenType = 24 // ==
-	TypeStmtQuoteL  TokenType = 25 // {
-	TypeStmtQuoteR  TokenType = 26 // }
-	TypeMapQHash    TokenType = 27 // #{
+	TypeComment       TokenType = 10 // 注：
+	TypeCommaSep      TokenType = 11 // ，
+	TypeStmtSep       TokenType = 12 // ；
+	TypeFuncCall      TokenType = 13 // ：
+	TypeFuncDeclare   TokenType = 14 // ？
+	TypeObjRef        TokenType = 15 // &
+	TypeMustT         TokenType = 16 // ！
+	TypeAnnoT         TokenType = 17 // @
+	TypeMapHash       TokenType = 18 // #
+	TypeMoreParam     TokenType = 19 // ……
+	TypeArrayQuoteL   TokenType = 20 // 【
+	TypeArrayQuoteR   TokenType = 21 // 】
+	TypeFuncQuoteL    TokenType = 22 // （
+	TypeFuncQuoteR    TokenType = 23 // ）
+	TypeMapData       TokenType = 24 // ==
+	TypeStmtQuoteL    TokenType = 25 // {
+	TypeStmtQuoteR    TokenType = 26 // }
+	TypeMapQHash      TokenType = 27 // #{
+	TypePauseCommaSep TokenType = 28 // 、
 )
 
 // next - return current rune, and move forward the cursor for 1 character.
@@ -459,12 +460,12 @@ func (l *Lexer) parseCRLF(ch rune) []rune {
 // 4. 注123456：“
 //
 // @returns (isValid, isMultiLine)
-func (l *Lexer) validateComment(ch rune) (bool, bool, []rune) {
+func (l *Lexer) validateComment(c rune) (bool, bool, []rune) {
 	note := []rune{}
 	// “ or 「
 	lquotes := []rune{LeftQuoteIV, LeftQuoteII}
 	for {
-		ch = l.next()
+		ch := l.next()
 		// match pattern 1, 2
 		if ch == Colon {
 			// match pattern 3, 4
@@ -764,6 +765,8 @@ func (l *Lexer) parseMarkers(ch rune) (*Token, *error.Error) {
 	switch ch {
 	case Comma:
 		return NewMarkToken(l.chBuffer, TypeCommaSep, startR, 1), nil
+	case PauseComma:
+		return NewMarkToken(l.chBuffer, TypePauseCommaSep, startR, 1), nil
 	case Colon:
 		return NewMarkToken(l.chBuffer, TypeFuncCall, startR, 1), nil
 	case Semicolon:
