@@ -964,7 +964,10 @@ func ParseVarDeclareStmt(p *Parser) *VarDeclareStmt {
 		}
 
 		parseItemListBlock(p, blockIndent, func() {
-			for !p.meetStmtLineBreak() {
+			for {
+				if p.meetStmtLineBreak() && p.lineTermFlag {
+					break
+				}
 				vNode.AssignPair = append(vNode.AssignPair, parseVDAssignPair(p))
 			}
 		})

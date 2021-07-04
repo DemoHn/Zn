@@ -41,7 +41,6 @@ func (p *Parser) Parse() (block *BlockStmt, err *error.Error) {
 	peekIndent := p.getPeekIndent()
 	// parse global block
 	block = ParseBlockStmt(p, peekIndent)
-
 	// ensure there's no remaining token after parsing global block
 	if p.peek().Type != lex.TypeEOF {
 		err = error.UnexpectedEOF()
@@ -149,8 +148,12 @@ func (p *Parser) meetStmtLineBreak() bool {
 	if peek == nil || current == nil {
 		return false
 	}
+
+	// while parsing last token of the file, there must be a line break
+	// to terminate the statement -- no reason that the parsing progress
+	// be continued.
 	if current.Type == lex.TypeEOF || peek.Type == lex.TypeEOF {
-		return false
+		return true
 	}
 
 	// current token is at line end
