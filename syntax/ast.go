@@ -686,8 +686,8 @@ func ParseMemberExpr(p *Parser) Expression {
 //
 // CFG:
 // BsE   -> { E }
-//       -> （ FuncID ： E，E，...）
-//       -> 以 E （ FuncID ： E，E，...）
+//       -> （ FuncID ： E、E、...）
+//       -> 以 E （ FuncID ： E、E、...）
 //       -> ID
 //       -> Number
 //       -> String
@@ -737,14 +737,15 @@ func ParseBasicExpr(p *Parser) Expression {
 // ParseArrayExpr - yield ArrayExpr node (support both hashMap and arrayList)
 // CFG:
 // ArrayExpr -> 【 ItemList 】
-//           -> 【】
 //           -> 【 HashMapList 】
 //           -> 【 == 】
-// ItemList  -> Expr ExprTail
+// ItemList  -> Expr ItemList
 //           ->
-// ExprTail  -> ， Expr ExprTail
-//           ->
-// HashMapList -> KeyID == Expr， KeyID2 == Expr2， ...
+//
+// HashMapList -> KeyID == Expr HashMapTail
+//
+// HashMapTail -> KeyID == Expr HashMapTail
+//             ->
 //
 // KeyID     -> ID
 //           -> String
@@ -763,10 +764,15 @@ func ParseArrayExpr(p *Parser) UnionMapList {
 	)
 	// #1. consume item list (comma list)
 	exprs := []Node{}
-	parseCommaList(p, func() {
+	for {
+		match, _ := p.tryConsume(lex.TypeArrayQuoteR)
+		if match {
+			break
+		}
+		// else parse expressions
 		expr := ParseExpression(p, true)
 
-		// parse if there's double equals, then cont'd parsing right expr for hashmap
+		// parse if there's double equal marks, then cont'd parsing right expr for hashmap
 		if match, _ := p.tryConsume(lex.TypeMapData); match {
 			exprR := ParseExpression(p, true)
 
@@ -774,10 +780,24 @@ func ParseArrayExpr(p *Parser) UnionMapList {
 				Tag:      tagHashMap,
 				Children: []Node{expr, exprR},
 			})
-			return
+			// allow line-feed after parsing one key-value pair done
+			// e.g.:
+			// 【
+			//     「A」 == 1  <-- resetLineTermFlag() here, otherwise throw LineTerm error
+			//     「B」 == 2
+			// 】
+			p.resetLineTermFlag()
+			continue
 		}
 		exprs = append(exprs, expr)
-	})
+		// For parsing arrays, allow line-feed after parsing one item done, too.
+		// e.g.:
+		// 【
+		//     「item1」  <-- resetLineTermFlag() here, otherwise throw LineTerm error
+		//     「item2」
+		// 】
+		p.resetLineTermFlag()
+	}
 
 	// type cast (because there's no GENERIC TYPE in golang!!!)
 	var ar = &ArrayExpr{
@@ -813,9 +833,6 @@ func ParseArrayExpr(p *Parser) UnionMapList {
 			})
 		}
 	}
-
-	// #2. consume right brancket
-	p.consume(lex.TypeArrayQuoteR)
 
 	// #3. return value
 	if subtype == subtypeArray {
@@ -912,7 +929,12 @@ func ParseVarOneLeadExpr(p *Parser) *FuncCallExpr {
 
 // ParseVarDeclareStmt - yield VarDeclare node
 // CFG:
-// VarDeclare -> 令 VDItem
+// VarDeclare -> 令 VDPair
+//
+// VDPair     -> VDItem VDPairTail
+//
+// VDPairTail -> VDItem VDPairTail
+//            ->
 //
 // VDItem     -> IdfList 为 Expr
 //            -> IdfList 成为 Idf ： Expr1、 Expr2、 ...
@@ -942,12 +964,15 @@ func ParseVarDeclareStmt(p *Parser) *VarDeclareStmt {
 		}
 
 		parseItemListBlock(p, blockIndent, func() {
-			vNode.AssignPair = append(vNode.AssignPair, parseVDAssignPair(p))
+			for !p.meetStmtLineBreak() {
+				vNode.AssignPair = append(vNode.AssignPair, parseVDAssignPair(p))
+			}
 		})
 	} else {
 		// #02. consume identifier declare list (comma list) inline
-		// [ONLY SUPPORT ONE VDAssignPair]
-		vNode.AssignPair = append(vNode.AssignPair, parseVDAssignPair(p))
+		for !p.meetStmtLineBreak() {
+			vNode.AssignPair = append(vNode.AssignPair, parseVDAssignPair(p))
+		}
 	}
 
 	return vNode
@@ -1512,21 +1537,6 @@ func parseFuncID(p *Parser) *ID {
 		panic(error.InvalidSyntaxCurr())
 	}
 	return newID(tk)
-}
-
-func parseCommaList(p *Parser, consumer consumerFunc) {
-	// first item MUST be consumed!
-	consumer()
-
-	// iterate to get value
-	for {
-		// consume comma
-		if match, _ := p.tryConsume(lex.TypeCommaSep); !match {
-			// stop parsing immediately
-			return
-		}
-		consumer()
-	}
 }
 
 // parsePauseCommaList - 使用顿号来分隔

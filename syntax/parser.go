@@ -53,9 +53,16 @@ func (p *Parser) next() *lex.Token {
 	var tk *lex.Token
 	var err *error.Error
 
-	tk, err = p.NextToken()
-	if err != nil {
-		panic(err)
+	for {
+		// if next token is comma (,) ignore it and continue
+		// until the next next (N nexts maybe) token is not a comma.
+		if tk != nil && tk.Type != lex.TypeCommaSep {
+			break
+		}
+		tk, err = p.NextToken()
+		if err != nil {
+			panic(err)
+		}
 	}
 
 	// move advanced token buffer
@@ -72,10 +79,6 @@ func (p *Parser) current() *lex.Token {
 
 func (p *Parser) peek() *lex.Token {
 	return p.tokens[1]
-}
-
-func (p *Parser) peek2() *lex.Token {
-	return p.tokens[2]
 }
 
 // meetStmtLineBreak - if there's a statement line-break at the end of token.
@@ -98,7 +101,7 @@ func (p *Parser) peek2() *lex.Token {
 // should meet StmtLineBreak, which means meetStmtLineBreak() = true. Still, there're some
 // exceptions listed below:
 //
-//   1.    token type is one of the following 6 punctuations:  ， 、  {  【  ：  ？
+//   1.    the current token type is one of the following 6 punctuations:  ， 、  {  【  ：  ？
 //   or
 //   2.    the next token type if one of the following 3 marks:  】  }  EOF
 //
@@ -108,7 +111,7 @@ func (p *Parser) peek2() *lex.Token {
 // Example 1#
 //
 // （显示并连缀：
-//     「结果为」，
+//     「结果为」、
 //      人口-中位数）
 //
 // Example 2#

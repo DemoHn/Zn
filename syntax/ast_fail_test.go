@@ -28,14 +28,6 @@ const varDeclCasesFAIL = `
 code=2250 line=3 col=9
 
 ========
-2. incomplete statement (additional comma) (InvalidSyntax)
---------
-    
-令某变量、另一变量、
-【A，B】为1
-    
---------
-code=2250 line=2 col=9
 
 ========
 3. incomplete statement (InvalidSyntax)
@@ -80,29 +72,11 @@ code=2250 line=2 col=1
 code=2250 line=2 col=1
 
 ========
-7. block var declare - additional comma
---------
-    
-令：
-    A为B，
-    B为C，
-    
---------
-code=2250 line=3 col=2
-
-========
 8. keyword only
 --------
 令
 --------
 code=2250 line=1 col=0
-
-========
-9. inline declare - multiple declarations
---------
-令A为1，B为2
---------
-code=2250 line=1 col=4
 `
 
 const whileLoopCasesFAIL = `
@@ -170,11 +144,11 @@ code=2250 line=1 col=7
 code=2250 line=1 col=0
 
 ========
-3. without colon
+3. func name includes otehr expr
 --------
 （显示时间，「2020」）
 --------
-code=2250 line=1 col=5
+code=2250 line=1 col=6
 
 ========
 4. additional right paren
@@ -192,13 +166,6 @@ code=2250 line=1 col=13
 `
 
 const arrayListCasesFAIL = `
-========
-1. additional comma
---------
-【10，】
---------
-code=2250 line=1 col=4
-
 ========
 2. missing right brancket
 --------
@@ -225,7 +192,7 @@ code=2250 line=1 col=5
 --------
 【 100，「正定」== 10 】
 --------
-code=2255 line=1 col=13
+code=2255 line=1 col=16
 `
 
 const funcDeclareCasesFAIL = `
