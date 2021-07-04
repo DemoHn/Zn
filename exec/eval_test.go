@@ -966,7 +966,7 @@ func Test_CreateObject(t *testing.T) {
 定义模型：
 	其名为 “乐高”
 
-令X，Y 成为 模型
+令X、Y 成为 模型
 
 （__probe：“TAG”、X之名）
 （__probe：“TAG”、Y之名）
@@ -988,7 +988,7 @@ func Test_CreateObject(t *testing.T) {
 
 	是为 名
 
-令X，Y 成为 模型：“香港记者”
+令X、Y 成为 模型：“香港记者”
 
 （__probe：“TAG”、X之名）
 （__probe：“TAG”、Y之名）

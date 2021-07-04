@@ -23,7 +23,7 @@ const varDeclCasesFAIL = `
 --------
 注：第一行留给度娘
 
-令某变量，另一变量，1240为1000
+令某变量、另一变量、1240为1000
 --------
 code=2250 line=3 col=9
 
@@ -31,7 +31,7 @@ code=2250 line=3 col=9
 2. incomplete statement (additional comma) (InvalidSyntax)
 --------
     
-令某变量，另一变量，
+令某变量、另一变量、
 【A，B】为1
     
 --------
@@ -41,7 +41,7 @@ code=2250 line=2 col=9
 3. incomplete statement (InvalidSyntax)
 --------
     
-令某变量，另一变量
+令某变量、另一变量
     【A，B】为100
     
 --------

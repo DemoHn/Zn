@@ -279,8 +279,9 @@ type VarAssignExpr struct {
 // FuncCallExpr - function call
 type FuncCallExpr struct {
 	ExprBase
-	FuncName *ID
-	Params   []Expression
+	FuncName    *ID
+	Params      []Expression
+	YieldResult *ID
 }
 
 // MemberExpr - declare a member (dot) relation
@@ -848,13 +849,16 @@ func tryParseEmptyMapList(p *Parser) (bool, UnionMapList) {
 // ParseFuncCallExpr - yield FuncCallExpr node
 //
 // CFG:
-// FuncCallExpr  -> （ FuncID ： pcommaList ）
+// FuncCallExpr  -> （ FuncID ： pcommaList ）YieldResultTail
 // pcommaList     -> E pcommaListTail
 // pcommaListTail -> 、 E pcommaListTail
 //               ->
 //
 // FuncID   -> ID
 //          -> Number
+//
+// YieldResultTail  ->  得到 ID
+//                  ->
 func ParseFuncCallExpr(p *Parser) *FuncCallExpr {
 	var callExpr = &FuncCallExpr{
 		Params: []Expression{},
@@ -915,14 +919,14 @@ func ParseVarOneLeadExpr(p *Parser) *FuncCallExpr {
 //            -> IdfList 恒为 Expr
 //
 //    IdfList -> I I'
-//         I' -> ，I I'
+//         I' -> 、I I'
 //            ->
 //
 // or block declaration:
 //
 // VarDeclare -> 令 ：
 //           ...
-//           ...     I3 ， I4， I5 ...
+//           ...     I3 、 I4、 I5 ...
 func ParseVarDeclareStmt(p *Parser) *VarDeclareStmt {
 	vNode := &VarDeclareStmt{
 		AssignPair: []VDAssignPair{},
@@ -953,7 +957,7 @@ func parseVDAssignPair(p *Parser) VDAssignPair {
 	idfList := []*ID{}
 
 	// #1. parse identifier
-	parseCommaList(p, func() {
+	parsePauseCommaList(p, func() {
 		id := parseID(p)
 		idfList = append(idfList, id)
 	})

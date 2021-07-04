@@ -136,7 +136,7 @@ $PG($BK(
 ========
 2. two variables
 --------
-令变量1，变量2为100
+令变量1、变量2为100
 --------
 $PG($BK(
 	$VD($VP(
@@ -148,7 +148,7 @@ $PG($BK(
 ========
 3. paired variables inline (one pair only)
 --------
-令小A，小B，小C为100
+令小A、小B、小C为100
 --------
 $PG($BK(
 	$VD($VP(
@@ -160,7 +160,7 @@ $PG($BK(
 ========
 4. with varquotes
 --------
-令小A，·先令·为200
+令小A、·先令·为200
 --------
 $PG($BK(
 	$VD($VP(
@@ -192,8 +192,8 @@ $PG($BK(
 令：
 	A为1
 	B为2
-	C，D为3
-	E，F为4
+	C、D为3
+	E、F为4
 
 令G为5
 --------
@@ -236,9 +236,9 @@ $PG($BK(
 9. block declaration - mixture of const,assign,newObj
 --------
 令：
-	高脚杯，小盅成为SKU：「玻璃制品」、10、20、30
-	A，B，C为「Amazon」
-	D，E，F恒为空
+	高脚杯、小盅成为SKU：「玻璃制品」、10、20、30
+	A、B、C为「Amazon」
+	D、E、F恒为空
 	G恒为空
 --------
 $PG($BK(
@@ -599,8 +599,8 @@ $PG($BK($VD($VP(vars[]=($ID(香港记者)) expr[]=($VA(target=($ID(记者名)) a
 ========
 2. a complete statement with comma list - 3 lines
 --------
-令树叶，鲜花，
-    雪花，
+令树叶、鲜花、
+    雪花、
                 墨水为「黑」
 --------
 $PG($BK($VD($VP(vars[]=($ID(树叶) $ID(鲜花) $ID(雪花) $ID(墨水)) expr[]=($STR(黑))))))
