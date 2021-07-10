@@ -964,6 +964,8 @@ func ParseVarDeclareStmt(p *Parser) *VarDeclareStmt {
 		}
 
 		parseItemListBlock(p, blockIndent, func() {
+			// there're at least ONE vdAssignPair on each line!
+			vNode.AssignPair = append(vNode.AssignPair, parseVDAssignPair(p))
 			for {
 				if p.meetStmtLineBreak() && p.lineTermFlag {
 					break
@@ -973,7 +975,9 @@ func ParseVarDeclareStmt(p *Parser) *VarDeclareStmt {
 		})
 	} else {
 		// #02. consume identifier declare list (comma list) inline
-		for !p.meetStmtLineBreak() {
+		// there're at least ONE vdAssignPair on each line!
+		vNode.AssignPair = append(vNode.AssignPair, parseVDAssignPair(p))
+		for !p.meetStmtLineBreak() && !p.meetStmtBreak() {
 			vNode.AssignPair = append(vNode.AssignPair, parseVDAssignPair(p))
 		}
 	}

@@ -134,7 +134,7 @@ const funcCallCasesFAIL = `
 --------
 （显示代码 等
 --------
-code=2250 line=1 col=1
+code=2250 line=1 col=7
 
 ========
 2. func name not ID

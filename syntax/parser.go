@@ -52,16 +52,9 @@ func (p *Parser) next() *lex.Token {
 	var tk *lex.Token
 	var err *error.Error
 
-	for {
-		// if next token is comma (,) ignore it and continue
-		// until the next next (N nexts maybe) token is not a comma.
-		if tk != nil && tk.Type != lex.TypeCommaSep {
-			break
-		}
-		tk, err = p.NextToken()
-		if err != nil {
-			panic(err)
-		}
+	tk, err = p.NextToken()
+	if err != nil {
+		panic(err)
 	}
 
 	// move advanced token buffer
@@ -175,6 +168,15 @@ func (p *Parser) meetStmtLineBreak() bool {
 	return false
 }
 
+// meetStmtBreak - similiar to `meetStmtLineBreak`
+func (p *Parser) meetStmtBreak() bool {
+	peek := p.peek()
+	if peek.Type == lex.TypeStmtSep || peek.Type == lex.TypeEOF {
+		return true
+	}
+	return false
+}
+
 func (p *Parser) resetLineTermFlag() {
 	p.lineTermFlag = false
 }
@@ -183,34 +185,22 @@ func (p *Parser) setLineTermFlag() {
 	p.lineTermFlag = true
 }
 
-// consume one token with denoted validTypes
-// if not, return syntaxError
-func (p *Parser) consume(validTypes ...lex.TokenType) {
-	if p.meetStmtLineBreak() && p.lineTermFlag {
-		panic(error.InvalidSyntaxCurr())
-	}
-
-	tkType := p.peek().Type
-	for _, item := range validTypes {
-		if item == tkType {
-			p.setLineTermFlag()
-			p.next()
-			return
-		}
-	}
-	err := error.InvalidSyntax()
-	panic(err)
-}
-
 // trying to consume one token. if the token is valid in the given range of tokenTypes,
 // will return its tokenType; if not, then nothing will happen.
 //
 // returns (matched, tokenType)
 func (p *Parser) tryConsume(validTypes ...lex.TokenType) (bool, *lex.Token) {
+	tk := p.peek()
+	// if next token is comma, then ignore comma (only once!) and
+	// read next token
+	if tk.Type == lex.TypeCommaSep {
+		p.next()
+		tk = p.peek()
+	}
 	if p.meetStmtLineBreak() && p.lineTermFlag {
 		return false, nil
 	}
-	tk := p.peek()
+
 	for _, vt := range validTypes {
 		if vt == tk.Type {
 			p.setLineTermFlag()
@@ -220,6 +210,16 @@ func (p *Parser) tryConsume(validTypes ...lex.TokenType) (bool, *lex.Token) {
 	}
 
 	return false, nil
+}
+
+// consume one token with denoted validTypes
+// if not, return syntaxError
+func (p *Parser) consume(validTypes ...lex.TokenType) {
+	match, _ := p.tryConsume(validTypes...)
+	if !match {
+		err := error.InvalidSyntax()
+		panic(err)
+	}
 }
 
 // expectBlockIndent - detect if the Indent(peek) == Indent(current) + 1
