@@ -212,6 +212,18 @@ func StringifyAST(node Node) string {
 			StringifyAST(v.PropertyID),
 			StringifyAST(v.InitValue),
 		)
+	case *ObjectDenoteStmt:
+		return fmt.Sprintf(
+			"$ODS(root=(%s) block=(%s))",
+			StringifyAST(v.RootObject),
+			StringifyAST(v.ExecBlock),
+		)
+	case *ObjDFuncCallExpr:
+		return fmt.Sprintf(
+			"$ODE(root=(%s) expr=(%s))",
+			StringifyAST(v.RootObject),
+			StringifyAST(v.FuncExpr),
+		)
 	case *ParamItem:
 		refMark := "false"
 		if v.RefMark {

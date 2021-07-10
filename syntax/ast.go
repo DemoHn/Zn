@@ -217,6 +217,14 @@ type PropertyDeclareStmt struct {
 	InitValue  Expression
 }
 
+// ObjectDenoteStmt - set one expr as root object and do executions
+// within the scope
+type ObjectDenoteStmt struct {
+	StmtBase
+	RootObject Expression
+	ExecBlock  *BlockStmt
+}
+
 // ParamItem - parameter item
 type ParamItem struct {
 	ID      *ID
@@ -301,6 +309,15 @@ type MemberExpr struct {
 	MemberIndex  Expression
 }
 
+// ObjDFuncCallExpr - declare a function call expression in 对于... format
+// Example:
+// 对于 A （执行：B、C、D），得到E
+type ObjDFuncCallExpr struct {
+	ExprBase
+	RootObject Expression
+	FuncExpr   *FuncCallExpr
+}
+
 // rootTypeE - root type enumeration
 type rootTypeE uint8
 
@@ -366,6 +383,12 @@ func (me *MemberExpr) assignable()       {}
 // CFG:
 // Statement -> VarDeclareStmt
 //           -> BranchStmt
+//           -> WhileLoopStmt
+//           -> IterateStmt
+//           -> FunctionDeclareStmt
+//           -> FunctionReturnStmt
+//           -> ObjDenoteStmt
+//           -> ClassStmt
 //           -> Expr
 //           -> ；
 func ParseStatement(p *Parser) Statement {
@@ -381,6 +404,7 @@ func ParseStatement(p *Parser) Statement {
 		lex.TypeIteratorW,
 		lex.TypeObjDefineW,
 		lex.TypeImportW,
+		lex.TypeObjDenoteW,
 	}
 	match, tk := p.tryConsume(validTypes...)
 	if match {
@@ -408,6 +432,8 @@ func ParseStatement(p *Parser) Statement {
 			s = ParseClassDeclareStmt(p)
 		case lex.TypeImportW:
 			s = ParseImportStmt(p)
+		case lex.TypeObjDenoteW:
+			s = ParseObjDenoteStmt(p)
 		}
 		s.SetCurrentLine(tk)
 		return s
@@ -688,6 +714,7 @@ func ParseMemberExpr(p *Parser) Expression {
 // BsE   -> { E }
 //       -> （ FuncID ： E、E、...）
 //       -> 以 E （ FuncID ： E、E、...）
+//       -> 对于 E （FuncID：E、E、...）
 //       -> ID
 //       -> Number
 //       -> String
@@ -706,6 +733,7 @@ func ParseBasicExpr(p *Parser) Expression {
 		lex.TypeFuncQuoteL,
 		lex.TypeLogicNotW,
 		lex.TypeVarOneW,
+		lex.TypeObjDenoteW,
 	}
 
 	match, tk := p.tryConsume(validTypes...)
@@ -727,6 +755,8 @@ func ParseBasicExpr(p *Parser) Expression {
 			e = ParseFuncCallExpr(p)
 		case lex.TypeVarOneW:
 			e = ParseVarOneLeadExpr(p)
+		case lex.TypeObjDenoteW:
+			e = ParseObjDenoteExpr(p)
 		}
 		e.SetCurrentLine(tk)
 		return e
@@ -867,6 +897,7 @@ func tryParseEmptyMapList(p *Parser) (bool, UnionMapList) {
 //
 // CFG:
 // FuncCallExpr  -> （ FuncID ： pcommaList ）YieldResultTail
+//               -> （ FuncID ） YieldResultTail
 // pcommaList     -> E pcommaListTail
 // pcommaListTail -> 、 E pcommaListTail
 //               ->
@@ -895,6 +926,12 @@ func ParseFuncCallExpr(p *Parser) *FuncCallExpr {
 	// #3. parse right quote
 	p.consume(lex.TypeFuncQuoteR)
 
+	// #4. parse yield result call
+	match2, _ := p.tryConsume(lex.TypeGetResultW)
+	if match2 {
+		id := parseID(p)
+		callExpr.YieldResult = id
+	}
 	return callExpr
 }
 
@@ -925,6 +962,83 @@ func ParseVarOneLeadExpr(p *Parser) *FuncCallExpr {
 	funcCallExpr.Params = append(funcCallExpr.Params, exprList...)
 	funcCallExpr.SetCurrentLine(tk)
 	return funcCallExpr
+}
+
+// ParseObjDenoteStmt - 对于XX：
+// CFG:
+//
+// ObjDenoteStmt   ->  对于 Expr ObjDenoteTail
+//
+// ObjDenoteTail   ->  ： 'BlockStmt
+//                 ->  ObjDenoteFuncCallExpr
+//
+// ObjDenoteFuncCallExpr  ->  以 Expr1、Expr2 （FuncID：XXX） FuncTail
+//                        ->  （FuncID：XXX） FuncTail
+// FuncTail               ->  得到 ID
+//                        ->
+func ParseObjDenoteStmt(p *Parser) *ObjectDenoteStmt {
+	finalStmt := &ObjectDenoteStmt{
+		ExecBlock: &BlockStmt{
+			Children: []Statement{},
+		},
+	}
+
+	// 1. parse root expression first
+	expr := ParseExpression(p, true)
+	finalStmt.RootObject = expr
+
+	// 2. parse colon (if exists, read block stmt directly;
+	// if not, parse remaining part as objDenoteExpr directly)
+	if match, _ := p.tryConsume(lex.TypeFuncCall); match {
+		expected, blockIndent := p.expectBlockIndent()
+		if !expected {
+			panic(error.InvalidSyntaxCurr())
+		}
+
+		parseItemListBlock(p, blockIndent, func() {
+			childStmt := ParseStatement(p)
+			finalStmt.ExecBlock.Children = append(finalStmt.ExecBlock.Children, childStmt)
+		})
+	} else {
+		funcCallExpr := parseObjDenoteExprTail(p)
+		finalStmt.ExecBlock.Children = append(finalStmt.ExecBlock.Children, funcCallExpr)
+	}
+	return finalStmt
+}
+
+// ParseObjDenoteExpr -
+// CFG:
+// ObjDenoteExpr          ->  对于 Expr ObjDenoteFuncCallExpr
+// ObjDenoteFuncCallExpr  ->  以 Expr1、Expr2 （FuncID：XXX） FuncTail
+//                        ->  （FuncID：XXX） FuncTail
+// FuncTail               ->  得到 ID
+//                        ->
+func ParseObjDenoteExpr(p *Parser) *ObjDFuncCallExpr {
+	rootExpr := ParseExpression(p, true)
+	funcCallExpr := parseObjDenoteExprTail(p)
+
+	return &ObjDFuncCallExpr{
+		RootObject: rootExpr,
+		FuncExpr:   funcCallExpr,
+	}
+}
+
+// parseObjDenoteExprTail -
+// CFG:
+// ObjDenoteFuncCallExpr  ->  以 Expr1、Expr2 （FuncID：XXX） FuncTail
+//                        ->  （FuncID：XXX） FuncTail
+// FuncTail               ->  得到 ID
+//                        ->
+func parseObjDenoteExprTail(p *Parser) *FuncCallExpr {
+	match, tk := p.tryConsume(lex.TypeVarOneW, lex.TypeFuncQuoteL)
+	if !match {
+		panic(error.InvalidSyntaxCurr())
+	}
+
+	if tk.Type == lex.TypeVarOneW {
+		return ParseVarOneLeadExpr(p)
+	}
+	return ParseFuncCallExpr(p)
 }
 
 // ParseVarDeclareStmt - yield VarDeclare node
@@ -1296,8 +1410,8 @@ func ParseGetterDeclareStmt(p *Parser) *GetterDeclareStmt {
 // ParseVarOneLeadStmt -
 // There're 2 possible statements
 //
-// 1. 以 K，V 遍历...
-// 2. 以 A，B，C （执行方法）
+// 1. 以 K、V 遍历...
+// 2. 以 A、B、C （执行方法）
 //
 // CFG:
 //
