@@ -21,6 +21,7 @@ var testSuccessSuites = []string{
 	classDeclareCasesOK,
 	functionDeclareCasesOK,
 	importStmtCasesOK,
+	objDenoteStmtExprCasesOK,
 }
 
 const logicExprCasesOK = `
@@ -1185,6 +1186,76 @@ $PG($BK(
 				))
 			)
 		))
+	)
+))
+`
+
+const objDenoteStmtExprCasesOK = `
+========
+1. simplist statement
+--------
+对于A：
+	令B为C
+--------
+$PG($BK(
+	$ODS(
+		root=($ID(A))
+		block=($BK(
+			$VD($VP(vars[]=($ID(B)) expr[]=($ID(C))))
+		))
+	)
+))
+========
+2. objDenote statements (2 statement)
+--------
+对于A：
+	令B为，C；D为E
+	；
+--------
+$PG($BK(
+	$ODS(
+		root=($ID(A))
+		block=($BK(
+			$VD($VP(vars[]=($ID(B)) expr[]=($ID(C))))
+			$
+			$VA(target=($ID(D)) assign=($ID(E)))
+			$
+		))
+	)
+))
+========
+3. objDenote nested objDenote expr
+--------
+对于A：
+	对于B（处理：C、D、E），得到F
+	；
+--------
+$PG($BK(
+	$ODS(
+		root=($ID(A))
+		block=($BK(
+			$ODS(root=($ID(B)) block=($BK(
+				$FN(
+					name=($ID(处理))
+					params=($ID(C) $ID(D) $ID(E))
+					yield=($ID(F))
+				)
+			)))
+			$
+		))
+	)
+))
+========
+4. objDenote expr
+--------
+令F为 对于B（处理：C、D、E）
+--------
+$PG($BK(
+	$VD(
+		$VP(vars[]=($ID(F)) expr[]=($ODE(
+			root=($ID(B))
+			expr=($FN(name=($ID(处理)) params=($ID(C) $ID(D) $ID(E))))
+		)))
 	)
 ))
 `

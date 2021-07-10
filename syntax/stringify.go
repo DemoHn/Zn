@@ -117,7 +117,11 @@ func StringifyAST(node Node) string {
 			params = append(params, StringifyAST(p))
 		}
 
-		return fmt.Sprintf("$FN(name=(%s) params=(%s))", name, strings.Join(params, " "))
+		yieldResult := ""
+		if v.YieldResult != nil {
+			yieldResult = fmt.Sprintf(" yield=(%s)", StringifyAST(v.YieldResult))
+		}
+		return fmt.Sprintf("$FN(name=(%s) params=(%s)%s)", name, strings.Join(params, " "), yieldResult)
 	case *BranchStmt:
 		var conds = []string{}
 		// add if-branch
