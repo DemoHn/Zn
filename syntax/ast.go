@@ -314,8 +314,9 @@ type MemberExpr struct {
 // 对于 A （执行：B、C、D），得到E
 type ObjDFuncCallExpr struct {
 	ExprBase
-	RootObject Expression
-	FuncExpr   *FuncCallExpr
+	RootObject  Expression
+	FuncExpr    *FuncCallExpr
+	YieldResult *ID
 }
 
 // rootTypeE - root type enumeration
@@ -631,7 +632,7 @@ func ParseMemberExpr(p *Parser) Expression {
 				memberExpr.MemberType = MemberID
 				memberExpr.MemberID = id
 			case lex.TypeFuncQuoteL:
-				e := ParseFuncCallExpr(p)
+				e := ParseFuncCallExpr(p, true)
 				e.SetCurrentLine(tk)
 				memberExpr.MemberType = MemberMethod
 				memberExpr.MemberMethod = e
@@ -752,7 +753,7 @@ func ParseBasicExpr(p *Parser) Expression {
 			e = ParseExpression(p, true)
 			p.consume(lex.TypeStmtQuoteR)
 		case lex.TypeFuncQuoteL:
-			e = ParseFuncCallExpr(p)
+			e = ParseFuncCallExpr(p, true)
 		case lex.TypeVarOneW:
 			e = ParseVarOneLeadExpr(p)
 		case lex.TypeObjDenoteW:
@@ -907,9 +908,10 @@ func tryParseEmptyMapList(p *Parser) (bool, UnionMapList) {
 //
 // YieldResultTail  ->  得到 ID
 //                  ->
-func ParseFuncCallExpr(p *Parser) *FuncCallExpr {
+func ParseFuncCallExpr(p *Parser, parseYieldResult bool) *FuncCallExpr {
 	var callExpr = &FuncCallExpr{
-		Params: []Expression{},
+		Params:      []Expression{},
+		YieldResult: nil,
 	}
 	// #1. parse ID
 	callExpr.FuncName = parseFuncID(p)
@@ -927,10 +929,12 @@ func ParseFuncCallExpr(p *Parser) *FuncCallExpr {
 	p.consume(lex.TypeFuncQuoteR)
 
 	// #4. parse yield result call
-	match2, _ := p.tryConsume(lex.TypeGetResultW)
-	if match2 {
-		id := parseID(p)
-		callExpr.YieldResult = id
+	if parseYieldResult {
+		match2, _ := p.tryConsume(lex.TypeGetResultW)
+		if match2 {
+			id := parseID(p)
+			callExpr.YieldResult = id
+		}
 	}
 	return callExpr
 }
@@ -957,7 +961,7 @@ func ParseVarOneLeadExpr(p *Parser) *FuncCallExpr {
 	}
 
 	// then suppose it's a funcCall expr
-	funcCallExpr := ParseFuncCallExpr(p)
+	funcCallExpr := ParseFuncCallExpr(p, true)
 	// append first ID into funcCall list
 	funcCallExpr.Params = append(funcCallExpr.Params, exprList...)
 	funcCallExpr.SetCurrentLine(tk)
@@ -976,7 +980,7 @@ func ParseVarOneLeadExpr(p *Parser) *FuncCallExpr {
 //                        ->  （FuncID：XXX） FuncTail
 // FuncTail               ->  得到 ID
 //                        ->
-func ParseObjDenoteStmt(p *Parser) *ObjectDenoteStmt {
+func ParseObjDenoteStmt(p *Parser) Statement {
 	finalStmt := &ObjectDenoteStmt{
 		ExecBlock: &BlockStmt{
 			Children: []Statement{},
@@ -984,8 +988,8 @@ func ParseObjDenoteStmt(p *Parser) *ObjectDenoteStmt {
 	}
 
 	// 1. parse root expression first
-	expr := ParseExpression(p, true)
-	finalStmt.RootObject = expr
+	rootExpr := ParseExpression(p, true)
+	finalStmt.RootObject = rootExpr
 
 	// 2. parse colon (if exists, read block stmt directly;
 	// if not, parse remaining part as objDenoteExpr directly)
@@ -999,28 +1003,42 @@ func ParseObjDenoteStmt(p *Parser) *ObjectDenoteStmt {
 			childStmt := ParseStatement(p)
 			finalStmt.ExecBlock.Children = append(finalStmt.ExecBlock.Children, childStmt)
 		})
-	} else {
-		funcCallExpr := parseObjDenoteExprTail(p)
-		finalStmt.ExecBlock.Children = append(finalStmt.ExecBlock.Children, funcCallExpr)
+		return finalStmt
 	}
-	return finalStmt
+	// as objDenote expr
+	objDExpr := &ObjDFuncCallExpr{
+		RootObject: rootExpr,
+	}
+	objDExpr.FuncExpr = parseObjDenoteExprTail(p)
+
+	match, _ := p.tryConsume(lex.TypeGetResultW)
+	if match {
+		id := parseID(p)
+		objDExpr.YieldResult = id
+	}
+	return objDExpr
 }
 
 // ParseObjDenoteExpr -
 // CFG:
-// ObjDenoteExpr          ->  对于 Expr ObjDenoteFuncCallExpr
-// ObjDenoteFuncCallExpr  ->  以 Expr1、Expr2 （FuncID：XXX） FuncTail
-//                        ->  （FuncID：XXX） FuncTail
-// FuncTail               ->  得到 ID
+// ObjDenoteExpr          ->  对于 Expr ObjDFuncCallExprTail YieldTail
+// ObjFuncCallExprTail    ->  以 Expr1、Expr2 （FuncID：XXX）
+//                        ->  （FuncID：XXX）
+// YieldTail               ->  得到 ID
 //                        ->
 func ParseObjDenoteExpr(p *Parser) *ObjDFuncCallExpr {
-	rootExpr := ParseExpression(p, true)
-	funcCallExpr := parseObjDenoteExprTail(p)
+	objDExpr := &ObjDFuncCallExpr{}
 
-	return &ObjDFuncCallExpr{
-		RootObject: rootExpr,
-		FuncExpr:   funcCallExpr,
+	// set rootObject & funcExpr
+	objDExpr.RootObject = ParseExpression(p, true)
+	objDExpr.FuncExpr = parseObjDenoteExprTail(p)
+
+	match, _ := p.tryConsume(lex.TypeGetResultW)
+	if match {
+		id := parseID(p)
+		objDExpr.YieldResult = id
 	}
+	return objDExpr
 }
 
 // parseObjDenoteExprTail -
@@ -1038,7 +1056,7 @@ func parseObjDenoteExprTail(p *Parser) *FuncCallExpr {
 	if tk.Type == lex.TypeVarOneW {
 		return ParseVarOneLeadExpr(p)
 	}
-	return ParseFuncCallExpr(p)
+	return ParseFuncCallExpr(p, false)
 }
 
 // ParseVarDeclareStmt - yield VarDeclare node
@@ -1443,7 +1461,7 @@ func ParseVarOneLeadStmt(p *Parser) Statement {
 			}
 			return parseIteratorStmtRest(p, idList)
 		case lex.TypeFuncQuoteL:
-			targetExpr := ParseFuncCallExpr(p)
+			targetExpr := ParseFuncCallExpr(p, true)
 			// prepend exprs
 			targetExpr.Params = append(targetExpr.Params, exprList...)
 			return targetExpr

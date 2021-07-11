@@ -503,12 +503,14 @@ func evalExpression(c *ctx.Context, expr syntax.Expression) (ctx.Value, *error.E
 		return evalPrimeExpr(c, e)
 	case *syntax.FuncCallExpr:
 		return evalFunctionCall(c, e)
+	case *syntax.ObjDFuncCallExpr:
+		return evalObjDFuncCallExpr(c, e)
 	default:
 		return nil, error.InvalidExprType()
 	}
 }
 
-// （显示：A，B，C）
+// （显示：A、B、C），得到D
 func evalFunctionCall(c *ctx.Context, expr *syntax.FuncCallExpr) (ctx.Value, *error.Error) {
 	var zf *val.ClosureRef
 	vtag := expr.FuncName.GetLiteral()
@@ -532,6 +534,13 @@ func evalFunctionCall(c *ctx.Context, expr *syntax.FuncCallExpr) (ctx.Value, *er
 	if thisValue != nil {
 		v, err := thisValue.ExecMethod(c, vtag, params)
 		if err == nil {
+			if expr.YieldResult != nil {
+				// add yield result
+				vtag := expr.YieldResult.GetLiteral()
+				// bind yield result
+				c.BindScopeSymbolDecl(c.GetScope(), vtag, v)
+			}
+			// return result
 			return v, nil
 		}
 		if err.GetCode() != errCodeMethodNotFound {
@@ -555,7 +564,50 @@ func evalFunctionCall(c *ctx.Context, expr *syntax.FuncCallExpr) (ctx.Value, *er
 	}
 
 	// exec function call via its ClosureRef
-	return zf.Exec(c, thisValue, params)
+	v2, err := zf.Exec(c, thisValue, params)
+	if err != nil {
+		return nil, err
+	}
+
+	if expr.YieldResult != nil {
+		// add yield result
+		ytag := expr.YieldResult.GetLiteral()
+		// bind yield result
+		c.BindScopeSymbolDecl(c.GetScope(), ytag, v2)
+	}
+
+	// return result
+	return v2, nil
+}
+
+// 对于A （执行：1、2、3）
+func evalObjDFuncCallExpr(c *ctx.Context, expr *syntax.ObjDFuncCallExpr) (ctx.Value, *error.Error) {
+	currentScope := c.GetScope()
+	newScope := currentScope.CreateChildScope()
+	// set scope
+	c.SetScope(newScope)
+	defer c.SetScope(currentScope)
+
+	// 1. parse root expr
+	rootExpr, err := evalExpression(c, expr.RootObject)
+	if err != nil {
+		return nil, err
+	}
+	// set this value
+	c.GetScope().SetThisValue(rootExpr)
+
+	v, err := evalFunctionCall(c, expr.FuncExpr)
+	if err != nil {
+		return nil, err
+	}
+	// add yield result
+	if expr.YieldResult != nil {
+		vtag := expr.YieldResult.GetLiteral()
+		// bind yield result
+		c.BindScopeSymbolDecl(currentScope, vtag, v)
+	}
+
+	return v, nil
 }
 
 // evaluate logic combination expressions

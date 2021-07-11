@@ -131,7 +131,17 @@ func (ctx *Context) BindSymbolDecl(name string, value Value, isConst bool) *erro
 		ctx.scope.symbolMap[name] = SymbolInfo{value, isConst}
 	}
 	return nil
+}
 
+// BindScopeSymbolDecl - bind value for declaration statement - that variables could be re-bind.
+func (ctx *Context) BindScopeSymbolDecl(scope *Scope, name string, value Value) *error.Error {
+	if _, inGlobals := ctx.globals[name]; inGlobals {
+		return error.NameRedeclared(name)
+	}
+	if scope != nil {
+		scope.symbolMap[name] = SymbolInfo{value, false}
+	}
+	return nil
 }
 
 // FindThisValue -
