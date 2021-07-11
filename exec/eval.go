@@ -10,6 +10,8 @@ import (
 	"github.com/DemoHn/Zn/syntax"
 )
 
+const errCodeMethodNotFound = 0x2505
+
 // eval.go evaluates program from generated AST tree with specific scopes
 // common signature of eval functions:
 //
@@ -83,6 +85,8 @@ func evalStatement(c *ctx.Context, stmt syntax.Statement) *error.Error {
 		return c.SetImportValue(className, &classRef)
 	case *syntax.IterateStmt:
 		return evalIterateStmt(c, v)
+	case *syntax.ObjectDenoteStmt:
+		return evalObjectDenoteStmt(c, v)
 	case *syntax.FunctionReturnStmt:
 		val, err := evalExpression(c, v.ReturnExpr)
 		if err != nil {
@@ -422,8 +426,27 @@ func evalIterateStmt(c *ctx.Context, node *syntax.IterateStmt) *error.Error {
 	return nil
 }
 
-//// execute expressions
+// evalObjectDenoteStmt -
+func evalObjectDenoteStmt(c *ctx.Context, node *syntax.ObjectDenoteStmt) *error.Error {
+	currentScope := c.GetScope()
+	newScope := currentScope.CreateChildScope()
+	// set scope
+	c.SetScope(newScope)
+	defer c.SetScope(currentScope)
 
+	// 1. parse root expr
+	rootExpr, err := evalExpression(c, node.RootObject)
+	if err != nil {
+		return err
+	}
+	// set this value
+	c.GetScope().SetThisValue(rootExpr)
+
+	// 2. eval statements
+	return evalStmtBlock(c, node.ExecBlock)
+}
+
+//// execute expressions
 func evalExpression(c *ctx.Context, expr syntax.Expression) (ctx.Value, *error.Error) {
 	c.GetFileInfo().SetCurrentLine(expr.GetCurrentLine())
 
@@ -499,13 +522,20 @@ func evalFunctionCall(c *ctx.Context, expr *syntax.FuncCallExpr) (ctx.Value, *er
 	// If thisValue == nil, we will look up target closure from scope's values directly.
 	thisValue, _ := c.FindThisValue()
 
+	// exec params first
+	params, err := exprsToValues(c, expr.Params)
+	if err != nil {
+		return nil, err
+	}
+
 	// if thisValue exists, find ID from its method list
 	if thisValue != nil {
-		if obj, ok := thisValue.(*val.Object); ok {
-			// find value
-			if method, ok2 := obj.GetRef().MethodList[vtag]; ok2 {
-				zf = &method
-			}
+		v, err := thisValue.ExecMethod(c, vtag, params)
+		if err == nil {
+			return v, nil
+		}
+		if err.GetCode() != errCodeMethodNotFound {
+			return nil, err
 		}
 	}
 
@@ -522,12 +552,6 @@ func evalFunctionCall(c *ctx.Context, expr *syntax.FuncCallExpr) (ctx.Value, *er
 			return nil, error.InvalidFuncVariable(vtag)
 		}
 		zf = zval.GetValue()
-	}
-
-	// exec params
-	params, err := exprsToValues(c, expr.Params)
-	if err != nil {
-		return nil, err
 	}
 
 	// exec function call via its ClosureRef
