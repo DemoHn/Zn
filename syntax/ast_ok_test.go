@@ -1258,6 +1258,36 @@ $PG($BK(
 		)))
 	)
 ))
+========
+5. objDenote expr #2
+--------
+令A为 对于B以C（处理：D、E），得到F
+--------
+$PG($BK(
+	$VD(
+		$VP(vars[]=($ID(A)) expr[]=($ODE(
+			root=($ID(B))
+			expr=($FN(name=($ID(处理)) params=($ID(D) $ID(E) $ID(C)) yield=($ID(F))))
+		)))
+	)
+))
+========
+6. objDenote stmt; two statements 
+--------
+对于B以C（处理：D、E），得到F；对于X（执行：Y）
+--------
+$PG($BK(
+	$ODS(root=($ID(B)) block=(
+		$BK($FN(
+			name=($ID(处理)) params=($ID(D) $ID(E) $ID(C)) yield=($ID(F))
+		))
+	))
+	$
+	$ODS(root=($ID(X)) block=($BK($FN(
+		name=($ID(执行))
+		params=($ID(Y))
+	))))
+))
 `
 
 type astSuccessCase struct {
