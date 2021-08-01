@@ -389,6 +389,8 @@ func (me *MemberExpr) assignable()       {}
 //           -> FunctionDeclareStmt
 //           -> FunctionReturnStmt
 //           -> ObjDenoteStmt
+//           -> VOStmt
+//           -> ImportStmt
 //           -> ClassStmt
 //           -> Expr
 //           -> ；
