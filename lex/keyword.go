@@ -12,7 +12,7 @@ const (
 	GlyphWEI rune = 0x4E3A
 	// GlyphYIy - 义 - 定义
 	GlyphYIy rune = 0x4E49
-	// GlyphZHI - 之 - 此之，之
+	// GlyphZHI - 之 - 之
 	GlyphZHI rune = 0x4E4B
 	// GlyphYU - 于 - 等于，小于，对于，大于，不等于，不小于，不大于
 	GlyphYU rune = 0x4E8E
@@ -66,7 +66,7 @@ const (
 	GlyphSHI rune = 0x662F
 	// GlyphGUO - 果 - 如果
 	GlyphGUO rune = 0x679C
-	// GlyphCI - 此 - 此之
+	// GlyphCI - 此 -
 	GlyphCI rune = 0x6B64
 	// GlyphMEI - 每 - 每当
 	GlyphMEI rune = 0x6BCF
@@ -93,9 +93,8 @@ var KeywordLeads = []rune{
 	GlyphDING, GlyphDUI, GlyphDAO,
 	GlyphXIAO, GlyphYI, GlyphDEy,
 	GlyphHENG, GlyphCHENG, GlyphHUO,
-	GlyphSHI, GlyphCI, GlyphMEI,
-	GlyphDE, GlyphDENG, GlyphFAN,
-	GlyphBIAN,
+	GlyphSHI, GlyphMEI, GlyphDE,
+	GlyphDENG, GlyphFAN, GlyphBIAN,
 }
 
 // Keyword token types
@@ -128,7 +127,6 @@ const (
 	TypeObjDotIIW     TokenType = 72 // 的
 	TypeObjConstructW TokenType = 73 // 是为
 	TypeLogicEqualW   TokenType = 74 // 等于
-	TypeStaticSelfW   TokenType = 75 // 此之
 	TypeIteratorW     TokenType = 76 // 遍历
 	TypeImportW       TokenType = 77 // 导入
 	TypeGetResultW    TokenType = 78 // 得到
@@ -165,7 +163,6 @@ var KeywordTypeMap = map[TokenType][]rune{
 	TypeObjDotIIW:     {GlyphDE},
 	TypeObjConstructW: {GlyphSHI, GlyphWEI},
 	TypeLogicEqualW:   {GlyphDENG, GlyphYU},
-	TypeStaticSelfW:   {GlyphCI, GlyphZHI},
 	TypeIteratorW:     {GlyphBIAN, GlyphLI},
 	TypeImportW:       {GlyphDAO, GlyphRUy},
 	TypeGetResultW:    {GlyphDEy, GlyphDAOy},
@@ -316,13 +313,6 @@ func (l *Lexer) parseKeyword(ch rune, moveForward bool) (bool, *Token) {
 			tk = NewKeywordToken(TypeObjConstructW)
 		} else {
 			tk = NewKeywordToken(TypeLogicYesIIW)
-		}
-	case GlyphCI:
-		if l.peek() == GlyphZHI {
-			wordLen = 2
-			tk = NewKeywordToken(TypeStaticSelfW)
-		} else {
-			return false, nil
 		}
 	case GlyphMEI:
 		if l.peek() == GlyphDANG {

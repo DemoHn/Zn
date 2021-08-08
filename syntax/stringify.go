@@ -59,7 +59,7 @@ func StringifyAST(node Node) string {
 			sType = "mMethod"
 		}
 		rootTypeStr := "rootScope"
-		if v.RootType == RootTypeProp || v.RootType == RootTypeScope {
+		if v.RootType == RootTypeProp {
 			if v.RootType == RootTypeProp {
 				rootTypeStr = "rootProp"
 			}
@@ -223,10 +223,16 @@ func StringifyAST(node Node) string {
 			StringifyAST(v.ExecBlock),
 		)
 	case *ObjDFuncCallExpr:
+		yieldResult := ""
+		if v.YieldResult != nil {
+			yieldResult = fmt.Sprintf(" yield=(%s)", StringifyAST(v.YieldResult))
+		}
+
 		return fmt.Sprintf(
-			"$ODE(root=(%s) expr=(%s))",
+			"$ODE(root=(%s) expr=(%s)%s)",
 			StringifyAST(v.RootObject),
 			StringifyAST(v.FuncExpr),
+			yieldResult,
 		)
 	case *ParamItem:
 		refMark := "false"

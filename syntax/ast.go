@@ -294,14 +294,12 @@ type FuncCallExpr struct {
 
 // MemberExpr - declare a member (dot) relation
 // Example:
-//    此之 代码
 //    【1，2】 之 和
-//    此之 （结束）
 //    100 之 （+1）
 type MemberExpr struct {
 	ExprBase
 	Root       Expression  // root Expr (maybe null when rootType is 2 or 3)
-	RootType   rootTypeE   // 1 - RootTypeExpr, 2 - RootTypeProp, 3 - RootTypeScope
+	RootType   rootTypeE   // 1 - RootTypeExpr, 2 - RootTypeProp
 	MemberType memberTypeE // 1 - memberID, 2 - memberMethod, 3 - memberIndex
 	// union: memberItem
 	MemberID     *ID
@@ -324,9 +322,8 @@ type rootTypeE uint8
 
 // declare root types
 const (
-	RootTypeExpr  rootTypeE = 1 // T 之 X
-	RootTypeProp  rootTypeE = 2 // 其 X
-	RootTypeScope rootTypeE = 3 // 此之 X
+	RootTypeExpr rootTypeE = 1 // T 之 X
+	RootTypeProp rootTypeE = 2 // 其 X
 )
 
 // memberTypeE - member type enumeration
@@ -576,8 +573,7 @@ func ParseExpression(p *Parser, asVarAssign bool) Expression {
 //
 // CFG:
 //
-// MemE  -> 此之 CallE' IdxE'
-//       -> 其 PropE' IdxE'
+// MemE  -> 其 PropE' IdxE'
 //       -> BsE IdxE'
 //
 // IdxE' -> #  Number   IdxE'
@@ -600,7 +596,7 @@ func ParseMemberExpr(p *Parser) Expression {
 	var calleeTailParser func(bool, rootTypeE, Expression) *MemberExpr
 	var memberTailParser func(Expression) Expression
 
-	// specially parsing items after 之 or 此之 or 其
+	// specially parsing items after 之 or 其
 	calleeTailParser = func(hasRoot bool, rootType rootTypeE, expr Expression) *MemberExpr {
 		var validTypes = []lex.TokenType{
 			lex.TypeIdentifier,
@@ -639,7 +635,7 @@ func ParseMemberExpr(p *Parser) Expression {
 				memberExpr.MemberType = MemberMethod
 				memberExpr.MemberMethod = e
 			case lex.TypeVarOneW:
-				e := ParseVarOneLeadExpr(p)
+				e := ParseVarOneLeadExpr(p, true)
 				e.SetCurrentLine(tk)
 				memberExpr.MemberType = MemberMethod
 				memberExpr.MemberMethod = e
@@ -695,14 +691,10 @@ func ParseMemberExpr(p *Parser) Expression {
 		panic(error.InvalidSyntax())
 	}
 
-	// #1. parse 此之 expr
-	match, tk := p.tryConsume(lex.TypeStaticSelfW, lex.TypeObjThisW) // 此之 或 其
+	// #1. parse 其 expr
+	match, _ := p.tryConsume(lex.TypeObjThisW) // 其
 	if match {
-		rootType := RootTypeScope        // 此之
-		if tk.Type == lex.TypeObjThisW { // 其
-			rootType = RootTypeProp
-		}
-
+		rootType := RootTypeProp // 其
 		newExpr := calleeTailParser(false, rootType, nil)
 		return memberTailParser(newExpr)
 	}
@@ -757,7 +749,7 @@ func ParseBasicExpr(p *Parser) Expression {
 		case lex.TypeFuncQuoteL:
 			e = ParseFuncCallExpr(p, true)
 		case lex.TypeVarOneW:
-			e = ParseVarOneLeadExpr(p)
+			e = ParseVarOneLeadExpr(p, true)
 		case lex.TypeObjDenoteW:
 			e = ParseObjDenoteExpr(p)
 		}
@@ -949,7 +941,7 @@ func ParseFuncCallExpr(p *Parser, parseYieldResult bool) *FuncCallExpr {
 //
 // FuncID  -> ID
 //         -> Number
-func ParseVarOneLeadExpr(p *Parser) *FuncCallExpr {
+func ParseVarOneLeadExpr(p *Parser, parseYieldResult bool) *FuncCallExpr {
 	// #1. parse exprs
 	exprList := []Expression{}
 	parsePauseCommaList(p, func() {
@@ -963,7 +955,7 @@ func ParseVarOneLeadExpr(p *Parser) *FuncCallExpr {
 	}
 
 	// then suppose it's a funcCall expr
-	funcCallExpr := ParseFuncCallExpr(p, true)
+	funcCallExpr := ParseFuncCallExpr(p, parseYieldResult)
 	// append first ID into funcCall list
 	funcCallExpr.Params = append(funcCallExpr.Params, exprList...)
 	funcCallExpr.SetCurrentLine(tk)
@@ -1056,7 +1048,7 @@ func parseObjDenoteExprTail(p *Parser) *FuncCallExpr {
 	}
 
 	if tk.Type == lex.TypeVarOneW {
-		return ParseVarOneLeadExpr(p)
+		return ParseVarOneLeadExpr(p, false)
 	}
 	return ParseFuncCallExpr(p, false)
 }

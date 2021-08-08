@@ -287,8 +287,6 @@ func Test_IterateStmt(t *testing.T) {
 遍历诸变量：
 	令X为100
 	Y为（X+Y：Y、5）
-	（__probe：「$KEY」、此之索引）
-	（__probe：「$VAL」、此之值）
 	（__probe：「$X」、X）
 	（__probe：「$Y」、Y）
 			`,
@@ -304,20 +302,6 @@ func Test_IterateStmt(t *testing.T) {
 			},
 			expReturnValue: val.NewNull(),
 			expProbe: map[string][][]string{
-				"$KEY": {
-					{"0", "*val.Decimal"},
-					{"1", "*val.Decimal"},
-					{"2", "*val.Decimal"},
-					{"3", "*val.Decimal"},
-					{"4", "*val.Decimal"},
-				},
-				"$VAL": {
-					{"一", "*val.String"},
-					{"地", "*val.String"},
-					{"在", "*val.String"},
-					{"要", "*val.String"},
-					{"工", "*val.String"},
-				},
 				"$X": {
 					{"100", "*val.Decimal"},
 					{"100", "*val.Decimal"},
@@ -331,43 +315,6 @@ func Test_IterateStmt(t *testing.T) {
 					{"40.5", "*val.Decimal"},
 					{"45.5", "*val.Decimal"},
 					{"50.5", "*val.Decimal"},
-				},
-			},
-		},
-		{
-			name: "with no lead variables (hashmap)",
-			program: `
-遍历示例列表：
-	（__probe：「$KEY」、此之索引）
-	（__probe：「$VAL」、此之值）
-			`,
-			symbols: map[string]ctx.Value{
-				"示例列表": val.NewHashMap([]val.KVPair{
-					{
-						Key:   "积分",
-						Value: val.NewDecimalFromInt(1000, 0),
-					},
-					{
-						Key:   "年龄",
-						Value: val.NewDecimalFromInt(24, 0),
-					},
-					{
-						Key:   "穿着",
-						Value: val.NewString("蕾丝边裙子"),
-					},
-				}),
-			},
-			expReturnValue: val.NewNull(),
-			expProbe: map[string][][]string{
-				"$KEY": {
-					{"积分", "*val.String"},
-					{"年龄", "*val.String"},
-					{"穿着", "*val.String"},
-				},
-				"$VAL": {
-					{"1000", "*val.Decimal"},
-					{"24", "*val.Decimal"},
-					{"蕾丝边裙子", "*val.String"},
 				},
 			},
 		},
@@ -617,7 +564,7 @@ func Test_WhileLoopStmt(t *testing.T) {
 	每当Y大于0：
 		Y为（X+Y：Y、1）
 		如果Y为4：
-			此之（结束）
+			（结束循环）
 		（__probe：「VY」、Y）
 		
 	X为（X+Y：X、-1）

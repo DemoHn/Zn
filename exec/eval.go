@@ -180,7 +180,7 @@ func evalWhileLoopStmt(c *ctx.Context, node *syntax.WhileLoopStmt) *error.Error 
 	currentScope := c.GetScope()
 	// create new scope
 	newScope := currentScope.CreateChildScope()
-	newScope.SetSgValue(val.NewLoopCtl())
+	newScope.SetThisValue(val.NewLoopCtl())
 	// set context's current scope with new one
 	c.SetScope(newScope)
 	// after finish executing this block, revert scope to old one
@@ -326,7 +326,7 @@ func evalBranchStmt(c *ctx.Context, node *syntax.BranchStmt) *error.Error {
 func evalIterateStmt(c *ctx.Context, node *syntax.IterateStmt) *error.Error {
 	currentScope := c.GetScope()
 	newScope := currentScope.CreateChildScope()
-	newScope.SetSgValue(val.NewLoopCtl())
+	newScope.SetThisValue(val.NewLoopCtl())
 	// set new scope (and revert to old when done)
 	c.SetScope(newScope)
 	defer c.SetScope(currentScope)
@@ -345,11 +345,6 @@ func evalIterateStmt(c *ctx.Context, node *syntax.IterateStmt) *error.Error {
 	// execIterationBlock, including set "currentKey" and "currentValue" to scope,
 	// and preDefined indication variables
 	execIterationBlockFn := func(key ctx.Value, v ctx.Value) *error.Error {
-		// set values of 此之值 and 此之
-		sgValueT := newScope.GetSgValue()
-		sgValue, _ := sgValueT.(*val.LoopCtl)
-		sgValue.SetCurrentKeyValue(key, v)
-
 		// set pre-defined value
 		if nameLen == 1 {
 			if err := c.SetSymbol(valueSlot, v); err != nil {
@@ -479,12 +474,6 @@ func evalExpression(c *ctx.Context, expr syntax.Expression) (ctx.Value, *error.E
 					return nil, err
 				}
 				rootValue = root
-			case syntax.RootTypeScope:
-				sgValue, err := c.FindSgValue()
-				if err != nil {
-					return nil, err
-				}
-				rootValue = sgValue
 			default: // 其他 rootType 不支持
 				return nil, error.UnExpectedCase("根元素类型", fmt.Sprintf("%d", e.MemberType))
 			}
@@ -802,12 +791,6 @@ func evalVarAssignExpr(c *ctx.Context, expr *syntax.VarAssignExpr) (ctx.Value, *
 
 func getMemberExprIV(c *ctx.Context, expr *syntax.MemberExpr) (*val.IV, *error.Error) {
 	switch expr.RootType {
-	case syntax.RootTypeScope: // 此之 XX
-		sgValue, err := c.FindSgValue()
-		if err != nil {
-			return nil, err
-		}
-		return val.NewMemberIV(sgValue, expr.MemberID.GetLiteral()), nil
 	case syntax.RootTypeProp: // 其 XX
 		thisValue, err := c.FindThisValue()
 		if err != nil {

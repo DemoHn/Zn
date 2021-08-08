@@ -231,7 +231,7 @@ func composePrettyString(tokens []*lex.Token, lineStack lex.LineStack) string {
 		case lex.TypeComment:
 			colorScheme = csComment
 		}
-		if tk.Type >= lex.TypeDeclareW && tk.Type <= lex.TypeStaticSelfW {
+		if tk.Type >= lex.TypeDeclareW && tk.Type <= lex.TypeObjDenoteW {
 			colorScheme = csKeyword
 		}
 

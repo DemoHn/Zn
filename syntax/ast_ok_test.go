@@ -742,28 +742,6 @@ $PG($BK(
 ))
 
 ========
-8. self root (rootScope)
---------
-此之（结束）#2
---------
-$PG($BK(
-	$MB(
-		root=(
-			$MB(
-				rootScope				
-				type=(mMethod)
-				object=($FN(
-					name=($ID(结束))
-					params=()
-				))
-			)
-		)
-		type=(mIndex)
-		object=($NUM(2))
-	)
-))
-
-========
 9. self root (rootProp)
 --------
 其年龄为20
@@ -826,8 +804,8 @@ const iterateCasesOK = `
 1. normal iterate expr
 --------
 遍历【1，2，3】：
-    令A为此之值
-    此之（结束）
+    令A为值
+    （结束循环）
 --------
 $PG($BK(
 	$IT(
@@ -835,9 +813,9 @@ $PG($BK(
 		idxList=()
 		block=($BK(
 			$VD($VP(vars[]=($ID(A)) expr[]=(
-				$MB(rootScope type=(mID) object=($ID(值)))
+			  	$ID(值)
 			)))
-			$MB(rootScope type=(mMethod) object=($FN(name=($ID(结束)) params=())))
+			$FN(name=($ID(结束循环)) params=())
 		))
 	)
 ))
@@ -845,12 +823,12 @@ $PG($BK(
 ========
 2. lead one var
 --------
-以K遍历此之代码：
+以K遍历代码：
     （显示：K）
 --------
 $PG($BK(
 	$IT(
-		target=($MB(rootScope type=(mID) object=($ID(代码))))
+		target=($ID(代码))
 		idxList=($ID(K))
 		block=($BK(
 			$FN(name=($ID(显示)) params=($ID(K)))
@@ -1234,13 +1212,13 @@ $PG($BK(
 	$ODS(
 		root=($ID(A))
 		block=($BK(
-			$ODS(root=($ID(B)) block=($BK(
+			$ODE(root=($ID(B)) expr=(
 				$FN(
 					name=($ID(处理))
-					params=($ID(C) $ID(D) $ID(E))
-					yield=($ID(F))
+					params=($ID(C) $ID(D) $ID(E))					
 				)
-			)))
+			) yield=($ID(F))
+			)
 			$
 		))
 	)
@@ -1267,7 +1245,8 @@ $PG($BK(
 	$VD(
 		$VP(vars[]=($ID(A)) expr[]=($ODE(
 			root=($ID(B))
-			expr=($FN(name=($ID(处理)) params=($ID(D) $ID(E) $ID(C)) yield=($ID(F))))
+			expr=($FN(name=($ID(处理)) params=($ID(D) $ID(E) $ID(C))))
+			yield=($ID(F))
 		)))
 	)
 ))
@@ -1277,16 +1256,12 @@ $PG($BK(
 对于B以C（处理：D、E），得到F；对于X（执行：Y）
 --------
 $PG($BK(
-	$ODS(root=($ID(B)) block=(
-		$BK($FN(
-			name=($ID(处理)) params=($ID(D) $ID(E) $ID(C)) yield=($ID(F))
-		))
-	))
+	$ODE(root=($ID(B)) expr=($FN(name=($ID(处理)) params=($ID(D) $ID(E) $ID(C)))) yield=($ID(F)))
 	$
-	$ODS(root=($ID(X)) block=($BK($FN(
+	$ODE(root=($ID(X)) expr=($FN(
 		name=($ID(执行))
 		params=($ID(Y))
-	))))
+	)))
 ))
 `
 

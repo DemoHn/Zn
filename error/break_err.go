@@ -8,14 +8,14 @@ func ReturnBreakError(extra interface{}) *Error {
 	})
 }
 
-// ContinueBreakError - breaks when "此之（继续）" statement is executed
+// ContinueBreakError - breaks when "（继续循环）" statement is executed
 func ContinueBreakError() *Error {
 	return breakError.NewError(0x02, Error{
 		text: "未处理之「继续」中断",
 	})
 }
 
-// BreakBreakError - breaks when "此之（结束）" statement fis executed
+// BreakBreakError - breaks when "（结束循环）" statement fis executed
 func BreakBreakError() *Error {
 	return breakError.NewError(0x03, Error{
 		text: "未处理之「结束」中断",

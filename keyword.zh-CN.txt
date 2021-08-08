@@ -80,7 +80,6 @@ ObjDotW         71      之
 ObjDotIIW       72      的
 ObjConstructW   73      是为
 LogicEqualW     74      等于
-StaticSelfW     75      此之
 IteratorW       76      遍历
 ImportW         77      导入
 GetResultW      78      得到
