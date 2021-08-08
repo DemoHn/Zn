@@ -5,7 +5,7 @@ import (
 	"github.com/DemoHn/Zn/exec/ctx"
 )
 
-// LoopCtl - a sgValue type used to control loop flow (aka. continue/break)
+// LoopCtl - a loopctl type used to control loop flow (aka. continue/break)
 // and record values of current iteration.
 type LoopCtl struct {
 	currentIndex ctx.Value

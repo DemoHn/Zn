@@ -10,8 +10,6 @@ type Scope struct {
 	child *Scope
 	// symbolMap - stores current scope stored symbols
 	symbolMap map[string]SymbolInfo
-	// sgValue - scoped global variable
-	sgValue Value
 	// thisValue - "this" variable of the scope
 	thisValue Value
 	// retrunValue - return value of scope
@@ -31,7 +29,6 @@ func NewScope() *Scope {
 		parent:      nil,
 		child:       nil,
 		symbolMap:   map[string]SymbolInfo{},
-		sgValue:     nil,
 		thisValue:   nil,
 		returnValue: nil,
 	}
@@ -43,7 +40,6 @@ func (sp *Scope) CreateChildScope() *Scope {
 		parent:      sp,
 		child:       nil,
 		symbolMap:   map[string]SymbolInfo{},
-		sgValue:     nil,
 		thisValue:   nil,
 		returnValue: nil,
 	}
@@ -80,14 +76,4 @@ func (sp *Scope) GetReturnValue() Value {
 // SetReturnValue -
 func (sp *Scope) SetReturnValue(v Value) {
 	sp.returnValue = v
-}
-
-// SetSgValue -
-func (sp *Scope) SetSgValue(v Value) {
-	sp.sgValue = v
-}
-
-// GetSgValue -
-func (sp *Scope) GetSgValue() Value {
-	return sp.sgValue
 }
