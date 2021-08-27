@@ -86,7 +86,7 @@ func loadFontFace(fileName string, fontSize float64) (font.Face, error) {
 
 	fontFace := truetype.NewFace(fontT, &truetype.Options{
 		Size:    fontSize,
-		Hinting: font.HintingVertical,
+		Hinting: font.HintingNone,
 	})
 	return fontFace, nil
 }

@@ -491,7 +491,7 @@ func ParseExpression(p *Parser, asVarAssign bool) Expression {
 			lex.TypeLogicLtW,
 			lex.TypeLogicLteW,
 		},
-		{lex.TypeLogicYesW, lex.TypeLogicYesIIW, lex.TypeLogicNotW},
+		{lex.TypeLogicYesW, lex.TypeLogicYesIIW, lex.TypeEqualMark, lex.TypeLogicNotW},
 	}
 	var logicTypeMap = map[lex.TokenType]LogicTypeE{
 		lex.TypeLogicOrW:    LogicOR,
@@ -505,6 +505,7 @@ func ParseExpression(p *Parser, asVarAssign bool) Expression {
 		lex.TypeLogicNotW:   LogicNEQ,
 		lex.TypeLogicYesW:   LogicEQ,
 		lex.TypeLogicYesIIW: LogicEQ,
+		lex.TypeEqualMark:   LogicEQ,
 	}
 	var logicAllowTails = [4]bool{true, true, false, false}
 
@@ -528,7 +529,7 @@ func ParseExpression(p *Parser, asVarAssign bool) Expression {
 		if !match {
 			return leftExpr
 		}
-		if (tk.Type == lex.TypeLogicYesW || tk.Type == lex.TypeLogicYesIIW) && asVarAssign {
+		if (tk.Type == lex.TypeLogicYesW || tk.Type == lex.TypeLogicYesIIW || tk.Type == lex.TypeEqualMark) && asVarAssign {
 			if match2, _ := p.tryConsume(lex.TypeObjRef); match2 {
 				refMarkForLogicYes = true
 			}
@@ -537,7 +538,7 @@ func ParseExpression(p *Parser, asVarAssign bool) Expression {
 		rightExpr := logicItemParser(idx + 1)
 
 		// compose logic expr
-		if (tk.Type == lex.TypeLogicYesW || tk.Type == lex.TypeLogicYesIIW) && asVarAssign {
+		if (tk.Type == lex.TypeLogicYesW || tk.Type == lex.TypeLogicYesIIW || tk.Type == lex.TypeEqualMark) && asVarAssign {
 			// if 为 (LogicYes) is interpreted as varAssign
 			// usually for normal expressions (except 如果，每当 expr)
 			vid, ok := leftExpr.(Assignable)
@@ -1124,6 +1125,7 @@ func parseVDAssignPair(p *Parser) VDAssignPair {
 	validKeywords := []lex.TokenType{
 		lex.TypeLogicYesW,
 		lex.TypeLogicYesIIW,
+		lex.TypeEqualMark,
 		lex.TypeAssignConstW,
 		lex.TypeObjNewW,
 	}
@@ -1133,7 +1135,7 @@ func parseVDAssignPair(p *Parser) VDAssignPair {
 	}
 
 	switch tk.Type {
-	case lex.TypeLogicYesW, lex.TypeLogicYesIIW:
+	case lex.TypeLogicYesW, lex.TypeLogicYesIIW, lex.TypeEqualMark:
 		refMark := false
 		if match, _ := p.tryConsume(lex.TypeObjRef); match {
 			refMark = true
@@ -1642,8 +1644,8 @@ func parseConstructor(p *Parser) []*ParamItem {
 func parsePropertyDeclareStmt(p *Parser) *PropertyDeclareStmt {
 	// #1. parse ID
 	idItem := parseFuncID(p)
-	// consume 为 or 是
-	p.consume(lex.TypeLogicYesW, lex.TypeLogicYesIIW)
+	// consume 为 or 是 or =
+	p.consume(lex.TypeLogicYesW, lex.TypeLogicYesIIW, lex.TypeEqualMark)
 
 	// #2. parse expr
 	initExpr := ParseExpression(p, true)

@@ -242,6 +242,7 @@ const (
 	TypeStmtQuoteR    TokenType = 26 // }
 	TypeMapQHash      TokenType = 27 // #{
 	TypePauseCommaSep TokenType = 28 // 、
+	TypeEqualMark     TokenType = 29 // =
 )
 
 // next - return current rune, and move forward the cursor for 1 character.
@@ -808,7 +809,7 @@ func (l *Lexer) parseMarkers(ch rune) (*Token, *error.Error) {
 			l.pushBuffer(l.next())
 			return NewMarkToken(l.chBuffer, TypeMapData, startR, 2), nil
 		}
-		return nil, error.InvalidSingleEqual()
+		return NewMarkToken(l.chBuffer, TypeEqualMark, startR, 1), nil
 	case DoubleArrow:
 		return NewMarkToken(l.chBuffer, TypeMapData, startR, 1), nil
 	}
