@@ -20,10 +20,10 @@ const (
 	marginBottom = 15.0
 	marginLeft   = 12.0
 	marginRight  = 12.0
-	lineHeight   = 21 * 1.5
-	fontSize     = 15 * 1.5
+	lineHeight   = 21 * 2
+	fontSize     = 15 * 2
 
-	finalWidth = 838 * 1.5 // GitHub <pre> bar width
+	finalWidth = 838 * 2 // GitHub <pre> bar width
 )
 
 var (
