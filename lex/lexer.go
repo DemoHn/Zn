@@ -92,11 +92,11 @@ const EOF rune = 0
 //// 2. markers
 // declare marks
 const (
-	Comma             rune = 0xFF0C //，
-	PauseComma        rune = 0x3001 //、
-	Colon             rune = 0xFF1A //：
-	Semicolon         rune = 0xFF1B //；
-	QuestionMark      rune = 0xFF1F //？
+	Comma             rune = 0xFF0C // ，
+	PauseComma        rune = 0x3001 // 、
+	Colon             rune = 0xFF1A // ：
+	Semicolon         rune = 0xFF1B // ；
+	QuestionMark      rune = 0xFF1F // ？
 	RefMark           rune = 0x0026 // &
 	BangMark          rune = 0xFF01 // ！
 	AnnotationMark    rune = 0x0040 // @
@@ -110,7 +110,9 @@ const (
 	DoubleArrow       rune = 0x27FA // ⟺
 	LeftCurlyBracket  rune = 0x007B // {
 	RightCurlyBracket rune = 0x007D // }
-
+	Slash             rune = 0x002F // /
+	LessThanMark      rune = 0x003C // <
+	GreaterThanMark   rune = 0x003E // >
 )
 
 // MarkLeads -
@@ -118,7 +120,7 @@ var MarkLeads = []rune{
 	Comma, PauseComma, Colon, Semicolon, QuestionMark, RefMark, BangMark,
 	AnnotationMark, HashMark, EllipsisMark, LeftBracket,
 	RightBracket, LeftParen, RightParen, Equal, DoubleArrow,
-	LeftCurlyBracket, RightCurlyBracket,
+	LeftCurlyBracket, RightCurlyBracket, Slash, LessThanMark, GreaterThanMark,
 }
 
 //// 3. spaces
@@ -243,6 +245,13 @@ const (
 	TypeMapQHash      TokenType = 27 // #{
 	TypePauseCommaSep TokenType = 28 // 、
 	TypeEqualMark     TokenType = 29 // =
+	TypeGTMark        TokenType = 30 // >
+	TypeLTMark        TokenType = 31 // <
+	TypeGTEMark       TokenType = 32 // >=
+	TypeLTEMark       TokenType = 33 // <=
+	TypeNEMark        TokenType = 34 // /=
+	TypeSlash         TokenType = 35 // /
+
 )
 
 // next - return current rune, and move forward the cursor for 1 character.
@@ -812,7 +821,26 @@ func (l *Lexer) parseMarkers(ch rune) (*Token, *error.Error) {
 		return NewMarkToken(l.chBuffer, TypeEqualMark, startR, 1), nil
 	case DoubleArrow:
 		return NewMarkToken(l.chBuffer, TypeMapData, startR, 1), nil
+	case Slash:
+		if l.peek() == Equal {
+			l.pushBuffer(l.next())
+			return NewMarkToken(l.chBuffer, TypeNEMark, startR, 2), nil
+		}
+		return NewMarkToken(l.chBuffer, TypeSlash, startR, 1), nil
+	case LessThanMark:
+		if l.peek() == Equal {
+			l.pushBuffer(l.next())
+			return NewMarkToken(l.chBuffer, TypeLTEMark, startR, 2), nil
+		}
+		return NewMarkToken(l.chBuffer, TypeLTMark, startR, 1), nil
+	case GreaterThanMark:
+		if l.peek() == Equal {
+			l.pushBuffer(l.next())
+			return NewMarkToken(l.chBuffer, TypeGTEMark, startR, 2), nil
+		}
+		return NewMarkToken(l.chBuffer, TypeGTMark, startR, 1), nil
 	}
+
 	return nil, error.InvalidChar(ch)
 }
 

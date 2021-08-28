@@ -3,6 +3,7 @@ package cmds
 import (
 	"fmt"
 	"io/ioutil"
+	"math"
 	"strings"
 
 	"github.com/DemoHn/Zn/lex"
@@ -19,10 +20,10 @@ const (
 	marginBottom = 15.0
 	marginLeft   = 12.0
 	marginRight  = 12.0
-	lineHeight   = 21
-	fontSize     = 15
+	lineHeight   = 21 * 1.5
+	fontSize     = 15 * 1.5
 
-	finalWidth = 838 // GitHub <pre> bar width
+	finalWidth = 838 * 1.5 // GitHub <pre> bar width
 )
 
 var (
@@ -101,7 +102,7 @@ func newBackground(width int, height int, bgColor string) *gg.Context {
 }
 
 func measureCodeHeight(tMap [][]colorTextMap) int {
-	return lineHeight * len(tMap)
+	return int(math.Floor(lineHeight)) * len(tMap)
 }
 
 func drawColorText(dc *gg.Context, tMap [][]colorTextMap) {
@@ -240,7 +241,7 @@ func matchColorScheme(tkType lex.TokenType, lastTok *lex.Token) string {
 			}
 		}
 	}
-	if tkType >= lex.TypeDeclareW && tkType <= lex.TypeIteratorW {
+	if tkType >= lex.TypeDeclareW && tkType <= lex.TypeObjDenoteW {
 		colorScheme = csKeyword
 	}
 	return colorScheme
