@@ -1,6 +1,7 @@
 package val
 
 import (
+	"strings"
 	"unicode/utf8"
 
 	"github.com/DemoHn/Zn/error"
@@ -39,5 +40,55 @@ func (s *String) SetProperty(c *ctx.Context, name string, value ctx.Value) *erro
 
 // ExecMethod -
 func (s *String) ExecMethod(c *ctx.Context, name string, values []ctx.Value) (ctx.Value, *error.Error) {
+	switch name {
+	// S 之（替换：<旧项>, <新项>）
+	case "替换":
+		if err := ValidateExactParams(values, "string", "string"); err != nil {
+			return nil, err
+		}
+		oldItem := values[0].(*String).String()
+		newItem := values[1].(*String).String()
+
+		result := strings.ReplaceAll(s.value, oldItem, newItem)
+		return NewString(result), nil
+	// S 之（分隔：<分隔符>） -> 【A，B，C，...】
+	case "分隔":
+		if err := ValidateExactParams(values, "string"); err != nil {
+			return nil, err
+		}
+		sep := values[0].(*String).String()
+		resultStrs := strings.Split(s.value, sep)
+
+		result := NewArray([]ctx.Value{})
+		for _, v := range resultStrs {
+			result.AppendValue(NewString(v))
+		}
+
+		return result, nil
+	case "匹配":
+		if err := ValidateExactParams(values, "string"); err != nil {
+			return nil, err
+		}
+		substr := values[0].(*String).String()
+		result := strings.Contains(s.value, substr)
+
+		return NewBool(result), nil
+	case "匹配开头":
+		if err := ValidateExactParams(values, "string"); err != nil {
+			return nil, err
+		}
+		substr := values[0].(*String).String()
+		result := strings.HasPrefix(s.value, substr)
+
+		return NewBool(result), nil
+	case "匹配结尾":
+		if err := ValidateExactParams(values, "string"); err != nil {
+			return nil, err
+		}
+		substr := values[0].(*String).String()
+		result := strings.HasSuffix(s.value, substr)
+
+		return NewBool(result), nil
+	}
 	return nil, error.MethodNotFound(name)
 }

@@ -16,10 +16,10 @@ import (
 )
 
 const (
-	marginTop    = 15.0
-	marginBottom = 15.0
-	marginLeft   = 12.0
-	marginRight  = 12.0
+	marginTop    = 15.0 * 2
+	marginBottom = 12.0 * 2
+	marginLeft   = 20.0 * 2
+	marginRight  = 20.0 * 2
 	lineHeight   = 21 * 2
 	fontSize     = 15 * 2
 
