@@ -1,6 +1,7 @@
 package val
 
 import (
+	"fmt"
 	"strings"
 	"unicode/utf8"
 
@@ -89,6 +90,36 @@ func (s *String) ExecMethod(c *ctx.Context, name string, values []ctx.Value) (ct
 		result := strings.HasSuffix(s.value, substr)
 
 		return NewBool(result), nil
+	// 「xxx」 + 「yyy」 + 「zzz」
+	case "拼接":
+		if err := ValidateAllParams(values, "string"); err != nil {
+			return nil, err
+		}
+		result := s.value
+		for _, v := range values {
+			result += v.(*String).String()
+		}
+
+		return NewString(result), nil
+	// 「xxx {#1} yyy {#2}」.Format(「A」,「B」)
+	case "格式拼接":
+		if err := ValidateAllParams(values, "string"); err != nil {
+			return nil, err
+		}
+
+		replacerArgs := []string{}
+		for idx, v := range values {
+			format := fmt.Sprintf("{#%d}", idx+1)
+			value := v.(*String).String()
+
+			replacerArgs = append(replacerArgs, format, value)
+		}
+
+		r := strings.NewReplacer(replacerArgs...)
+		// replace {#1} with value1, {#2} with value2, ...
+		result := r.Replace(s.value)
+
+		return NewString(result), nil
 	}
 	return nil, error.MethodNotFound(name)
 }
