@@ -8,7 +8,7 @@ import (
 )
 
 const (
-	defaultBlockSize int = 512
+	defaultBlockSize int = 4 * 1024 // 4k
 )
 
 // Lexer is a structure that pe provides a set of tools to help tokenizing the code.
