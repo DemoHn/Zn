@@ -120,7 +120,7 @@ var MarkLeads = []rune{
 	Comma, PauseComma, Colon, Semicolon, QuestionMark, RefMark, BangMark,
 	AnnotationMark, HashMark, EllipsisMark, LeftBracket,
 	RightBracket, LeftParen, RightParen, Equal, DoubleArrow,
-	LeftCurlyBracket, RightCurlyBracket, Slash, LessThanMark, GreaterThanMark,
+	LeftCurlyBracket, RightCurlyBracket, LessThanMark, GreaterThanMark,
 }
 
 //// 3. spaces
@@ -210,7 +210,7 @@ func isNumber(ch rune) bool {
 
 // @params: ch - input char
 func isIdentifierChar(ch rune) bool {
-	return idInRange(ch)
+	return idInRange(ch) || ch == Slash
 }
 
 //// token consts and constructors (without keyword token)
@@ -250,8 +250,6 @@ const (
 	TypeGTEMark       TokenType = 32 // >=
 	TypeLTEMark       TokenType = 33 // <=
 	TypeNEMark        TokenType = 34 // /=
-	TypeSlash         TokenType = 35 // /
-
 )
 
 // next - return current rune, and move forward the cursor for 1 character.
@@ -379,6 +377,11 @@ head:
 		}
 		if util.Contains(ch, MarkLeads) {
 			tok, err = l.parseMarkers(ch)
+			return
+		}
+		// handle /= specially
+		if ch == Slash && l.peek() == Equal {
+			tok, err = l.parseNEMarker()
 			return
 		}
 		// suppose it's a keyword
@@ -821,12 +824,6 @@ func (l *Lexer) parseMarkers(ch rune) (*Token, *error.Error) {
 		return NewMarkToken(l.chBuffer, TypeEqualMark, startR, 1), nil
 	case DoubleArrow:
 		return NewMarkToken(l.chBuffer, TypeMapData, startR, 1), nil
-	case Slash:
-		if l.peek() == Equal {
-			l.pushBuffer(l.next())
-			return NewMarkToken(l.chBuffer, TypeNEMark, startR, 2), nil
-		}
-		return NewMarkToken(l.chBuffer, TypeSlash, startR, 1), nil
 	case LessThanMark:
 		if l.peek() == Equal {
 			l.pushBuffer(l.next())
@@ -842,6 +839,18 @@ func (l *Lexer) parseMarkers(ch rune) (*Token, *error.Error) {
 	}
 
 	return nil, error.InvalidChar(ch)
+}
+
+// parseNEMarkers - parse '/' and '='
+func (l *Lexer) parseNEMarker() (*Token, *error.Error) {
+	// setup
+	l.clearBuffer()
+	startR := newTokenRange(l)
+
+	l.pushBuffer(Slash)
+	l.pushBuffer(l.next())
+
+	return NewMarkToken(l.chBuffer, TypeNEMark, startR, 2), nil
 }
 
 // for (l *Lexer) parseKeyword(), CHECK lex/keyword.go for details
@@ -881,6 +890,7 @@ func (l *Lexer) parseIdentifier(ch rune) (*Token, *error.Error) {
 		if isWhiteSpace(ch) {
 			continue
 		}
+
 		// if the following chars are a keyword,
 		// then terminate the identifier parsing process.
 		if isKeyword, _ := l.parseKeyword(ch, false); isKeyword {
@@ -896,6 +906,11 @@ func (l *Lexer) parseIdentifier(ch rune) (*Token, *error.Error) {
 				return NewIdentifierToken(l.chBuffer, rg), nil
 			}
 			l.rebase(prev + 1)
+		}
+		if ch == Slash && l.peek() == Equal {
+			l.rebase(prev)
+			rg.setRangeEnd(l)
+			return NewIdentifierToken(l.chBuffer, rg), nil
 		}
 		// other char as terminator
 		if util.Contains(ch, terminators) {
