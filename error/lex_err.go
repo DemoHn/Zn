@@ -4,13 +4,6 @@ import (
 	"fmt"
 )
 
-// InvalidSingleEllipsis -
-func InvalidSingleEllipsis() *Error {
-	return lexError.NewError(0x01, Error{
-		text: "未能识别单个「…」字符，或许应该是「……」？",
-	})
-}
-
 // InvalidSingleEqual -
 func InvalidSingleEqual() *Error {
 	return lexError.NewError(0x02, Error{

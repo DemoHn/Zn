@@ -407,7 +407,6 @@ func TestNextToken_MarkerONLY(t *testing.T) {
 		"！":  TypeMustT,
 		"@":  TypeAnnoT,
 		"#":  TypeMapHash,
-		"……": TypeMoreParam,
 		"【":  TypeArrayQuoteL,
 		"】":  TypeArrayQuoteR,
 		"（":  TypeFuncQuoteL,
@@ -415,7 +414,6 @@ func TestNextToken_MarkerONLY(t *testing.T) {
 		"{":  TypeStmtQuoteL,
 		"}":  TypeStmtQuoteR,
 		"==": TypeMapData,
-		"⟺":  TypeMapData,
 	}
 
 	var cases = make([]nextTokenCase, 0)

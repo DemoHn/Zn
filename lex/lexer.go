@@ -101,13 +101,11 @@ const (
 	BangMark          rune = 0xFF01 // ！
 	AnnotationMark    rune = 0x0040 // @
 	HashMark          rune = 0x0023 // #
-	EllipsisMark      rune = 0x2026 // …
 	LeftBracket       rune = 0x3010 // 【
 	RightBracket      rune = 0x3011 // 】
 	LeftParen         rune = 0xFF08 // （
 	RightParen        rune = 0xFF09 // ）
 	Equal             rune = 0x003D // =
-	DoubleArrow       rune = 0x27FA // ⟺
 	LeftCurlyBracket  rune = 0x007B // {
 	RightCurlyBracket rune = 0x007D // }
 	Slash             rune = 0x002F // /
@@ -118,8 +116,8 @@ const (
 // MarkLeads -
 var MarkLeads = []rune{
 	Comma, PauseComma, Colon, Semicolon, QuestionMark, RefMark, BangMark,
-	AnnotationMark, HashMark, EllipsisMark, LeftBracket,
-	RightBracket, LeftParen, RightParen, Equal, DoubleArrow,
+	AnnotationMark, HashMark, LeftBracket,
+	RightBracket, LeftParen, RightParen, Equal,
 	LeftCurlyBracket, RightCurlyBracket, LessThanMark, GreaterThanMark,
 }
 
@@ -234,7 +232,6 @@ const (
 	TypeMustT         TokenType = 16 // ！
 	TypeAnnoT         TokenType = 17 // @
 	TypeMapHash       TokenType = 18 // #
-	TypeMoreParam     TokenType = 19 // ……
 	TypeArrayQuoteL   TokenType = 20 // 【
 	TypeArrayQuoteR   TokenType = 21 // 】
 	TypeFuncQuoteL    TokenType = 22 // （
@@ -798,12 +795,6 @@ func (l *Lexer) parseMarkers(ch rune) (*Token, *error.Error) {
 			return NewMarkToken(l.chBuffer, TypeMapQHash, startR, 2), nil
 		}
 		return NewMarkToken(l.chBuffer, TypeMapHash, startR, 1), nil
-	case EllipsisMark:
-		if l.peek() == EllipsisMark {
-			l.pushBuffer(l.next())
-			return NewMarkToken(l.chBuffer, TypeMoreParam, startR, 2), nil
-		}
-		return nil, error.InvalidSingleEllipsis()
 	case LeftBracket:
 		return NewMarkToken(l.chBuffer, TypeArrayQuoteL, startR, 1), nil
 	case RightBracket:
@@ -822,8 +813,6 @@ func (l *Lexer) parseMarkers(ch rune) (*Token, *error.Error) {
 			return NewMarkToken(l.chBuffer, TypeMapData, startR, 2), nil
 		}
 		return NewMarkToken(l.chBuffer, TypeEqualMark, startR, 1), nil
-	case DoubleArrow:
-		return NewMarkToken(l.chBuffer, TypeMapData, startR, 1), nil
 	case LessThanMark:
 		if l.peek() == Equal {
 			l.pushBuffer(l.next())
