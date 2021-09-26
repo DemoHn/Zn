@@ -470,7 +470,7 @@ func ParseStatement(p *Parser) Statement {
 // IdxE  -> BsE IdxE'
 // IdxE' -> #  Number   IdxE'
 // IdxE' -> #  String   IdxE'
-//       -> #{  Expr  }  IdxE'
+//       -> #  {  Expr  }  IdxE'
 //
 // precedences:
 //
@@ -584,7 +584,7 @@ func ParseExpression(p *Parser, asVarAssign bool) Expression {
 //
 // IdxE' -> #  Number   IdxE'
 //       -> #  String   IdxE'
-//       -> #{  Expr  }  IdxE'
+//       -> #  {  Expr  }  IdxE'
 //       -> 之  CallE' IdxE'
 //       ->
 //
