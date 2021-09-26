@@ -12,8 +12,13 @@ func TestIdInRange(t *testing.T) {
 	}{
 		{
 			name:   "operators",
-			ids:    []rune{'+', '-', '*', '/'},
+			ids:    []rune{'+', '-', '*'},
 			expect: true,
+		},
+		{
+			name:   "operators (not /)",
+			ids:    []rune{'/'},
+			expect: false,
 		},
 		{
 			name:   "numbers",
