@@ -657,7 +657,7 @@ func ParseMemberExpr(p *Parser) Expression {
 		// default rootType is RootTypeExpr
 		mExpr.RootType = RootTypeExpr
 
-		match, tk := p.tryConsume(lex.TypeMapHash, lex.TypeMapQHash, lex.TypeObjDotW, lex.TypeObjDotIIW)
+		match, tk := p.tryConsume(lex.TypeMapHash, lex.TypeObjDotW, lex.TypeObjDotIIW)
 		if !match {
 			return expr
 		}
@@ -666,7 +666,7 @@ func ParseMemberExpr(p *Parser) Expression {
 
 		switch tk.Type {
 		case lex.TypeMapHash:
-			match2, tk2 := p.tryConsume(lex.TypeNumber, lex.TypeString)
+			match2, tk2 := p.tryConsume(lex.TypeNumber, lex.TypeString, lex.TypeStmtQuoteL)
 			if match2 {
 				// set memberType
 				mExpr.MemberType = MemberIndex
@@ -675,19 +675,15 @@ func ParseMemberExpr(p *Parser) Expression {
 					mExpr.MemberIndex = newNumber(tk2)
 				case lex.TypeString:
 					mExpr.MemberIndex = newString(tk2)
+				case lex.TypeStmtQuoteL:
+					mExpr.MemberIndex = ParseExpression(p, true)
+
+					// #2. parse tail brace
+					p.consume(lex.TypeStmtQuoteR)
 				}
 				return memberTailParser(mExpr)
 			}
 			panic(error.InvalidSyntax())
-		case lex.TypeMapQHash: // lex.TypeMapQHash
-			// #1. parse Expr
-			mExpr.MemberType = MemberIndex
-			mExpr.MemberIndex = ParseExpression(p, true)
-
-			// #2. parse tail brace
-			p.consume(lex.TypeStmtQuoteR)
-
-			return memberTailParser(mExpr)
 		case lex.TypeObjDotW, lex.TypeObjDotIIW:
 			newExpr := calleeTailParser(true, RootTypeExpr, expr)
 			// replace current memberExpr as newExpr

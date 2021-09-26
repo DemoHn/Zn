@@ -239,7 +239,6 @@ const (
 	TypeMapData       TokenType = 24 // ==
 	TypeStmtQuoteL    TokenType = 25 // {
 	TypeStmtQuoteR    TokenType = 26 // }
-	TypeMapQHash      TokenType = 27 // #{
 	TypePauseCommaSep TokenType = 28 // 、
 	TypeEqualMark     TokenType = 29 // =
 	TypeGTMark        TokenType = 30 // >
@@ -790,10 +789,6 @@ func (l *Lexer) parseMarkers(ch rune) (*Token, *error.Error) {
 	case AnnotationMark:
 		return NewMarkToken(l.chBuffer, TypeAnnoT, startR, 1), nil
 	case HashMark:
-		if l.peek() == LeftCurlyBracket {
-			l.pushBuffer(l.next())
-			return NewMarkToken(l.chBuffer, TypeMapQHash, startR, 2), nil
-		}
 		return NewMarkToken(l.chBuffer, TypeMapHash, startR, 1), nil
 	case LeftBracket:
 		return NewMarkToken(l.chBuffer, TypeArrayQuoteL, startR, 1), nil
