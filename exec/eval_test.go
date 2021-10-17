@@ -124,7 +124,7 @@ func Test_ExecPrimeExpr(t *testing.T) {
 		},
 		{
 			name:    "simple array",
-			program: "【10，20，300】",
+			program: "【10、20、300】",
 			symbols: map[string]ctx.Value{
 				"X-AE-A11": val.NewBool(true),
 				"X-AE":     val.NewString("HelloWorld"),
@@ -183,7 +183,7 @@ func Test_MemberExpr(t *testing.T) {
 	
 	如何累加？
 		已知 累加数
-		其总和 为 【其总和，累加数】之和
+		其总和 为 【其总和、累加数】之和
 		返回空
 
 	如何获取总和？
@@ -192,7 +192,7 @@ func Test_MemberExpr(t *testing.T) {
 	suites := []programOKSuite{
 		{
 			name:           "array index expr (normal)",
-			program:        `【3，5，7，9】#2`,
+			program:        `【3、5、7、9】#2`,
 			symbols:        map[string]ctx.Value{},
 			expReturnValue: val.NewDecimalFromInt(7, 0),
 			expProbe:       map[string][][]string{},
@@ -211,7 +211,7 @@ func Test_MemberExpr(t *testing.T) {
 		},
 		{
 			name:           "consecutive array index expr",
-			program:        `【【30，40】，100】#0 #0`,
+			program:        `【【30、40】、100】#0 #0`,
 			symbols:        map[string]ctx.Value{},
 			expReturnValue: val.NewDecimalFromInt(30, 0),
 			expProbe:       map[string][][]string{},
@@ -244,7 +244,7 @@ func Test_MemberExpr(t *testing.T) {
 		},
 		{
 			name:           "expr as index",
-			program:        `【3，5，7，9】#{（X-Y：8、7）}`,
+			program:        `【3、5、7、9】#{（X-Y：8、7）}`,
 			symbols:        map[string]ctx.Value{},
 			expReturnValue: val.NewDecimalFromInt(5, 0),
 			expProbe:       map[string][][]string{},
@@ -321,7 +321,7 @@ func Test_IterateStmt(t *testing.T) {
 		{
 			name: "with one var lead (array, hashmap)",
 			program: `
-以V遍历【30， 40， 50】：
+以V遍历【30、 40、 50】：
     （__probe：「$L1V」、V）
     以V遍历【「甲」 == 20，「乙」 == 30】：
         （__probe：「$L2V」、V）`,
@@ -346,7 +346,7 @@ func Test_IterateStmt(t *testing.T) {
 		{
 			name: "with two vars lead (array)",
 			program: `
-以K、V遍历【「土」，「地」】：
+以K、V遍历【「土」、「地」】：
     （__probe：「K1」、K）
     （__probe：「V1」、V）`,
 			symbols:        map[string]ctx.Value{},
@@ -451,7 +451,7 @@ func Test_VarAssignExpr(t *testing.T) {
 		},
 		{
 			name:    "normal var assign with array value",
-			program: `A为【2，4，6，8】`,
+			program: `A为【2、4、6、8】`,
 			symbols: map[string]ctx.Value{
 				"A": val.NewBool(true),
 			},
@@ -465,7 +465,7 @@ func Test_VarAssignExpr(t *testing.T) {
 		},
 		{
 			name:    "normal var assign with reference",
-			program: `令B为【2，4，6，8】；A为&B；B#2为60；A`,
+			program: `令B为【2、4、6、8】；A为&B；B#2为60；A`,
 			symbols: map[string]ctx.Value{
 				"A": val.NewBool(true),
 			},
@@ -480,7 +480,7 @@ func Test_VarAssignExpr(t *testing.T) {
 		},
 		{
 			name:    "normal var assign without reference",
-			program: `令B为【2，4，6，8】；A为B；B#2为60；A`,
+			program: `令B为【2、4、6、8】；A为B；B#2为60；A`,
 			symbols: map[string]ctx.Value{
 				"A": val.NewBool(true),
 			},
@@ -659,7 +659,7 @@ func Test_BranchStmt(t *testing.T) {
 		{
 			name: "if-elseif expr",
 			program: `
-以成绩遍历【40，95，70，82】：
+以成绩遍历【40、95、70、82】：
 	如果 成绩 大于 90：
 		评级 为 “优秀”
 	再如 成绩 大于 80：
@@ -726,7 +726,7 @@ func Test_FunctionCall(t *testing.T) {
 			name: "normal function call (with return value)",
 			program: `
 如何执行方法？
-	令A 为【20，30】
+	令A 为【20、30】
 	A#1 为 40
 	返回 A
 
@@ -743,7 +743,7 @@ func Test_FunctionCall(t *testing.T) {
 			name: "normal function call (without return value)",
 			program: `
 如何执行方法？
-	令A 为【20，30】
+	令A 为【20、30】
 	如果 A#1 为 40：
 		（X+Y：1、2）
 
@@ -877,7 +877,7 @@ A`,
 	如果X不大于1：
 		返回1
 	否则：
-		返回【（调用FIB：【X，-1】之和），（调用FIB：【X，-2】之和）】之和
+		返回【（调用FIB：【X、-1】之和）、（调用FIB：【X、-2】之和）】之和
 
 
 （调用FIB：10）`,

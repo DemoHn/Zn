@@ -505,7 +505,7 @@ $PG($BK($HM()))
 ========
 3. mixed string and decimal array
 --------
-【「MacBook Air 12"」，2080， 3000】
+【「MacBook Air 12"」、2080、3000】
 --------
 $PG($BK($ARR($STR(MacBook Air 12") $NUM(2080) $NUM(3000))))
 
@@ -513,8 +513,8 @@ $PG($BK($ARR($STR(MacBook Air 12") $NUM(2080) $NUM(3000))))
 4. array with newline
 --------
 【
-    「MacBook Air 12"」，
-    2080，
+    「MacBook Air 12"」、
+    2080、
     3000
 】
 --------
@@ -524,9 +524,9 @@ $PG($BK($ARR($STR(MacBook Air 12") $NUM(2080) $NUM(3000))))
 5. array nest with array
 --------
 【
-    「MacBook Air 12"」，
-    2080，
-    【100，200，300】
+    「MacBook Air 12"」、
+    2080、
+    【100、200、300】
 】
 --------
 $PG($BK($ARR(
@@ -539,9 +539,9 @@ $PG($BK($ARR(
 6. array nest with array nest with array
 --------
 【
-    「MacBook Air 12"」，
-    2080，
-    【100，200，300，
+    「MacBook Air 12"」、
+    2080、
+    【100、200、300、
         【
             10000
         】
@@ -803,7 +803,7 @@ const iterateCasesOK = `
 ========
 1. normal iterate expr
 --------
-遍历【1，2，3】：
+遍历【1、2、3】：
     令A为值
     （结束循环）
 --------

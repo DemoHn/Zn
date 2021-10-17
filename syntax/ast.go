@@ -783,89 +783,75 @@ func ParseArrayExpr(p *Parser) UnionMapList {
 		return emptyExpr
 	}
 
-	const (
-		tagHashMap     = 11
-		subtypeUnknown = 0
-		subtypeArray   = 1
-		subtypeHashMap = 2
-	)
-	// #1. consume item list (comma list)
-	exprs := []Node{}
-	for {
-		match, _ := p.tryConsume(lex.TypeArrayQuoteR)
-		if match {
-			break
-		}
-		// else parse expressions
-		expr := ParseExpression(p, true)
-
-		// parse if there's double equal marks, then cont'd parsing right expr for hashmap
-		if match, _ := p.tryConsume(lex.TypeMapData); match {
-			exprR := ParseExpression(p, true)
-
-			exprs = append(exprs, &NodeList{
-				Tag:      tagHashMap,
-				Children: []Node{expr, exprR},
-			})
-			// allow line-feed after parsing one key-value pair done
-			// e.g.:
-			// 【
-			//     「A」 == 1  <-- resetLineTermFlag() here, otherwise throw LineTerm error
-			//     「B」 == 2
-			// 】
-			p.resetLineTermFlag()
-			continue
-		}
-		exprs = append(exprs, expr)
-		// For parsing arrays, allow line-feed after parsing one item done, too.
-		// e.g.:
-		// 【
-		//     「item1」  <-- resetLineTermFlag() here, otherwise throw LineTerm error
-		//     「item2」
-		// 】
-		p.resetLineTermFlag()
-	}
-
-	// type cast (because there's no GENERIC TYPE in golang!!!)
+	// define ArrayExpr & HashMapExpr
 	var ar = &ArrayExpr{
 		Items: []Expression{},
 	}
 	var hm = &HashMapExpr{
 		KVPair: []hashMapKeyValuePair{},
 	}
-	var subtype = subtypeUnknown
-	for _, expr := range exprs {
-		switch v := expr.(type) {
-		case Expression:
-			if subtype == subtypeUnknown {
-				subtype = subtypeArray
-			}
-			if subtype != subtypeArray {
-				panic(error.MixArrayHashMap())
-			}
-			// add value
-			ar.Items = append(ar.Items, v)
-		case *NodeList: // tagHashMap
-			if subtype == subtypeUnknown {
-				subtype = subtypeHashMap
-			}
-			if subtype != subtypeHashMap {
-				panic(error.MixArrayHashMap())
-			}
-			n0, _ := v.Children[0].(Expression)
-			n1, _ := v.Children[1].(Expression)
+
+	var isArrayType = true
+	// #1. consume first expression
+	exprI := ParseExpression(p, true)
+	if match, tk := p.tryConsume(lex.TypeMapData, lex.TypePauseCommaSep, lex.TypeArrayQuoteR); match {
+		switch tk.Type {
+		case lex.TypeArrayQuoteR:
+			ar.Items = append(ar.Items, exprI)
+			return ar
+		case lex.TypeMapData:
+			isArrayType = false
+			// parse right expr
+			exprR := ParseExpression(p, true)
+
 			hm.KVPair = append(hm.KVPair, hashMapKeyValuePair{
-				Key:   n0,
-				Value: n1,
+				Key:   exprI,
+				Value: exprR,
 			})
+			p.resetLineTermFlag()
+		case lex.TypePauseCommaSep:
+			isArrayType = true
+			// append item on array
+			ar.Items = append(ar.Items, exprI)
 		}
+	} else {
+		panic(error.InvalidSyntax())
 	}
 
-	// #3. return value
-	if subtype == subtypeArray {
-		return ar
+	if isArrayType {
+		// parse array like 【1、2、3、4、5】
+		for {
+			// if not, parse next expr
+			expr := ParseExpression(p, true)
+			ar.Items = append(ar.Items, expr)
+
+			// if parse to end
+			if match, tk := p.tryConsume(lex.TypeArrayQuoteR, lex.TypePauseCommaSep); match {
+				if tk.Type == lex.TypeArrayQuoteR {
+					return ar
+				}
+			} else {
+				panic(error.InvalidSyntax())
+			}
+		}
+	} else {
+		// parse hashmap like 【A = 1，B = 2】
+		for {
+			if match, _ := p.tryConsume(lex.TypeArrayQuoteR); match {
+				return hm
+			}
+
+			exprL := ParseExpression(p, true)
+			p.consume(lex.TypeMapData)
+			exprR := ParseExpression(p, true)
+
+			hm.KVPair = append(hm.KVPair, hashMapKeyValuePair{
+				Key:   exprL,
+				Value: exprR,
+			})
+			p.resetLineTermFlag()
+		}
 	}
-	return hm
 }
 
 func tryParseEmptyMapList(p *Parser) (bool, UnionMapList) {
