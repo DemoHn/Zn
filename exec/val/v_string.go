@@ -2,12 +2,26 @@ package val
 
 import (
 	"fmt"
+	"regexp"
+	"strconv"
 	"strings"
 	"unicode/utf8"
 
 	"github.com/DemoHn/Zn/error"
 	"github.com/DemoHn/Zn/exec/ctx"
 )
+
+// 将对应字符表示替换成对应的实际字符
+var specialCharMap = map[string]string{
+	"{/CR}":  "\r",
+	"{/r}":   "\r",
+	"{/LF}":  "\n",
+	"{/n}":   "\n",
+	"{/TAB}": "\t",
+	"{/t}":   "\t",
+	"{/SO}":  "/",
+	"{/s}":   "/",
+}
 
 // String - represents for Zn's 文本型
 type String struct {
@@ -16,12 +30,36 @@ type String struct {
 
 // NewString - new string ctx.Value Object from raw string
 func NewString(value string) *String {
-	return &String{value}
+	v := replaceSpecialChars(value)
+	return &String{v}
 }
 
 // String - display string value's string
 func (s *String) String() string {
 	return s.value
+}
+
+// replaceSpecialChars: A{/CR}B -> A\nB
+func replaceSpecialChars(s string) string {
+	re := regexp.MustCompile(`\{\/(\+?[0-9a-zA-Z]+?)\}`)
+	reUnicode := regexp.MustCompile(`\{\/\+([0-9a-fA-F]+)\}`)
+
+	return re.ReplaceAllStringFunc(s, func(ss string) string {
+		// #1. check if matched string is a special char
+		if res, ok := specialCharMap[ss]; ok {
+			return res
+		}
+
+		// #2. check if matched string is a unicode representation
+		if matches := reUnicode.FindStringSubmatch(ss); len(matches) > 1 {
+			hexData, _ := strconv.ParseInt(matches[1], 16, 32)
+			hexData32 := int32(hexData)
+			return string([]rune{hexData32})
+		}
+
+		// #3. otherwise, return directly
+		return ss
+	})
 }
 
 // GetProperty -

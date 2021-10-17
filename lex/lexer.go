@@ -856,7 +856,8 @@ func (l *Lexer) parseIdentifier(ch rune) (*Token, *error.Error) {
 		LeftQuoteIV, LeftQuoteV, MiddleDot,
 	}, MarkLeads...)
 
-	if !isIdentifierChar(ch) {
+	// NOTE: Slash '/' cannot be the first character of an identifier!
+	if !isIdentifierChar(ch) || ch == Slash {
 		return nil, error.InvalidIdentifier()
 	}
 
