@@ -241,7 +241,7 @@ func matchColorScheme(tkType lex.TokenType, lastTok *lex.Token) string {
 			}
 		}
 	}
-	if tkType >= lex.TypeDeclareW && tkType <= lex.TypeObjDenoteW {
+	if tkType >= lex.TypeDeclareW && tkType <= lex.TypeGetResultW {
 		colorScheme = csKeyword
 	}
 	return colorScheme

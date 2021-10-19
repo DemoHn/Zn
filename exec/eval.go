@@ -85,8 +85,6 @@ func evalStatement(c *ctx.Context, stmt syntax.Statement) *error.Error {
 		return c.SetImportValue(className, &classRef)
 	case *syntax.IterateStmt:
 		return evalIterateStmt(c, v)
-	case *syntax.ObjectDenoteStmt:
-		return evalObjectDenoteStmt(c, v)
 	case *syntax.FunctionReturnStmt:
 		val, err := evalExpression(c, v.ReturnExpr)
 		if err != nil {
@@ -421,26 +419,6 @@ func evalIterateStmt(c *ctx.Context, node *syntax.IterateStmt) *error.Error {
 	return nil
 }
 
-// evalObjectDenoteStmt -
-func evalObjectDenoteStmt(c *ctx.Context, node *syntax.ObjectDenoteStmt) *error.Error {
-	currentScope := c.GetScope()
-	newScope := currentScope.CreateChildScope()
-	// set scope
-	c.SetScope(newScope)
-	defer c.SetScope(currentScope)
-
-	// 1. parse root expr
-	rootExpr, err := evalExpression(c, node.RootObject)
-	if err != nil {
-		return err
-	}
-	// set this value
-	c.GetScope().SetThisValue(rootExpr)
-
-	// 2. eval statements
-	return evalStmtBlock(c, node.ExecBlock)
-}
-
 //// execute expressions
 func evalExpression(c *ctx.Context, expr syntax.Expression) (ctx.Value, *error.Error) {
 	c.GetFileInfo().SetCurrentLine(expr.GetCurrentLine())
@@ -454,40 +432,11 @@ func evalExpression(c *ctx.Context, expr syntax.Expression) (ctx.Value, *error.E
 		}
 		return evalLogicComparator(c, e)
 	case *syntax.MemberExpr:
-		// when MemberType = memberID or memberIndex, it's a typical "getter" expression;
-		// when MemberType = memberMethod, it's a method call, so we could not use IV logic
-		// to handle it
-		switch e.MemberType {
-		case syntax.MemberID, syntax.MemberIndex:
-			iv, err := getMemberExprIV(c, e)
-			if err != nil {
-				return nil, err
-			}
-			return iv.ReduceRHS(c)
-		case syntax.MemberMethod:
-			// get root expr
-			var rootValue ctx.Value
-			switch e.RootType {
-			case syntax.RootTypeExpr:
-				root, err := evalExpression(c, e.Root)
-				if err != nil {
-					return nil, err
-				}
-				rootValue = root
-			default: // 其他 rootType 不支持
-				return nil, error.UnExpectedCase("根元素类型", fmt.Sprintf("%d", e.MemberType))
-			}
-
-			// execute method
-			methodName := e.MemberMethod.FuncName.GetLiteral()
-			paramValues, err := exprsToValues(c, e.MemberMethod.Params)
-			if err != nil {
-				return nil, err
-			}
-
-			return rootValue.ExecMethod(c, methodName, paramValues)
+		iv, err := getMemberExprIV(c, e)
+		if err != nil {
+			return nil, err
 		}
-		return nil, error.UnExpectedCase("成员类型", fmt.Sprintf("%d", e.MemberType))
+		return iv.ReduceRHS(c)
 	case *syntax.Number, *syntax.String, *syntax.ID, *syntax.ArrayExpr, *syntax.HashMapExpr:
 		return evalPrimeExpr(c, e)
 	case *syntax.FuncCallExpr:

@@ -83,4 +83,3 @@ LogicEqualW     74      等于
 IteratorW       76      遍历
 ImportW         77      导入
 GetResultW      78      得到
-ObjDenoteW      79      对于

@@ -54,10 +54,6 @@ func StringifyAST(node Node) string {
 		case MemberIndex:
 			str = StringifyAST(v.MemberIndex)
 			sType = "mIndex"
-		case MemberMethod:
-			str = StringifyAST(v.MemberMethod)
-			sType = "mMethod"
-		}
 		rootTypeStr := "rootScope"
 		if v.RootType == RootTypeProp {
 			if v.RootType == RootTypeProp {
@@ -215,12 +211,6 @@ func StringifyAST(node Node) string {
 			"$PD(id=(%s) expr=(%s))",
 			StringifyAST(v.PropertyID),
 			StringifyAST(v.InitValue),
-		)
-	case *ObjectDenoteStmt:
-		return fmt.Sprintf(
-			"$ODS(root=(%s) block=(%s))",
-			StringifyAST(v.RootObject),
-			StringifyAST(v.ExecBlock),
 		)
 	case *ObjDFuncCallExpr:
 		yieldResult := ""

@@ -3,9 +3,6 @@ package syntax
 import (
 	"regexp"
 	"strings"
-	"testing"
-
-	"github.com/DemoHn/Zn/lex"
 )
 
 var testSuccessSuites = []string{
@@ -21,7 +18,6 @@ var testSuccessSuites = []string{
 	classDeclareCasesOK,
 	functionDeclareCasesOK,
 	importStmtCasesOK,
-	objDenoteStmtExprCasesOK,
 }
 
 const logicExprCasesOK = `
@@ -1167,147 +1163,6 @@ $PG($BK(
 	)
 ))
 `
-
-const objDenoteStmtExprCasesOK = `
-========
-1. simplist statement
---------
-对于A：
-	令B为C
---------
-$PG($BK(
-	$ODS(
-		root=($ID(A))
-		block=($BK(
-			$VD($VP(vars[]=($ID(B)) expr[]=($ID(C))))
-		))
-	)
-))
-========
-2. objDenote statements (2 statement)
---------
-对于A：
-	令B为，C；D为E
-	；
---------
-$PG($BK(
-	$ODS(
-		root=($ID(A))
-		block=($BK(
-			$VD($VP(vars[]=($ID(B)) expr[]=($ID(C))))
-			$
-			$VA(target=($ID(D)) assign=($ID(E)))
-			$
-		))
-	)
-))
-========
-3. objDenote nested objDenote expr
---------
-对于A：
-	对于B（处理：C、D、E），得到F
-	；
---------
-$PG($BK(
-	$ODS(
-		root=($ID(A))
-		block=($BK(
-			$ODE(root=($ID(B)) expr=(
-				$FN(
-					name=($ID(处理))
-					params=($ID(C) $ID(D) $ID(E))					
-				)
-			) yield=($ID(F))
-			)
-			$
-		))
-	)
-))
-========
-4. objDenote expr
---------
-令F为 对于B（处理：C、D、E）
---------
-$PG($BK(
-	$VD(
-		$VP(vars[]=($ID(F)) expr[]=($ODE(
-			root=($ID(B))
-			expr=($FN(name=($ID(处理)) params=($ID(C) $ID(D) $ID(E))))
-		)))
-	)
-))
-========
-5. objDenote expr #2
---------
-令A为 对于B以C（处理：D、E），得到F
---------
-$PG($BK(
-	$VD(
-		$VP(vars[]=($ID(A)) expr[]=($ODE(
-			root=($ID(B))
-			expr=($FN(name=($ID(处理)) params=($ID(D) $ID(E) $ID(C))))
-			yield=($ID(F))
-		)))
-	)
-))
-========
-6. objDenote stmt; two statements 
---------
-对于B以C（处理：D、E），得到F；对于X（执行：Y）
---------
-$PG($BK(
-	$ODE(root=($ID(B)) expr=($FN(name=($ID(处理)) params=($ID(D) $ID(E) $ID(C)))) yield=($ID(F)))
-	$
-	$ODE(root=($ID(X)) expr=($FN(
-		name=($ID(执行))
-		params=($ID(Y))
-	)))
-))
-`
-
-type astSuccessCase struct {
-	name    string
-	input   string
-	astTree string
-}
-
-func TestAST_OK(t *testing.T) {
-	astCases := []astSuccessCase{}
-
-	for _, suData := range testSuccessSuites {
-		suites := splitTestSuites(suData)
-		for _, suite := range suites {
-			astCases = append(astCases, astSuccessCase{
-				name:    suite[0],
-				input:   suite[1],
-				astTree: suite[2],
-			})
-		}
-	}
-
-	for _, tt := range astCases {
-		t.Run(tt.name, func(t *testing.T) {
-			in := lex.NewTextStream(tt.input)
-			l := lex.NewLexer(in)
-			p := NewParser(l)
-
-			block, err := p.Parse()
-			pg := new(Program)
-			pg.Content = block
-			if err != nil {
-				t.Errorf("expect no error, got error: %s", err.Display())
-			} else {
-				// compare with ast
-				expect := StringifyAST(pg)
-				got := formatASTstr(tt.astTree)
-
-				if expect != got {
-					t.Errorf("AST compare:\nexpect ->\n%s\ngot ->\n%s", expect, got)
-				}
-			}
-		})
-	}
-}
 
 func splitTestSuites(source string) [][3]string {
 	result := [][3]string{}
