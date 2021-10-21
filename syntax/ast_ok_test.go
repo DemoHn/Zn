@@ -3,6 +3,9 @@ package syntax
 import (
 	"regexp"
 	"strings"
+	"testing"
+
+	"github.com/DemoHn/Zn/lex"
 )
 
 var testSuccessSuites = []string{
@@ -14,6 +17,7 @@ var testSuccessSuites = []string{
 	branchStmtCasesOK,
 	stmtLineBreakCasesOK,
 	memberExprCasesOK,
+	memberMethodStmtCasesOK,
 	iterateCasesOK,
 	classDeclareCasesOK,
 	functionDeclareCasesOK,
@@ -649,22 +653,6 @@ $PG($BK(
 ))
 
 ========
-3. call method
---------
-雪花之（执行方法：A、B、C）
---------
-$PG($BK(
-	$MB(
-		root=($ID(雪花))
-		type=(mMethod)
-		object=($FN(
-			name=($ID(执行方法))
-			params=($ID(A) $ID(B) $ID(C))
-		))
-	)
-))
-
-========
 4. array index
 --------
 Array#123
@@ -712,28 +700,19 @@ $PG($BK(
 ========
 7. mix methods & members & indexes
 --------
-Array#10之首之（执行）
+Array#10之首
 --------
 $PG($BK(
 	$MB(
 		root=(
 			$MB(
-				root=(
-					$MB(
-						root=($ID(Array))
-						type=(mIndex)
-						object=($NUM(10))
-					)
-				)
-				type=(mID)
-				object=($ID(首))
+				root=($ID(Array))
+				type=(mIndex)
+				object=($NUM(10))
 			)
 		)
-		type=(mMethod)
-		object=($FN(
-			name=($ID(执行))
-			params=()
-		))
+		type=(mID)
+		object=($ID(首))
 	)
 ))
 
@@ -755,7 +734,7 @@ $PG($BK(
 ========
 10. mix rootProp and member
 --------
-其年龄之（文本）
+其年龄之文本
 --------
 $PG($BK(
 	$MB(
@@ -766,11 +745,8 @@ $PG($BK(
 				object=($ID(年龄))
 			)
 		)
-		type=(mMethod)
-		object=($FN(
-			name=($ID(文本))
-			params=()
-		))
+		type=(mID)
+		object=($ID(文本))
 	)
 ))
 `
@@ -792,6 +768,47 @@ $PG($BK(
 --------
 $PG($BK(
 	$IM(name=($STR(对象)) items=($ID(名称) $ID(内容)))	
+))
+`
+
+const memberMethodStmtCasesOK = `
+========
+1. normal member method expr
+--------
+以A（运行方法）
+--------
+$PG($BK(
+	$MMF(root=($ID(A)) chain=($FN(name=($ID(运行方法)) params=())))
+))
+========
+2. normal member method expr with yield
+--------
+以A（运行方法），得到结果
+--------
+$PG($BK(
+	$MMF(root=($ID(A)) chain=($FN(name=($ID(运行方法)) params=())) yield=($ID(结果)))
+))
+========
+3. normal member method chain expr with yield
+--------
+以A（运行方法）、（方法2：A、B、C），得到结果
+--------
+$PG($BK(
+	$MMF(root=($ID(A)) chain=(
+		$FN(name=($ID(运行方法)) params=())
+		$FN(name=($ID(方法2)) params=($ID(A) $ID(B) $ID(C)))
+	) yield=($ID(结果)))
+))
+========
+3. normal member method chain expr w/o yield
+--------
+以A（运行方法）、（方法2：A、B、C）
+--------
+$PG($BK(
+	$MMF(root=($ID(A)) chain=(
+		$FN(name=($ID(运行方法)) params=())
+		$FN(name=($ID(方法2)) params=($ID(A) $ID(B) $ID(C)))
+	))
 ))
 `
 
@@ -1163,6 +1180,50 @@ $PG($BK(
 	)
 ))
 `
+
+type astSuccessCase struct {
+	name    string
+	input   string
+	astTree string
+}
+
+func TestAST_OK(t *testing.T) {
+	astCases := []astSuccessCase{}
+
+	for _, suData := range testSuccessSuites {
+		suites := splitTestSuites(suData)
+		for _, suite := range suites {
+			astCases = append(astCases, astSuccessCase{
+				name:    suite[0],
+				input:   suite[1],
+				astTree: suite[2],
+			})
+		}
+	}
+
+	for _, tt := range astCases {
+		t.Run(tt.name, func(t *testing.T) {
+			in := lex.NewTextStream(tt.input)
+			l := lex.NewLexer(in)
+			p := NewParser(l)
+
+			block, err := p.Parse()
+			pg := new(Program)
+			pg.Content = block
+			if err != nil {
+				t.Errorf("expect no error, got error: %s", err.Display())
+			} else {
+				// compare with ast
+				expect := StringifyAST(pg)
+				got := formatASTstr(tt.astTree)
+
+				if expect != got {
+					t.Errorf("AST compare:\nexpect ->\n%s\ngot ->\n%s", expect, got)
+				}
+			}
+		})
+	}
+}
 
 func splitTestSuites(source string) [][3]string {
 	result := [][3]string{}

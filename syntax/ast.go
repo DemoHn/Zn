@@ -298,6 +298,16 @@ type MemberExpr struct {
 	MemberIndex Expression
 }
 
+// MemberMethodExpr - declare a member method
+// Example:
+// 以 X （执行方法：YYY、ZZZ）
+type MemberMethodExpr struct {
+	ExprBase
+	Root        Expression
+	MethodChain []*FuncCallExpr
+	YieldResult *ID
+}
+
 // ObjDFuncCallExpr - declare a function call expression in 对于... format
 // Example:
 // 对于 A （执行：B、C、D），得到E
@@ -603,6 +613,8 @@ func ParseMemberExpr(p *Parser) Expression {
 			id.SetCurrentLine(tk)
 			memberExpr.MemberType = MemberID
 			memberExpr.MemberID = id
+
+			return memberExpr
 		}
 		panic(error.InvalidSyntax())
 	}
@@ -618,7 +630,6 @@ func ParseMemberExpr(p *Parser) Expression {
 		}
 		mExpr.SetCurrentLine(tk)
 		mExpr.Root = expr
-
 		switch tk.Type {
 		case lex.TypeMapHash:
 			match2, tk2 := p.tryConsume(lex.TypeNumber, lex.TypeString, lex.TypeStmtQuoteL)
@@ -1273,43 +1284,68 @@ func ParseGetterDeclareStmt(p *Parser) *GetterDeclareStmt {
 // There're 2 possible statements
 //
 // 1. 以 K、V 遍历...
-// 2. 以 A、B、C （执行方法）
+// 2. 以 A （执行方法）
 //
 // CFG:
 //
-// VOStmt -> 以 ID 、 ID ... 遍历 IStmtT'
-//        -> 以 Expr 、 Expr ... FuncExprT'
+// VOStmt -> 以 ID  遍历 IStmtT'
+// VOStmt -> 以 ID 、 ID  遍历 IStmtT'
+//        -> 以 Expr  FuncExprT'
 func ParseVarOneLeadStmt(p *Parser) Statement {
-	validTypes := []lex.TokenType{
-		lex.TypeIteratorW,
-		lex.TypeFuncQuoteL,
-	}
-	exprList := []Expression{}
-	parsePauseCommaList(p, func() {
-		exprList = append(exprList, ParseExpression(p, true))
-	})
+	// parse IterateStmt or FuncCallStmt
+	exprI := ParseExpression(p, true)
 
-	match, tk := p.tryConsume(validTypes...)
-	if match {
+	if match, tk := p.tryConsume(lex.TypeIteratorW, lex.TypeFuncQuoteL); match {
 		switch tk.Type {
 		case lex.TypeIteratorW:
-			// validate if each node in exprList is an ID type
-			// otherwise an error will be thrown
-			idList := []*ID{}
-			for _, pExpr := range exprList {
-				if id, ok := pExpr.(*ID); ok {
-					idList = append(idList, id)
-				} else {
-					panic(error.InvalidExprType("id"))
-				}
+			if idX, ok := exprI.(*ID); ok {
+				return parseIteratorStmtRest(p, []*ID{idX})
 			}
-			return parseIteratorStmtRest(p, idList)
+			panic(error.InvalidExprType("id"))
 		case lex.TypeFuncQuoteL:
-			targetExpr := ParseFuncCallExpr(p, true)
-			// prepend exprs
-			targetExpr.Params = append(targetExpr.Params, exprList...)
-			return targetExpr
+			result := &MemberMethodExpr{
+				Root:        exprI,
+				MethodChain: []*FuncCallExpr{},
+				YieldResult: nil,
+			}
+
+			// parse first function in function chain
+			funcExprI := ParseFuncCallExpr(p, false)
+			result.MethodChain = append(result.MethodChain, funcExprI)
+
+			// then parse 、 and （  (for chain function)
+			for {
+				match, _ := p.tryConsume(lex.TypePauseCommaSep)
+				if !match {
+					break
+				}
+				// parse （
+				p.consume(lex.TypeFuncQuoteL)
+				funcExprN := ParseFuncCallExpr(p, false)
+				result.MethodChain = append(result.MethodChain, funcExprN)
+			}
+
+			// then parse 得到
+			if match, _ := p.tryConsume(lex.TypeGetResultW); match {
+				id := parseID(p)
+				result.YieldResult = id
+			}
+			return result
 		}
+	}
+
+	// Another case: 以 ID 、ID 遍历 IStmtT'
+	p.consume(lex.TypePauseCommaSep)
+	exprII := ParseExpression(p, true)
+
+	if match2, _ := p.tryConsume(lex.TypeIteratorW); match2 {
+		idX, okX := exprI.(*ID)
+		idY, okY := exprII.(*ID)
+
+		if okX && okY {
+			return parseIteratorStmtRest(p, []*ID{idX, idY})
+		}
+		panic(error.InvalidExprType("id"))
 	}
 	panic(error.InvalidSyntax())
 }

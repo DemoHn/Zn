@@ -260,18 +260,20 @@ X之名
 			expReturnValue: val.NewString("示例"),
 			expProbe:       map[string][][]string{},
 		},
-		{
-			name: "object run methods",
-			program: exampleClassDef + `
-令X 成为示例
-X之总和为20
-X之（累加：25）
-X之（获取总和）
-			`,
-			symbols:        map[string]ctx.Value{},
-			expReturnValue: val.NewDecimalFromInt(45, 0),
-			expProbe:       map[string][][]string{},
-		},
+		/**
+				{
+					name: "object run methods",
+					program: exampleClassDef + `
+		令X 成为示例
+		X之总和为20
+		X之（累加：25）
+		X之（获取总和）
+					`,
+					symbols:        map[string]ctx.Value{},
+					expReturnValue: val.NewDecimalFromInt(45, 0),
+					expProbe:       map[string][][]string{},
+				},
+		*/
 	}
 
 	for _, suite := range suites {

@@ -54,6 +54,7 @@ func StringifyAST(node Node) string {
 		case MemberIndex:
 			str = StringifyAST(v.MemberIndex)
 			sType = "mIndex"
+		}
 		rootTypeStr := "rootScope"
 		if v.RootType == RootTypeProp {
 			if v.RootType == RootTypeProp {
@@ -63,6 +64,18 @@ func StringifyAST(node Node) string {
 		}
 		rootStr := StringifyAST(v.Root)
 		return fmt.Sprintf("$MB(root=(%s) type=(%s) object=(%s))", rootStr, sType, str)
+	case *MemberMethodExpr:
+		rootStr := StringifyAST(v.Root)
+		// display chain
+		chain := []string{}
+		for _, method := range v.MethodChain {
+			chain = append(chain, StringifyAST(method))
+		}
+		yieldRes := ""
+		if v.YieldResult != nil {
+			yieldRes = fmt.Sprintf(" yield=(%s)", StringifyAST(v.YieldResult))
+		}
+		return fmt.Sprintf("$MMF(root=(%s) chain=(%s)%s)", rootStr, strings.Join(chain, " "), yieldRes)
 	case *EmptyStmt:
 		return "$"
 	case *VarDeclareStmt:
