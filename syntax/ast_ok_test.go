@@ -800,7 +800,7 @@ $PG($BK(
 	) yield=($ID(结果)))
 ))
 ========
-3. normal member method chain expr w/o yield
+4. normal member method chain expr w/o yield
 --------
 以A（运行方法）、（方法2：A、B、C）
 --------
@@ -808,6 +808,20 @@ $PG($BK(
 	$MMF(root=($ID(A)) chain=(
 		$FN(name=($ID(运行方法)) params=())
 		$FN(name=($ID(方法2)) params=($ID(A) $ID(B) $ID(C)))
+	))
+))
+========
+5. normal member method chain more exprs
+--------
+以A（运行方法）、
+	（方法2：A、B、C）、
+	（QAQ：1、3、5、7）
+--------
+$PG($BK(
+	$MMF(root=($ID(A)) chain=(
+		$FN(name=($ID(运行方法)) params=())
+		$FN(name=($ID(方法2)) params=($ID(A) $ID(B) $ID(C)))
+		$FN(name=($ID(QAQ)) params=($NUM(1) $NUM(3) $NUM(5) $NUM(7)))
 	))
 ))
 `
