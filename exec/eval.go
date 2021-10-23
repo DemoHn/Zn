@@ -441,8 +441,8 @@ func evalExpression(c *ctx.Context, expr syntax.Expression) (ctx.Value, *error.E
 		return evalPrimeExpr(c, e)
 	case *syntax.FuncCallExpr:
 		return evalFunctionCall(c, e)
-	case *syntax.ObjDFuncCallExpr:
-		return evalObjDFuncCallExpr(c, e)
+	case *syntax.MemberMethodExpr:
+		return evalMemberMethodExpr(c, e)
 	default:
 		return nil, error.InvalidExprType()
 	}
@@ -518,8 +518,8 @@ func evalFunctionCall(c *ctx.Context, expr *syntax.FuncCallExpr) (ctx.Value, *er
 	return v2, nil
 }
 
-// 对于A （执行：1、2、3）
-func evalObjDFuncCallExpr(c *ctx.Context, expr *syntax.ObjDFuncCallExpr) (ctx.Value, *error.Error) {
+// 以 A （执行：B、C、D）
+func evalMemberMethodExpr(c *ctx.Context, expr *syntax.MemberMethodExpr) (ctx.Value, *error.Error) {
 	currentScope := c.GetScope()
 	newScope := currentScope.CreateChildScope()
 	// set scope
@@ -527,25 +527,31 @@ func evalObjDFuncCallExpr(c *ctx.Context, expr *syntax.ObjDFuncCallExpr) (ctx.Va
 	defer c.SetScope(currentScope)
 
 	// 1. parse root expr
-	rootExpr, err := evalExpression(c, expr.RootObject)
+	rootExpr, err := evalExpression(c, expr.Root)
 	if err != nil {
 		return nil, err
 	}
 	// set this value
 	c.GetScope().SetThisValue(rootExpr)
 
-	v, err := evalFunctionCall(c, expr.FuncExpr)
-	if err != nil {
-		return nil, err
+	var vlast ctx.Value
+
+	for _, methodExpr := range expr.MethodChain {
+		v, err := evalFunctionCall(c, methodExpr)
+		if err != nil {
+			return nil, err
+		}
+		vlast = v
 	}
+
 	// add yield result
 	if expr.YieldResult != nil {
 		vtag := expr.YieldResult.GetLiteral()
 		// bind yield result
-		c.BindScopeSymbolDecl(currentScope, vtag, v)
+		c.BindScopeSymbolDecl(currentScope, vtag, vlast)
 	}
 
-	return v, nil
+	return vlast, nil
 }
 
 // evaluate logic combination expressions

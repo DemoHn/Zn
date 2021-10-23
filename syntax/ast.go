@@ -308,16 +308,6 @@ type MemberMethodExpr struct {
 	YieldResult *ID
 }
 
-// ObjDFuncCallExpr - declare a function call expression in 对于... format
-// Example:
-// 对于 A （执行：B、C、D），得到E
-type ObjDFuncCallExpr struct {
-	ExprBase
-	RootObject  Expression
-	FuncExpr    *FuncCallExpr
-	YieldResult *ID
-}
-
 // rootTypeE - root type enumeration
 type rootTypeE uint8
 
@@ -585,8 +575,6 @@ func ParseExpression(p *Parser, asVarAssign bool) Expression {
 //       ->
 //
 // CallE' -> FuncID
-//        -> （FuncID：E，E，...）
-//        -> 以 E，E，... （FuncID：E，E，...）
 //
 // PropE' -> ID
 //        -> Number (as string)
@@ -677,7 +665,6 @@ func ParseMemberExpr(p *Parser) Expression {
 // BsE   -> { E }
 //       -> （ FuncID ： E、E、...）
 //       -> 以 E （ FuncID ： E、E、...）
-//       -> 对于 E （FuncID：E、E、...）
 //       -> ID
 //       -> Number
 //       -> String
@@ -716,7 +703,7 @@ func ParseBasicExpr(p *Parser) Expression {
 		case lex.TypeFuncQuoteL:
 			e = ParseFuncCallExpr(p, true)
 		case lex.TypeVarOneW:
-			e = ParseVarOneLeadExpr(p, true)
+			e = ParseMemberFuncCallExpr(p)
 		}
 		e.SetCurrentLine(tk)
 		return e
@@ -884,33 +871,40 @@ func ParseFuncCallExpr(p *Parser, parseYieldResult bool) *FuncCallExpr {
 	return callExpr
 }
 
-// ParseVarOneLeadExpr - 以 ... （‹方法名›）
+// ParseMemberFuncCallExpr - 以 ... （‹方法名›）
 // CFG:
 //
-// FuncExpr -> 以 Expr、Expr、 ... RawFuncExpr
-// RawFuncExpr -> （ FuncID ： commaList ）
+// FuncExpr -> 以 Expr （ FuncID ： commaList ）
 //
 // FuncID  -> ID
 //         -> Number
-func ParseVarOneLeadExpr(p *Parser, parseYieldResult bool) *FuncCallExpr {
-	// #1. parse exprs
-	exprList := []Expression{}
-	parsePauseCommaList(p, func() {
-		expr := ParseExpression(p, true)
-		exprList = append(exprList, expr)
-	})
-	// #2. parse FuncExpr (maybe)
-	match2, tk := p.tryConsume(lex.TypeFuncQuoteL)
-	if !match2 {
-		panic(error.InvalidSyntaxCurr())
+func ParseMemberFuncCallExpr(p *Parser) *MemberMethodExpr {
+	result := &MemberMethodExpr{}
+	result.Root = ParseExpression(p, true)
+
+	p.consume(lex.TypeFuncQuoteL)
+	// parse first function in function chain
+	funcExprI := ParseFuncCallExpr(p, false)
+	result.MethodChain = append(result.MethodChain, funcExprI)
+
+	// then parse 、 and （  (for chain function)
+	for {
+		match, _ := p.tryConsume(lex.TypePauseCommaSep)
+		if !match {
+			break
+		}
+		// parse （
+		p.consume(lex.TypeFuncQuoteL)
+		funcExprN := ParseFuncCallExpr(p, false)
+		result.MethodChain = append(result.MethodChain, funcExprN)
 	}
 
-	// then suppose it's a funcCall expr
-	funcCallExpr := ParseFuncCallExpr(p, parseYieldResult)
-	// append first ID into funcCall list
-	funcCallExpr.Params = append(funcCallExpr.Params, exprList...)
-	funcCallExpr.SetCurrentLine(tk)
-	return funcCallExpr
+	if match, _ := p.tryConsume(lex.TypeGetResultW); match {
+		id := parseID(p)
+		result.YieldResult = id
+	}
+
+	return result
 }
 
 // ParseVarDeclareStmt - yield VarDeclare node

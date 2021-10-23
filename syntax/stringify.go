@@ -225,18 +225,6 @@ func StringifyAST(node Node) string {
 			StringifyAST(v.PropertyID),
 			StringifyAST(v.InitValue),
 		)
-	case *ObjDFuncCallExpr:
-		yieldResult := ""
-		if v.YieldResult != nil {
-			yieldResult = fmt.Sprintf(" yield=(%s)", StringifyAST(v.YieldResult))
-		}
-
-		return fmt.Sprintf(
-			"$ODE(root=(%s) expr=(%s)%s)",
-			StringifyAST(v.RootObject),
-			StringifyAST(v.FuncExpr),
-			yieldResult,
-		)
 	case *ParamItem:
 		refMark := "false"
 		if v.RefMark {
