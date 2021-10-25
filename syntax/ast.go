@@ -770,13 +770,13 @@ func ParseBasicExpr(p *Parser) Expression {
 // CFG:
 // ArrayExpr -> 【 ItemList 】
 //           -> 【 HashMapList 】
-//           -> 【 == 】
+//           -> 【 = 】
 // ItemList  -> Expr ItemList
 //           ->
 //
-// HashMapList -> KeyID == Expr HashMapTail
+// HashMapList -> KeyID = Expr HashMapTail
 //
-// HashMapTail -> KeyID == Expr HashMapTail
+// HashMapTail -> KeyID = Expr HashMapTail
 //             ->
 //
 // KeyID     -> ID
@@ -798,13 +798,13 @@ func ParseArrayExpr(p *Parser) UnionMapList {
 
 	var isArrayType = true
 	// #1. consume first expression
-	exprI := ParseExpression(p)
-	if match, tk := p.tryConsume(lex.TypeMapData, lex.TypePauseCommaSep, lex.TypeArrayQuoteR); match {
+	exprI := ParseExpressionMAP(p)
+	if match, tk := p.tryConsume(lex.TypeEqualMark, lex.TypePauseCommaSep, lex.TypeArrayQuoteR); match {
 		switch tk.Type {
 		case lex.TypeArrayQuoteR:
 			ar.Items = append(ar.Items, exprI)
 			return ar
-		case lex.TypeMapData:
+		case lex.TypeEqualMark:
 			isArrayType = false
 			// parse right expr
 			exprR := ParseExpressionMAP(p)
@@ -827,7 +827,7 @@ func ParseArrayExpr(p *Parser) UnionMapList {
 		// parse array like 【1、2、3、4、5】
 		for {
 			// if not, parse next expr
-			expr := ParseExpression(p)
+			expr := ParseExpressionMAP(p)
 			ar.Items = append(ar.Items, expr)
 
 			// if parse to end
@@ -846,9 +846,9 @@ func ParseArrayExpr(p *Parser) UnionMapList {
 				return hm
 			}
 
-			exprL := ParseExpression(p)
-			p.consume(lex.TypeMapData)
-			exprR := ParseExpression(p)
+			exprL := ParseExpressionMAP(p)
+			p.consume(lex.TypeEqualMark)
+			exprR := ParseExpressionMAP(p)
 
 			hm.KVPair = append(hm.KVPair, hashMapKeyValuePair{
 				Key:   exprL,

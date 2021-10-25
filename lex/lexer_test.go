@@ -399,21 +399,20 @@ func TestNextToken_NumberONLY(t *testing.T) {
 func TestNextToken_MarkerONLY(t *testing.T) {
 	// 01. generate TRUE cases
 	var markerMap = map[string]TokenType{
-		"，":  TypeCommaSep,
-		"：":  TypeFuncCall,
-		"；":  TypeStmtSep,
-		"？":  TypeFuncDeclare,
-		"&":  TypeObjRef,
-		"！":  TypeMustT,
-		"@":  TypeAnnoT,
-		"#":  TypeMapHash,
-		"【":  TypeArrayQuoteL,
-		"】":  TypeArrayQuoteR,
-		"（":  TypeFuncQuoteL,
-		"）":  TypeFuncQuoteR,
-		"{":  TypeStmtQuoteL,
-		"}":  TypeStmtQuoteR,
-		"==": TypeMapData,
+		"，": TypeCommaSep,
+		"：": TypeFuncCall,
+		"；": TypeStmtSep,
+		"？": TypeFuncDeclare,
+		"&": TypeObjRef,
+		"！": TypeMustT,
+		"@": TypeAnnoT,
+		"#": TypeMapHash,
+		"【": TypeArrayQuoteL,
+		"】": TypeArrayQuoteR,
+		"（": TypeFuncQuoteL,
+		"）": TypeFuncQuoteR,
+		"{": TypeStmtQuoteL,
+		"}": TypeStmtQuoteR,
 	}
 
 	var cases = make([]nextTokenCase, 0)
