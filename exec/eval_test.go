@@ -145,7 +145,7 @@ func Test_ExecPrimeExpr(t *testing.T) {
 		},
 		{
 			name:    "simple empty hashmap",
-			program: "【==】",
+			program: "【=】",
 			symbols: map[string]ctx.Value{
 				"X-AE-A11": val.NewBool(true),
 				"X-AE":     val.NewString("HelloWorld"),
@@ -565,7 +565,7 @@ func Test_WhileLoopStmt(t *testing.T) {
 	Y为1
 	每当Y大于0：
 		Y为（X+Y：Y、1）
-		如果Y为4：
+		如果Y = 4：
 			（结束循环）
 		（__probe：「VY」、Y）
 		
@@ -601,7 +601,7 @@ func Test_BranchStmt(t *testing.T) {
 		{
 			name: "exec true expr",
 			program: `
-如果 变量A 为 “真实”：
+如果 变量A = “真实”：
 	（__probe：“TAG”、变量A）	
 			`,
 			symbols: map[string]ctx.Value{
@@ -617,7 +617,7 @@ func Test_BranchStmt(t *testing.T) {
 		{
 			name: "exec false expr",
 			program: `
-如果 变量A 为 “真实”：
+如果 变量A = “真实”：
 	（__probe：“TAG”、 “走过真逻辑”）
 （__probe：“TAG”、 “走过公共逻辑”）
 			`,
@@ -746,7 +746,7 @@ func Test_FunctionCall(t *testing.T) {
 			program: `
 如何执行方法？
 	令A 为【20、30】
-	如果 A#1 为 40：
+	如果 A#1 = 40：
 		（X+Y：1、2）
 
 （执行方法）

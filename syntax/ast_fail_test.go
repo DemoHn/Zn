@@ -185,7 +185,7 @@ code=2250 line=1 col=9
 --------
 【 == 「正定」 】
 --------
-code=2250 line=1 col=5
+code=2250 line=1 col=2
 
 ========
 5. mixture of hashmap and array

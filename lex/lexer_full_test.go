@@ -49,17 +49,17 @@ func TestNextToken_MixedText(t *testing.T) {
 		},
 		{
 			name:        "1 identifier, 注 is not comment",
-			input:       `起居注23不为其和`,
+			input:       `起居注23为其和`,
 			expectError: false,
-			tokens:      `$5[起居注23] $49[不为] $65[其] $5[和]`,
-			lines:       "U<0>[起居注23不为其和]",
+			tokens:      `$5[起居注23] $41[为] $65[其] $5[和]`,
+			lines:       "U<0>[起居注23为其和]",
 		},
 		{
 			name:        "identifer in keyword",
-			input:       `令变量不为空`,
+			input:       `令变量为空`,
 			expectError: false,
-			tokens:      `$40[令] $5[变量] $49[不为] $5[空]`,
-			lines:       "U<0>[令变量不为空]",
+			tokens:      `$40[令] $5[变量] $41[为] $5[空]`,
+			lines:       "U<0>[令变量为空]",
 		},
 		{
 			name:        "1 identifier sep 1 number",
