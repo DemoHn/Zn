@@ -4,11 +4,11 @@ package lex
 // keywords are all ideoglyphs that its length varies from its definitions.
 // so here we define all possible chars that may be an element of one keyword.
 const (
-	// GlyphBU - 不 - 不等于，不小于，不大于，不为
+	// GlyphBU - 不 - 不等于，不小于，不大于
 	GlyphBU rune = 0x4E0D
 	// GlyphQIE - 且 - 且
 	GlyphQIE rune = 0x4E14
-	// GlyphWEI - 为 - 是为，成为，恒为，何为，为，不为
+	// GlyphWEI - 为 - 是为，成为，恒为，何为，为
 	GlyphWEI rune = 0x4E3A
 	// GlyphYIy - 义 - 定义
 	GlyphYIy rune = 0x4E49
@@ -109,7 +109,6 @@ const (
 	TypeGetterW       TokenType = 46 // 何为
 	TypeParamAssignW  TokenType = 47 // 已知
 	TypeReturnW       TokenType = 48 // 返回
-	TypeLogicNotW     TokenType = 49 // 不为
 	TypeLogicNotEqW   TokenType = 51 // 不等于
 	TypeLogicLteW     TokenType = 52 // 不大于
 	TypeLogicGteW     TokenType = 53 // 不小于
@@ -144,7 +143,6 @@ var KeywordTypeMap = map[TokenType][]rune{
 	TypeGetterW:       {GlyphHE, GlyphWEI},
 	TypeParamAssignW:  {GlyphYI, GlyphZHIy},
 	TypeReturnW:       {GlyphFAN, GlyphHUI},
-	TypeLogicNotW:     {GlyphBU, GlyphWEI},
 	TypeLogicNotEqW:   {GlyphBU, GlyphDENG, GlyphYU},
 	TypeLogicLteW:     {GlyphBU, GlyphDA, GlyphYU},
 	TypeLogicGteW:     {GlyphBU, GlyphXIAO, GlyphYU},
@@ -182,10 +180,7 @@ func (l *Lexer) parseKeyword(ch rune, moveForward bool) (bool, *Token) {
 	// manual matching one or consecutive keywords
 	switch ch {
 	case GlyphBU:
-		if l.peek() == GlyphWEI {
-			wordLen = 2
-			tk = NewKeywordToken(TypeLogicNotW)
-		} else if l.peek() == GlyphDA && l.peek2() == GlyphYU {
+		if l.peek() == GlyphDA && l.peek2() == GlyphYU {
 			wordLen = 3
 			tk = NewKeywordToken(TypeLogicLteW)
 		} else if l.peek() == GlyphDENG && l.peek2() == GlyphYU {

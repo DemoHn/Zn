@@ -484,7 +484,9 @@ func ParseExpressionEQ(p *Parser) Expression {
 }
 
 func ParseExpressionMAP(p *Parser) Expression {
-	cfg := EqMarkConfig{}
+	cfg := EqMarkConfig{
+		AsMapSign: true,
+	}
 
 	return parseExpressionLv1(p, cfg)
 }
@@ -557,6 +559,12 @@ func parseExpressionLv3(p *Parser, cfg EqMarkConfig) Expression {
 		lex.TypeLTMark:      LogicLT,
 		lex.TypeLogicLteW:   LogicLTE,
 		lex.TypeLTEMark:     LogicLTE,
+		lex.TypeEqualMark:   LogicEQ,
+	}
+
+	// '=' represents for 等于
+	if cfg.AsEqual {
+		validTypes = append(validTypes, lex.TypeEqualMark)
 	}
 
 	exprL := parseExpressionLv4(p, cfg)
@@ -577,8 +585,15 @@ func parseExpressionLv3(p *Parser, cfg EqMarkConfig) Expression {
 // parseExpressionLv4 - X 为 Y
 // NOTE: by default '=' means nothing!
 func parseExpressionLv4(p *Parser, cfg EqMarkConfig) Expression {
+	validTypes := []lex.TokenType{
+		lex.TypeLogicYesW,
+	}
+	if cfg.AsVarAssign {
+		validTypes = append(validTypes, lex.TypeEqualMark)
+	}
+
 	exprL := ParseMemberExpr(p)
-	if match, tk := p.tryConsume(lex.TypeLogicYesW); match {
+	if match, tk := p.tryConsume(validTypes...); match {
 		// parse &
 		refMarkForLogicYes := false
 		if match2, _ := p.tryConsume(lex.TypeObjRef); match2 {
@@ -722,7 +737,6 @@ func ParseBasicExpr(p *Parser) Expression {
 		lex.TypeArrayQuoteL,
 		lex.TypeStmtQuoteL,
 		lex.TypeFuncQuoteL,
-		lex.TypeLogicNotW,
 		lex.TypeVarOneW,
 	}
 
@@ -793,7 +807,7 @@ func ParseArrayExpr(p *Parser) UnionMapList {
 		case lex.TypeMapData:
 			isArrayType = false
 			// parse right expr
-			exprR := ParseExpression(p)
+			exprR := ParseExpressionMAP(p)
 
 			hm.KVPair = append(hm.KVPair, hashMapKeyValuePair{
 				Key:   exprI,
@@ -848,7 +862,7 @@ func ParseArrayExpr(p *Parser) UnionMapList {
 func tryParseEmptyMapList(p *Parser) (bool, UnionMapList) {
 	emptyTrialTypes := []lex.TokenType{
 		lex.TypeArrayQuoteR, // for empty array
-		lex.TypeMapData,     // for empty hashmap
+		lex.TypeEqualMark,   // for empty hashmap
 	}
 
 	if match, tk := p.tryConsume(emptyTrialTypes...); match {
@@ -857,7 +871,7 @@ func tryParseEmptyMapList(p *Parser) (bool, UnionMapList) {
 			e := &ArrayExpr{Items: []Expression{}}
 			e.SetCurrentLine(tk)
 			return true, e
-		case lex.TypeMapData:
+		case lex.TypeEqualMark:
 			p.consume(lex.TypeArrayQuoteR)
 			e := &HashMapExpr{KVPair: []hashMapKeyValuePair{}}
 			e.SetCurrentLine(tk)

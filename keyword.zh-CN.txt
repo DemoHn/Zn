@@ -62,7 +62,6 @@ FuncW           45      如何
 GetterW         46      何为
 ParamAssignW    47      已知
 ReturnW         48      返回
-LogicNotW       49      不为
 LogicNotEqW     51      不等于
 LogicLteW       52      不大于
 LogicGteW       53      不小于
