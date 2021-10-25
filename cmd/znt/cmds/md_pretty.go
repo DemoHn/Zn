@@ -226,7 +226,7 @@ func composePrettyString(tokens []*lex.Token, lineStack lex.LineStack) string {
 			colorScheme = csString
 		case lex.TypeNumber:
 			colorScheme = csNumber
-		case lex.TypeMapData, lex.TypeFuncCall, lex.TypeFuncDeclare:
+		case lex.TypeFuncCall, lex.TypeFuncDeclare:
 			colorScheme = csToken
 		case lex.TypeComment:
 			colorScheme = csComment

@@ -349,6 +349,13 @@ type LogicExpr struct {
 	RightExpr Expression
 }
 
+// EqMarkConfig - configure the representation of equal mark
+type EqMarkConfig struct {
+	AsMapSign   bool // '=' represents for '是', e.g. 【A = 1】
+	AsVarAssign bool // '=' represents for '为'
+	AsEqual     bool // '=' represents for '等于'
+}
+
 // implement expression interface
 
 // SetLiteral - set literal for primeExpr
@@ -425,7 +432,7 @@ func ParseStatement(p *Parser) Statement {
 		return s
 	}
 	// other case, parse expression
-	return ParseExpression(p, true)
+	return ParseExpression(p)
 }
 
 // ParseExpression - parse an expression, see the following CFG for details
@@ -439,18 +446,18 @@ func ParseStatement(p *Parser) Statement {
 // AndE' -> 且 EqE AndE'
 //       ->
 //
-// EqE   -> VaE EqE'
-// EqE'  -> 等于 VaE
-//       -> 不等于 VaE
-//       -> 小于 VaE
-//       -> 不小于 VaE
-//       -> 大于 VaE
-//       -> 不大于 VaE
+// EqE   -> VaE  EqE'
+// EqE'  -> 等于  VaE
+//       -> [不等于  /=]  VaE
+//       -> [小于  <]  VaE
+//       -> [不小于  >=]  VaE
+//       -> [大于  >]  VaE
+//       -> [不大于  <=] VaE
 //       ->
 //
 // VaE   -> IdxE VaE'
-// VaE'  -> 为 IdxE
-// VaE'  -> 为 & IdxE
+// VaE'  -> 为  IdxE
+//       -> 为  & IdxE
 //       ->
 //
 // IdxE  -> BsE IdxE'
@@ -460,30 +467,86 @@ func ParseStatement(p *Parser) Statement {
 //
 // precedences:
 //
-// # #{}  >  为  >  等于，大于，etc.  >  且  >  或
-func ParseExpression(p *Parser, asVarAssign bool) Expression {
-	var logicItemParser func(int) Expression
-	var logicItemTailParser func(int, Expression) Expression
-	// logicKeywords, ordered by precedence asc
-	// that means, the very begin logicKeyword ([]lex.TokenType) has lowest precedence
-	var logicKeywords = [4][]lex.TokenType{
-		{lex.TypeLogicOrW},
-		{lex.TypeLogicAndW},
-		{
-			lex.TypeLogicEqualW, lex.TypeEqualMark,
-			lex.TypeLogicNotEqW, lex.TypeNEMark,
-			lex.TypeLogicGtW, lex.TypeGTMark,
-			lex.TypeLogicGteW, lex.TypeGTEMark,
-			lex.TypeLogicLtW, lex.TypeLTMark,
-			lex.TypeLogicLteW, lex.TypeLTEMark,
-		},
-		{lex.TypeLogicYesW, lex.TypeLogicYesIIW, lex.TypeLogicNotW},
+// #, #{}  >  为  >  等于，大于，etc.  >  且  >  或
+func ParseExpression(p *Parser) Expression {
+	cfg := EqMarkConfig{
+		AsVarAssign: true,
 	}
-	var logicTypeMap = map[lex.TokenType]LogicTypeE{
-		lex.TypeLogicOrW:    LogicOR,
-		lex.TypeLogicAndW:   LogicAND,
+	return parseExpressionLv1(p, cfg)
+}
+
+// ParseExpressionEQ - similiar to ParseExpression, but '=' represents for '等于'
+func ParseExpressionEQ(p *Parser) Expression {
+	cfg := EqMarkConfig{
+		AsEqual: true,
+	}
+	return parseExpressionLv1(p, cfg)
+}
+
+func ParseExpressionMAP(p *Parser) Expression {
+	cfg := EqMarkConfig{}
+
+	return parseExpressionLv1(p, cfg)
+}
+
+// parseExpressionLv1 - X 或 Y
+func parseExpressionLv1(p *Parser, cfg EqMarkConfig) Expression {
+	var parseTail func(Expression) Expression
+
+	parseTail = func(el Expression) Expression {
+		if match, tk := p.tryConsume(lex.TypeLogicOrW); match {
+			exprR := parseExpressionLv2(p, cfg)
+			finalExpr := &LogicExpr{
+				Type:      LogicOR,
+				LeftExpr:  el,
+				RightExpr: exprR,
+			}
+			finalExpr.SetCurrentLine(tk)
+			return parseTail(finalExpr)
+		}
+		return el
+	}
+
+	exprL := parseExpressionLv2(p, cfg)
+	return parseTail(exprL)
+}
+
+// parseExpressionLv2 - X 且 Y
+func parseExpressionLv2(p *Parser, cfg EqMarkConfig) Expression {
+	var parseTail func(Expression) Expression
+
+	parseTail = func(el Expression) Expression {
+		if match, tk := p.tryConsume(lex.TypeLogicAndW); match {
+			exprR := parseExpressionLv3(p, cfg)
+			finalExpr := &LogicExpr{
+				Type:      LogicAND,
+				LeftExpr:  el,
+				RightExpr: exprR,
+			}
+			finalExpr.SetCurrentLine(tk)
+			return parseTail(finalExpr)
+		}
+		return el
+	}
+
+	exprL := parseExpressionLv3(p, cfg)
+	return parseTail(exprL)
+}
+
+// parseExpressionLv3 - X 等于/不等于 Y
+// NOTE: by default '=' means nothing!
+func parseExpressionLv3(p *Parser, cfg EqMarkConfig) Expression {
+	validTypes := []lex.TokenType{
+		lex.TypeLogicEqualW,
+		lex.TypeLogicNotEqW, lex.TypeNEMark,
+		lex.TypeLogicGtW, lex.TypeGTMark,
+		lex.TypeLogicGteW, lex.TypeGTEMark,
+		lex.TypeLogicLtW, lex.TypeLTMark,
+		lex.TypeLogicLteW, lex.TypeLTEMark,
+	}
+
+	logicTypeMap := map[lex.TokenType]LogicTypeE{
 		lex.TypeLogicEqualW: LogicEQ,
-		lex.TypeEqualMark:   LogicEQ,
 		lex.TypeLogicNotEqW: LogicNEQ,
 		lex.TypeNEMark:      LogicNEQ,
 		lex.TypeLogicGtW:    LogicGT,
@@ -494,71 +557,49 @@ func ParseExpression(p *Parser, asVarAssign bool) Expression {
 		lex.TypeLTMark:      LogicLT,
 		lex.TypeLogicLteW:   LogicLTE,
 		lex.TypeLTEMark:     LogicLTE,
-		lex.TypeLogicNotW:   LogicNEQ,
-		lex.TypeLogicYesW:   LogicEQ,
-		lex.TypeLogicYesIIW: LogicEQ,
-	}
-	var logicAllowTails = [4]bool{true, true, false, false}
-
-	//// anynomous function definition
-	logicItemParser = func(idx int) Expression {
-		if idx >= len(logicKeywords) {
-			return ParseMemberExpr(p)
-		}
-		// #1. match item
-		expr1 := logicItemParser(idx + 1)
-
-		return logicItemTailParser(idx, expr1)
 	}
 
-	//// anynomous function definition
-	logicItemTailParser = func(idx int, leftExpr Expression) Expression {
-		var finalExpr Expression
-		var refMarkForLogicYes = false
-		// #1. consume keyword
-		match, tk := p.tryConsume(logicKeywords[idx]...)
-		if !match {
-			return leftExpr
+	exprL := parseExpressionLv4(p, cfg)
+	if match, tk := p.tryConsume(validTypes...); match {
+		exprR := parseExpressionLv4(p, cfg)
+		finalExpr := &LogicExpr{
+			Type:      logicTypeMap[tk.Type],
+			LeftExpr:  exprL,
+			RightExpr: exprR,
 		}
-		if (tk.Type == lex.TypeLogicYesW || tk.Type == lex.TypeLogicYesIIW || tk.Type == lex.TypeEqualMark) && asVarAssign {
-			if match2, _ := p.tryConsume(lex.TypeObjRef); match2 {
-				refMarkForLogicYes = true
-			}
-		}
-		// #2. consume Y
-		rightExpr := logicItemParser(idx + 1)
 
-		// compose logic expr
-		if (tk.Type == lex.TypeLogicYesW || tk.Type == lex.TypeLogicYesIIW || tk.Type == lex.TypeEqualMark) && asVarAssign {
-			// if 为 (LogicYes) is interpreted as varAssign
-			// usually for normal expressions (except 如果，每当 expr)
-			vid, ok := leftExpr.(Assignable)
-			if !ok {
-				panic(error.ExprMustTypeID())
-			}
-			finalExpr = &VarAssignExpr{
-				TargetVar:  vid,
-				RefMark:    refMarkForLogicYes,
-				AssignExpr: rightExpr,
-			}
-		} else {
-			finalExpr = &LogicExpr{
-				Type:      logicTypeMap[tk.Type],
-				LeftExpr:  leftExpr,
-				RightExpr: rightExpr,
-			}
-		}
-		// set current line (after finalExpr has been initialized)
 		finalExpr.SetCurrentLine(tk)
-
-		// #3. consume X' (X-tail)
-		if logicAllowTails[idx] {
-			return logicItemTailParser(idx, finalExpr)
-		}
 		return finalExpr
 	}
+	return exprL
+}
 
-	return logicItemParser(0)
+// parseExpressionLv4 - X 为 Y
+// NOTE: by default '=' means nothing!
+func parseExpressionLv4(p *Parser, cfg EqMarkConfig) Expression {
+	exprL := ParseMemberExpr(p)
+	if match, tk := p.tryConsume(lex.TypeLogicYesW); match {
+		// parse &
+		refMarkForLogicYes := false
+		if match2, _ := p.tryConsume(lex.TypeObjRef); match2 {
+			refMarkForLogicYes = true
+		}
+
+		vid, ok := exprL.(Assignable)
+		if !ok {
+			panic(error.ExprMustTypeID())
+		}
+		exprR := ParseMemberExpr(p)
+		finalExpr := &VarAssignExpr{
+			TargetVar:  vid,
+			RefMark:    refMarkForLogicYes,
+			AssignExpr: exprR,
+		}
+
+		finalExpr.SetCurrentLine(tk)
+		return finalExpr
+	}
+	return exprL
 }
 
 // ParseMemberExpr -
@@ -630,7 +671,7 @@ func ParseMemberExpr(p *Parser) Expression {
 				case lex.TypeString:
 					mExpr.MemberIndex = newString(tk2)
 				case lex.TypeStmtQuoteL:
-					mExpr.MemberIndex = ParseExpression(p, true)
+					mExpr.MemberIndex = ParseExpression(p)
 
 					// #2. parse tail brace
 					p.consume(lex.TypeStmtQuoteR)
@@ -698,7 +739,7 @@ func ParseBasicExpr(p *Parser) Expression {
 		case lex.TypeArrayQuoteL:
 			e = ParseArrayExpr(p)
 		case lex.TypeStmtQuoteL:
-			e = ParseExpression(p, true)
+			e = ParseExpression(p)
 			p.consume(lex.TypeStmtQuoteR)
 		case lex.TypeFuncQuoteL:
 			e = ParseFuncCallExpr(p, true)
@@ -743,7 +784,7 @@ func ParseArrayExpr(p *Parser) UnionMapList {
 
 	var isArrayType = true
 	// #1. consume first expression
-	exprI := ParseExpression(p, true)
+	exprI := ParseExpression(p)
 	if match, tk := p.tryConsume(lex.TypeMapData, lex.TypePauseCommaSep, lex.TypeArrayQuoteR); match {
 		switch tk.Type {
 		case lex.TypeArrayQuoteR:
@@ -752,7 +793,7 @@ func ParseArrayExpr(p *Parser) UnionMapList {
 		case lex.TypeMapData:
 			isArrayType = false
 			// parse right expr
-			exprR := ParseExpression(p, true)
+			exprR := ParseExpression(p)
 
 			hm.KVPair = append(hm.KVPair, hashMapKeyValuePair{
 				Key:   exprI,
@@ -772,7 +813,7 @@ func ParseArrayExpr(p *Parser) UnionMapList {
 		// parse array like 【1、2、3、4、5】
 		for {
 			// if not, parse next expr
-			expr := ParseExpression(p, true)
+			expr := ParseExpression(p)
 			ar.Items = append(ar.Items, expr)
 
 			// if parse to end
@@ -791,9 +832,9 @@ func ParseArrayExpr(p *Parser) UnionMapList {
 				return hm
 			}
 
-			exprL := ParseExpression(p, true)
+			exprL := ParseExpression(p)
 			p.consume(lex.TypeMapData)
-			exprR := ParseExpression(p, true)
+			exprR := ParseExpression(p)
 
 			hm.KVPair = append(hm.KVPair, hashMapKeyValuePair{
 				Key:   exprL,
@@ -852,7 +893,7 @@ func ParseFuncCallExpr(p *Parser, parseYieldResult bool) *FuncCallExpr {
 	if match {
 		// #2.1 parse pcomma list
 		parsePauseCommaList(p, func() {
-			expr := ParseExpression(p, true)
+			expr := ParseExpression(p)
 			callExpr.Params = append(callExpr.Params, expr)
 		})
 	}
@@ -880,7 +921,7 @@ func ParseFuncCallExpr(p *Parser, parseYieldResult bool) *FuncCallExpr {
 //         -> Number
 func ParseMemberFuncCallExpr(p *Parser) *MemberMethodExpr {
 	result := &MemberMethodExpr{}
-	result.Root = ParseExpression(p, true)
+	result.Root = ParseExpression(p)
 
 	p.consume(lex.TypeFuncQuoteL)
 	// parse first function in function chain
@@ -993,7 +1034,7 @@ func parseVDAssignPair(p *Parser) VDAssignPair {
 		if match, _ := p.tryConsume(lex.TypeObjRef); match {
 			refMark = true
 		}
-		expr := ParseExpression(p, true)
+		expr := ParseExpression(p)
 
 		return VDAssignPair{
 			Type:       VDTypeAssign,
@@ -1006,7 +1047,7 @@ func parseVDAssignPair(p *Parser) VDAssignPair {
 		if match, _ := p.tryConsume(lex.TypeObjRef); match {
 			refMark = true
 		}
-		expr := ParseExpression(p, true)
+		expr := ParseExpression(p)
 
 		return VDAssignPair{
 			Type:       VDTypeAssignConst,
@@ -1029,7 +1070,7 @@ func parseVDAssignPair(p *Parser) VDAssignPair {
 		// param param list
 		params := []Expression{}
 		parsePauseCommaList(p, func() {
-			e := ParseExpression(p, true)
+			e := ParseExpression(p)
 			params = append(params, e)
 		})
 
@@ -1049,7 +1090,7 @@ func parseVDAssignPair(p *Parser) VDAssignPair {
 func ParseWhileLoopStmt(p *Parser) *WhileLoopStmt {
 	// #1. consume expr
 	// 为  as logicYES here
-	trueExpr := ParseExpression(p, false)
+	trueExpr := ParseExpressionEQ(p)
 
 	// #2. parse colon
 	p.consume(lex.TypeFuncCall)
@@ -1152,7 +1193,7 @@ func ParseBranchStmt(p *Parser, mainIndent int) *BranchStmt {
 
 		// #1. parse condition expr
 		if hState != stateElseBranch {
-			condExpr = ParseExpression(p, false)
+			condExpr = ParseExpressionEQ(p)
 		}
 
 		// #2. parse colon
@@ -1287,7 +1328,7 @@ func ParseGetterDeclareStmt(p *Parser) *GetterDeclareStmt {
 //        -> 以 Expr  FuncExprT'
 func ParseVarOneLeadStmt(p *Parser) Statement {
 	// parse IterateStmt or FuncCallStmt
-	exprI := ParseExpression(p, true)
+	exprI := ParseExpression(p)
 
 	if match, tk := p.tryConsume(lex.TypeIteratorW, lex.TypeFuncQuoteL); match {
 		switch tk.Type {
@@ -1330,7 +1371,7 @@ func ParseVarOneLeadStmt(p *Parser) Statement {
 
 	// Another case: 以 ID 、ID 遍历 IStmtT'
 	p.consume(lex.TypePauseCommaSep)
-	exprII := ParseExpression(p, true)
+	exprII := ParseExpression(p)
 
 	if match2, _ := p.tryConsume(lex.TypeIteratorW); match2 {
 		idX, okX := exprI.(*ID)
@@ -1356,7 +1397,7 @@ func ParseIteratorStmt(p *Parser) *IterateStmt {
 // IStmtT'  -> [遍历] TargetExpr ：  StmtBlock
 func parseIteratorStmtRest(p *Parser, idList []*ID) *IterateStmt {
 	// 1. parse target expr
-	targetExpr := ParseExpression(p, true)
+	targetExpr := ParseExpression(p)
 
 	// 2. parse colon
 	p.consume(lex.TypeFuncCall)
@@ -1380,7 +1421,7 @@ func parseIteratorStmtRest(p *Parser, idList []*ID) *IterateStmt {
 // CFG:
 // FRStmt -> 返回 Expression
 func ParseFunctionReturnStmt(p *Parser) *FunctionReturnStmt {
-	expr := ParseExpression(p, true)
+	expr := ParseExpression(p)
 	return &FunctionReturnStmt{
 		ReturnExpr: expr,
 	}
@@ -1526,7 +1567,7 @@ func parsePropertyDeclareStmt(p *Parser) *PropertyDeclareStmt {
 	p.consume(lex.TypeLogicYesW, lex.TypeLogicYesIIW, lex.TypeEqualMark)
 
 	// #2. parse expr
-	initExpr := ParseExpression(p, true)
+	initExpr := ParseExpression(p)
 
 	return &PropertyDeclareStmt{
 		PropertyID: idItem,

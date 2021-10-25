@@ -51,6 +51,22 @@ $PG($BK(
 		R=($NUM(0))
 	)
 ))
+========
+2. A or B or C or D or E
+--------
+A或B或C或D或E
+--------
+$PG($BK(
+	$OR(L=(
+		$OR(L=(
+			$OR(L=(
+				$OR(L=($ID(A)) R=(
+					$ID(B)
+				))
+			) R=($ID(C)))
+		) R=($ID(D)))
+	) R=($ID(E)))
+))
 `
 
 const whileLoopCasesOK = `
