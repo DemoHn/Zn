@@ -84,6 +84,7 @@ func (iv *IV) ReduceLHS(c *ctx.Context, input ctx.Value) *error.Error {
 			return error.InvalidExprType("hashmap")
 		}
 		hm.value[iv.member] = input
+		return nil
 	case IVTypeMember:
 		return iv.root.SetProperty(c, iv.member, input)
 	}
