@@ -68,6 +68,19 @@ func (s *String) GetProperty(c *ctx.Context, name string) (ctx.Value, *error.Err
 	case "长度":
 		l := utf8.RuneCountInString(s.value)
 		return NewDecimalFromInt(l, 0), nil
+	case "文本":
+		return NewString(s.value), nil
+	case "字符组":
+		charArr := NewArray([]ctx.Value{})
+		v := s.value
+
+		for len(v) > 0 {
+			r, size := utf8.DecodeRuneInString(v)
+			charArr.AppendValue(NewString(string(r)))
+
+			v = v[size:]
+		}
+		return charArr, nil
 	}
 	return nil, error.PropertyNotFound(name)
 }
