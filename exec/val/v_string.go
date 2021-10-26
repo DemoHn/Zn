@@ -65,7 +65,7 @@ func replaceSpecialChars(s string) string {
 // GetProperty -
 func (s *String) GetProperty(c *ctx.Context, name string) (ctx.Value, *error.Error) {
 	switch name {
-	case "长度":
+	case "长度", "字数":
 		l := utf8.RuneCountInString(s.value)
 		return NewDecimalFromInt(l, 0), nil
 	case "文本":
