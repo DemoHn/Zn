@@ -29,7 +29,7 @@ func (n *Number) GetValue() float64 {
 // GetProperty -
 func (n *Number) GetProperty(c *ctx.Context, name string) (ctx.Value, *error.Error) {
 	switch name {
-	case "文本*":
+	case "文本":
 		return NewString(n.String()), nil
 	case "+1":
 		return NewNumber(n.value + 1), nil

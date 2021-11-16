@@ -32,7 +32,7 @@ func (b *Bool) GetValue() bool {
 // GetProperty -
 func (b *Bool) GetProperty(c *ctx.Context, name string) (ctx.Value, *error.Error) {
 	switch name {
-	case "文本*":
+	case "文本":
 		return NewString(b.String()), nil
 	}
 	return nil, error.PropertyNotFound(name)

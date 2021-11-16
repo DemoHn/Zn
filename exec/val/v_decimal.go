@@ -251,43 +251,13 @@ func (zd *Decimal) Div(others ...*Decimal) (*Decimal, *error.Error) {
 // GetProperty - a null ctx.Value does not have ANY propreties.
 func (zd *Decimal) GetProperty(c *ctx.Context, name string) (ctx.Value, *error.Error) {
 	switch name {
-	case "文本*":
+	case "文本":
 		return NewString(zd.String()), nil
 	case "+1":
 		v := zd.Add(NewDecimalFromInt(1, 0))
 		return v, nil
 	case "-1":
 		v := zd.Add(NewDecimalFromInt(-1, 0))
-		return v, nil
-	case "1倍":
-		v := zd.Mul(NewDecimalFromInt(1, 0))
-		return v, nil
-	case "2倍":
-		v := zd.Mul(NewDecimalFromInt(2, 0))
-		return v, nil
-	case "3倍":
-		v := zd.Mul(NewDecimalFromInt(3, 0))
-		return v, nil
-	case "4倍":
-		v := zd.Mul(NewDecimalFromInt(4, 0))
-		return v, nil
-	case "5倍":
-		v := zd.Mul(NewDecimalFromInt(5, 0))
-		return v, nil
-	case "6倍":
-		v := zd.Mul(NewDecimalFromInt(6, 0))
-		return v, nil
-	case "7倍":
-		v := zd.Mul(NewDecimalFromInt(7, 0))
-		return v, nil
-	case "8倍":
-		v := zd.Mul(NewDecimalFromInt(8, 0))
-		return v, nil
-	case "9倍":
-		v := zd.Mul(NewDecimalFromInt(9, 0))
-		return v, nil
-	case "10倍":
-		v := zd.Mul(NewDecimalFromInt(10, 0))
 		return v, nil
 	}
 	return nil, error.PropertyNotFound(name)
@@ -301,6 +271,33 @@ func (zd *Decimal) SetProperty(c *ctx.Context, name string, value ctx.Value) *er
 // ExecMethod - a null value does not have ANY methods.
 func (zd *Decimal) ExecMethod(c *ctx.Context, name string, values []ctx.Value) (ctx.Value, *error.Error) {
 	switch name {
+	case "加":
+		if err := ValidateExactParams(values, "decimal"); err != nil {
+			return nil, err
+		}
+		item := values[0].(*Decimal)
+		v := zd.Add(item)
+		return v, nil
+	case "减":
+		if err := ValidateExactParams(values, "decimal"); err != nil {
+			return nil, err
+		}
+		item := values[0].(*Decimal)
+		v := zd.Sub(item)
+		return v, nil
+	case "乘":
+		if err := ValidateExactParams(values, "decimal"); err != nil {
+			return nil, err
+		}
+		item := values[0].(*Decimal)
+		v := zd.Mul(item)
+		return v, nil
+	case "除":
+		if err := ValidateExactParams(values, "decimal"); err != nil {
+			return nil, err
+		}
+		item := values[0].(*Decimal)
+		return zd.Div(item)
 	case "+1":
 		v := zd.Add(NewDecimalFromInt(1, 0))
 		*zd = *v

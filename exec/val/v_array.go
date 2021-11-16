@@ -51,7 +51,7 @@ func (ar *Array) GetProperty(c *ctx.Context, name string) (ctx.Value, *error.Err
 	case "数目", "长度":
 		l := len(ar.value)
 		return NewDecimalFromInt(l, 0), nil
-	case "文本*":
+	case "文本":
 		valStr := StringifyValue(ar)
 		return NewString(valStr), nil
 	case "逆":
