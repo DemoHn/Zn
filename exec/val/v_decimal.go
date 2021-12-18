@@ -259,6 +259,14 @@ func (zd *Decimal) GetProperty(c *ctx.Context, name string) (ctx.Value, *error.E
 	case "-1":
 		v := zd.Add(NewDecimalFromInt(-1, 0))
 		return v, nil
+	case "平方":
+		// TODO: quick impl, need further optimization!
+		v := zd.Mul(zd)
+		return v, nil
+	case "立方":
+		// TODO: quick impl, need further optimization!
+		v := zd.Mul(zd, zd)
+		return v, nil
 	}
 	return nil, error.PropertyNotFound(name)
 }
@@ -300,10 +308,26 @@ func (zd *Decimal) ExecMethod(c *ctx.Context, name string, values []ctx.Value) (
 		return zd.Div(item)
 	case "+1":
 		v := zd.Add(NewDecimalFromInt(1, 0))
-		*zd = *v
 		return v, nil
 	case "-1":
 		v := zd.Add(NewDecimalFromInt(-1, 0))
+		return v, nil
+	case "自增":
+		if err := ValidateExactParams(values, "decimal"); err != nil {
+			return nil, err
+		}
+		item := values[0].(*Decimal)
+		v := zd.Add(item)
+		// change original object to new value
+		*zd = *v
+		return v, nil
+	case "自减":
+		if err := ValidateExactParams(values, "decimal"); err != nil {
+			return nil, err
+		}
+		item := values[0].(*Decimal)
+		v := zd.Sub(item)
+		// change original object to new value
 		*zd = *v
 		return v, nil
 	}
