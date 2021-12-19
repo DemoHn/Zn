@@ -155,7 +155,7 @@ func Test_ExecPrimeExpr(t *testing.T) {
 		},
 		{
 			name:    "simple hashmap",
-			program: "【「1」 == 2】",
+			program: "【「1」 = 2】",
 			symbols: map[string]ctx.Value{
 				"X-AE-A11": val.NewBool(true),
 				"X-AE":     val.NewString("HelloWorld"),
@@ -218,7 +218,7 @@ func Test_MemberExpr(t *testing.T) {
 		},
 		{
 			name:           "hashmap index expr (normal)",
-			program:        `【“L” == 7，“M” == 8】# “L”`,
+			program:        `【“L” = 7，“M” = 8】# “L”`,
 			symbols:        map[string]ctx.Value{},
 			expReturnValue: val.NewDecimalFromInt(7, 0),
 			expProbe:       map[string][][]string{},
@@ -237,7 +237,7 @@ func Test_MemberExpr(t *testing.T) {
 		},
 		{
 			name:           "consecutive hashmap index expr",
-			program:        `【“X” ==【“Y” == 20】】# “X” # “Y”`,
+			program:        `【“X” =【“Y” = 20】】# “X” # “Y”`,
 			symbols:        map[string]ctx.Value{},
 			expReturnValue: val.NewDecimalFromInt(20, 0),
 			expProbe:       map[string][][]string{},
@@ -325,7 +325,7 @@ func Test_IterateStmt(t *testing.T) {
 			program: `
 以V遍历【30、 40、 50】：
     （__probe：「$L1V」、V）
-    以V遍历【「甲」 == 20，「乙」 == 30】：
+    以V遍历【「甲」 = 20，「乙」 = 30】：
         （__probe：「$L2V」、V）`,
 			symbols:        map[string]ctx.Value{},
 			expReturnValue: val.NewNull(),
@@ -367,7 +367,7 @@ func Test_IterateStmt(t *testing.T) {
 		{
 			name: "with two vars lead (hashmap)",
 			program: `
-以K、V遍历【「上」==「下」，「左」==「右」】：
+以K、V遍历【「上」=「下」，「左」=「右」】：
     （__probe：「K1」、K）
     （__probe：「V1」、V）`,
 			symbols:        map[string]ctx.Value{},

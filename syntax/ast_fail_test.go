@@ -176,21 +176,21 @@ code=2250 line=1 col=4
 ========
 3. incomplete map mark
 --------
-【「正定」 == 】
+【「正定」 = 】
 --------
-code=2250 line=1 col=9
+code=2250 line=1 col=8
 
 ========
 4. incomplete map mark #2
 --------
-【 == 「正定」 】
+【 = 「正定」 】
 --------
-code=2250 line=1 col=2
+code=2250 line=1 col=4
 
 ========
 5. mixture of hashmap and array
 --------
-【 100，「正定」== 10 】
+【 100，「正定」= 10 】
 --------
 code=2250 line=1 col=6
 `
