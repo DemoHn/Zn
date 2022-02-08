@@ -81,7 +81,7 @@ func NewLineStack(in *InputStream) *LineStack {
 // and change scanState from 0 -> 1
 //
 // possible errors:
-// 1. inconsist indentType
+// 1. inconsistent indentType
 // 2. when IndentType = SPACE, the count is not 4 * N chars
 func (ls *LineStack) SetIndent(count int, t IndentType) *error.Error {
 	switch t {
@@ -203,8 +203,8 @@ func (ls *LineStack) getTextFromIdx(startIdx int, endIdx int) []rune {
 	return ls.lineBuffer[startIdx:endIdx]
 }
 
-// getLineRune - get text from desinated line number.
-// There're two situations need to handle:
+// getLineRune - get text from designated line number.
+// There are two situations need to handle:
 //
 // I. lineNum < currentLine. line info MUST have been completely parsed
 // and stored in ls.lineBuffer. Thus it's easy to fetch by index.

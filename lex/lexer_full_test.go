@@ -12,7 +12,7 @@ type tokensCase struct {
 	lines       string
 }
 
-// stringify token grammer:
+// stringify token grammar:
 // $type[literal] $type2[literal]
 //
 // example:

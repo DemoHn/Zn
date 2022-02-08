@@ -22,7 +22,7 @@ type Error struct {
 }
 
 // RawError <--> builtin 'error' type
-// this is to resolve naming confliction.
+// this is to resolve naming conflict.
 //
 // usage:
 // OLD:    func A(int) error
