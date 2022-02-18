@@ -14,7 +14,10 @@ type FileStream struct {
 }
 
 
-const defaultReadBlock = 1024
+const (
+	defaultReadBlock = 4096
+	BOM = 0xFEFF
+)
 
 // NewFileStream - create file stream
 func NewFileStream(path string) (*FileStream, error) {
@@ -63,10 +66,11 @@ func (f *FileStream) read(n int) ([]rune, error) {
 		return []rune{}, err
 	}
 	f.encBuffer = remains
-	// detect BOM
+
 	if !f.hasRead {
 		f.hasRead = true
-		if data[0] == 0xFEFF {
+		// detect BOM, if BOM on the first char, then remove it directly.
+		if data[0] == BOM {
 			data = data[1:]
 		}
 	}

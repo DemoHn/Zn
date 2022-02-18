@@ -204,7 +204,7 @@ func (ls *LineStack) getTextFromIdx(startIdx int, endIdx int) []rune {
 }
 
 // getLineRune - get text from designated line number.
-// There are two situations need to handle:
+// There are two situations we need to handle:
 //
 // I. lineNum < currentLine. line info MUST have been completely parsed
 // and stored in ls.lineBuffer. Thus it's easy to fetch by index.
