@@ -1,6 +1,5 @@
 package syntax
 
-import "github.com/DemoHn/Zn/lex"
 import zerr "github.com/DemoHn/Zn/pkg/error"
 
 // Lexer is used to tokenizing the code and yield tokens, after lexing process, Parser will analysis
@@ -26,6 +25,16 @@ type LineInfo struct {
 	Indents int
 	// startIdx - start index of lineBuffer
 	StartIdx int
+}
+
+// TokenType - general token type
+type TokenType int
+
+// Token - general token type
+type Token struct {
+	Type    TokenType
+	StartIdx int
+	EndIdx int
 }
 
 // define constants
@@ -60,7 +69,7 @@ func NewLexer(source []rune) *Lexer {
 		Source: source,
 		IndentType: IndentUnknown,
 		Lines: []LineInfo{},
-		cursor: -1,
+		cursor: 0,
 		currentLine: 0,
 	}
 }
@@ -101,7 +110,15 @@ func (l *Lexer) getChar(idx int) rune {
 	return l.Source[idx]
 }
 
-func (l *Lexer) getIndentNum(count int, t lex.IndentType) (int, error) {
+func (l *Lexer) setIndentType(count int, ch rune) (int, error) {
+	var t = IndentUnknown
+	switch ch {
+	case RuneTAB:
+		t = IndentTab
+	case RuneSP:
+		t = IndentSpace
+	}
+
 	switch t {
 	case IndentUnknown:
 		if count > 0 && l.IndentType != t {
@@ -129,6 +146,41 @@ func (l *Lexer) getIndentNum(count int, t lex.IndentType) (int, error) {
 	}
 
 	return indentNum, nil
+}
+
+// ParseBeginLex -
+func (l *Lexer) ParseBeginLex() error {
+	// get char 0
+	ch := l.getChar(0)
+	if ch == RuneEOF {
+		return nil
+	}
+
+	// add new line
+	l.Lines = append(l.Lines, LineInfo{
+		Indents:  0,
+		StartIdx: 0,
+	})
+	l.currentLine += 1
+	// parse indents
+	if containsRune(ch, []rune{RuneTAB, RuneSP}) {
+		count := 1
+		for {
+			if l.Peek() == ch {
+				count += 1
+				l.Next()
+			} else {
+				break
+			}
+		}
+		indents, err := l.setIndentType(count, ch)
+		if err != nil {
+			return err
+		}
+		// set line indents
+		l.Lines[l.currentLine - 1].Indents = indents
+	}
+	return nil
 }
 
 // ParseLine - when cursor parsed to the end line (ch = CR, LF or EOF)
@@ -167,16 +219,8 @@ func (l *Lexer) ParseLine(ch rune) error {
 		}
 	}
 
-	indentType := IndentUnknown
-	switch p {
-	case RuneTAB:
-		indentType = IndentTab
-	case RuneSP:
-		indentType = IndentSpace
-	}
-
 	// get indent
-	indentNum, err := l.getIndentNum(count, indentType)
+	indentNum, err := l.setIndentType(count, p)
 	if err != nil {
 		return err
 	}

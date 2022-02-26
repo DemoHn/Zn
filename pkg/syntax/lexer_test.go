@@ -13,7 +13,7 @@ func TestLexer_ParseLine(t *testing.T) {
 	}{
 		{
 			name: "one-line string",
-			text: []rune("This is one line\r\n233"),
+			text: []rune("        This is one line\r\n233"),
 			expectLines: []LineInfo{
 				{
 					Indents: 0,
@@ -26,6 +26,7 @@ func TestLexer_ParseLine(t *testing.T) {
 	for _, tt := range cases {
 		t.Run(tt.name, func (t *testing.T) {
 			l := NewLexer(tt.text)
+			_ = l.ParseBeginLex()
 			H:
 			for {
 				ch := l.Next()
