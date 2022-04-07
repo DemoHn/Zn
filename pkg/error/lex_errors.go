@@ -27,3 +27,12 @@ func InvalidIndentSpaceCount(count int) *Error {
 		Extra:   count,
 	}
 }
+
+// InvalidChar -
+func InvalidChar(ch rune) *Error {
+	return &Error{
+		Code:    0x2026,
+		Message: fmt.Sprintf("未能识别字符「%c」", ch),
+		Extra:   ch,
+	}
+}

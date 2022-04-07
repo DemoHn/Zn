@@ -27,14 +27,11 @@ type LineInfo struct {
 	StartIdx int
 }
 
-// TokenType - general token type
-type TokenType int
-
 // Token - general token type
 type Token struct {
-	Type    TokenType
+	Type     uint8
 	StartIdx int
-	EndIdx int
+	EndIdx   int
 }
 
 // define constants
@@ -66,10 +63,10 @@ const (
 
 func NewLexer(source []rune) *Lexer {
 	return &Lexer{
-		Source: source,
-		IndentType: IndentUnknown,
-		Lines: []LineInfo{},
-		cursor: 0,
+		Source:      source,
+		IndentType:  IndentUnknown,
+		Lines:       []LineInfo{},
+		cursor:      0,
 		currentLine: 0,
 	}
 }
@@ -95,6 +92,11 @@ func (l *Lexer) Peek2() rune {
 // GetCursor - get current cursor
 func (l *Lexer) GetCursor() int {
 	return l.cursor
+}
+
+// GetCurrentChar -
+func (l *Lexer) GetCurrentChar() rune {
+	return l.getChar(l.cursor)
 }
 
 // SetCursor - set cursor
@@ -166,9 +168,8 @@ func (l *Lexer) ParseBeginLex() error {
 	if containsRune(ch, []rune{RuneTAB, RuneSP}) {
 		count := 1
 		for {
-			if l.Peek() == ch {
+			if l.Next() == ch {
 				count += 1
-				l.Next()
 			} else {
 				break
 			}
@@ -178,7 +179,7 @@ func (l *Lexer) ParseBeginLex() error {
 			return err
 		}
 		// set line indents
-		l.Lines[l.currentLine - 1].Indents = indents
+		l.Lines[l.currentLine-1].Indents = indents
 	}
 	return nil
 }
