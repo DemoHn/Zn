@@ -7,9 +7,7 @@ import (
 )
 
 // TokenBuilderZH
-type TokenBuilderZH struct {
-	noBeginLex bool
-}
+type TokenBuilderZH struct{}
 
 //// 2. markers
 // declare marks
@@ -30,9 +28,12 @@ const (
 	Equal             rune = 0x003D // =
 	LeftCurlyBracket  rune = 0x007B // {
 	RightCurlyBracket rune = 0x007D // }
-	Slash             rune = 0x002F // /
 	LessThanMark      rune = 0x003C // <
 	GreaterThanMark   rune = 0x003E // >
+	PlusMark          rune = '+'    // +
+	MinusMark         rune = '-'    // -
+	MultiplyMark      rune = '*'    // *
+	Slash             rune = 0x002F // /
 )
 
 //// token constants and constructors (without keyword token)
@@ -40,53 +41,119 @@ const (
 // for special type Tokens, its range varies from 0 - 9
 // for keyword types, check lex/keyword.go for details
 const (
-	TypeEOF           = 0
-	TypeSpace         = 1  //
-	TypeString        = 2  // string (only double quotes)
-	TypeNumber        = 4  // numbers
-	TypeIdentifier    = 5  //
-	TypeEnumString    = 6  // string (with single quotes)
-	TypeComment       = 10 // 注：
-	TypeCommaSep      = 11 // ，
-	TypeStmtSep       = 12 // ；
-	TypeFuncCall      = 13 // ：
-	TypeFuncDeclare   = 14 // ？
-	TypeObjRef        = 15 // &
-	TypeExceptionT    = 16 // ！
-	TypeAnnotationT   = 17 // @
-	TypeMapHash       = 18 // #
-	TypeArrayQuoteL   = 20 // 【
-	TypeArrayQuoteR   = 21 // 】
-	TypeFuncQuoteL    = 22 // （
-	TypeFuncQuoteR    = 23 // ）
-	TypeStmtQuoteL    = 25 // {
-	TypeStmtQuoteR    = 26 // }
-	TypePauseCommaSep = 28 // 、
-	TypeAssignMark    = 29 // =
-	TypeGTMark        = 30 // >
-	TypeLTMark        = 31 // <
-	TypeGTEMark       = 32 // >=
-	TypeLTEMark       = 33 // <=
-	TypeNEMark        = 34 // /=
-	TypeEqualMark     = 35 // ==
+	TypeEOF           uint8 = 0
+	TypeSpace         uint8 = 1  //
+	TypeString        uint8 = 2  // string (only double quotes)
+	TypeNumber        uint8 = 4  // numbers
+	TypeIdentifier    uint8 = 5  //
+	TypeEnumString    uint8 = 6  // string (with single quotes)
+	TypeComment       uint8 = 10 // 注：
+	TypeCommaSep      uint8 = 11 // ，
+	TypeStmtSep       uint8 = 12 // ；
+	TypeFuncCall      uint8 = 13 // ：
+	TypeFuncDeclare   uint8 = 14 // ？
+	TypeObjRef        uint8 = 15 // &
+	TypeExceptionT    uint8 = 16 // ！
+	TypeAnnotationT   uint8 = 17 // @
+	TypeMapHash       uint8 = 18 // #
+	TypeArrayQuoteL   uint8 = 20 // 【
+	TypeArrayQuoteR   uint8 = 21 // 】
+	TypeFuncQuoteL    uint8 = 22 // （
+	TypeFuncQuoteR    uint8 = 23 // ）
+	TypeStmtQuoteL    uint8 = 25 // {
+	TypeStmtQuoteR    uint8 = 26 // }
+	TypePauseCommaSep uint8 = 28 // 、
+	TypeAssignMark    uint8 = 29 // uint8 =
+	TypeGTMark        uint8 = 30 // >
+	TypeLTMark        uint8 = 31 // <
+	TypeGTEMark       uint8 = 32 // >uint8 =
+	TypeLTEMark       uint8 = 33 // <uint8 =
+	TypeNEMark        uint8 = 34 // /uint8 =
+	TypeEqualMark     uint8 = 35 // uint8 =uint8 =
+	TypePlus          uint8 = 36 // +
+	TypeMinus         uint8 = 37 // -
+	TypeMultiply      uint8 = 38 // *
+	TypeDivision      uint8 = 39 // /
 )
+
+// MarkLeads -
+var MarkLeads = []rune{
+	Comma, PauseComma, Colon, Semicolon, QuestionMark, RefMark, BangMark,
+	AnnotationMark, HashMark, LeftBracket,
+	RightBracket, LeftParen, RightParen, Equal,
+	LeftCurlyBracket, RightCurlyBracket, LessThanMark, GreaterThanMark,
+}
+
+// WhiteSpaces - all kinds of valid spaces
+var WhiteSpaces = []rune{
+	// where 0x0020 <--> SP
+	0x0009, 0x000B, 0x000C, 0x0020, 0x00A0,
+	0x2000, 0x2001, 0x2002, 0x2003, 0x2004,
+	0x2005, 0x2006, 0x2007, 0x2008, 0x2009,
+	0x200A, 0x200B, 0x202F, 0x205F, 0x3000,
+}
 
 // NextToken -
 func (tb *TokenBuilderZH) NextToken(l *syntax.Lexer) (syntax.Token, error) {
-	// ParseBeginLex
-	if !tb.noBeginLex {
-		tb.noBeginLex = true
-		if err := l.ParseBeginLex(); err != nil {
-			return syntax.Token{}, err
-		}
+	// parse non-keyword tokens e.g.: Spaces, LineBreaks
+	if err := l.PreNextToken(); err != nil {
+		return syntax.Token{}, err
 	}
 
 	ch := l.GetCurrentChar()
 	switch ch {
-	default:
-		if isNumber(ch) {
-			return parseNumber(l)
+	case syntax.RuneEOF:
+		return syntax.Token{Type: TypeEOF, StartIdx: l.GetCursor(), EndIdx: l.GetCursor()}, nil
+	// handle 'A + B' case
+	// for numbers like '+1234', this will be handled by parseNumber()
+	case PlusMark, MinusMark, MultiplyMark:
+		startIdx := l.GetCursor()
+		chn := l.Peek()
+
+		t := TypePlus
+		if ch == MinusMark {
+			t = TypeMinus
+		} else if ch == MultiplyMark {
+			t = TypeMultiply
 		}
+		// NOTE: the next char must be space to ensure it's not a part of
+		// identifier
+		if isWhiteSpace(chn) {
+			l.Next()
+			return syntax.Token{Type: t, StartIdx: startIdx, EndIdx: l.GetCursor()}, nil
+		}
+	case Slash:
+		startIdx := l.GetCursor()
+		chn := l.Peek()
+
+		// parse /=, example usage: '如果 X /= 10'
+		if chn == Equal {
+			l.Next()
+			l.Next()
+			return syntax.Token{
+				Type:     TypeNEMark,
+				StartIdx: startIdx,
+				EndIdx:   l.GetCursor(),
+			}, nil
+		}
+
+		// parse / (as div) only, example usage: '25 / 8'
+		if isWhiteSpace(chn) {
+			l.Next()
+			return syntax.Token{
+				Type:     TypeDivision,
+				StartIdx: startIdx,
+				EndIdx:   l.GetCursor(),
+			}, nil
+		}
+	}
+
+	// other token types
+	if isNumberLead(ch) {
+		return parseNumber(l)
+	}
+	if util.Contains(ch, MarkLeads) {
+		return parseMarkers(l)
 	}
 
 	return syntax.Token{}, nil
@@ -288,6 +355,17 @@ func parseMarkers(l *syntax.Lexer) (syntax.Token, error) {
 }
 
 //// utils
-func isNumber(ch rune) bool {
+func isNumberLead(ch rune) bool {
 	return (ch >= '0' && ch <= '9') || util.Contains(ch, []rune{'.', '-', '+'})
+}
+
+// helpers
+func isWhiteSpace(ch rune) bool {
+	for _, whiteSpace := range WhiteSpaces {
+		if ch == whiteSpace {
+			return true
+		}
+	}
+
+	return false
 }

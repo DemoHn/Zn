@@ -15,6 +15,8 @@ type Lexer struct {
 	cursor int
 	// current line
 	currentLine int
+	// beginLex
+	beginLex bool
 }
 
 // LineInfo - stores the (absolute) start & end index of this line
@@ -68,6 +70,7 @@ func NewLexer(source []rune) *Lexer {
 		Lines:       []LineInfo{},
 		cursor:      0,
 		currentLine: 0,
+		beginLex:    true,
 	}
 }
 
@@ -102,6 +105,25 @@ func (l *Lexer) GetCurrentChar() rune {
 // SetCursor - set cursor
 func (l *Lexer) SetCursor(cursor int) {
 	l.cursor = cursor
+}
+
+func (l *Lexer) PreNextToken() error {
+	// build first line info
+	if l.beginLex {
+		l.beginLex = false
+		if err := l.parseBeginLex(); err != nil {
+			return err
+		}
+	}
+	// when current char CR/LF, parse newline
+	ch := l.GetCurrentChar()
+	if ch == RuneCR || ch == RuneLF {
+		if err := l.parseLine(ch); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 // getChar - get value from lineBuffer
@@ -151,7 +173,7 @@ func (l *Lexer) setIndentType(count int, ch rune) (int, error) {
 }
 
 // ParseBeginLex -
-func (l *Lexer) ParseBeginLex() error {
+func (l *Lexer) parseBeginLex() error {
 	// get char 0
 	ch := l.getChar(0)
 	if ch == RuneEOF {
@@ -188,40 +210,34 @@ func (l *Lexer) ParseBeginLex() error {
 // then record line info, parse CRLFs and indents, move cursor to the start of
 // next line
 // NOTE: ch would be CR or LF only.
-func (l *Lexer) ParseLine(ch rune) error {
-	p := l.Peek()
-	switch p {
-	case RuneCR, RuneLF:
-		// read line break chars
-		if (ch == RuneCR && p == RuneLF) || (ch == RuneLF && p == RuneCR) {
-			l.Next()
-			p = l.Peek()
-		}
-		// or indent chars
-	}
-
-	if p == RuneEOF {
-		return nil
+func (l *Lexer) parseLine(c rune) error {
+	ch := c
+head:
+	chn := l.Next()
+	// read line-break chars: CRLF or LFCR
+	if (ch == RuneCR && chn == RuneLF) || (ch == RuneLF && chn == RuneCR) {
+		chn = l.Next()
 	}
 
 	// append next line info
 	l.Lines = append(l.Lines, LineInfo{
 		Indents:  0,
-		StartIdx: l.GetCursor() + 1,
+		StartIdx: l.GetCursor(),
 	})
 	l.currentLine += 1
 
 	// parse next line's indents
 	count := 0
-	if containsRune(p, []rune{RuneSP, RuneTAB}) {
-		for l.Peek() == p {
+	if containsRune(chn, []rune{RuneSP, RuneTAB}) {
+		count = 1
+		for l.Next() == chn {
 			count += 1
-			l.Next()
+
 		}
 	}
 
 	// get indent
-	indentNum, err := l.setIndentType(count, p)
+	indentNum, err := l.setIndentType(count, chn)
 	if err != nil {
 		return err
 	}
@@ -229,5 +245,11 @@ func (l *Lexer) ParseLine(ch rune) error {
 	// set indent num of current line
 	lastIdx := l.currentLine - 1
 	l.Lines[lastIdx].Indents = indentNum
+
+	// if current char is CR/LF, parse new line again
+	ch = l.GetCurrentChar()
+	if ch == RuneCR || ch == RuneLF {
+		goto head
+	}
 	return nil
 }
