@@ -1,6 +1,8 @@
 package syntax
 
-import zerr "github.com/DemoHn/Zn/pkg/error"
+import (
+	zerr "github.com/DemoHn/Zn/pkg/error"
+)
 
 // Lexer is used to tokenizing the code and yield tokens, after lexing process, Parser will analysis
 // tokens and transform to AST.
@@ -32,6 +34,8 @@ type LineInfo struct {
 // Token - general token type
 type Token struct {
 	Type     uint8
+	// stores token's actual content (optional)
+	Literal []rune
 	StartIdx int
 	EndIdx   int
 }

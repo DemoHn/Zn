@@ -31,7 +31,6 @@ CHENG   成
 DING    定
 YIy     义
 QI      其
-CI      此
 ZHU     注
 HUO     或
 QIE     且
@@ -52,7 +51,6 @@ DAOy    到
 #
 # 类型名    类型ID      关键词
 #
-LogicYesIIW     39      是
 DeclareW        40      令
 LogicYesW       41      为
 AssignConstW    42      恒为
@@ -62,6 +60,7 @@ FuncW           45      如何
 GetterW         46      何为
 ParamAssignW    47      已知
 ReturnW         48      返回
+LogicYesIIW     49      是
 LogicNotEqW     51      不等于
 LogicLteW       52      不大于
 LogicGteW       53      不小于

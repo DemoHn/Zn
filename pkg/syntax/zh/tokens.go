@@ -66,12 +66,11 @@ const (
 // for keyword types, check lex/keyword.go for details
 const (
 	TypeEOF           uint8 = 0
-	TypeSpace         uint8 = 1  //
 	TypeString        uint8 = 2  // string (only double quotes)
 	TypeNumber        uint8 = 4  // numbers
 	TypeIdentifier    uint8 = 5  //
 	TypeEnumString    uint8 = 6  // string (with single quotes)
-	TypeLibString     uint8 = 7  // string (with guillemets)
+	TypeLibString     uint8 = 7  // string (with guillemots)
 	TypeComment       uint8 = 10 // 注：
 	TypeCommaSep      uint8 = 11 // ，
 	TypeStmtSep       uint8 = 12 // ；
@@ -88,17 +87,18 @@ const (
 	TypeStmtQuoteL    uint8 = 25 // {
 	TypeStmtQuoteR    uint8 = 26 // }
 	TypePauseCommaSep uint8 = 28 // 、
-	TypeAssignMark    uint8 = 29 // uint8 =
+	TypeAssignMark    uint8 = 29 // =
 	TypeGTMark        uint8 = 30 // >
 	TypeLTMark        uint8 = 31 // <
-	TypeGTEMark       uint8 = 32 // >uint8 =
-	TypeLTEMark       uint8 = 33 // <uint8 =
-	TypeNEMark        uint8 = 34 // /uint8 =
-	TypeEqualMark     uint8 = 35 // uint8 =uint8 =
+	TypeGTEMark       uint8 = 32 // >=
+	TypeLTEMark       uint8 = 33 // <=
+	TypeNEMark        uint8 = 34 // /=
+	TypeEqualMark     uint8 = 35 // ==
 	TypePlus          uint8 = 36 // +
 	TypeMinus         uint8 = 37 // -
 	TypeMultiply      uint8 = 38 // *
 	TypeDivision      uint8 = 39 // /
+	//// from 40 - 78, reserved for keywords
 )
 
 // MarkLeads -
@@ -162,6 +162,23 @@ func (tb *TokenBuilderZH) NextToken(l *syntax.Lexer) (syntax.Token, error) {
 				EndIdx:   l.GetCursor(),
 			}, nil
 		}
+
+		// maybe / would be the start of comment block (e.g. // This is a comment)
+		isComment, tk, err := parseComment(l)
+		if err != nil {
+			return syntax.Token{}, err
+		}
+		if isComment {
+			return tk, nil
+		}
+	case CharZHU:
+		isComment, tk, err := parseComment(l)
+		if err != nil {
+			return syntax.Token{}, err
+		}
+		if isComment {
+			return tk, nil
+		}
 	}
 
 	// other token types
@@ -172,6 +189,15 @@ func (tb *TokenBuilderZH) NextToken(l *syntax.Lexer) (syntax.Token, error) {
 		return parseMarkers(l)
 	}
 
+	// suppose it's a keyword
+	isKeyword, tk, err := parseKeyword(l, true)
+	if err != nil {
+		return syntax.Token{}, err
+	}
+	if isKeyword {
+		return tk, nil
+	}
+
 	return syntax.Token{}, nil
 }
 
@@ -180,6 +206,8 @@ func (tb *TokenBuilderZH) NextToken(l *syntax.Lexer) (syntax.Token, error) {
 func parseNumber(l *syntax.Lexer) (syntax.Token, error) {
 	ch := l.GetCurrentChar()
 	startIdx := l.GetCursor()
+
+	var literal []rune
 	// hand-written regex parser
 	// ref: https://cyberzhg.github.io/toolbox/min_dfa?regex=Rj9QP0QqLj9EKygoKEVQKXwocygxMCk/dVA/KSlEKyk/
 	// hand-drawn min-DFA:
@@ -286,6 +314,8 @@ func parseNumber(l *syntax.Lexer) (syntax.Token, error) {
 		default:
 			goto end
 		}
+		// add item to literal
+		literal = append(literal, ch)
 		ch = l.Next()
 	}
 
@@ -293,6 +323,7 @@ end:
 	if util.ContainsInt(state, endStates) {
 		return syntax.Token{
 			Type:     TypeNumber,
+			Literal: literal,
 			StartIdx: startIdx,
 			EndIdx:   l.GetCursor(),
 		}, nil
@@ -406,21 +437,23 @@ func parseComment(l *syntax.Lexer) (bool, syntax.Token, error) {
 			case LeftDoubleQuoteII:
 				multiCommentType = commentTypeQuoteII
 				quoteCount = 1
+			default:
+				multiCommentType = commentTypeSingle
 			}
-			multiCommentType = commentTypeSingle
-		}
-		// parse 注123456：
-		for {
-			if !isPureNumber(l.Next()) {
-				break
-			}
-		}
-		// consume numbers and now parse colon
-		if l.GetCurrentChar() == Colon {
-			isComment = true
-			multiCommentType = commentTypeSingle
 		} else {
-			return false, syntax.Token{}, zerr.InvalidChar(l.GetCurrentChar())
+			// parse 注123456：
+			for {
+				if !isPureNumber(l.Next()) {
+					break
+				}
+			}
+			// consume numbers and now parse colon
+			if l.GetCurrentChar() == Colon {
+				isComment = true
+				multiCommentType = commentTypeSingle
+			} else {
+				return false, syntax.Token{}, zerr.InvalidChar(l.GetCurrentChar())
+			}
 		}
 	case Slash:
 		p := l.Peek()
@@ -510,6 +543,8 @@ func parseComment(l *syntax.Lexer) (bool, syntax.Token, error) {
 
 	return false, syntax.Token{}, nil
 }
+
+//// parseKeyword logic in keyword.go
 
 //// utils
 func isPureNumber(ch rune) bool {
