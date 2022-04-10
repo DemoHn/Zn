@@ -42,26 +42,22 @@ const (
 	IndentTab     uint8 = 9
 	IndentSpace   uint8 = 32
 
-	// define scanStates
-	// example:
-	//
-	// [ INDENTS ] [ TEXT TEXT TEXT ] [ CR LF ]
-	// ^         ^                  ^
-	// 0         1                  2
-	//
-	// 0: ScanInit
-	// 1: ScanIndent
-	// 2: ScanEnd
-	ScanInit   uint8 = 0
-	ScanIndent uint8 = 1
-	ScanEnd    uint8 = 2
-
 	RuneEOF rune = 0
 	RuneSP  rune = 0x0020 // <SP>
 	RuneTAB rune = 0x0009 // <TAB>
 	RuneCR  rune = 0x000D // \r
 	RuneLF  rune = 0x000A // \n
 )
+
+
+// whiteSpaces - all kinds of valid spaces
+var whiteSpaces = []rune{
+	// where 0x0020 <--> SP
+	0x0009, 0x000B, 0x000C, 0x0020, 0x00A0,
+	0x2000, 0x2001, 0x2002, 0x2003, 0x2004,
+	0x2005, 0x2006, 0x2007, 0x2008, 0x2009,
+	0x200A, 0x200B, 0x202F, 0x205F, 0x3000,
+}
 
 func NewLexer(source []rune) *Lexer {
 	return &Lexer{
@@ -118,14 +114,23 @@ func (l *Lexer) PreNextToken() error {
 	// when current char CR/LF, parse newline
 	ch := l.GetCurrentChar()
 	if ch == RuneCR || ch == RuneLF {
-		if err := l.parseLine(ch); err != nil {
+		if err := l.parseLine(ch, true); err != nil {
 			return err
 		}
 	}
 
+	if IsWhiteSpace(ch) {
+		if err := l.parseSpaces(ch); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
+// ParseLine -
+func (l *Lexer) ParseCRLF(c rune) error {
+	return l.parseLine(c, false)
+}
 // getChar - get value from lineBuffer
 func (l *Lexer) getChar(idx int) rune {
 	if idx >= len(l.Source) {
@@ -206,11 +211,19 @@ func (l *Lexer) parseBeginLex() error {
 	return nil
 }
 
+// parseSpaces - when cursor meets spaces (SP, TAB) in the middle of line, skip them until next meaningful token
+func (l *Lexer) parseSpaces(ch rune) error {
+	for IsWhiteSpace(ch) {
+		ch = l.Next()
+	}
+	return nil
+}
+
 // ParseLine - when cursor parsed to the end line (ch = CR, LF or EOF)
 // then record line info, parse CRLFs and indents, move cursor to the start of
 // next line
 // NOTE: ch would be CR or LF only.
-func (l *Lexer) parseLine(c rune) error {
+func (l *Lexer) parseLine(c rune, withIndent bool) error {
 	ch := c
 head:
 	chn := l.Next()
@@ -226,25 +239,26 @@ head:
 	})
 	l.currentLine += 1
 
-	// parse next line's indents
-	count := 0
-	if containsRune(chn, []rune{RuneSP, RuneTAB}) {
-		count = 1
-		for l.Next() == chn {
-			count += 1
-
+	if withIndent {
+		// parse next line's indents
+		count := 0
+		if containsRune(chn, []rune{RuneSP, RuneTAB}) {
+			count = 1
+			for l.Next() == chn {
+				count += 1
+			}
 		}
-	}
 
-	// get indent
-	indentNum, err := l.setIndentType(count, chn)
-	if err != nil {
-		return err
-	}
+		// get indent
+		indentNum, err := l.setIndentType(count, chn)
+		if err != nil {
+			return err
+		}
 
-	// set indent num of current line
-	lastIdx := l.currentLine - 1
-	l.Lines[lastIdx].Indents = indentNum
+		// set indent num of current line
+		lastIdx := l.currentLine - 1
+		l.Lines[lastIdx].Indents = indentNum
+	}
 
 	// if current char is CR/LF, parse new line again
 	ch = l.GetCurrentChar()
@@ -252,4 +266,14 @@ head:
 		goto head
 	}
 	return nil
+}
+
+// util
+func IsWhiteSpace(ch rune) bool {
+	for _, ws := range whiteSpaces {
+		if ch == ws {
+			return true
+		}
+	}
+	return false
 }
