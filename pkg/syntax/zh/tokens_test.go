@@ -109,16 +109,15 @@ func TestNextToken_NumberONLY(t *testing.T) {
 				{int(TypeNumber), 5, 7},
 			},
 		},
-		/**
 		{
 			name:        "*10^ as E",
 			input:       "23.5*10^8",
 			expectError: false,
-			token: Token{
-				Type:    TypeNumber,
-				Literal: []rune("23.5*10^8"),
+			tokens: [][]int{
+				{int(TypeNumber), 0, 9},
 			},
 		},
+		/**
 		// test fail cases
 		{
 			name:        "operater only",

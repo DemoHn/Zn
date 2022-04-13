@@ -49,7 +49,7 @@ const (
 	LeftSingleQuoteI   rune = 0x300E // 『
 	RightSingleQuoteI  rune = 0x300F // 』
 	LeftSingleQuoteII  rune = 0x2018 // ‘
-	RightSingleQuoteII rune = 0x2019 // ’
+	RightSingleQuoteII rune = 0x2019 // ‘
 )
 
 //// 3. commentType
@@ -401,6 +401,83 @@ func parseMarkers(l *syntax.Lexer) (syntax.Token, error) {
 	}, nil
 }
 
+// 4 types of string:
+// 1. 「 ... 」 or “ ... ”
+// 2. 『 ... 』 or ‘ ... ‘
+// 3. 《 ... 》
+// 4. 「- ... -」
+func parseString(l *syntax.Lexer) (syntax.Token, error) {
+	sch := l.GetCurrentChar()
+	startIdx := l.GetCursor()
+	literal := []rune{}
+
+	quoteNum := 0
+	stripIndents := false
+	tkType := TypeString
+	quoteMatchMap := map[rune]rune {
+		LeftDoubleQuoteI: RightDoubleQuoteI,
+		LeftDoubleQuoteII: RightDoubleQuoteII,
+		LeftSingleQuoteI: RightSingleQuoteI,
+		LeftSingleQuoteII: RightSingleQuoteII,
+		LeftLibQuoteI: RightLibQuoteI,
+	}
+
+	// match case 4: 「-
+	if sch == LeftDoubleQuoteI || sch == LeftDoubleQuoteII {
+		if l.Peek() == MinusMark {
+			l.Next()
+			stripIndents = true
+		}
+	}
+	// get token type
+	if sch == LeftSingleQuoteI || sch == LeftSingleQuoteII {
+		tkType = TypeEnumString
+	} else if sch == LeftLibQuoteI {
+		tkType = TypeLibString
+	}
+
+	for {
+		ch := l.Next()
+		switch ch {
+		case syntax.RuneEOF:
+			return syntax.Token{
+				Type: tkType,
+				Literal: literal,
+				StartIdx: startIdx,
+				EndIdx: l.GetCursor(),
+			}, nil
+		case syntax.RuneCR, syntax.RuneLF:
+			p := l.Peek()
+			if (ch == syntax.RuneCR && p == syntax.RuneLF) || (ch == syntax.RuneLF && p == syntax.RuneCR) {
+				l.Next()
+			}
+		case LeftDoubleQuoteI, LeftDoubleQuoteII, LeftSingleQuoteI, LeftSingleQuoteII, LeftLibQuoteI:
+			if sch == ch {
+				quoteNum += 1
+			}
+			literal = append(literal, ch)
+		case RightDoubleQuoteI, RightDoubleQuoteII, RightSingleQuoteI, RightSingleQuoteII, RightLibQuoteI:
+			if quoteMatchMap[sch] == ch {
+				quoteNum -= 1
+				if quoteNum == 0 {
+					// return strings
+					l.Next()
+					return syntax.Token{
+						Type: tkType,
+						Literal: literal,
+						StartIdx: startIdx,
+						EndIdx: l.GetCursor(),
+					}, nil
+				}
+			}
+		case MinusMark:
+			// match right quote
+			if stripIndents && quoteMatchMap[sch] == l.Peek() {
+				l.Next()
+			}
+		}
+	}
+}
 // validate if the coming block is a comment block then parse comment block
 // valid comment block are listed below:
 // (single-line)
