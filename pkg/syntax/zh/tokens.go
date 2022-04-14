@@ -179,6 +179,8 @@ func (tb *TokenBuilderZH) NextToken(l *syntax.Lexer) (syntax.Token, error) {
 		if isComment {
 			return tk, nil
 		}
+	case LeftLibQuoteI, LeftDoubleQuoteI, LeftDoubleQuoteII, LeftSingleQuoteI, LeftSingleQuoteII:
+		return parseString(l)
 	}
 
 	// other token types
@@ -405,14 +407,12 @@ func parseMarkers(l *syntax.Lexer) (syntax.Token, error) {
 // 1. 「 ... 」 or “ ... ”
 // 2. 『 ... 』 or ‘ ... ‘
 // 3. 《 ... 》
-// 4. 「- ... -」
 func parseString(l *syntax.Lexer) (syntax.Token, error) {
 	sch := l.GetCurrentChar()
 	startIdx := l.GetCursor()
 	literal := []rune{}
 
-	quoteNum := 0
-	stripIndents := false
+	quoteNum := 1
 	tkType := TypeString
 	quoteMatchMap := map[rune]rune {
 		LeftDoubleQuoteI: RightDoubleQuoteI,
@@ -422,13 +422,6 @@ func parseString(l *syntax.Lexer) (syntax.Token, error) {
 		LeftLibQuoteI: RightLibQuoteI,
 	}
 
-	// match case 4: 「-
-	if sch == LeftDoubleQuoteI || sch == LeftDoubleQuoteII {
-		if l.Peek() == MinusMark {
-			l.Next()
-			stripIndents = true
-		}
-	}
 	// get token type
 	if sch == LeftSingleQuoteI || sch == LeftSingleQuoteII {
 		tkType = TypeEnumString
@@ -449,8 +442,15 @@ func parseString(l *syntax.Lexer) (syntax.Token, error) {
 		case syntax.RuneCR, syntax.RuneLF:
 			p := l.Peek()
 			if (ch == syntax.RuneCR && p == syntax.RuneLF) || (ch == syntax.RuneLF && p == syntax.RuneCR) {
+				literal = append(literal, ch)
 				l.Next()
 			}
+			l.Lines = append(l.Lines, syntax.LineInfo{
+				Indents:  0,
+				StartIdx: l.GetCursor() + 1,
+			})
+			// add literal (for CR/LF only, append oneChar; for CR+LF, append LF)
+			literal = append(literal, l.GetCurrentChar())
 		case LeftDoubleQuoteI, LeftDoubleQuoteII, LeftSingleQuoteI, LeftSingleQuoteII, LeftLibQuoteI:
 			if sch == ch {
 				quoteNum += 1
@@ -470,11 +470,9 @@ func parseString(l *syntax.Lexer) (syntax.Token, error) {
 					}, nil
 				}
 			}
-		case MinusMark:
-			// match right quote
-			if stripIndents && quoteMatchMap[sch] == l.Peek() {
-				l.Next()
-			}
+			literal = append(literal, ch)
+		default:
+			literal = append(literal, ch)
 		}
 	}
 }

@@ -26,7 +26,7 @@ func TestLexer_ParseLine(t *testing.T) {
 	for _, tt := range cases {
 		t.Run(tt.name, func (t *testing.T) {
 			l := NewLexer(tt.text)
-			_ = l.ParseBeginLex()
+			_ = l.parseBeginLex()
 			H:
 			for {
 				ch := l.Next()
@@ -34,7 +34,7 @@ func TestLexer_ParseLine(t *testing.T) {
 				case RuneEOF:
 					break H
 				case RuneCR, RuneLF:
-					e := l.ParseLine(ch)
+					e := l.parseLine(ch, true)
 					if e == nil && tt.err != nil {
 						t.Errorf("expect error, finally no error")
 					} else if e != nil && tt.err == nil {

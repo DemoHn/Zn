@@ -15,9 +15,13 @@ type nextTokenCase struct {
 }
 
 func Test_PlayGround(t *testing.T) {
-	source := "123 = 是成为 注：「xxx」 2333\n\n\n12"
+	source := "以 《「「- 文章》二 -」」》233"
 	tk, l, err := parseTokens([]rune(source))
-	fmt.Println("token = ", tk)
+	for _, tm := range tk {
+		fmt.Println("token = ", tm)
+		fmt.Println("token literal =", string(tm.Literal))
+	}
+
 	fmt.Println("lineInfo = ", l)
 	fmt.Println("err = ", err)
 }
