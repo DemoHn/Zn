@@ -15,7 +15,7 @@ type nextTokenCase struct {
 }
 
 func Test_PlayGround(t *testing.T) {
-	source := "我到河北省之间来"
+	source := "我到河北省注.来"
 	tk, l, err := parseTokens([]rune(source))
 	for _, tm := range tk {
 		fmt.Println("token = ", tm)

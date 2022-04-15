@@ -100,7 +100,7 @@ func TestIdInRange(t *testing.T) {
 	for _, tt := range cases {
 		t.Run(tt.name, func(t *testing.T) {
 			for _, id := range tt.ids {
-				res := idInRange(id)
+				res := IdInRange(id)
 				if res != tt.expect {
 					t.Errorf("identifier %c (0x%x) expects %v, got %v", id, id, tt.expect, res)
 				}

@@ -3,7 +3,6 @@ package zh
 import (
 	zerr "github.com/DemoHn/Zn/pkg/error"
 	"github.com/DemoHn/Zn/pkg/syntax"
-	"github.com/DemoHn/Zn/util"
 )
 
 // TokenBuilderZH
@@ -194,7 +193,7 @@ func (tb *TokenBuilderZH) NextToken(l *syntax.Lexer) (syntax.Token, error) {
 	if isNumber(ch) {
 		return parseNumber(l)
 	}
-	if util.Contains(ch, MarkLeads) {
+	if syntax.ContainsRune(ch, MarkLeads) {
 		return parseMarkers(l)
 	}
 
@@ -329,7 +328,7 @@ func parseNumber(l *syntax.Lexer) (syntax.Token, error) {
 	}
 
 end:
-	if util.ContainsInt(state, endStates) {
+	if syntax.ContainsInt(state, endStates) {
 		return syntax.Token{
 			Type:     TypeNumber,
 			Literal: literal,
@@ -557,7 +556,7 @@ func parseIdentifier(l *syntax.Lexer) (syntax.Token, error) {
 		// 3. when next char is a start of comment, stop here
 		// only 「//」 and 「/*」 type is available
 		// NOTE: we will regard comment type「注」 as a regular identifier
-		if ch == Slash && util.Contains(l.Peek(), []rune{Slash, MultiplyMark, Equal}) {
+		if ch == Slash && syntax.ContainsRune(l.Peek(), []rune{Slash, MultiplyMark, Equal}) {
 			return syntax.Token{
 				Type: TypeIdentifier,
 				StartIdx: startIdx,
@@ -566,7 +565,7 @@ func parseIdentifier(l *syntax.Lexer) (syntax.Token, error) {
 			}, nil
 		}
 		// 4. when next char is a mark, stop here
-		if util.Contains(ch, terminators) {
+		if syntax.ContainsRune(ch, terminators) {
 			return syntax.Token{
 				Type: TypeIdentifier,
 				StartIdx: startIdx,
@@ -576,7 +575,7 @@ func parseIdentifier(l *syntax.Lexer) (syntax.Token, error) {
 		}
 		// 5. otherwise, if it's an identifier with +, -, *, /, .
 		// add char to literal
-		if isIdentifierChar(ch) || util.Contains(ch, []rune{PlusMark, MinusMark, MultiplyMark, Slash, '.'}) {
+		if isIdentifierChar(ch) || syntax.ContainsRune(ch, []rune{PlusMark, MinusMark, MultiplyMark, Slash, '.'}) {
 			literal = append(literal, ch)
 			continue
 		}
@@ -735,7 +734,7 @@ func isPureNumber(ch rune) bool {
 }
 
 func isNumber(ch rune) bool {
-	return (ch >= '0' && ch <= '9') || util.Contains(ch, []rune{'.', '-', '+'})
+	return (ch >= '0' && ch <= '9') || syntax.ContainsRune(ch, []rune{'.', '-', '+'})
 }
 
 // @params: ch - input char

@@ -29,3 +29,23 @@ func NewParser(lexer *Lexer, builder TokenBuilder) *Parser {
 func (p *Parser) Parse() (*AST, error) {
 	return nil, nil
 }
+
+func (p *Parser) next() Token {
+	tk, err := p.NextToken(p.Lexer)
+	if err != nil {
+		panic(err)
+	}
+
+	p.TokenP1 = p.TokenP2
+	p.TokenP2 = tk
+
+	return p.TokenP1
+}
+
+func (p *Parser) current() Token {
+	return p.TokenP1
+}
+
+func (p *Parser) peek() Token {
+	return p.TokenP2
+}
