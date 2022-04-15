@@ -3,9 +3,7 @@ package syntax
 type runePair [2]rune
 // idRange - define exact ID_Continue range
 var idRange = []runePair{
-	{0x24, 0x25},
-	{0x2a, 0x2b},
-	{0x2d, 0x2e},
+	{0x24, 0x25}, // $, %
 	{0x30, 0x39},
 	{0x41, 0x5a},
 	{0x5e, 0x5f},
@@ -447,11 +445,11 @@ var idRange = []runePair{
 	{0xffda, 0xffdc},
 }
 
-// idInRange - check if char in idRange table
+// IdInRange - check if char in idRange table
 // i.e. there exists an index j, that idRange[j][0] <= char <= idRange[j][1]
 // NOTE: using binary search to boost search performance.
 // e.g. for a 440 item array, we need at most 11 loops to get the result.
-func idInRange(num rune) bool {
+func IdInRange(num rune) bool {
 	if num > 0xffff || num < 0 {
 		return false
 	}

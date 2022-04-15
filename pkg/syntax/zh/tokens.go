@@ -60,6 +60,11 @@ const (
 	commentTypeQuoteII = 4 // multiple line, starts with '注：“'
 )
 
+//// 4. var quote
+const (
+	MiddleDot rune = 0x00B7 // ·
+)
+
 //// token constants and constructors (without keyword token)
 // token types -
 // for special type Tokens, its range varies from 0 - 9
@@ -181,6 +186,8 @@ func (tb *TokenBuilderZH) NextToken(l *syntax.Lexer) (syntax.Token, error) {
 		}
 	case LeftLibQuoteI, LeftDoubleQuoteI, LeftDoubleQuoteII, LeftSingleQuoteI, LeftSingleQuoteII:
 		return parseString(l)
+	case MiddleDot:
+		return parseVarQuote(l)
 	}
 
 	// other token types
@@ -200,7 +207,7 @@ func (tb *TokenBuilderZH) NextToken(l *syntax.Lexer) (syntax.Token, error) {
 		return tk, nil
 	}
 
-	return syntax.Token{}, nil
+	return parseIdentifier(l)
 }
 
 // regex: ^[-+]?[0-9]*\.?[0-9]+((([eE][-+])|(\*(10)?\^[-+]?))[0-9]+)?$
@@ -403,6 +410,34 @@ func parseMarkers(l *syntax.Lexer) (syntax.Token, error) {
 	}, nil
 }
 
+// parse · <identifier> ·
+func parseVarQuote(l *syntax.Lexer) (syntax.Token, error) {
+	startIdx := l.GetCursor()
+	var literal []rune
+	for {
+		ch := l.Next()
+		switch ch {
+		case syntax.RuneEOF:
+			return syntax.Token{
+				Type: TypeIdentifier,
+				StartIdx: startIdx,
+				EndIdx: l.GetCursor(),
+				Literal: literal,
+			}, nil
+		case MiddleDot:
+			l.Next()
+			return syntax.Token{
+				Type: TypeIdentifier,
+				StartIdx: startIdx,
+				EndIdx: l.GetCursor(),
+				Literal: literal,
+			}, nil
+		default:
+			literal = append(literal, ch)
+		}
+	}
+}
+
 // 4 types of string:
 // 1. 「 ... 」 or “ ... ”
 // 2. 『 ... 』 or ‘ ... ‘
@@ -476,6 +511,79 @@ func parseString(l *syntax.Lexer) (syntax.Token, error) {
 		}
 	}
 }
+
+// parseIdentifier -
+func parseIdentifier(l *syntax.Lexer) (syntax.Token, error) {
+	ch := l.GetCurrentChar()
+	startIdx := l.GetCursor()
+
+	literal := []rune{ch}
+
+	terminators := append([]rune{
+		syntax.RuneEOF, syntax.RuneCR, syntax.RuneLF,
+		LeftLibQuoteI, LeftSingleQuoteI, LeftSingleQuoteII,
+		LeftDoubleQuoteI, LeftDoubleQuoteII,
+	}, MarkLeads...)
+
+	// 0. first char must be an identifier
+	if !isIdentifierChar(ch) {
+		return syntax.Token{}, zerr.InvalidChar(ch)
+	}
+	for {
+		ch = l.Next()
+		// 1. when next char is space, stop here
+		if syntax.IsWhiteSpace(ch) {
+			return syntax.Token{
+				Type: TypeIdentifier,
+				StartIdx: startIdx,
+				EndIdx: l.GetCursor(),
+				Literal: literal,
+			}, nil
+		}
+
+		// 2. when next char is a part of keyword, stop here
+		isKeyword, _, err := parseKeyword(l, false)
+		if err != nil {
+			return syntax.Token{}, err
+		}
+		if isKeyword {
+			return syntax.Token{
+				Type: TypeIdentifier,
+				StartIdx: startIdx,
+				EndIdx: l.GetCursor(),
+				Literal: literal,
+			}, nil
+		}
+		// 3. when next char is a start of comment, stop here
+		// only 「//」 and 「/*」 type is available
+		// NOTE: we will regard comment type「注」 as a regular identifier
+		if ch == Slash && util.Contains(l.Peek(), []rune{Slash, MultiplyMark, Equal}) {
+			return syntax.Token{
+				Type: TypeIdentifier,
+				StartIdx: startIdx,
+				EndIdx: l.GetCursor(),
+				Literal: literal,
+			}, nil
+		}
+		// 4. when next char is a mark, stop here
+		if util.Contains(ch, terminators) {
+			return syntax.Token{
+				Type: TypeIdentifier,
+				StartIdx: startIdx,
+				EndIdx: l.GetCursor(),
+				Literal: literal,
+			}, nil
+		}
+		// 5. otherwise, if it's an identifier with +, -, *, /, .
+		// add char to literal
+		if isIdentifierChar(ch) || util.Contains(ch, []rune{PlusMark, MinusMark, MultiplyMark, Slash, '.'}) {
+			literal = append(literal, ch)
+			continue
+		}
+		return syntax.Token{}, zerr.InvalidChar(ch)
+	}
+}
+
 // validate if the coming block is a comment block then parse comment block
 // valid comment block are listed below:
 // (single-line)
@@ -628,4 +736,9 @@ func isPureNumber(ch rune) bool {
 
 func isNumber(ch rune) bool {
 	return (ch >= '0' && ch <= '9') || util.Contains(ch, []rune{'.', '-', '+'})
+}
+
+// @params: ch - input char
+func isIdentifierChar(ch rune) bool {
+	return syntax.IdInRange(ch)
 }
