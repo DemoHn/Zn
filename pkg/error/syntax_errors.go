@@ -4,9 +4,9 @@ import "fmt"
 
 // InvalidIndentType -
 func InvalidIndentType(expect uint8, got uint8) *Error {
-	findName := func(idetType uint8) string {
+	findName := func(indentType uint8) string {
 		name := "「空格」"
-		if idetType == uint8(9) { // TAB
+		if expect == uint8(9) { // TAB
 			name = "「TAB」"
 		}
 		return name
@@ -36,3 +36,37 @@ func InvalidChar(ch rune) *Error {
 		Extra:   ch,
 	}
 }
+
+const (
+	PeekCursorFlag uint8 = 9
+	CurrentCursorFlag uint8 = 8
+)
+
+//// syntax error
+// InvalidSyntax -
+func InvalidSyntax() *Error {
+	return &Error{
+		Code:    0x2250,
+		Message: "当前语法不符合规范，无法解析",
+		Extra:   PeekCursorFlag,
+	}
+}
+
+// InvalidSyntaxCurr -
+func InvalidSyntaxCurr() *Error {
+	return &Error{
+		Code:    0x2250,
+		Message: "当前语法不符合规范，无法解析",
+		Extra:   CurrentCursorFlag,
+	}
+}
+
+func UnexpectedIndent() *Error {
+	return &Error{
+		Code:    0x2251,
+		Message: "出现不符合预期的缩进，无法解析",
+		Extra:   PeekCursorFlag,
+	}
+}
+
+

@@ -5,9 +5,6 @@ import (
 	"github.com/DemoHn/Zn/pkg/syntax"
 )
 
-// TokenBuilderZH
-type TokenBuilderZH struct{}
-
 //// 1. markers
 // declare marks
 const (
@@ -114,7 +111,7 @@ var MarkLeads = []rune{
 }
 
 // NextToken -
-func (tb *TokenBuilderZH) NextToken(l *syntax.Lexer) (syntax.Token, error) {
+func NextToken(l *syntax.Lexer) (syntax.Token, error) {
 	// parse non-keyword tokens e.g.: Spaces, LineBreaks
 	if err := l.PreNextToken(); err != nil {
 		return syntax.Token{}, err

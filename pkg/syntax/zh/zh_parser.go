@@ -1,39 +1,40 @@
-package syntax
+package zh
 
 import (
-	"github.com/DemoHn/Zn/error"
-	"github.com/DemoHn/Zn/lex"
+	zerr "github.com/DemoHn/Zn/pkg/error"
+	"github.com/DemoHn/Zn/pkg/syntax"
 )
 
-// Parser - parse all nodes
-type Parser struct {
-	*lex.Lexer
-	tokens       [3]*lex.Token
+// ParserZH - parse all nodes
+type ParserZH struct {
+	*syntax.Lexer
+	// current token
+	TokenP1 *syntax.Token
+	// which line is startIdx located (P1)
+	StartLineIdxP1 int
+	// which line is endIdx located
+	EndLineIdxP1 int
+	// peek token
+	TokenP2 *syntax.Token
+	// which line is startIdx located (P2)
+	StartLineIdxP2 int
+	// which line is endIdx located
+	EndLineIdxP2 int
+	// line termination flag
 	lineTermFlag bool
 }
 
-// NewParser -
-func NewParser(l *lex.Lexer) *Parser {
-	return &Parser{
-		Lexer:        l,
+// NewParserZH -
+func NewParserZH() *ParserZH {
+	return &ParserZH{
 		lineTermFlag: false,
 	}
 }
 
 // Parse - parse all tokens into an AST (stored as ProgramNode)
-func (p *Parser) Parse() (block *BlockStmt, err *error.Error) {
-	defer func() {
-		var ok bool
-		if r := recover(); r != nil {
-			err, ok = r.(*error.Error)
-			// for other kinds of error (e.g. runtime error), panic it directly
-			if !ok {
-				panic(r)
-			}
-		}
-		handleDeferError(p, err)
-	}()
-
+func (p *ParserZH) ParseAST(l *syntax.Lexer) (ast *syntax.AST, err error) {
+	// set lexer
+	p.Lexer = l
 	// advance tokens TWICE
 	p.next()
 	p.next()
@@ -42,35 +43,37 @@ func (p *Parser) Parse() (block *BlockStmt, err *error.Error) {
 	// parse global block
 	block = ParseBlockStmt(p, peekIndent)
 	// ensure there's no remaining token after parsing global block
-	if p.peek().Type != lex.TypeEOF {
-		err = error.UnexpectedEOF()
+	if p.peek().Type != TypeEOF {
+		err = zerr.InvalidSyntaxCurr()
 	}
 	return
 }
 
-func (p *Parser) next() *lex.Token {
-	var tk *lex.Token
-	var err *error.Error
-
-	tk, err = p.NextToken()
+func (p *ParserZH) next() *syntax.Token {
+	tk, err := NextToken(p.Lexer)
 	if err != nil {
 		panic(err)
 	}
 
 	// move advanced token buffer
-	p.tokens[0] = p.tokens[1]
-	p.tokens[1] = p.tokens[2]
-	p.tokens[2] = tk
+	p.TokenP1 = p.TokenP2
+	p.TokenP2 = &tk
 
-	return p.tokens[0]
+	// get peek token's startLine and endLine
+	p.StartLineIdxP1 = p.StartLineIdxP2
+	p.EndLineIdxP1 = p.EndLineIdxP2
+	p.StartLineIdxP2 = p.findLineIdx(tk.StartIdx, p.StartLineIdxP2)
+	p.EndLineIdxP2 = p.findLineIdx(tk.EndIdx, p.EndLineIdxP2)
+
+	return p.TokenP1
 }
 
-func (p *Parser) current() *lex.Token {
-	return p.tokens[0]
+func (p *ParserZH) current() *syntax.Token {
+	return p.TokenP1
 }
 
-func (p *Parser) peek() *lex.Token {
-	return p.tokens[1]
+func (p *ParserZH) peek() *syntax.Token {
+	return p.TokenP2
 }
 
 // meetStmtLineBreak - if there's a statement line-break at the end of token.
@@ -83,7 +86,7 @@ func (p *Parser) peek() *lex.Token {
 //     名为「VSCODE」
 //
 // There's stmt line-break at the end of first line, thus the process of parsing IF-statement
-// should terminate due to lacking matched tokens, like an semicolon is inserted.
+// should terminate due to lacking matched tokens, similar to the behaviour that an semicolon is inserted.
 //
 // Theoretically, any type of token that located at the end of line
 //
@@ -91,7 +94,7 @@ func (p *Parser) peek() *lex.Token {
 //   or    $token.Range.EndLine < ($token+1).Range.StartLine,
 //
 // should meet StmtLineBreak, which means meetStmtLineBreak() = true. Still, there are some
-// exceptions listed as below:
+// exceptions listed below:
 //
 //   1.    the current token type is one of the following 6 punctuations:  ， 、  {  【  ：  ？
 //   or
@@ -120,22 +123,22 @@ func (p *Parser) peek() *lex.Token {
 // ·时·等于12 且{
 //     ·分·等于0 或 ·分·等于30
 // }等于真
-func (p *Parser) meetStmtLineBreak() bool {
+func (p *ParserZH) meetStmtLineBreak() bool {
 	current := p.current()
 	peek := p.peek()
 
-	exceptCurrentTokenTypes := []lex.TokenType{
-		lex.TypeCommaSep,
-		lex.TypePauseCommaSep,
-		lex.TypeStmtQuoteL,
-		lex.TypeArrayQuoteL,
-		lex.TypeFuncCall,
-		lex.TypeFuncDeclare,
+	exceptCurrentTokenTypes := []uint8{
+		TypeCommaSep,
+		TypePauseCommaSep,
+		TypeStmtQuoteL,
+		TypeArrayQuoteL,
+		TypeFuncCall,
+		TypeFuncDeclare,
 	}
 
-	exceptFollowingTokenTypes := []lex.TokenType{
-		lex.TypeArrayQuoteR,
-		lex.TypeStmtQuoteR,
+	exceptFollowingTokenTypes := []uint8{
+		TypeArrayQuoteR,
+		TypeStmtQuoteR,
 	}
 
 	if peek == nil || current == nil {
@@ -145,12 +148,12 @@ func (p *Parser) meetStmtLineBreak() bool {
 	// while parsing last token of the file, there must be a line break
 	// to terminate the statement -- no reason that the parsing progress
 	// be continued.
-	if current.Type == lex.TypeEOF || peek.Type == lex.TypeEOF {
+	if current.Type == TypeEOF || peek.Type == TypeEOF {
 		return true
 	}
 
 	// current token is at line end
-	if peek.Range.StartLine > current.Range.EndLine {
+	if p.StartLineIdxP2 > p.EndLineIdxP1 {
 		// exception rule 1
 		for _, currTk := range exceptCurrentTokenTypes {
 			if currTk == current.Type {
@@ -168,20 +171,20 @@ func (p *Parser) meetStmtLineBreak() bool {
 	return false
 }
 
-// meetStmtBreak - similiar to `meetStmtLineBreak`
-func (p *Parser) meetStmtBreak() bool {
+// meetStmtBreak - similar to `meetStmtLineBreak`
+func (p *ParserZH) meetStmtBreak() bool {
 	peek := p.peek()
-	if peek.Type == lex.TypeStmtSep || peek.Type == lex.TypeEOF {
+	if peek.Type == TypeStmtSep || peek.Type == TypeEOF {
 		return true
 	}
 	return false
 }
 
-func (p *Parser) resetLineTermFlag() {
+func (p *ParserZH) resetLineTermFlag() {
 	p.lineTermFlag = false
 }
 
-func (p *Parser) setLineTermFlag() {
+func (p *ParserZH) setLineTermFlag() {
 	p.lineTermFlag = true
 }
 
@@ -189,11 +192,11 @@ func (p *Parser) setLineTermFlag() {
 // will return its tokenType; if not, then nothing will happen.
 //
 // returns (matched, tokenType)
-func (p *Parser) tryConsume(validTypes ...lex.TokenType) (bool, *lex.Token) {
+func (p *ParserZH) tryConsume(validTypes ...uint8) (bool, *syntax.Token) {
 	tk := p.peek()
 	// if next token is comma, then ignore comma (only once!) and
 	// read next token
-	if tk.Type == lex.TypeCommaSep {
+	if tk.Type == TypeCommaSep {
 		p.next()
 		tk = p.peek()
 	}
@@ -214,22 +217,22 @@ func (p *Parser) tryConsume(validTypes ...lex.TokenType) (bool, *lex.Token) {
 
 // consume one token with denoted validTypes
 // if not, return syntaxError
-func (p *Parser) consume(validTypes ...lex.TokenType) {
+func (p *ParserZH) consume(validTypes ...uint8) {
 	match, _ := p.tryConsume(validTypes...)
 	if !match {
-		err := error.InvalidSyntax()
+		err := zerr.InvalidSyntax()
 		panic(err)
 	}
 }
 
 // expectBlockIndent - detect if the Indent(peek) == Indent(current) + 1
 // returns (validBlockIndent, newIndent)
-func (p *Parser) expectBlockIndent() (bool, int) {
-	var peekLine = p.peek().Range.StartLine
-	var currLine = p.current().Range.StartLine
+func (p *ParserZH) expectBlockIndent() (bool, int) {
+	var peekLine = p.StartLineIdxP2
+	var currLine = p.StartLineIdxP1
 
-	var peekIndent = p.GetLineIndent(peekLine)
-	var currIndent = p.GetLineIndent(currLine)
+	var peekIndent = p.getLineInfo(peekLine).Indents
+	var currIndent = p.getLineInfo(currLine).Indents
 
 	if peekIndent == currIndent+1 {
 		return true, peekIndent
@@ -238,40 +241,27 @@ func (p *Parser) expectBlockIndent() (bool, int) {
 }
 
 // getPeekIndent -
-func (p *Parser) getPeekIndent() int {
-	var peekLine = p.peek().Range.StartLine
+func (p *ParserZH) getPeekIndent() int {
+	var peekLine = p.StartLineIdxP2
 
-	return p.GetLineIndent(peekLine)
+	return p.getLineInfo(peekLine).Indents
 }
 
-//// helper functions
-
-// similar to lexer's version, but with given line & col
-func moveAndSetCursor(p *Parser, tk *lex.Token, err *error.Error) {
-	line := tk.Range.StartLine
-	cursor := error.Cursor{
-		File:    p.Lexer.InputStream.GetFile(),
-		ColNum:  p.GetLineColumn(line, tk.Range.StartIdx),
-		LineNum: tk.Range.StartLine,
-		Text:    p.GetLineText(line, true),
-	}
-
-	err.SetCursor(cursor)
-}
-
-func handleDeferError(p *Parser, err *error.Error) {
-	var tk *lex.Token
-
-	if err != nil && err.GetErrorClass() == error.SyntaxErrorClass {
-		if cursorType, ok := err.GetInfo()["cursor"]; ok {
-			if cursorType == "peek" {
-				tk = p.peek()
-			} else if cursorType == "current" {
-				tk = p.current()
-			}
-			if tk != nil {
-				moveAndSetCursor(p, tk, err)
-			}
+// find which line the given `cursor` is located
+func (p *ParserZH) findLineIdx(cursor int, startLoopIdx int) int {
+	i := startLoopIdx
+	for i < len(p.Lines) {
+		if cursor < p.Lines[i].StartIdx {
+			return i - 1
 		}
+		i += 1
 	}
+	return i - 1
+}
+
+func (p *ParserZH) getLineInfo(idx int) *syntax.LineInfo {
+	if idx < len(p.Lines) {
+		return &p.Lines[idx]
+	}
+	return nil
 }
