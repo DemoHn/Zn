@@ -211,11 +211,10 @@ func assertParseTokens(cases []nextTokenCase, t *testing.T) {
 }
 
 func parseTokens(source []rune) ([]syntax.Token, []syntax.LineInfo, error) {
-	b := TokenBuilderZH{}
 	l := syntax.NewLexer(source)
 	var tks []syntax.Token
 	for {
-		tk, err := b.NextToken(l)
+		tk, err := NextToken(l)
 		if err != nil {
 			return tks, l.Lines, err
 		}

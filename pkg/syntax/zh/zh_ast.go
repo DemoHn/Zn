@@ -9,7 +9,7 @@ type consumerFunc func()
 
 //////// Parse Methods
 
-//// NOTE: the following methods are all using panic -> recover for error management.
+//// NOTE: the following methods are all using panic -> recover for zerr.management.
 //// This is to expect eliminating `err != nil` statements.
 
 // ParseStatement - a program consists of statements
@@ -201,7 +201,7 @@ func parseExpressionLv3(p *ParserZH, cfg syntax.EqMarkConfig) syntax.Expression 
 		TypeEqualMark:   syntax.LogicEQ,
 	}
 
-	// '=' represents for 等于
+	// '==' represents for 等于
 	if cfg.AsEqual {
 		validTypes = append(validTypes, TypeEqualMark)
 	}
@@ -228,7 +228,7 @@ func parseExpressionLv4(p *ParserZH, cfg syntax.EqMarkConfig) syntax.Expression 
 		TypeLogicYesW,
 	}
 	if cfg.AsVarAssign {
-		validTypes = append(validTypes, TypeEqualMark)
+		validTypes = append(validTypes, TypeAssignMark)
 	}
 
 	exprL := ParseMemberExpr(p)
@@ -241,7 +241,7 @@ func parseExpressionLv4(p *ParserZH, cfg syntax.EqMarkConfig) syntax.Expression 
 
 		vid, ok := exprL.(syntax.Assignable)
 		if !ok {
-			panic(error.ExprMustTypeID())
+			panic(zerr.ExprMustTypeID())
 		}
 		exprR := ParseMemberExpr(p)
 		finalExpr := &syntax.VarAssignExpr{
@@ -437,12 +437,12 @@ func ParseArrayExpr(p *ParserZH) syntax.UnionMapList {
 	var isArrayType = true
 	// #1. consume first syntax.Expression
 	exprI := ParseExpressionMAP(p)
-	if match, tk := p.tryConsume(TypeEqualMark, TypePauseCommaSep, TypeArrayQuoteR); match {
+	if match, tk := p.tryConsume(TypeAssignMark, TypePauseCommaSep, TypeArrayQuoteR); match {
 		switch tk.Type {
 		case TypeArrayQuoteR:
 			ar.Items = append(ar.Items, exprI)
 			return ar
-		case TypeEqualMark:
+		case TypeAssignMark:
 			isArrayType = false
 			// parse right expr
 			exprR := ParseExpressionMAP(p)
@@ -485,7 +485,7 @@ func ParseArrayExpr(p *ParserZH) syntax.UnionMapList {
 			}
 
 			exprL := ParseExpressionMAP(p)
-			p.consume(TypeEqualMark)
+			p.consume(TypeAssignMark)
 			exprR := ParseExpressionMAP(p)
 
 			hm.KVPair = append(hm.KVPair, syntax.HashMapKeyValuePair{
@@ -500,7 +500,7 @@ func ParseArrayExpr(p *ParserZH) syntax.UnionMapList {
 func tryParseEmptyMapList(p *ParserZH) (bool, syntax.UnionMapList) {
 	emptyTrialTypes := []uint8{
 		TypeArrayQuoteR, // for empty array
-		TypeEqualMark,   // for empty hashmap
+		TypeAssignMark,   // for empty hashmap
 	}
 
 	if match, tk := p.tryConsume(emptyTrialTypes...); match {
@@ -509,7 +509,7 @@ func tryParseEmptyMapList(p *ParserZH) (bool, syntax.UnionMapList) {
 			e := &syntax.ArrayExpr{Items: []syntax.Expression{}}
 			p.setStmtCurrentLine(e, tk)
 			return true, e
-		case TypeEqualMark:
+		case TypeAssignMark:
 			p.consume(TypeArrayQuoteR)
 			e := &syntax.HashMapExpr{KVPair: []syntax.HashMapKeyValuePair{}}
 			p.setStmtCurrentLine(e, tk)
@@ -637,7 +637,7 @@ func ParseVarDeclareStmt(p *ParserZH) *syntax.VarDeclareStmt {
 		}
 
 		parseItemListBlock(p, blockIndent, func() {
-			// there're at least ONE vdAssignPair on each line!
+			// there are at least ONE vdAssignPair on each line!
 			vNode.AssignPair = append(vNode.AssignPair, parseVDAssignPair(p))
 			for {
 				if p.meetStmtLineBreak() && p.lineTermFlag {
@@ -648,7 +648,7 @@ func ParseVarDeclareStmt(p *ParserZH) *syntax.VarDeclareStmt {
 		})
 	} else {
 		// #02. consume identifier declare list (comma list) inline
-		// there're at least ONE vdAssignPair on each line!
+		// there are at least ONE vdAssignPair on each line!
 		vNode.AssignPair = append(vNode.AssignPair, parseVDAssignPair(p))
 		for !p.meetStmtLineBreak() && !p.meetStmtBreak() {
 			vNode.AssignPair = append(vNode.AssignPair, parseVDAssignPair(p))
@@ -659,7 +659,7 @@ func ParseVarDeclareStmt(p *ParserZH) *syntax.VarDeclareStmt {
 }
 
 func parseVDAssignPair(p *ParserZH) syntax.VDAssignPair {
-	idfList := []*syntax.ID{}
+	var idfList []*syntax.ID
 
 	// #1. parse identifier
 	parsePauseCommaList(p, func() {
@@ -671,7 +671,7 @@ func parseVDAssignPair(p *ParserZH) syntax.VDAssignPair {
 	validKeywords := []uint8{
 		TypeLogicYesW,
 		TypeLogicYesIIW,
-		TypeEqualMark,
+		TypeAssignMark,
 		TypeAssignConstW,
 		TypeObjNewW,
 	}
@@ -681,7 +681,7 @@ func parseVDAssignPair(p *ParserZH) syntax.VDAssignPair {
 	}
 
 	switch tk.Type {
-	case TypeLogicYesW, TypeLogicYesIIW, TypeEqualMark:
+	case TypeLogicYesW, TypeLogicYesIIW, TypeAssignMark:
 		refMark := false
 		if match, _ := p.tryConsume(TypeObjRef); match {
 			refMark = true
@@ -854,7 +854,7 @@ func ParseBranchStmt(p *ParserZH, mainIndent int) *syntax.BranchStmt {
 		// #3. parse block statements
 		ok, blockIndent := p.expectBlockIndent()
 		if !ok {
-			panic(error.UnexpectedIndent())
+			panic(zerr.UnexpectedIndent())
 		}
 		condBlock = ParseBlockStmt(p, blockIndent)
 
@@ -907,7 +907,7 @@ func ParseFunctionDeclareStmt(p *ParserZH) *syntax.FunctionDeclareStmt {
 	// #3. parse block manually
 	ok, blockIndent := p.expectBlockIndent()
 	if !ok {
-		panic(error.UnexpectedIndent())
+		panic(zerr.UnexpectedIndent())
 	}
 	// #3.1 parse param def list
 	parseItemListBlock(p, blockIndent, func() {
@@ -957,7 +957,7 @@ func ParseGetterDeclareStmt(p *ParserZH) *syntax.GetterDeclareStmt {
 	// #3. parse block manually
 	ok, blockIndent := p.expectBlockIndent()
 	if !ok {
-		panic(error.UnexpectedIndent())
+		panic(zerr.UnexpectedIndent())
 	}
 	// #3.1 parse param def list
 	parseItemListBlock(p, blockIndent, func() {
@@ -988,7 +988,7 @@ func ParseVarOneLeadStmt(p *ParserZH) syntax.Statement {
 			if idX, ok := exprI.(*syntax.ID); ok {
 				return parseIteratorStmtRest(p, []*syntax.ID{idX})
 			}
-			panic(error.InvalidExprType("id"))
+			panic(zerr.InvalidSyntax())
 		case TypeFuncQuoteL:
 			result := &syntax.MemberMethodExpr{
 				Root:        exprI,
@@ -1032,7 +1032,7 @@ func ParseVarOneLeadStmt(p *ParserZH) syntax.Statement {
 		if okX && okY {
 			return parseIteratorStmtRest(p, []*syntax.ID{idX, idY})
 		}
-		panic(error.InvalidExprType("id"))
+		panic(zerr.InvalidSyntax())
 	}
 	panic(zerr.InvalidSyntax())
 }
@@ -1090,16 +1090,14 @@ func ParseFunctionReturnStmt(p *ParserZH) *syntax.FunctionReturnStmt {
 //             ->
 func ParseImportStmt(p *ParserZH) *syntax.ImportStmt {
 	stmt := &syntax.ImportStmt{
-		ImportLibType: LibTypeStd, // 目前只支持标准库的导入
+		ImportLibType: syntax.LibTypeStd, // 目前只支持标准库的导入
 	}
-	match, tk := p.tryConsume(TypeString)
+	match, tk := p.tryConsume(TypeLibString)
 	if !match {
 		panic(zerr.InvalidSyntaxCurr())
 	}
 	// currently, string must be starts with '《' (LeftQuoteI)
-	if tk.Literal[0] != LeftQuoteI {
-		panic(zerr.InvalidSyntaxCurr())
-	}
+
 	stmt.ImportName = newString(p, tk)
 
 	match2, _ := p.tryConsume(TypeObjDotW, TypeObjDotIIW)
@@ -1216,7 +1214,7 @@ func parsePropertyDeclareStmt(p *ParserZH) *syntax.PropertyDeclareStmt {
 	// #1. parse ID
 	idItem := parseFuncID(p)
 	// consume 为 or 是 or =
-	p.consume(TypeLogicYesW, TypeLogicYesIIW, TypeEqualMark)
+	p.consume(TypeLogicYesW, TypeLogicYesIIW, TypeAssignMark)
 
 	// #2. parse expr
 	initExpr := ParseExpression(p)
@@ -1288,7 +1286,7 @@ func newNumber(p *ParserZH, tk *syntax.Token) *syntax.Number {
 func newString(p *ParserZH, tk *syntax.Token) *syntax.String {
 	str := new(syntax.String)
 	// remove first char and last char (that are left & right quotes)
-	str.SetLiteral(tk.Literal[1 : len(tk.Literal)-1])
+	str.SetLiteral(tk.Literal)
 	p.setStmtCurrentLine(str, tk)
 	return str
 }

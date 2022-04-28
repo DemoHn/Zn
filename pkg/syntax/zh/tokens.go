@@ -674,6 +674,8 @@ func parseComment(l *syntax.Lexer) (bool, syntax.Token, error) {
 				if err := l.ParseCRLF(ch); err != nil {
 					return true, syntax.Token{}, err
 				}
+				// cursor prev 1
+				l.Prev()
 			case LeftDoubleQuoteI:
 				if multiCommentType == commentTypeQuoteI {
 					quoteCount += 1

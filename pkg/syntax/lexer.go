@@ -76,7 +76,14 @@ func NewLexer(source []rune) *Lexer {
 
 // Next - return current rune, and move forward the cursor for 1 character.
 func (l *Lexer) Next() rune {
-	l.cursor++
+	l.cursor += 1
+
+	// still no data, return EOF directly
+	return l.getChar(l.cursor)
+}
+
+func (l *Lexer) Prev() rune {
+	l.cursor -= 1
 
 	// still no data, return EOF directly
 	return l.getChar(l.cursor)

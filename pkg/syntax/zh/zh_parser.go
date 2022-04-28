@@ -32,16 +32,20 @@ func NewParserZH() *ParserZH {
 }
 
 // Parse - parse all tokens into an AST (stored as ProgramNode)
-func (p *ParserZH) ParseAST(l *syntax.Lexer) (ast *syntax.BlockStmt, err error) {
+func (p *ParserZH) ParseAST(l *syntax.Lexer) (pg *syntax.Program, err error) {
 	// set lexer
 	p.Lexer = l
-	// advance tokens TWICE
-	p.next()
+	// advance tokens ONCE
 	p.next()
 
 	peekIndent := p.getPeekIndent()
 	// parse global block
-	ast = ParseBlockStmt(p, peekIndent)
+	block := ParseBlockStmt(p, peekIndent)
+	pg = &syntax.Program{
+		Lexer:    l,
+		Content:  block,
+	}
+
 	// ensure there's no remaining token after parsing global block
 	if p.peek().Type != TypeEOF {
 		err = zerr.InvalidSyntaxCurr()

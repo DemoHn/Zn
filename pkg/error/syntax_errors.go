@@ -69,4 +69,31 @@ func UnexpectedIndent() *Error {
 	}
 }
 
+// IncompleteStmt -
+func IncompleteStmt() *Error {
+	return &Error{
+		Code: 0x2252,
+		Message: "不完整的语句",
+		Extra: PeekCursorFlag,
+	}
+}
+
+// IncompleteStmtCurr - return IncompleteStmt error, and denote
+// its cursor to p.current() instead of p.peek() by default.
+func IncompleteStmtCurr() *Error {
+	return &Error{
+		Code: 0x2252,
+		Message: "不完整的语句",
+		Extra: CurrentCursorFlag,
+	}
+}
+
+// ExprMustTypeID -
+func ExprMustTypeID() *Error {
+	return &Error{
+		Code: 0x2253,
+		Message: "表达式须为「标识符」",
+		Extra: PeekCursorFlag,
+	}
+}
 
