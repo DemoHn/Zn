@@ -7,13 +7,11 @@ package syntax
 // Node -
 type Node interface{}
 
-type consumerFunc func()
-
 // Statement -
 type Statement interface {
 	Node
 	GetCurrentLine() int
-	SetCurrentLine(tk *Token)
+	SetCurrentLine(line int)
 }
 
 // StmtBase - Statement Base
@@ -250,11 +248,11 @@ type ArrayExpr struct {
 // HashMapExpr - hashMap expression
 type HashMapExpr struct {
 	ExprBase
-	KVPair []hashMapKeyValuePair
+	KVPair []HashMapKeyValuePair
 }
 
-// hashMapKeyValuePair -
-type hashMapKeyValuePair struct {
+// HashMapKeyValuePair -
+type HashMapKeyValuePair struct {
 	Key   Expression
 	Value Expression
 }

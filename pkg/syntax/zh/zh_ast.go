@@ -5,10 +5,12 @@ import (
 	"github.com/DemoHn/Zn/pkg/syntax"
 )
 
+type consumerFunc func()
+
 //////// Parse Methods
 
 //// NOTE: the following methods are all using panic -> recover for error management.
-//// This is to expect elimilating `err != nil` statements.
+//// This is to expect eliminating `err != nil` statements.
 
 // ParseStatement - a program consists of statements
 //
@@ -65,7 +67,7 @@ func ParseStatement(p *ParserZH) syntax.Statement {
 		case TypeImportW:
 			s = ParseImportStmt(p)
 		}
-		s.SetCurrentLine(tk)
+		p.setStmtCurrentLine(s, tk)
 		return s
 	}
 	// other case, parse syntax.syntax.Expression
@@ -112,7 +114,7 @@ func ParseExpression(p *ParserZH) syntax.Expression {
 	return parseExpressionLv1(p, cfg)
 }
 
-// ParseExpressionEQ - similiar to ParseExpression, but '=' represents for '等于'
+// ParseExpressionEQ - similar to ParseExpression, but '=' represents for '等于'
 func ParseExpressionEQ(p *ParserZH) syntax.Expression {
 	cfg := syntax.EqMarkConfig{
 		AsEqual: true,
@@ -136,11 +138,11 @@ func parseExpressionLv1(p *ParserZH, cfg syntax.EqMarkConfig) syntax.Expression 
 		if match, tk := p.tryConsume(TypeLogicOrW); match {
 			exprR := parseExpressionLv2(p, cfg)
 			finalExpr := &syntax.LogicExpr{
-				Type:      LogicOR,
+				Type:      syntax.LogicOR,
 				LeftExpr:  el,
 				RightExpr: exprR,
 			}
-			finalExpr.SetCurrentLine(tk)
+			p.setStmtCurrentLine(finalExpr, tk)
 			return parseTail(finalExpr)
 		}
 		return el
@@ -158,11 +160,11 @@ func parseExpressionLv2(p *ParserZH, cfg syntax.EqMarkConfig) syntax.Expression 
 		if match, tk := p.tryConsume(TypeLogicAndW); match {
 			exprR := parseExpressionLv3(p, cfg)
 			finalExpr := &syntax.LogicExpr{
-				Type:      LogicAND,
+				Type:      syntax.LogicAND,
 				LeftExpr:  el,
 				RightExpr: exprR,
 			}
-			finalExpr.SetCurrentLine(tk)
+			p.setStmtCurrentLine(finalExpr, tk)
 			return parseTail(finalExpr)
 		}
 		return el
@@ -184,7 +186,7 @@ func parseExpressionLv3(p *ParserZH, cfg syntax.EqMarkConfig) syntax.Expression 
 		TypeLogicLteW, TypeLTEMark,
 	}
 
-	logicTypeMap := map[uint8]syntax.LogicTypeE{
+	logicTypeMap := map[uint8]uint8{
 		TypeLogicEqualW: syntax.LogicEQ,
 		TypeLogicNotEqW: syntax.LogicNEQ,
 		TypeNEMark:      syntax.LogicNEQ,
@@ -213,7 +215,7 @@ func parseExpressionLv3(p *ParserZH, cfg syntax.EqMarkConfig) syntax.Expression 
 			RightExpr: exprR,
 		}
 
-		finalExpr.SetCurrentLine(tk)
+		p.setStmtCurrentLine(finalExpr, tk)
 		return finalExpr
 	}
 	return exprL
@@ -248,7 +250,7 @@ func parseExpressionLv4(p *ParserZH, cfg syntax.EqMarkConfig) syntax.Expression 
 			AssignExpr: exprR,
 		}
 
-		finalExpr.SetCurrentLine(tk)
+		p.setStmtCurrentLine(finalExpr, tk)
 		return finalExpr
 	}
 	return exprL
@@ -276,11 +278,11 @@ func parseExpressionLv4(p *ParserZH, cfg syntax.EqMarkConfig) syntax.Expression 
 //        -> Number (as string)
 func ParseMemberExpr(p *ParserZH) syntax.Expression {
 	// internal functions
-	var calleeTailParser func(bool, rootTypeE, syntax.Expression) *syntax.MemberExpr
+	var calleeTailParser func(bool, uint8, syntax.Expression) *syntax.MemberExpr
 	var memberTailParser func(syntax.Expression) syntax.Expression
 
 	// specially parsing items after 之 or 其
-	calleeTailParser = func(hasRoot bool, rootType rootTypeE, expr syntax.Expression) *syntax.MemberExpr {
+	calleeTailParser = func(hasRoot bool, rootType uint8, expr syntax.Expression) *syntax.MemberExpr {
 		memberExpr := &syntax.MemberExpr{
 			Root:     nil,
 			RootType: rootType,
@@ -290,9 +292,9 @@ func ParseMemberExpr(p *ParserZH) syntax.Expression {
 		}
 
 		if match, tk := p.tryConsume(TypeIdentifier, TypeNumber); match {
-			id := newID(tk)
-			id.SetCurrentLine(tk)
-			memberExpr.MemberType = MemberID
+			id := newID(p, tk)
+			p.setStmtCurrentLine(id, tk)
+			memberExpr.MemberType = syntax.MemberID
 			memberExpr.MemberID = id
 
 			return memberExpr
@@ -303,25 +305,25 @@ func ParseMemberExpr(p *ParserZH) syntax.Expression {
 	memberTailParser = func(expr syntax.Expression) syntax.Expression {
 		mExpr := &syntax.MemberExpr{}
 		// default rootType is RootTypeExpr
-		mExpr.RootType = RootTypeExpr
+		mExpr.RootType = syntax.RootTypeExpr
 
 		match, tk := p.tryConsume(TypeMapHash, TypeObjDotW, TypeObjDotIIW)
 		if !match {
 			return expr
 		}
-		mExpr.SetCurrentLine(tk)
+		p.setStmtCurrentLine(mExpr, tk)
 		mExpr.Root = expr
 		switch tk.Type {
 		case TypeMapHash:
 			match2, tk2 := p.tryConsume(TypeNumber, TypeString, TypeStmtQuoteL)
 			if match2 {
 				// set memberType
-				mExpr.MemberType = MemberIndex
+				mExpr.MemberType = syntax.MemberIndex
 				switch tk2.Type {
 				case TypeNumber:
-					mExpr.MemberIndex = newNumber(tk2)
+					mExpr.MemberIndex = newNumber(p, tk2)
 				case TypeString:
-					mExpr.MemberIndex = newString(tk2)
+					mExpr.MemberIndex = newString(p, tk2)
 				case TypeStmtQuoteL:
 					mExpr.MemberIndex = ParseExpression(p)
 
@@ -381,11 +383,11 @@ func ParseBasicExpr(p *ParserZH) syntax.Expression {
 		var e syntax.Expression
 		switch tk.Type {
 		case TypeIdentifier:
-			e = newID(tk)
+			e = newID(p, tk)
 		case TypeNumber:
-			e = newNumber(tk)
+			e = newNumber(p, tk)
 		case TypeString:
-			e = newString(tk)
+			e = newString(p, tk)
 		case TypeArrayQuoteL:
 			e = ParseArrayExpr(p)
 		case TypeStmtQuoteL:
@@ -396,7 +398,7 @@ func ParseBasicExpr(p *ParserZH) syntax.Expression {
 		case TypeVarOneW:
 			e = ParseMemberFuncCallExpr(p)
 		}
-		e.SetCurrentLine(tk)
+		p.setStmtCurrentLine(e, tk)
 		return e
 	}
 	panic(zerr.InvalidSyntax())
@@ -429,7 +431,7 @@ func ParseArrayExpr(p *ParserZH) syntax.UnionMapList {
 		Items: []syntax.Expression{},
 	}
 	var hm = &syntax.HashMapExpr{
-		KVPair: []hashMapKeyValuePair{},
+		KVPair: []syntax.HashMapKeyValuePair{},
 	}
 
 	var isArrayType = true
@@ -445,7 +447,7 @@ func ParseArrayExpr(p *ParserZH) syntax.UnionMapList {
 			// parse right expr
 			exprR := ParseExpressionMAP(p)
 
-			hm.KVPair = append(hm.KVPair, hashMapKeyValuePair{
+			hm.KVPair = append(hm.KVPair, syntax.HashMapKeyValuePair{
 				Key:   exprI,
 				Value: exprR,
 			})
@@ -486,7 +488,7 @@ func ParseArrayExpr(p *ParserZH) syntax.UnionMapList {
 			p.consume(TypeEqualMark)
 			exprR := ParseExpressionMAP(p)
 
-			hm.KVPair = append(hm.KVPair, hashMapKeyValuePair{
+			hm.KVPair = append(hm.KVPair, syntax.HashMapKeyValuePair{
 				Key:   exprL,
 				Value: exprR,
 			})
@@ -504,13 +506,13 @@ func tryParseEmptyMapList(p *ParserZH) (bool, syntax.UnionMapList) {
 	if match, tk := p.tryConsume(emptyTrialTypes...); match {
 		switch tk.Type {
 		case TypeArrayQuoteR:
-			e := &syntax.rrayExpr{Items: []syntax.Expression{}}
-			e.SetCurrentLine(tk)
+			e := &syntax.ArrayExpr{Items: []syntax.Expression{}}
+			p.setStmtCurrentLine(e, tk)
 			return true, e
 		case TypeEqualMark:
 			p.consume(TypeArrayQuoteR)
-			e := &syntax.HashMapExpr{KVPair: []hashMapKeyValuePair{}}
-			e.SetCurrentLine(tk)
+			e := &syntax.HashMapExpr{KVPair: []syntax.HashMapKeyValuePair{}}
+			p.setStmtCurrentLine(e, tk)
 			return true, e
 		}
 	}
@@ -541,7 +543,7 @@ func ParseFuncCallExpr(p *ParserZH, parseYieldResult bool) *syntax.FuncCallExpr 
 	// #2. parse colon (maybe there's no params)
 	match, _ := p.tryConsume(TypeFuncCall)
 	if match {
-		// #2.1 parse pcomma list
+		// #2.1 parse comma list
 		parsePauseCommaList(p, func() {
 			expr := ParseExpression(p)
 			callExpr.Params = append(callExpr.Params, expr)
@@ -887,7 +889,7 @@ func ParseBranchStmt(p *ParserZH, mainIndent int) *syntax.BranchStmt {
 //
 func ParseFunctionDeclareStmt(p *ParserZH) *syntax.FunctionDeclareStmt {
 	var fdStmt = &syntax.FunctionDeclareStmt{
-		ParamList: []*ParamItem{},
+		ParamList: []*syntax.ParamItem{},
 	}
 	// by definition, when 已知 syntax.Statement exists, it should be at first line
 	// of function block
@@ -919,7 +921,7 @@ func ParseFunctionDeclareStmt(p *ParserZH) *syntax.FunctionDeclareStmt {
 						refMark = true
 					}
 					idItem := parseID(p)
-					fdStmt.ParamList = append(fdStmt.ParamList, &ParamItem{
+					fdStmt.ParamList = append(fdStmt.ParamList, &syntax.ParamItem{
 						RefMark: refMark,
 						ID:      idItem,
 					})
@@ -990,7 +992,7 @@ func ParseVarOneLeadStmt(p *ParserZH) syntax.Statement {
 		case TypeFuncQuoteL:
 			result := &syntax.MemberMethodExpr{
 				Root:        exprI,
-				MethodChain: []*FuncCallExpr{},
+				MethodChain: []*syntax.FuncCallExpr{},
 				YieldResult: nil,
 			}
 
@@ -1098,7 +1100,7 @@ func ParseImportStmt(p *ParserZH) *syntax.ImportStmt {
 	if tk.Literal[0] != LeftQuoteI {
 		panic(zerr.InvalidSyntaxCurr())
 	}
-	stmt.ImportName = newString(tk)
+	stmt.ImportName = newString(p, tk)
 
 	match2, _ := p.tryConsume(TypeObjDotW, TypeObjDotIIW)
 	if !match2 {
@@ -1189,8 +1191,8 @@ func ParseClassDeclareStmt(p *ParserZH) *syntax.ClassDeclareStmt {
 // parseConstructor -
 // CFG:
 // Constructor  -> 是为 ID1、ID2 ...
-func parseConstructor(p *ParserZH) []*ParamItem {
-	var paramList = []*ParamItem{}
+func parseConstructor(p *ParserZH) []*syntax.ParamItem {
+	var paramList []*syntax.ParamItem
 	parsePauseCommaList(p, func() {
 		refMark := false
 		if match, _ := p.tryConsume(TypeObjRef); match {
@@ -1198,7 +1200,7 @@ func parseConstructor(p *ParserZH) []*ParamItem {
 		}
 
 		idItem := parseID(p)
-		paramList = append(paramList, &ParamItem{
+		paramList = append(paramList, &syntax.ParamItem{
 			ID:      idItem,
 			RefMark: refMark,
 		})
@@ -1231,7 +1233,7 @@ func parseID(p *ParserZH) *syntax.ID {
 	if !match {
 		panic(zerr.InvalidSyntaxCurr())
 	}
-	return newID(tk)
+	return newID(p, tk)
 }
 
 // parseFuncID - allow parsing number (as string)
@@ -1240,7 +1242,7 @@ func parseFuncID(p *ParserZH) *syntax.ID {
 	if !match {
 		panic(zerr.InvalidSyntaxCurr())
 	}
-	return newID(tk)
+	return newID(p, tk)
 }
 
 // parsePauseCommaList - 使用顿号来分隔
@@ -1269,41 +1271,24 @@ func parseItemListBlock(p *ParserZH, blockIndent int, consumer func()) {
 	}
 }
 
-func newID(tk *syntax.Token) *syntax.ID {
+func newID(p *ParserZH, tk *syntax.Token) *syntax.ID {
 	id := new(syntax.ID)
 	id.SetLiteral(tk.Literal)
-	id.SetCurrentLine(tk)
+	p.setStmtCurrentLine(id, tk)
 	return id
 }
 
-func newNumber(tk *syntax.Token) *Number {
+func newNumber(p *ParserZH, tk *syntax.Token) *syntax.Number {
 	num := new(syntax.Number)
 	num.SetLiteral(tk.Literal)
-	num.SetCurrentLine(tk)
+	p.setStmtCurrentLine(num, tk)
 	return num
 }
 
-func newString(tk *syntax.Token) *String {
+func newString(p *ParserZH, tk *syntax.Token) *syntax.String {
 	str := new(syntax.String)
 	// remove first char and last char (that are left & right quotes)
 	str.SetLiteral(tk.Literal[1 : len(tk.Literal)-1])
-	str.SetCurrentLine(tk)
+	p.setStmtCurrentLine(str, tk)
 	return str
-}
-
-// public helpers
-
-// NewIDNode -
-func NewIDNode(tk *syntax.Token) *syntax.ID {
-	return newID(tk)
-}
-
-// NewNumberNode -
-func NewNumberNode(tk *syntax.Token) *syntax.Number {
-	return newNumber(tk)
-}
-
-// NewStringNode -
-func NewStringNode(tk *syntax.Token) *syntax.String {
-	return newString(tk)
 }

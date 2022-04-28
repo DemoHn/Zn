@@ -32,7 +32,7 @@ func NewParserZH() *ParserZH {
 }
 
 // Parse - parse all tokens into an AST (stored as ProgramNode)
-func (p *ParserZH) ParseAST(l *syntax.Lexer) (ast *syntax.AST, err error) {
+func (p *ParserZH) ParseAST(l *syntax.Lexer) (ast *syntax.BlockStmt, err error) {
 	// set lexer
 	p.Lexer = l
 	// advance tokens TWICE
@@ -41,7 +41,7 @@ func (p *ParserZH) ParseAST(l *syntax.Lexer) (ast *syntax.AST, err error) {
 
 	peekIndent := p.getPeekIndent()
 	// parse global block
-	block = ParseBlockStmt(p, peekIndent)
+	ast = ParseBlockStmt(p, peekIndent)
 	// ensure there's no remaining token after parsing global block
 	if p.peek().Type != TypeEOF {
 		err = zerr.InvalidSyntaxCurr()
@@ -264,4 +264,12 @@ func (p *ParserZH) getLineInfo(idx int) *syntax.LineInfo {
 		return &p.Lines[idx]
 	}
 	return nil
+}
+
+// equals to s.SetCurrentLine(<line of tk>)
+func (p *ParserZH) setStmtCurrentLine(s syntax.Statement, tk *syntax.Token) {
+	if tk != nil {
+		idx := p.findLineIdx(tk.StartIdx, 0)
+		s.SetCurrentLine(idx)
+	}
 }

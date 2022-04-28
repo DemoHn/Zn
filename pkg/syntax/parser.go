@@ -6,14 +6,10 @@ type Parser struct {
 	ASTBuilder
 }
 
-type AST struct {
-	Children []int
-}
-
 // ASTBuilder - build AST from tokens. Its logic varies from different languages.
 // Currently, only Chinese ASTBuilder is supported
 type ASTBuilder interface {
-	ParseAST(lexer *Lexer) (*AST, error)
+	ParseAST(lexer *Lexer) (*BlockStmt, error)
 }
 
 // NewParser - create a new parser from source
@@ -26,7 +22,7 @@ func NewParser(lexer *Lexer, astBuilder ASTBuilder) *Parser {
 
 // Parser - parse all tokens into syntax tree
 // TODO: in the future we'll parse it into bytecodes directly, instead.
-func (p *Parser) Parse() (ast *AST, err error) {
+func (p *Parser) Parse() (ast *BlockStmt, err error) {
 	// handle panics
 	defer func() {
 		var ok bool
