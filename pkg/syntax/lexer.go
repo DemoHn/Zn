@@ -82,13 +82,6 @@ func (l *Lexer) Next() rune {
 	return l.getChar(l.cursor)
 }
 
-func (l *Lexer) Prev() rune {
-	l.cursor -= 1
-
-	// still no data, return EOF directly
-	return l.getChar(l.cursor)
-}
-
 // Peek - get the character of the cursor
 func (l *Lexer) Peek() rune {
 	return l.getChar(l.cursor + 1)

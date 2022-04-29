@@ -669,13 +669,14 @@ func parseComment(l *syntax.Lexer) (bool, syntax.Token, error) {
 						EndIdx: l.GetCursor(),
 					}, nil
 				}
-
-				// multi line - parse CRLF, but still in comment block
-				if err := l.ParseCRLF(ch); err != nil {
-					return true, syntax.Token{}, err
+				p := l.Peek()
+				if (ch == syntax.RuneCR && p == syntax.RuneLF) || (ch == syntax.RuneLF && p == syntax.RuneCR) {
+					l.Next()
 				}
-				// cursor prev 1
-				l.Prev()
+				l.Lines = append(l.Lines, syntax.LineInfo{
+					Indents:  0,
+					StartIdx: l.GetCursor() + 1,
+				})
 			case LeftDoubleQuoteI:
 				if multiCommentType == commentTypeQuoteI {
 					quoteCount += 1
