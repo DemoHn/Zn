@@ -125,7 +125,7 @@ func (e *Error) Display() string {
 	if e.onMask(dpHideErrClass) {
 		line4 = e.text
 	} else {
-		errClassText := fmt.Sprintf("‹%04X› %s", e.code, errClassMap[e.code>>8])
+		errClassText := fmt.Sprintf("<%04X> %s", e.code, errClassMap[e.code>>8])
 		line4 = fmt.Sprintf("%s：%s", errClassText, e.text)
 	}
 
