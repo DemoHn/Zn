@@ -7,5 +7,8 @@ type Context struct {
 
 // NewContext -
 func NewContext() *Context {
-	return &Context{}
+	return &Context{
+		rootModule: nil,
+		scopeCursor: nil,
+	}
 }

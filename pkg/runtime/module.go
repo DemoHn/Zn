@@ -15,3 +15,27 @@ type Module struct {
 	lexer *syntax.Lexer
 }
 
+// NewModule - create module with specific name
+func NewModule(name string, l *syntax.Lexer) *Module {
+	return &Module{
+		name: &name,
+		symbols: map[string]SymbolInfo{},
+		imports: []Module{},
+		rootScope: NewScope(),
+		lexer: l,
+	}
+}
+
+// NewAnonymousModule - create module but no module name
+func NewAnonymousModule(l *syntax.Lexer) *Module {
+	return &Module{
+		name: nil,
+		symbols: map[string]SymbolInfo{},
+		imports: []Module{},
+		rootScope: NewScope(),
+		lexer: l,
+	}
+}
+
+
+
