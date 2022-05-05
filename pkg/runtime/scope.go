@@ -8,11 +8,11 @@ type Scope struct {
 	parent *Scope
 	// child - child Scope
 	child *Scope
-	// symbolMap - symbolMap
+	// symbolMap - stores current scope stored symbols
 	symbolMap map[string]SymbolInfo
 	// thisValue - "this" variable of the scope
 	thisValue Value
-	// returnValue of current scopes
+	// returnValue - return value of scope
 	returnValue Value
 }
 
@@ -33,7 +33,6 @@ func NewScope() *Scope {
 		returnValue: nil,
 	}
 }
-
 
 // CreateChildScope -
 func (sp *Scope) CreateChildScope() *Scope {
