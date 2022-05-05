@@ -143,12 +143,8 @@ func DuplicateValue(in r.Value) r.Value {
 		return NewBool(v.value)
 	case *String:
 		return NewString(v.value)
-	case *Decimal:
-		x := new(big.Int)
-		return &Decimal{
-			co:  x.Set(v.co),
-			exp: v.exp,
-		}
+	case *Number:
+		return NewNumber(v.value)
 	case *Null:
 		return in // no need to copy since all "NULL" values are same
 	case *Array:
@@ -177,7 +173,7 @@ func StringifyValue(value r.Value) string {
 	switch v := value.(type) {
 	case *String:
 		return fmt.Sprintf("「%s」", v.value)
-	case *Decimal:
+	case *Number:
 		return v.String()
 	case *Array:
 		strs := []string{}

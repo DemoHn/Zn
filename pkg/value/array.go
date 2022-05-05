@@ -4,7 +4,7 @@ import (
 	zerr "github.com/DemoHn/Zn/pkg/error"
 	r "github.com/DemoHn/Zn/pkg/runtime"
 )
-
+// TODO: add methods
 // Array - represents for Zn's 数组型
 type Array struct {
 	value []r.Value
@@ -27,7 +27,6 @@ func (ar *Array) AppendValue(value r.Value) {
 
 // GetProperty -
 func (ar *Array) GetProperty(c *r.Context, name string) (r.Value, error) {
-	TODO
 	return nil, zerr.PropertyNotFound(name)
 }
 

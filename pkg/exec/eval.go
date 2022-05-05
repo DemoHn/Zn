@@ -4,9 +4,9 @@ import (
 	"fmt"
 
 	"github.com/DemoHn/Zn/exec/stdlib"
-	"github.com/DemoHn/Zn/exec/val"
 	r "github.com/DemoHn/Zn/pkg/runtime"
 	"github.com/DemoHn/Zn/pkg/syntax"
+	"github.com/DemoHn/Zn/pkg/value"
 )
 
 const errCodeMethodNotFound = 0x2505
@@ -24,7 +24,7 @@ const errCodeMethodNotFound = 0x2505
 // `evalXXXXStmt` will change the value of its corresponding scope; However, `evalXXXXExpr` will export
 // a r.Value object and mostly won't change scopes (but search a variable from scope is frequently used)
 
-// val.DuplicateValue - deepcopy values' structure, including bool, string, decimal, array, hashmap
+// value.DuplicateValue - deepcopy values' structure, including bool, string, decimal, array, hashmap
 // for function or object or null, pass the original reference instead.
 // This is due to the 'copycat by default' policy
 
@@ -47,7 +47,7 @@ func evalStatement(c *r.Context, stmt syntax.Statement) error {
 
 	// set return value
 	defer func() {
-		var finalReturnValue r.Value = val.NewNull()
+		var finalReturnValue r.Value = value.NewNull()
 		// set current return value
 		if returnValue != nil {
 			finalReturnValue = returnValue
@@ -121,7 +121,7 @@ func evalVarDeclareStmt(c *r.Context, node *syntax.VarDeclareStmt) error {
 			for _, v := range vpair.Variables {
 				vtag := v.GetLiteral()
 				if !vpair.RefMark {
-					obj = val.DuplicateValue(obj)
+					obj = value.DuplicateValue(obj)
 				}
 
 				if err := c.BindSymbolDecl(vtag, obj, isConst); err != nil {
@@ -146,7 +146,7 @@ func evalNewObject(c *r.Context, node syntax.VDAssignPair) error {
 	if err != nil {
 		return err
 	}
-	classRef, ok := importVal.(*val.ClassRef)
+	classRef, ok := importVal.(*value.ClassRef)
 	if !ok {
 		return error.InvalidParamType("classRef")
 	}
@@ -177,7 +177,7 @@ func evalWhileLoopStmt(c *r.Context, node *syntax.WhileLoopStmt) error {
 	currentScope := c.GetScope()
 	// create new scope
 	newScope := currentScope.CreateChildScope()
-	newScope.SetThisValue(val.NewLoopCtl())
+	newScope.SetThisValue(value.NewLoopCtl())
 	// set context's current scope with new one
 	c.SetScope(newScope)
 	// after finish executing this block, revert scope to old one
@@ -190,7 +190,7 @@ func evalWhileLoopStmt(c *r.Context, node *syntax.WhileLoopStmt) error {
 			return err
 		}
 		// #2. assert trueExpr to be Bool
-		vTrueExpr, ok := trueExpr.(*val.Bool)
+		vTrueExpr, ok := trueExpr.(*value.Bool)
 		if !ok {
 			return error.InvalidExprType("bool")
 		}
@@ -289,7 +289,7 @@ func evalBranchStmt(c *r.Context, node *syntax.BranchStmt) error {
 	if err != nil {
 		return err
 	}
-	vIfExpr, ok := ifExpr.(*val.Bool)
+	vIfExpr, ok := ifExpr.(*value.Bool)
 	if !ok {
 		return error.InvalidExprType("bool")
 	}
@@ -304,7 +304,7 @@ func evalBranchStmt(c *r.Context, node *syntax.BranchStmt) error {
 		if err != nil {
 			return err
 		}
-		vOtherExprI, ok := otherExprI.(*val.Bool)
+		vOtherExprI, ok := otherExprI.(*value.Bool)
 		if !ok {
 			return error.InvalidExprType("bool")
 		}
@@ -323,7 +323,7 @@ func evalBranchStmt(c *r.Context, node *syntax.BranchStmt) error {
 func evalIterateStmt(c *r.Context, node *syntax.IterateStmt) error {
 	currentScope := c.GetScope()
 	newScope := currentScope.CreateChildScope()
-	newScope.SetThisValue(val.NewLoopCtl())
+	newScope.SetThisValue(value.NewLoopCtl())
 	// set new scope (and revert to old when done)
 	c.SetScope(newScope)
 	defer c.SetScope(currentScope)
@@ -362,16 +362,16 @@ func evalIterateStmt(c *r.Context, node *syntax.IterateStmt) error {
 	// of course since there's no any iteration is executed yet, the initial values are all "Null"
 	if nameLen == 1 {
 		valueSlot = node.IndexNames[0].Literal
-		if err := c.BindSymbol(valueSlot, val.NewNull()); err != nil {
+		if err := c.BindSymbol(valueSlot, value.NewNull()); err != nil {
 			return err
 		}
 	} else if nameLen == 2 {
 		keySlot = node.IndexNames[0].Literal
 		valueSlot = node.IndexNames[1].Literal
-		if err := c.BindSymbol(keySlot, val.NewNull()); err != nil {
+		if err := c.BindSymbol(keySlot, value.NewNull()); err != nil {
 			return err
 		}
-		if err := c.BindSymbol(valueSlot, val.NewNull()); err != nil {
+		if err := c.BindSymbol(valueSlot, value.NewNull()); err != nil {
 			return err
 		}
 	} else if nameLen > 2 {
@@ -380,9 +380,9 @@ func evalIterateStmt(c *r.Context, node *syntax.IterateStmt) error {
 
 	// execute iterations
 	switch tv := targetExpr.(type) {
-	case *val.Array:
+	case *value.Array:
 		for idx, v := range tv.GetValue() {
-			idxVar := val.NewDecimalFromInt(idx, 0)
+			idxVar := value.NewDecimalFromInt(idx, 0)
 			if err := execIterationBlockFn(idxVar, v); err != nil {
 				if err.GetCode() == error.ContinueBreakSignal {
 					// continue next turn
@@ -395,10 +395,10 @@ func evalIterateStmt(c *r.Context, node *syntax.IterateStmt) error {
 				return err
 			}
 		}
-	case *val.HashMap:
+	case *value.HashMap:
 		for _, key := range tv.GetKeyOrder() {
 			v := tv.GetValue()[key]
-			keyVar := val.NewString(key)
+			keyVar := value.NewString(key)
 			// handle interrupts
 			if err := execIterationBlockFn(keyVar, v); err != nil {
 				if err.GetCode() == error.ContinueBreakSignal {
@@ -449,7 +449,7 @@ func evalExpression(c *r.Context, expr syntax.Expression) (r.Value, error) {
 
 // （显示：A、B、C），得到D
 func evalFunctionCall(c *r.Context, expr *syntax.FuncCallExpr) (r.Value, error) {
-	var zf *val.ClosureRef
+	var zf *value.ClosureRef
 	vtag := expr.FuncName.GetLiteral()
 
 	// for a function call, if thisValue NOT FOUND, that means the target closure is a FUNCTION
@@ -493,7 +493,7 @@ func evalFunctionCall(c *r.Context, expr *syntax.FuncCallExpr) (r.Value, error) 
 			return nil, err
 		}
 		// assert value
-		zval, ok := v.(*val.Function)
+		zval, ok := v.(*value.Function)
 		if !ok {
 			return nil, error.InvalidFuncVariable(vtag)
 		}
@@ -556,7 +556,7 @@ func evalMemberMethodExpr(c *r.Context, expr *syntax.MemberMethodExpr) (r.Value,
 // evaluate logic combination expressions
 // such as A 且 B
 // or A 或 B
-func evalLogicCombiner(c *r.Context, expr *syntax.LogicExpr) (*val.Bool, error) {
+func evalLogicCombiner(c *r.Context, expr *syntax.LogicExpr) (*value.Bool, error) {
 	logicType := expr.Type
 	// #1. eval left
 	left, err := evalExpression(c, expr.LeftExpr)
@@ -564,7 +564,7 @@ func evalLogicCombiner(c *r.Context, expr *syntax.LogicExpr) (*val.Bool, error) 
 		return nil, err
 	}
 	// #2. assert left expr type to be ZnBool
-	vleft, ok := left.(*val.Bool)
+	vleft, ok := left.(*value.Bool)
 	if !ok {
 		return nil, error.InvalidExprType("bool")
 	}
@@ -575,32 +575,32 @@ func evalLogicCombiner(c *r.Context, expr *syntax.LogicExpr) (*val.Bool, error) 
 	//
 	// for those cases, we can yield result directly
 	if logicType == syntax.LogicAND && !vleft.GetValue() {
-		return val.NewBool(false), nil
+		return value.NewBool(false), nil
 	}
 	if logicType == syntax.LogicOR && vleft.GetValue() {
-		return val.NewBool(true), nil
+		return value.NewBool(true), nil
 	}
 	// #4. eval right
 	right, err := evalExpression(c, expr.RightExpr)
 	if err != nil {
 		return nil, err
 	}
-	vright, ok := right.(*val.Bool)
+	vright, ok := right.(*value.Bool)
 	if !ok {
 		return nil, error.InvalidExprType("bool")
 	}
 	// then evalute data
 	switch logicType {
 	case syntax.LogicAND:
-		return val.NewBool(vleft.GetValue() && vright.GetValue()), nil
+		return value.NewBool(vleft.GetValue() && vright.GetValue()), nil
 	default: // logicOR
-		return val.NewBool(vleft.GetValue() || vright.GetValue()), nil
+		return value.NewBool(vleft.GetValue() || vright.GetValue()), nil
 	}
 }
 
 // evaluate logic comparator
 // ensure both expressions are comparable (i.e. subtype of ZnComparable)
-func evalLogicComparator(c *r.Context, expr *syntax.LogicExpr) (*val.Bool, error) {
+func evalLogicComparator(c *r.Context, expr *syntax.LogicExpr) (*value.Bool, error) {
 	logicType := expr.Type
 	// #1. eval left
 	left, err := evalExpression(c, expr.LeftExpr)
@@ -618,44 +618,44 @@ func evalLogicComparator(c *r.Context, expr *syntax.LogicExpr) (*val.Bool, error
 	// #3. do comparison
 	switch logicType {
 	case syntax.LogicEQ:
-		cmpRes, cmpErr = val.CompareValues(left, right, val.CmpEq)
+		cmpRes, cmpErr = value.CompareValues(left, right, value.CmpEq)
 	case syntax.LogicNEQ:
-		cmpRes, cmpErr = val.CompareValues(left, right, val.CmpEq)
+		cmpRes, cmpErr = value.CompareValues(left, right, value.CmpEq)
 		cmpRes = !cmpRes // reverse result
 	case syntax.LogicGT:
-		cmpRes, cmpErr = val.CompareValues(left, right, val.CmpGt)
+		cmpRes, cmpErr = value.CompareValues(left, right, value.CmpGt)
 	case syntax.LogicGTE:
 		var cmp1, cmp2 bool
-		cmp1, cmpErr = val.CompareValues(left, right, val.CmpGt)
+		cmp1, cmpErr = value.CompareValues(left, right, value.CmpGt)
 		if cmpErr != nil {
 			return nil, cmpErr
 		}
-		cmp2, cmpErr = val.CompareValues(left, right, val.CmpEq)
+		cmp2, cmpErr = value.CompareValues(left, right, value.CmpEq)
 		cmpRes = cmp1 || cmp2
 	case syntax.LogicLT:
-		cmpRes, cmpErr = val.CompareValues(left, right, val.CmpLt)
+		cmpRes, cmpErr = value.CompareValues(left, right, value.CmpLt)
 	case syntax.LogicLTE:
 		var cmp1, cmp2 bool
-		cmp1, cmpErr = val.CompareValues(left, right, val.CmpLt)
+		cmp1, cmpErr = value.CompareValues(left, right, value.CmpLt)
 		if cmpErr != nil {
 			return nil, cmpErr
 		}
-		cmp2, cmpErr = val.CompareValues(left, right, val.CmpEq)
+		cmp2, cmpErr = value.CompareValues(left, right, value.CmpEq)
 		cmpRes = cmp1 || cmp2
 	default:
 		return nil, error.UnExpectedCase("比较类型", fmt.Sprintf("%d", logicType))
 	}
 
-	return val.NewBool(cmpRes), cmpErr
+	return value.NewBool(cmpRes), cmpErr
 }
 
 // eval prime expr
 func evalPrimeExpr(c *r.Context, expr syntax.Expression) (r.Value, error) {
 	switch e := expr.(type) {
 	case *syntax.Number:
-		return val.NewDecimal(e.GetLiteral())
+		return value.NewDecimal(e.GetLiteral())
 	case *syntax.String:
-		return val.NewString(e.GetLiteral()), nil
+		return value.NewString(e.GetLiteral()), nil
 	case *syntax.ID:
 		vtag := e.GetLiteral()
 		return c.FindSymbol(vtag)
@@ -669,9 +669,9 @@ func evalPrimeExpr(c *r.Context, expr syntax.Expression) (r.Value, error) {
 			znObjs = append(znObjs, expr)
 		}
 
-		return val.NewArray(znObjs), nil
+		return value.NewArray(znObjs), nil
 	case *syntax.HashMapExpr:
-		znPairs := []val.KVPair{}
+		var znPairs []value.KVPair
 		for _, item := range e.KVPair {
 			// the key of KVPair MUST BE one of the following types
 			//   - Number (its literal as key)
@@ -699,12 +699,12 @@ func evalPrimeExpr(c *r.Context, expr syntax.Expression) (r.Value, error) {
 			if err != nil {
 				return nil, err
 			}
-			znPairs = append(znPairs, val.KVPair{
+			znPairs = append(znPairs, value.KVPair{
 				Key:   exprKey,
 				Value: exprVal,
 			})
 		}
-		return val.NewHashMap(znPairs), nil
+		return value.NewHashMap(znPairs), nil
 	default:
 		return nil, error.UnExpectedCase("表达式类型", fmt.Sprintf("%T", e))
 	}
@@ -719,7 +719,7 @@ func evalVarAssignExpr(c *r.Context, expr *syntax.VarAssignExpr) (r.Value, error
 	}
 	// if var assignment is NOT by reference, then duplicate value
 	if !expr.RefMark {
-		vr = val.DuplicateValue(vr)
+		vr = value.DuplicateValue(vr)
 	}
 
 	// Left Side
@@ -743,14 +743,14 @@ func evalVarAssignExpr(c *r.Context, expr *syntax.VarAssignExpr) (r.Value, error
 	}
 }
 
-func getMemberExprIV(c *r.Context, expr *syntax.MemberExpr) (*val.IV, error) {
+func getMemberExprIV(c *r.Context, expr *syntax.MemberExpr) (*value.IV, error) {
 	switch expr.RootType {
 	case syntax.RootTypeProp: // 其 XX
 		thisValue, err := c.FindThisValue()
 		if err != nil {
 			return nil, err
 		}
-		return val.NewMemberIV(thisValue, expr.MemberID.GetLiteral()), nil
+		return value.NewMemberIV(thisValue, expr.MemberID.GetLiteral()), nil
 	case syntax.RootTypeExpr: // A 之 B
 		valRoot, err := evalExpression(c, expr.Root)
 		if err != nil {
@@ -758,15 +758,15 @@ func getMemberExprIV(c *r.Context, expr *syntax.MemberExpr) (*val.IV, error) {
 		}
 		switch expr.MemberType {
 		case syntax.MemberID: // A 之 B
-			return val.NewMemberIV(valRoot, expr.MemberID.GetLiteral()), nil
+			return value.NewMemberIV(valRoot, expr.MemberID.GetLiteral()), nil
 		case syntax.MemberIndex: // A # 0
 			idx, err := evalExpression(c, expr.MemberIndex)
 			if err != nil {
 				return nil, err
 			}
 			switch v := valRoot.(type) {
-			case *val.Array:
-				vr, ok := idx.(*val.Decimal)
+			case *value.Array:
+				vr, ok := idx.(*value.Number)
 				if !ok {
 					return nil, error.InvalidExprType("integer")
 				}
@@ -774,24 +774,24 @@ func getMemberExprIV(c *r.Context, expr *syntax.MemberExpr) (*val.IV, error) {
 				if e != nil {
 					return nil, error.InvalidExprType("integer")
 				}
-				return val.NewArrayIV(v, vri), nil
-			case *val.HashMap:
+				return value.NewArrayIV(v, vri), nil
+			case *value.HashMap:
 				var s string
 				switch x := idx.(type) {
 				// regard decimal value directly as string
-				case *val.Decimal:
+				case *value.Decimal:
 					// transform decimal value to string
 					// x.exp < 0 express that its a decimal value with point mark, not an integer
 					if x.GetExp() < 0 {
 						return nil, error.InvalidExprType("integer", "string")
 					}
 					s = x.String()
-				case *val.String:
+				case *value.String:
 					s = x.String()
 				default:
 					return nil, error.InvalidExprType("integer", "string")
 				}
-				return val.NewHashMapIV(v, s), nil
+				return value.NewHashMapIV(v, s), nil
 			}
 			return nil, error.InvalidExprType("array", "hashmap")
 		}
@@ -817,7 +817,7 @@ func exprsToValues(c *r.Context, exprs []syntax.Expression) ([]r.Value, error) {
 
 // BuildClosureFromNode - create a closure (with default param handler logic)
 // from Zn code (*syntax.BlockStmt). It's the constructor of 如何XX or (anoymous function in the future)
-func BuildClosureFromNode(paramTags []*syntax.ParamItem, stmtBlock *syntax.BlockStmt) val.ClosureRef {
+func BuildClosureFromNode(paramTags []*syntax.ParamItem, stmtBlock *syntax.BlockStmt) value.ClosureRef {
 	var executor = func(c *r.Context, params []r.Value) (r.Value, error) {
 		// iterate block round I - function hoisting
 		// NOTE: function hoisting means bind function definitions at the beginning
@@ -860,7 +860,7 @@ func BuildClosureFromNode(paramTags []*syntax.ParamItem, stmtBlock *syntax.Block
 			// if param is NOT a reference type, then we need additionally
 			// copy its value
 			if !param.RefMark {
-				paramVal = val.DuplicateValue(paramVal)
+				paramVal = value.DuplicateValue(paramVal)
 			}
 			paramName := param.ID.GetLiteral()
 			if err := c.BindSymbol(paramName, paramVal); err != nil {
@@ -870,22 +870,22 @@ func BuildClosureFromNode(paramTags []*syntax.ParamItem, stmtBlock *syntax.Block
 		return nil, nil
 	}
 
-	return val.NewClosure(paramHandler, executor)
+	return value.NewClosure(paramHandler, executor)
 }
 
 // BuildClassFromNode -
-func BuildClassFromNode(name string, classNode *syntax.ClassDeclareStmt) val.ClassRef {
-	ref := val.ClassRef{
+func BuildClassFromNode(name string, classNode *syntax.ClassDeclareStmt) value.ClassRef {
+	ref := value.ClassRef{
 		Name:         name,
 		Constructor:  nil,
 		PropList:     []string{},
-		CompPropList: map[string]val.ClosureRef{},
-		MethodList:   map[string]val.ClosureRef{},
+		CompPropList: map[string]value.ClosureRef{},
+		MethodList:   map[string]value.ClosureRef{},
 	}
 
 	// define default constrcutor
 	var constructor = func(c *r.Context, params []r.Value) (r.Value, error) {
-		obj := val.NewObject(ref)
+		obj := value.NewObject(ref)
 		propMap := obj.GetPropList()
 		// init prop list
 		for _, propPair := range classNode.PropertyList {
@@ -906,7 +906,7 @@ func BuildClassFromNode(name string, classNode *syntax.ClassDeclareStmt) val.Cla
 			param := classNode.ConstructorIDList[idx]
 			// if param is NOT a reference, then we need to copy its value
 			if !param.RefMark {
-				objParamVal = val.DuplicateValue(objParamVal)
+				objParamVal = value.DuplicateValue(objParamVal)
 			}
 			paramName := param.ID.GetLiteral()
 			propMap[paramName] = objParamVal
@@ -933,7 +933,7 @@ func BuildClassFromNode(name string, classNode *syntax.ClassDeclareStmt) val.Cla
 }
 
 // BuildFunctionFromNode -
-func BuildFunctionFromNode(node *syntax.FunctionDeclareStmt) *val.Function {
+func BuildFunctionFromNode(node *syntax.FunctionDeclareStmt) *value.Function {
 	closureRef := BuildClosureFromNode(node.ParamList, node.ExecBlock)
-	return val.NewFunctionFromClosure(closureRef)
+	return value.NewFunctionFromClosure(closureRef)
 }
