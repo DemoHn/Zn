@@ -4,6 +4,8 @@ import (
 	"fmt"
 	zerr "github.com/DemoHn/Zn/pkg/error"
 	r "github.com/DemoHn/Zn/pkg/runtime"
+	"strconv"
+	"strings"
 )
 
 type Number struct {
@@ -13,6 +15,18 @@ type Number struct {
 // NewNumber - create new number object (plain float64)
 func NewNumber(value float64) *Number {
 	return &Number{value}
+}
+
+func NewNumberFromString(value string) (*Number, error) {
+	v := strings.ReplaceAll(value, ",", "")
+	v = strings.Replace(v, "*^", "", 1)
+	v = strings.Replace(v, "*10^", "", 1)
+
+	f, err := strconv.ParseFloat(v, 64)
+	if err != nil {
+		return nil, err
+	}
+	return NewNumber(f), nil
 }
 
 // String -

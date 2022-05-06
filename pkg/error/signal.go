@@ -2,7 +2,6 @@ package error
 
 import (
 	"fmt"
-	r "github.com/DemoHn/Zn/pkg/runtime"
 )
 
 const (
@@ -27,7 +26,7 @@ func (s *Signal) Error() string {
 }
 
 // return XXX
-func NewReturnSignal(val r.Value) *Signal {
+func NewReturnSignal(val interface{}) *Signal {
 	return &Signal{SigTypeReturn, val}
 }
 

@@ -3,7 +3,6 @@ package exec
 import (
 	"fmt"
 
-	"github.com/DemoHn/Zn/exec/stdlib"
 	zerr "github.com/DemoHn/Zn/pkg/error"
 	r "github.com/DemoHn/Zn/pkg/runtime"
 	"github.com/DemoHn/Zn/pkg/syntax"
@@ -43,8 +42,6 @@ func evalProgram(c *r.Context, program *syntax.Program) error {
 func evalStatement(c *r.Context, stmt syntax.Statement) error {
 	var returnValue r.Value
 	var sp = c.GetScope()
-	// set currentLine
-	c.GetFileInfo().SetCurrentLine(stmt.GetCurrentLine())
 
 	// set return value
 	defer func() {
@@ -236,6 +233,7 @@ func evalPreStmtBlock(c *r.Context, block *syntax.BlockStmt) (*syntax.BlockStmt,
 			}
 		case *syntax.ImportStmt:
 			// TODO: support non-stdlib imports
+			/**
 			libName := v.ImportName.GetLiteral()
 			libData, ok := stdlib.PackageList[libName]
 			if !ok {
@@ -261,6 +259,7 @@ func evalPreStmtBlock(c *r.Context, block *syntax.BlockStmt) (*syntax.BlockStmt,
 					c.SetImportValue(itemName, libItem)
 				}
 			}
+			 */
 		default:
 			otherStmts.Children = append(otherStmts.Children, stmtI)
 		}
@@ -421,8 +420,6 @@ func evalIterateStmt(c *r.Context, node *syntax.IterateStmt) error {
 
 //// execute expressions
 func evalExpression(c *r.Context, expr syntax.Expression) (r.Value, error) {
-	c.GetFileInfo().SetCurrentLine(expr.GetCurrentLine())
-
 	switch e := expr.(type) {
 	case *syntax.VarAssignExpr:
 		return evalVarAssignExpr(c, e)
@@ -658,14 +655,14 @@ func evalLogicComparator(c *r.Context, expr *syntax.LogicExpr) (*value.Bool, err
 func evalPrimeExpr(c *r.Context, expr syntax.Expression) (r.Value, error) {
 	switch e := expr.(type) {
 	case *syntax.Number:
-		return value.NewDecimal(e.GetLiteral())
+		return value.NewNumberFromString(e.GetLiteral())
 	case *syntax.String:
 		return value.NewString(e.GetLiteral()), nil
 	case *syntax.ID:
 		vtag := e.GetLiteral()
 		return c.FindSymbol(vtag)
 	case *syntax.ArrayExpr:
-		znObjs := []r.Value{}
+		var znObjs []r.Value
 		for _, item := range e.Items {
 			expr, err := evalExpression(c, item)
 			if err != nil {
@@ -776,9 +773,6 @@ func getMemberExprIV(c *r.Context, expr *syntax.MemberExpr) (*value.IV, error) {
 					return nil, zerr.InvalidExprType("integer")
 				}
 				vri := int(vr.GetValue())
-				if e != nil {
-					return nil, zerr.InvalidExprType("integer")
-				}
 				return value.NewArrayIV(v, vri), nil
 			case *value.HashMap:
 				var s string

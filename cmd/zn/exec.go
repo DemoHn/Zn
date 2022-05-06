@@ -2,13 +2,13 @@ package zn
 
 import (
 	"fmt"
-	"io"
+	"github.com/DemoHn/Zn/pkg/io"
+	r "github.com/DemoHn/Zn/pkg/runtime"
+	"github.com/DemoHn/Zn/pkg/value"
+	eio "io"
 	"os"
 
-	"github.com/DemoHn/Zn/exec"
-	"github.com/DemoHn/Zn/exec/ctx"
-	"github.com/DemoHn/Zn/exec/val"
-	"github.com/DemoHn/Zn/lex"
+	"github.com/DemoHn/Zn/pkg/exec"
 	"github.com/peterh/liner"
 )
 
@@ -18,7 +18,8 @@ const version = "rev04"
 func EnterREPL() {
 	linerR := liner.NewLiner()
 	linerR.SetCtrlCAborts(true)
-	c := ctx.NewContext(exec.GlobalValues)
+	c := r.NewContext(exec.GlobalValues)
+
 
 	// REPL loop
 	for {
@@ -44,13 +45,13 @@ func EnterREPL() {
 		}
 
 		// execute program
-		in := lex.NewTextStream(text)
+		in := io.NewByteStream([]byte(text))
 		result, err2 := exec.ExecuteCode(c, in)
 		if err2 != nil {
-			fmt.Println(err2.Display())
+			fmt.Println(err2.Error())
 		} else {
 			if result != nil {
-				prettyDisplayValue(result, os.Stdout)
+				//prettyDisplayValue(result, os.Stdout)
 			}
 		}
 	}
@@ -58,17 +59,17 @@ func EnterREPL() {
 
 // ExecProgram - exec program from file directly
 func ExecProgram(file string) {
-	c := ctx.NewContext(exec.GlobalValues)
-	in, errF := lex.NewFileStream(file)
+	c := r.NewContext(exec.GlobalValues)
+	in, errF := io.NewFileStream(file)
 	if errF != nil {
-		fmt.Println(errF.Display())
+		fmt.Println(errF.Error())
 		return
 	}
 
 	_, err := exec.ExecuteCode(c, in)
 	// when exec program, unlike REPL, it's not necessary to print last executed value
 	if err != nil {
-		fmt.Println(err.Display())
+		fmt.Println(err.Error())
 	}
 }
 
@@ -78,20 +79,20 @@ func ShowVersion() {
 }
 
 //// display helpers
-func prettyDisplayValue(v ctx.Value, w io.Writer) {
+func prettyDisplayValue(v r.Value, w eio.Writer) {
 	var displayData = ""
-	var valStr = val.StringifyValue(v)
+	var valStr = value.StringifyValue(v)
 	switch v.(type) {
-	case *val.Decimal:
+	case *value.Number:
 		// FG color: Cyan (lightblue)
 		displayData = fmt.Sprintf("\x1b[38;5;147m%s\x1b[0m\n", valStr)
-	case *val.String:
+	case *value.String:
 		// FG color: Green
 		displayData = fmt.Sprintf("\x1b[38;5;184m%s\x1b[0m\n", valStr)
-	case *val.Bool:
+	case *value.Bool:
 		// FG color: White
 		displayData = fmt.Sprintf("\x1b[38;5;231m%s\x1b[0m\n", valStr)
-	case *val.Null, *val.Function:
+	case *value.Null, *value.Function:
 		displayData = fmt.Sprintf("‹\x1b[38;5;80m%s\x1b[0m›\n", valStr)
 	default:
 		displayData = fmt.Sprintf("%s\n", valStr)
@@ -101,7 +102,7 @@ func prettyDisplayValue(v ctx.Value, w io.Writer) {
 }
 
 // printSymbols -
-func printSymbols(c *ctx.Context) {
+func printSymbols(c *r.Context) {
 	/** TODO
 	strs := []string{}
 	for k, symArr := range ctx.GetSymbols() {

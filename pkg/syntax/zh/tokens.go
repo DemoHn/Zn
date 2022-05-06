@@ -261,7 +261,7 @@ func parseNumber(l *syntax.Lexer) (syntax.Token, error) {
 			default:
 				goto end
 			}
-		case '_':
+		case ',':
 			ch = l.Next()
 			continue
 		case '*':
