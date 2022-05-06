@@ -93,7 +93,7 @@ func (ar *Array) SetProperty(c *ctx.Context, name string, value ctx.Value) *erro
 func (ar *Array) ExecMethod(c *ctx.Context, name string, values []ctx.Value) (ctx.Value, *error.Error) {
 	switch name {
 	case "新增", "添加":
-		if err := ValidateExactParams(values, "any", "decimal"); err != nil {
+		if err := ValidateExactParams(values, "any", "number"); err != nil {
 			return nil, err
 		}
 		v := values[1].(*Decimal)

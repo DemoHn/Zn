@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/DemoHn/Zn/exec/stdlib"
+	zerr "github.com/DemoHn/Zn/pkg/error"
 	r "github.com/DemoHn/Zn/pkg/runtime"
 	"github.com/DemoHn/Zn/pkg/syntax"
 	"github.com/DemoHn/Zn/pkg/value"
@@ -75,7 +76,7 @@ func evalStatement(c *r.Context, stmt syntax.Statement) error {
 		return c.BindSymbol(v.FuncName.GetLiteral(), fn)
 	case *syntax.ClassDeclareStmt:
 		if sp.FindParentScope() != nil {
-			return error.NewErrorSLOT("只能在代码主层级定义类")
+			return zerr.NewErrorSLOT("只能在代码主层级定义类")
 		}
 		// bind classRef
 		className := v.ClassName.GetLiteral()
@@ -90,13 +91,13 @@ func evalStatement(c *r.Context, stmt syntax.Statement) error {
 			return err
 		}
 		// send RETURN break
-		return error.ReturnBreakError(val)
+		return zerr.NewReturnSignal(val)
 	case syntax.Expression:
 		expr, err := evalExpression(c, v)
 		returnValue = expr
 		return err
 	default:
-		return error.UnExpectedCase("语句类型", fmt.Sprintf("%T", v))
+		return zerr.UnExpectedCase("语句类型", fmt.Sprintf("%T", v))
 	}
 }
 
@@ -148,7 +149,7 @@ func evalNewObject(c *r.Context, node syntax.VDAssignPair) error {
 	}
 	classRef, ok := importVal.(*value.ClassRef)
 	if !ok {
-		return error.InvalidParamType("classRef")
+		return zerr.InvalidParamType("classRef")
 	}
 
 	cParams, err := exprsToValues(c, node.ObjParams)
@@ -192,7 +193,7 @@ func evalWhileLoopStmt(c *r.Context, node *syntax.WhileLoopStmt) error {
 		// #2. assert trueExpr to be Bool
 		vTrueExpr, ok := trueExpr.(*value.Bool)
 		if !ok {
-			return error.InvalidExprType("bool")
+			return zerr.InvalidExprType("bool")
 		}
 		// break the loop if expr yields not true
 		if !vTrueExpr.GetValue() {
@@ -200,13 +201,13 @@ func evalWhileLoopStmt(c *r.Context, node *syntax.WhileLoopStmt) error {
 		}
 		// #3. stmt block
 		if err := evalStmtBlock(c, node.LoopBlock); err != nil {
-			if err.GetCode() == error.ContinueBreakSignal {
-				// continue next turn
-				continue
-			}
-			if err.GetCode() == error.BreakBreakSignal {
-				// break directly
-				return nil
+			if s, ok := err.(*zerr.Signal); ok {
+				if s.SigType == zerr.SigTypeContinue {
+					continue
+				}
+				if s.SigType == zerr.SigTypeBreak {
+					return nil
+				}
 			}
 			return err
 		}
@@ -238,12 +239,12 @@ func evalPreStmtBlock(c *r.Context, block *syntax.BlockStmt) (*syntax.BlockStmt,
 			libName := v.ImportName.GetLiteral()
 			libData, ok := stdlib.PackageList[libName]
 			if !ok {
-				return nil, error.NewErrorSLOT("对应的类库不存在")
+				return nil, zerr.NewErrorSLOT("对应的类库不存在")
 			}
 
 			itemsList := []string{}
 			// if itemList is [] (e.g. 导入《 ... 》)
-			// then we import all itmes in this libaray
+			// then we import all items in this library
 			if len(v.ImportItems) == 0 {
 				for k := range libData {
 					itemsList = append(itemsList, k)
@@ -291,7 +292,7 @@ func evalBranchStmt(c *r.Context, node *syntax.BranchStmt) error {
 	}
 	vIfExpr, ok := ifExpr.(*value.Bool)
 	if !ok {
-		return error.InvalidExprType("bool")
+		return zerr.InvalidExprType("bool")
 	}
 
 	// exec if-branch
@@ -306,7 +307,7 @@ func evalBranchStmt(c *r.Context, node *syntax.BranchStmt) error {
 		}
 		vOtherExprI, ok := otherExprI.(*value.Bool)
 		if !ok {
-			return error.InvalidExprType("bool")
+			return zerr.InvalidExprType("bool")
 		}
 		// exec else-if branch
 		if vOtherExprI.GetValue() {
@@ -375,22 +376,22 @@ func evalIterateStmt(c *r.Context, node *syntax.IterateStmt) error {
 			return err
 		}
 	} else if nameLen > 2 {
-		return error.MostParamsError(2)
+		return zerr.MostParamsError(2)
 	}
 
 	// execute iterations
 	switch tv := targetExpr.(type) {
 	case *value.Array:
 		for idx, v := range tv.GetValue() {
-			idxVar := value.NewDecimalFromInt(idx, 0)
+			idxVar := value.NewNumber(float64(idx))
 			if err := execIterationBlockFn(idxVar, v); err != nil {
-				if err.GetCode() == error.ContinueBreakSignal {
-					// continue next turn
-					continue
-				}
-				if err.GetCode() == error.BreakBreakSignal {
-					// break directly
-					return nil
+				if s, ok := err.(*zerr.Signal); ok {
+					if s.SigType == zerr.SigTypeContinue {
+						continue
+					}
+					if s.SigType == zerr.SigTypeBreak {
+						return nil
+					}
 				}
 				return err
 			}
@@ -401,19 +402,19 @@ func evalIterateStmt(c *r.Context, node *syntax.IterateStmt) error {
 			keyVar := value.NewString(key)
 			// handle interrupts
 			if err := execIterationBlockFn(keyVar, v); err != nil {
-				if err.GetCode() == error.ContinueBreakSignal {
-					// continue next turn
-					continue
-				}
-				if err.GetCode() == error.BreakBreakSignal {
-					// break directly
-					return nil
+				if s, ok := err.(*zerr.Signal); ok {
+					if s.SigType == zerr.SigTypeContinue {
+						continue
+					}
+					if s.SigType == zerr.SigTypeBreak {
+						return nil
+					}
 				}
 				return err
 			}
 		}
 	default:
-		return error.InvalidExprType("array", "hashmap")
+		return zerr.InvalidExprType("array", "hashmap")
 	}
 	return nil
 }
@@ -443,7 +444,7 @@ func evalExpression(c *r.Context, expr syntax.Expression) (r.Value, error) {
 	case *syntax.MemberMethodExpr:
 		return evalMemberMethodExpr(c, e)
 	default:
-		return nil, error.InvalidExprType()
+		return nil, zerr.InvalidExprType()
 	}
 }
 
@@ -480,14 +481,18 @@ func evalFunctionCall(c *r.Context, expr *syntax.FuncCallExpr) (r.Value, error) 
 			// return result
 			return v, nil
 		}
-		if err.GetCode() != errCodeMethodNotFound {
+		if errX, ok := err.(*zerr.Error); ok {
+			if errX.Code != errCodeMethodNotFound {
+				return nil, err
+			}
+		} else {
 			return nil, err
 		}
 	}
 
 	// if function value not found from object scope, look up from local scope
 	if zf == nil {
-		// find function definction
+		// find function definition
 		v, err := c.FindSymbol(vtag)
 		if err != nil {
 			return nil, err
@@ -495,7 +500,7 @@ func evalFunctionCall(c *r.Context, expr *syntax.FuncCallExpr) (r.Value, error) 
 		// assert value
 		zval, ok := v.(*value.Function)
 		if !ok {
-			return nil, error.InvalidFuncVariable(vtag)
+			return nil, zerr.InvalidFuncVariable(vtag)
 		}
 		zf = zval.GetValue()
 	}
@@ -566,7 +571,7 @@ func evalLogicCombiner(c *r.Context, expr *syntax.LogicExpr) (*value.Bool, error
 	// #2. assert left expr type to be ZnBool
 	vleft, ok := left.(*value.Bool)
 	if !ok {
-		return nil, error.InvalidExprType("bool")
+		return nil, zerr.InvalidExprType("bool")
 	}
 	// #3. check if the result could be retrieved earlier
 	//
@@ -587,7 +592,7 @@ func evalLogicCombiner(c *r.Context, expr *syntax.LogicExpr) (*value.Bool, error
 	}
 	vright, ok := right.(*value.Bool)
 	if !ok {
-		return nil, error.InvalidExprType("bool")
+		return nil, zerr.InvalidExprType("bool")
 	}
 	// then evalute data
 	switch logicType {
@@ -643,7 +648,7 @@ func evalLogicComparator(c *r.Context, expr *syntax.LogicExpr) (*value.Bool, err
 		cmp2, cmpErr = value.CompareValues(left, right, value.CmpEq)
 		cmpRes = cmp1 || cmp2
 	default:
-		return nil, error.UnExpectedCase("比较类型", fmt.Sprintf("%d", logicType))
+		return nil, zerr.UnExpectedCase("比较类型", fmt.Sprintf("%d", logicType))
 	}
 
 	return value.NewBool(cmpRes), cmpErr
@@ -692,7 +697,7 @@ func evalPrimeExpr(c *r.Context, expr syntax.Expression) (r.Value, error) {
 			case *syntax.Number:
 				exprKey = k.GetLiteral()
 			default:
-				return nil, error.InvalidExprType("string", "decimal", "id")
+				return nil, zerr.InvalidExprType("string", "number", "id")
 			}
 
 			exprVal, err := evalExpression(c, item.Value)
@@ -706,7 +711,7 @@ func evalPrimeExpr(c *r.Context, expr syntax.Expression) (r.Value, error) {
 		}
 		return value.NewHashMap(znPairs), nil
 	default:
-		return nil, error.UnExpectedCase("表达式类型", fmt.Sprintf("%T", e))
+		return nil, zerr.UnExpectedCase("表达式类型", fmt.Sprintf("%T", e))
 	}
 }
 
@@ -737,9 +742,9 @@ func evalVarAssignExpr(c *r.Context, expr *syntax.VarAssignExpr) (r.Value, error
 			}
 			return vr, iv.ReduceLHS(c, vr)
 		}
-		return nil, error.NewErrorSLOT("方法不能被赋值")
+		return nil, zerr.NewErrorSLOT("方法不能被赋值")
 	default:
-		return nil, error.UnExpectedCase("被赋值", fmt.Sprintf("%T", v))
+		return nil, zerr.UnExpectedCase("被赋值", fmt.Sprintf("%T", v))
 	}
 }
 
@@ -768,37 +773,32 @@ func getMemberExprIV(c *r.Context, expr *syntax.MemberExpr) (*value.IV, error) {
 			case *value.Array:
 				vr, ok := idx.(*value.Number)
 				if !ok {
-					return nil, error.InvalidExprType("integer")
+					return nil, zerr.InvalidExprType("integer")
 				}
-				vri, e := vr.AsInteger()
+				vri := int(vr.GetValue())
 				if e != nil {
-					return nil, error.InvalidExprType("integer")
+					return nil, zerr.InvalidExprType("integer")
 				}
 				return value.NewArrayIV(v, vri), nil
 			case *value.HashMap:
 				var s string
 				switch x := idx.(type) {
 				// regard decimal value directly as string
-				case *value.Decimal:
-					// transform decimal value to string
-					// x.exp < 0 express that its a decimal value with point mark, not an integer
-					if x.GetExp() < 0 {
-						return nil, error.InvalidExprType("integer", "string")
-					}
+				case *value.Number:
 					s = x.String()
 				case *value.String:
 					s = x.String()
 				default:
-					return nil, error.InvalidExprType("integer", "string")
+					return nil, zerr.InvalidExprType("integer", "string")
 				}
 				return value.NewHashMapIV(v, s), nil
 			}
-			return nil, error.InvalidExprType("array", "hashmap")
+			return nil, zerr.InvalidExprType("array", "hashmap")
 		}
-		return nil, error.UnExpectedCase("子项类型", fmt.Sprintf("%d", expr.MemberType))
+		return nil, zerr.UnExpectedCase("子项类型", fmt.Sprintf("%d", expr.MemberType))
 	}
 
-	return nil, error.UnExpectedCase("根元素类型", fmt.Sprintf("%d", expr.RootType))
+	return nil, zerr.UnExpectedCase("根元素类型", fmt.Sprintf("%d", expr.RootType))
 }
 
 //// helpers
@@ -836,9 +836,11 @@ func BuildClosureFromNode(paramTags []*syntax.ParamItem, stmtBlock *syntax.Block
 			if _, ok := stmtII.(*syntax.FunctionDeclareStmt); !ok {
 				if err := evalStatement(c, stmtII); err != nil {
 					// if recv breaks
-					if err.GetCode() == error.ReturnBreakSignal {
-						if extra, ok := err.GetExtra().(r.Value); ok {
-							return extra, nil
+					if sig, ok := err.(*zerr.Signal); ok {
+						if sig.SigType == zerr.SigTypeReturn {
+							if extra, ok2 := sig.Extra.(r.Value); ok2 {
+								return extra, nil
+							}
 						}
 					}
 					return nil, err
@@ -851,7 +853,7 @@ func BuildClosureFromNode(paramTags []*syntax.ParamItem, stmtBlock *syntax.Block
 	var paramHandler = func(c *r.Context, params []r.Value) (r.Value, error) {
 		// check param length
 		if len(params) != len(paramTags) {
-			return nil, error.MismatchParamLengthError(len(paramTags), len(params))
+			return nil, zerr.MismatchParamLengthError(len(paramTags), len(params))
 		}
 
 		// bind params (as variable) to function scope
@@ -883,7 +885,7 @@ func BuildClassFromNode(name string, classNode *syntax.ClassDeclareStmt) value.C
 		MethodList:   map[string]value.ClosureRef{},
 	}
 
-	// define default constrcutor
+	// define default constructor
 	var constructor = func(c *r.Context, params []r.Value) (r.Value, error) {
 		obj := value.NewObject(ref)
 		propMap := obj.GetPropList()
@@ -900,7 +902,7 @@ func BuildClassFromNode(name string, classNode *syntax.ClassDeclareStmt) value.C
 		}
 		// constructor: set some properties' value
 		if len(params) != len(classNode.ConstructorIDList) {
-			return nil, error.MismatchParamLengthError(len(params), len(classNode.ConstructorIDList))
+			return nil, zerr.MismatchParamLengthError(len(params), len(classNode.ConstructorIDList))
 		}
 		for idx, objParamVal := range params {
 			param := classNode.ConstructorIDList[idx]

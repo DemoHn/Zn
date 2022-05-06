@@ -693,7 +693,7 @@ func evalPrimeExpr(c *ctx.Context, expr syntax.Expression) (ctx.Value, *error.Er
 			case *syntax.Number:
 				exprKey = k.GetLiteral()
 			default:
-				return nil, error.InvalidExprType("string", "decimal", "id")
+				return nil, error.InvalidExprType("string", "number", "id")
 			}
 
 			exprVal, err := evalExpression(c, item.Value)

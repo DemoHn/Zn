@@ -2,8 +2,8 @@ package value
 
 import (
 	"fmt"
+	zerr "github.com/DemoHn/Zn/pkg/error"
 	r "github.com/DemoHn/Zn/pkg/runtime"
-	"math/big"
 	"regexp"
 	"strconv"
 	"strings"
@@ -19,7 +19,7 @@ const (
 )
 
 // compareValues - some ZnValues are comparable from specific types of right value
-// otherwise it will throw error.
+// otherwise it will throw zerr.
 //
 // There are three types of compare verbs (actions): Eq, Lt and Gt.
 //
@@ -51,7 +51,7 @@ func CompareValues(left r.Value, right r.Value, verb uint8) (bool, error) {
 			case CmpGt:
 				cmpResult = vl.value > vr.value
 			default:
-				return false, error.UnExpectedCase("比较原语", strconv.Itoa(int(verb)))
+				return false, zerr.UnExpectedCase("比较原语", strconv.Itoa(int(verb)))
 			}
 			return cmpResult, nil
 		}
@@ -60,21 +60,21 @@ func CompareValues(left r.Value, right r.Value, verb uint8) (bool, error) {
 		if verb == CmpEq {
 			return false, nil
 		}
-		return false, error.InvalidCompareRType("decimal")
+		return false, zerr.InvalidCompareRType("number")
 	case *String:
 		// Only CmpEq is valid for comparison
 		if verb != CmpEq {
-			return false, error.InvalidCompareLType("decimal", "string", "bool", "array", "hashmap")
+			return false, zerr.InvalidCompareLType("number", "string", "bool", "array", "hashmap")
 		}
 		// compare right value - string only
 		if vr, ok := right.(*String); ok {
-			cmpResult := (strings.Compare(vl.value, vr.value) == 0)
+			cmpResult := strings.Compare(vl.value, vr.value) == 0
 			return cmpResult, nil
 		}
 		return false, nil
 	case *Bool:
 		if verb != CmpEq {
-			return false, error.InvalidCompareLType("decimal", "string", "bool", "array", "hashmap")
+			return false, zerr.InvalidCompareLType("number", "string", "bool", "array", "hashmap")
 		}
 		// compare right value - bool only
 		if vr, ok := right.(*Bool); ok {
@@ -84,7 +84,7 @@ func CompareValues(left r.Value, right r.Value, verb uint8) (bool, error) {
 		return false, nil
 	case *Array:
 		if verb != CmpEq {
-			return false, error.InvalidCompareLType("decimal", "string", "bool", "array", "hashmap")
+			return false, zerr.InvalidCompareLType("number", "string", "bool", "array", "hashmap")
 		}
 
 		if vr, ok := right.(*Array); ok {
@@ -107,7 +107,7 @@ func CompareValues(left r.Value, right r.Value, verb uint8) (bool, error) {
 		return false, nil
 	case *HashMap:
 		if verb != CmpEq {
-			return false, error.InvalidCompareLType("decimal", "string", "bool", "array", "hashmap")
+			return false, zerr.InvalidCompareLType("number", "string", "bool", "array", "hashmap")
 		}
 
 		if vr, ok := right.(*HashMap); ok {
@@ -131,7 +131,7 @@ func CompareValues(left r.Value, right r.Value, verb uint8) (bool, error) {
 		}
 		return false, nil
 	}
-	return false, error.InvalidCompareLType("decimal", "string", "bool", "array", "hashmap")
+	return false, zerr.InvalidCompareLType("number", "string", "bool", "array", "hashmap")
 }
 
 // DuplicateValue - deepcopy values' structure, including bool, string, decimal, array, hashmap
@@ -220,7 +220,7 @@ func StringifyValue(value r.Value) string {
 // 8. any      --> any value type
 func ValidateExactParams(values []r.Value, typeStr ...string) error {
 	if len(values) != len(typeStr) {
-		return error.ExactParamsError(len(typeStr))
+		return zerr.ExactParamsError(len(typeStr))
 	}
 	for idx, v := range values {
 		if err := validateOneParam(v, typeStr[idx]); err != nil {
@@ -238,10 +238,10 @@ func ValidateExactParams(values []r.Value, typeStr ...string) error {
 // mark variadic part, like "string+", "bool*"
 //
 // e.g.:
-// ["decimal", "string+"] means the FIRST param is a decimal, and the FOLLOWING params
+// ["number", "string+"] means the FIRST param is a decimal, and the FOLLOWING params
 // are all strings (must have ONE string param)
 //
-// ["decimal", "bool", "string*"] means the FIRST param is a decimal, the SECOND param is a bool, and the FOLLOWING params
+// ["number", "bool", "string*"] means the FIRST param is a decimal, the SECOND param is a bool, and the FOLLOWING params
 // are all strings (allow 0 string params)
 func ValidateLeastParams(values []r.Value, typeStr ...string) error {
 Loop:
@@ -254,7 +254,7 @@ Loop:
 		// matches 0 or more params
 		case "*", "+":
 			if matches[2] == "+" && idx > len(values) {
-				return error.NewErrorSLOT("通配符需要至少一个参数")
+				return zerr.NewErrorSLOT("通配符需要至少一个参数")
 			}
 			for i := idx; i < len(values); i++ {
 				if err := validateOneParam(values[i], matches[1]); err != nil {
@@ -286,8 +286,8 @@ func ValidateAllParams(values []r.Value, typeStr string) error {
 func validateOneParam(v r.Value, typeStr string) error {
 	valid := true
 	switch typeStr {
-	case "decimal":
-		if _, ok := v.(*Decimal); !ok {
+	case "number":
+		if _, ok := v.(*Number); !ok {
 			valid = false
 		}
 	case "string":
@@ -318,7 +318,7 @@ func validateOneParam(v r.Value, typeStr string) error {
 		valid = true
 	}
 	if !valid {
-		return error.InvalidParamType(typeStr)
+		return zerr.InvalidParamType(typeStr)
 	}
 	return nil
 }
@@ -340,85 +340,4 @@ var DisplayExecutor = func(c *r.Context, params []r.Value) (r.Value, error) {
 	}
 	fmt.Printf("%s\n", strings.Join(items, " "))
 	return NewNull(), nil
-}
-
-// （递增）方法的执行逻辑
-var AddValueExecutor = func(c *r.Context, params []r.Value) (r.Value, error) {
-	var decimals = []*Decimal{}
-
-	if err := ValidateLeastParams(params, "decimal+"); err != nil {
-		return nil, err
-	}
-	// validate types
-	for _, param := range params {
-		vparam := param.(*Decimal)
-		decimals = append(decimals, vparam)
-	}
-
-	if len(decimals) == 1 {
-		return decimals[0], nil
-	}
-
-	sum := decimals[0].Add(decimals[1:]...)
-	return sum, nil
-}
-
-// （递减）方法的执行逻辑
-var SubValueExecutor = func(c *r.Context, params []r.Value) (r.Value, error) {
-	var decimals = []*Decimal{}
-
-	if err := ValidateLeastParams(params, "decimal+"); err != nil {
-		return nil, err
-	}
-	// validate types
-	for _, param := range params {
-		vparam := param.(*Decimal)
-		decimals = append(decimals, vparam)
-	}
-
-	if len(decimals) == 1 {
-		return decimals[0], nil
-	}
-
-	sum := decimals[0].Sub(decimals[1:]...)
-	return sum, nil
-}
-
-var MulValueExecutor = func(c *r.Context, params []r.Value) (r.Value, error) {
-	var decimals = []*Decimal{}
-
-	if err := ValidateLeastParams(params, "decimal+"); err != nil {
-		return nil, err
-	}
-	// validate types
-	for _, param := range params {
-		vparam := param.(*Decimal)
-		decimals = append(decimals, vparam)
-	}
-
-	if len(decimals) == 1 {
-		return decimals[0], nil
-	}
-
-	sum := decimals[0].Mul(decimals[1:]...)
-	return sum, nil
-}
-
-var DivValueExecutor = func(c *r.Context, params []r.Value) (r.Value, error) {
-	var decimals = []*Decimal{}
-
-	if err := ValidateLeastParams(params, "decimal+"); err != nil {
-		return nil, err
-	}
-	// validate types
-	for _, param := range params {
-		vparam := param.(*Decimal)
-		decimals = append(decimals, vparam)
-	}
-	if len(decimals) == 1 {
-		return decimals[0], nil
-	}
-
-	res, err := decimals[0].Div(decimals[1:]...)
-	return res, err
 }

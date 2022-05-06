@@ -2,6 +2,7 @@ package value
 
 import (
 	"fmt"
+	zerr "github.com/DemoHn/Zn/pkg/error"
 	r "github.com/DemoHn/Zn/pkg/runtime"
 )
 
@@ -67,10 +68,10 @@ func (iv *IV) ReduceLHS(c *r.Context, input r.Value) error {
 	case IVTypeArray:
 		arr, ok := iv.root.(*Array)
 		if !ok {
-			return error.InvalidExprType("array")
+			return zerr.InvalidExprType("array")
 		}
 		if iv.index < 0 || iv.index >= len(arr.value) {
-			return error.IndexOutOfRange()
+			return zerr.IndexOutOfRange()
 		}
 		// set array value
 		arr.value[iv.index] = input
@@ -78,14 +79,14 @@ func (iv *IV) ReduceLHS(c *r.Context, input r.Value) error {
 	case IVTypeHashMap:
 		hm, ok := iv.root.(*HashMap)
 		if !ok {
-			return error.InvalidExprType("hashmap")
+			return zerr.InvalidExprType("hashmap")
 		}
 		hm.value[iv.member] = input
 		return nil
 	case IVTypeMember:
 		return iv.root.SetProperty(c, iv.member, input)
 	}
-	return error.UnExpectedCase("IVReduceType", fmt.Sprintf("%d", iv.reduceType))
+	return zerr.UnExpectedCase("IVReduceType", fmt.Sprintf("%d", iv.reduceType))
 }
 
 // ReduceRHS -
@@ -94,25 +95,25 @@ func (iv *IV) ReduceRHS(c *r.Context) (r.Value, error) {
 	case IVTypeArray:
 		arr, ok := iv.root.(*Array)
 		if !ok {
-			return nil, error.InvalidExprType("array")
+			return nil, zerr.InvalidExprType("array")
 		}
 		if iv.index < 0 || iv.index >= len(arr.value) {
-			return nil, error.IndexOutOfRange()
+			return nil, zerr.IndexOutOfRange()
 		}
 		// set array value
 		return arr.value[iv.index], nil
 	case IVTypeHashMap:
 		hm, ok := iv.root.(*HashMap)
 		if !ok {
-			return nil, error.InvalidExprType("hashmap")
+			return nil, zerr.InvalidExprType("hashmap")
 		}
 		result, ok := hm.value[iv.member]
 		if !ok {
-			return nil, error.IndexKeyNotFound(iv.member)
+			return nil, zerr.IndexKeyNotFound(iv.member)
 		}
 		return result, nil
 	case IVTypeMember:
 		return iv.root.GetProperty(c, iv.member)
 	}
-	return nil, error.UnExpectedCase("IVReduceType", fmt.Sprintf("%d", iv.reduceType))
+	return nil, zerr.UnExpectedCase("IVReduceType", fmt.Sprintf("%d", iv.reduceType))
 }

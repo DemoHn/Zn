@@ -64,11 +64,11 @@ func CompareValues(left ctx.Value, right ctx.Value, verb compareVerb) (bool, *er
 		if verb == CmpEq {
 			return false, nil
 		}
-		return false, error.InvalidCompareRType("decimal")
+		return false, error.InvalidCompareRType("number")
 	case *String:
 		// Only CmpEq is valid for comparison
 		if verb != CmpEq {
-			return false, error.InvalidCompareLType("decimal", "string", "bool", "array", "hashmap")
+			return false, error.InvalidCompareLType("number", "string", "bool", "array", "hashmap")
 		}
 		// compare right value - string only
 		if vr, ok := right.(*String); ok {
@@ -78,7 +78,7 @@ func CompareValues(left ctx.Value, right ctx.Value, verb compareVerb) (bool, *er
 		return false, nil
 	case *Bool:
 		if verb != CmpEq {
-			return false, error.InvalidCompareLType("decimal", "string", "bool", "array", "hashmap")
+			return false, error.InvalidCompareLType("number", "string", "bool", "array", "hashmap")
 		}
 		// compare right value - bool only
 		if vr, ok := right.(*Bool); ok {
@@ -88,7 +88,7 @@ func CompareValues(left ctx.Value, right ctx.Value, verb compareVerb) (bool, *er
 		return false, nil
 	case *Array:
 		if verb != CmpEq {
-			return false, error.InvalidCompareLType("decimal", "string", "bool", "array", "hashmap")
+			return false, error.InvalidCompareLType("number", "string", "bool", "array", "hashmap")
 		}
 
 		if vr, ok := right.(*Array); ok {
@@ -111,7 +111,7 @@ func CompareValues(left ctx.Value, right ctx.Value, verb compareVerb) (bool, *er
 		return false, nil
 	case *HashMap:
 		if verb != CmpEq {
-			return false, error.InvalidCompareLType("decimal", "string", "bool", "array", "hashmap")
+			return false, error.InvalidCompareLType("number", "string", "bool", "array", "hashmap")
 		}
 
 		if vr, ok := right.(*HashMap); ok {
@@ -135,7 +135,7 @@ func CompareValues(left ctx.Value, right ctx.Value, verb compareVerb) (bool, *er
 		}
 		return false, nil
 	}
-	return false, error.InvalidCompareLType("decimal", "string", "bool", "array", "hashmap")
+	return false, error.InvalidCompareLType("number", "string", "bool", "array", "hashmap")
 }
 
 // DuplicateValue - deepcopy values' structure, including bool, string, decimal, array, hashmap
@@ -246,10 +246,10 @@ func ValidateExactParams(values []ctx.Value, typeStr ...string) *error.Error {
 // mark variadic part, like "string+", "bool*"
 //
 // e.g.:
-// ["decimal", "string+"] means the FIRST param is a decimal, and the FOLLOWING params
+// ["number", "string+"] means the FIRST param is a decimal, and the FOLLOWING params
 // are all strings (must have ONE string param)
 //
-// ["decimal", "bool", "string*"] means the FIRST param is a decimal, the SECOND param is a bool, and the FOLLOWING params
+// ["number", "bool", "string*"] means the FIRST param is a decimal, the SECOND param is a bool, and the FOLLOWING params
 // are all strings (allow 0 string params)
 func ValidateLeastParams(values []ctx.Value, typeStr ...string) *error.Error {
 Loop:
@@ -294,7 +294,7 @@ func ValidateAllParams(values []ctx.Value, typeStr string) *error.Error {
 func validateOneParam(v ctx.Value, typeStr string) *error.Error {
 	valid := true
 	switch typeStr {
-	case "decimal":
+	case "number":
 		if _, ok := v.(*Decimal); !ok {
 			valid = false
 		}

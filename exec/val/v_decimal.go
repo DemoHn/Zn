@@ -280,28 +280,28 @@ func (zd *Decimal) SetProperty(c *ctx.Context, name string, value ctx.Value) *er
 func (zd *Decimal) ExecMethod(c *ctx.Context, name string, values []ctx.Value) (ctx.Value, *error.Error) {
 	switch name {
 	case "加":
-		if err := ValidateExactParams(values, "decimal"); err != nil {
+		if err := ValidateExactParams(values, "number"); err != nil {
 			return nil, err
 		}
 		item := values[0].(*Decimal)
 		v := zd.Add(item)
 		return v, nil
 	case "减":
-		if err := ValidateExactParams(values, "decimal"); err != nil {
+		if err := ValidateExactParams(values, "number"); err != nil {
 			return nil, err
 		}
 		item := values[0].(*Decimal)
 		v := zd.Sub(item)
 		return v, nil
 	case "乘":
-		if err := ValidateExactParams(values, "decimal"); err != nil {
+		if err := ValidateExactParams(values, "number"); err != nil {
 			return nil, err
 		}
 		item := values[0].(*Decimal)
 		v := zd.Mul(item)
 		return v, nil
 	case "除":
-		if err := ValidateExactParams(values, "decimal"); err != nil {
+		if err := ValidateExactParams(values, "number"); err != nil {
 			return nil, err
 		}
 		item := values[0].(*Decimal)
@@ -313,7 +313,7 @@ func (zd *Decimal) ExecMethod(c *ctx.Context, name string, values []ctx.Value) (
 		v := zd.Add(NewDecimalFromInt(-1, 0))
 		return v, nil
 	case "自增":
-		if err := ValidateExactParams(values, "decimal"); err != nil {
+		if err := ValidateExactParams(values, "number"); err != nil {
 			return nil, err
 		}
 		item := values[0].(*Decimal)
@@ -322,7 +322,7 @@ func (zd *Decimal) ExecMethod(c *ctx.Context, name string, values []ctx.Value) (
 		*zd = *v
 		return v, nil
 	case "自减":
-		if err := ValidateExactParams(values, "decimal"); err != nil {
+		if err := ValidateExactParams(values, "number"); err != nil {
 			return nil, err
 		}
 		item := values[0].(*Decimal)
