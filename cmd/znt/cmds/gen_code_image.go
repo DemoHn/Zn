@@ -198,7 +198,7 @@ func parseCodeFromFile(file string) ([][]colorTextMap, error) {
 			}
 		}
 		// add literal (support multi-line token)
-		literals := splitMultiLineString(tok.Literal)
+		literals := splitMultiLineString(l.Source[tok.StartIdx:tok.EndIdx])
 		for idx, lt := range literals {
 			tMapItems = append(tMapItems, colorTextMap{
 				text:  lt,

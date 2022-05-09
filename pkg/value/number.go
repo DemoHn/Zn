@@ -20,7 +20,7 @@ func NewNumber(value float64) *Number {
 func NewNumberFromString(value string) (*Number, error) {
 	v := strings.ReplaceAll(value, ",", "")
 	v = strings.Replace(v, "*^", "", 1)
-	v = strings.Replace(v, "*10^", "", 1)
+	v = strings.Replace(v, "*10^", "e", 1)
 
 	f, err := strconv.ParseFloat(v, 64)
 	if err != nil {

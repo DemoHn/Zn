@@ -33,8 +33,11 @@ func parseCode(in io.InputStream) (*syntax.Program, error) {
 }
 
 func execProgram(c *r.Context, program *syntax.Program) (r.Value, error) {
-	/** TODO: complete error display system
 	err := evalProgram(c, program)
+	if err != nil {
+		return nil, err
+	}
+	/** TODO: complete error display system
 
 	if err != nil {
 		cursor := err.GetCursor()

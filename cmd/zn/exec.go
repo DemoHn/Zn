@@ -12,7 +12,7 @@ import (
 	"github.com/peterh/liner"
 )
 
-const version = "rev04"
+const version = "rev06"
 
 // EnterREPL - enter REPL to handle data
 func EnterREPL() {
@@ -51,7 +51,7 @@ func EnterREPL() {
 			fmt.Println(err2.Error())
 		} else {
 			if result != nil {
-				//prettyDisplayValue(result, os.Stdout)
+				prettyDisplayValue(result, os.Stdout)
 			}
 		}
 	}
