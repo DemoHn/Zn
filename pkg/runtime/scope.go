@@ -10,6 +10,8 @@ type Scope struct {
 	child *Scope
 	// symbolMap - stores current scope stored symbols
 	symbolMap map[string]SymbolInfo
+	// module - get current module
+	module *Module
 	// thisValue - "this" variable of the scope
 	thisValue Value
 	// returnValue - return value of scope

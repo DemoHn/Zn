@@ -8,6 +8,9 @@ import (
 	"strings"
 )
 
+type numGetterFunc func(*Number, *r.Context) (r.Value, error)
+type numMethodFunc func(*Number, *r.Context, []r.Value) (r.Value, error)
+
 type Number struct {
 	value float64
 }
@@ -51,5 +54,102 @@ func (n *Number) SetProperty(c *r.Context, name string, value r.Value) error {
 
 // ExecMethod -
 func (n *Number) ExecMethod(c *r.Context, name string, values []r.Value) (r.Value, error) {
+	numMethodMap := map[string]numMethodFunc{
+		"加": numExecAdd,
+		"减": numExecSub,
+		"乘": numExecMul,
+		"除": numExecDiv,
+		"自增": numExecSelfAdd,
+		"自减": numExecSelfSub,
+	}
+	if fn, ok := numMethodMap[name]; ok {
+		return fn(n, c, values)
+	}
 	return nil, zerr.MethodNotFound(name)
+}
+
+//// getters, setters and methods
+
+// methods
+func numExecAdd(n *Number, c *r.Context, values []r.Value) (r.Value, error) {
+	if err := ValidateAllParams(values, "number"); err != nil {
+		return nil, err
+	}
+
+	sum := n.value
+	for _, v := range values {
+		vr, _ := v.(*Number)
+		sum += vr.value
+	}
+
+	return NewNumber(sum), nil
+}
+
+func numExecSub(n *Number, c *r.Context, values []r.Value) (r.Value, error) {
+	if err := ValidateAllParams(values, "number"); err != nil {
+		return nil, err
+	}
+
+	sum := n.value
+	for _, v := range values {
+		vr, _ := v.(*Number)
+		sum -= vr.value
+	}
+
+	return NewNumber(sum), nil
+}
+
+func numExecMul(n *Number, c *r.Context, values []r.Value) (r.Value, error) {
+	if err := ValidateAllParams(values, "number"); err != nil {
+		return nil, err
+	}
+
+	sum := n.value
+	for _, v := range values {
+		vr, _ := v.(*Number)
+		sum *= vr.value
+	}
+
+	return NewNumber(sum), nil
+}
+
+func numExecDiv(n *Number, c *r.Context, values []r.Value) (r.Value, error) {
+	if err := ValidateAllParams(values, "number"); err != nil {
+		return nil, err
+	}
+
+	sum := n.value
+	for _, v := range values {
+		vr, _ := v.(*Number)
+		if vr.value == 0 {
+			return nil, zerr.NewErrorSLOT("被除数不能为0")
+		}
+		sum /= vr.value
+	}
+
+	return NewNumber(sum), nil
+}
+
+func numExecSelfAdd(n *Number, c *r.Context, values []r.Value) (r.Value, error) {
+	if err := ValidateExactParams(values, "number"); err != nil {
+		return nil, err
+	}
+
+	target, _ := values[0].(*Number)
+
+	n.value = n.value + target.value
+
+	return n, nil
+}
+
+func numExecSelfSub(n *Number, c *r.Context, values []r.Value) (r.Value, error) {
+	if err := ValidateExactParams(values, "number"); err != nil {
+		return nil, err
+	}
+
+	target, _ := values[0].(*Number)
+
+	n.value = n.value - target.value
+
+	return n, nil
 }

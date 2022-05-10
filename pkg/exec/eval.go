@@ -24,10 +24,6 @@ const errCodeMethodNotFound = 0x2505
 // `evalXXXXStmt` will change the value of its corresponding scope; However, `evalXXXXExpr` will export
 // a r.Value object and mostly won't change scopes (but search a variable from scope is frequently used)
 
-// value.DuplicateValue - deepcopy values' structure, including bool, string, decimal, array, hashmap
-// for function or object or null, pass the original reference instead.
-// This is due to the 'copycat by default' policy
-
 func evalProgram(c *r.Context, program *syntax.Program) error {
 	otherStmts, err := evalPreStmtBlock(c, program.Content)
 	if err != nil {
