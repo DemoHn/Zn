@@ -44,6 +44,14 @@ func (n *Number) GetValue() float64 {
 
 // GetProperty -
 func (n *Number) GetProperty(c *r.Context, name string) (r.Value, error) {
+	numGetterMap := map[string]numGetterFunc{
+		"文本": numGetText,
+		"平方": numGetSquare,
+		"立方": numGetCube,
+	}
+	if fn, ok := numGetterMap[name]; ok {
+		return fn(n, c)
+	}
 	return nil, zerr.PropertyNotFound(name)
 }
 
@@ -69,6 +77,21 @@ func (n *Number) ExecMethod(c *r.Context, name string, values []r.Value) (r.Valu
 }
 
 //// getters, setters and methods
+
+// getters
+func numGetText(n *Number, c *r.Context) (r.Value, error) {
+	return NewString(n.String()), nil
+}
+
+func numGetSquare(n *Number, c *r.Context) (r.Value, error) {
+	res := n.value * n.value
+	return NewNumber(res), nil
+}
+
+func numGetCube(n *Number, c *r.Context) (r.Value, error) {
+	res := n.value * n.value * n.value
+	return NewNumber(res), nil
+}
 
 // methods
 func numExecAdd(n *Number, c *r.Context, values []r.Value) (r.Value, error) {
