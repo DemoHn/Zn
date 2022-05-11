@@ -4,7 +4,11 @@ import (
 	zerr "github.com/DemoHn/Zn/pkg/error"
 	r "github.com/DemoHn/Zn/pkg/runtime"
 )
-// TODO - add methods
+
+type hmGetterFunc func(*HashMap, *r.Context) (r.Value, error)
+type hmSetterFunc func(*HashMap, *r.Context, r.Value) error
+type hmMethodFunc func(*HashMap, *r.Context, []r.Value) (r.Value, error)
+
 // HashMap - represents for 列表类
 type HashMap struct {
 	value    map[string]r.Value
@@ -61,6 +65,15 @@ func (hm *HashMap) AppendKVPair(pair KVPair) {
 
 // GetProperty -
 func (hm *HashMap) GetProperty(c *r.Context, name string) (r.Value, error) {
+	hmGetterMap := map[string]hmGetterFunc{
+		"数目": hmGetLength,
+		"长度": hmGetLength,
+		"所有索引": hmGetAllIndexes,
+		"所有值": hmGetAllValues,
+	}
+	if fn, ok := hmGetterMap[name]; ok {
+		return fn(hm, c)
+	}
 	return nil, zerr.PropertyNotFound(name)
 }
 
@@ -71,5 +84,98 @@ func (hm *HashMap) SetProperty(c *r.Context, name string, value r.Value) error {
 
 // ExecMethod -
 func (hm *HashMap) ExecMethod(c *r.Context, name string, values []r.Value) (r.Value, error) {
+	hmMethodMap := map[string]hmMethodFunc{
+		"读取": hmExecGet,
+	}
+	if fn, ok := hmMethodMap[name]; ok {
+		return fn(hm, c, values)
+	}
 	return nil, zerr.MethodNotFound(name)
 }
+
+//// getters, setters and methods
+
+// getters
+func hmGetLength(hm *HashMap, c *r.Context) (r.Value, error) {
+	return NewNumber(float64(len(hm.value))), nil
+}
+
+func hmGetAllIndexes(hm *HashMap, c *r.Context) (r.Value, error) {
+	var strs []r.Value
+	for _, keyName := range hm.keyOrder {
+		strs = append(strs, NewString(keyName))
+	}
+	return NewArray(strs), nil
+}
+
+func hmGetAllValues(hm *HashMap, c *r.Context) (r.Value, error) {
+	var vals []r.Value
+	for _, keyName := range hm.keyOrder {
+		vals = append(vals, hm.value[keyName])
+	}
+	return NewArray(vals), nil
+}
+
+// methods
+func hmExecGet(hm *HashMap, c *r.Context, values []r.Value) (r.Value, error) {
+	if err := ValidateLeastParams(values, "string+"); err != nil {
+		return nil, err
+	}
+	var result r.Value = hm
+
+	for _, keyName := range values {
+		keyNameStr := keyName.(*String).value
+		if cursorHM, ok := result.(*HashMap); ok {
+			if val, ok2 := cursorHM.value[keyNameStr]; ok2 {
+				result = val
+			} else {
+				return NewNull(), nil
+			}
+		} else {
+			return NewNull(), nil
+		}
+	}
+	return result, nil
+}
+/**
+case "读取":
+		if err := ValidateExactParams(values, "string"); err != nil {
+			return nil, err
+		}
+		// key name
+		keyName := values[0].(*String).value
+		val, ok := hm.value[keyName]
+		if ok {
+			return val, nil
+		}
+		return NewNull(), nil
+	case "写入":
+		if err := ValidateExactParams(values, "string", "any"); err != nil {
+			return nil, err
+		}
+		// key name
+		keyName := values[0].(*String).value
+		hm.AppendKVPair(KVPair{keyName, values[1]})
+		return values[1], nil
+	case "移除":
+		if err := ValidateExactParams(values, "string"); err != nil {
+			return nil, err
+		}
+		// key name
+		keyName := values[0].(*String).value
+		val, ok := hm.value[keyName]
+		if ok {
+			delete(hm.value, keyName)
+			// find & delete key from keyOrder
+			for idx, vk := range hm.keyOrder {
+				// if found, delete item from keyOrder to stop loop
+				if vk == keyName {
+					hm.keyOrder = append(hm.keyOrder[:idx], hm.keyOrder[idx+1:]...)
+				}
+			}
+			return val, nil
+		}
+		// if delete key not found in hashmap, return null directly
+		return NewNull(), nil
+	}
+ */

@@ -122,7 +122,7 @@ func arrayGetReverse(ar *Array, c *r.Context) (r.Value, error) {
 }
 
 func arrayGetAddResult(ar *Array, c *r.Context) (r.Value, error) {
-	if err := ValidateAllParams(ar.value, "number"); err != nil {
+	if err := ValidateLeastParams(ar.value, "number+"); err != nil {
 		return nil, err
 	}
 
@@ -137,7 +137,7 @@ func arrayGetAddResult(ar *Array, c *r.Context) (r.Value, error) {
 }
 
 func arrayGetSubResult(ar *Array, c *r.Context) (r.Value, error) {
-	if err := ValidateAllParams(ar.value, "number"); err != nil {
+	if err := ValidateLeastParams(ar.value, "number+"); err != nil {
 		return nil, err
 	}
 
@@ -156,9 +156,8 @@ func arrayGetSubResult(ar *Array, c *r.Context) (r.Value, error) {
 	return NewNumber(sum), nil
 }
 
-
 func arrayGetMulResult(ar *Array, c *r.Context) (r.Value, error) {
-	if err := ValidateAllParams(ar.value, "number"); err != nil {
+	if err := ValidateLeastParams(ar.value, "number+"); err != nil {
 		return nil, err
 	}
 
@@ -177,9 +176,8 @@ func arrayGetMulResult(ar *Array, c *r.Context) (r.Value, error) {
 	return NewNumber(sum), nil
 }
 
-
 func arrayGetDivResult(ar *Array, c *r.Context) (r.Value, error) {
-	if err := ValidateAllParams(ar.value, "number"); err != nil {
+	if err := ValidateLeastParams(ar.value, "number+"); err != nil {
 		return nil, err
 	}
 
