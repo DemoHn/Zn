@@ -239,7 +239,7 @@ func ValidateExactParams(values []r.Value, typeStr ...string) error {
 //
 // e.g.:
 // ["number", "string+"] means the FIRST param is a decimal, and the FOLLOWING params
-// are all strings (must have ONE string param)
+// are all strings (must have ONE more string param)
 //
 // ["number", "bool", "string*"] means the FIRST param is a decimal, the SECOND param is a bool, and the FOLLOWING params
 // are all strings (allow 0 string params)

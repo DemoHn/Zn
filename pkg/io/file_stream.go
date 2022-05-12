@@ -34,7 +34,7 @@ func NewFileStream(path string) (*FileStream, error) {
 		reader:    reader,
 		encBuffer: []byte{},
 		path:      path,
-		hasRead: false,
+		hasRead:   false,
 	}, nil
 }
 

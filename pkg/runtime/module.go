@@ -9,8 +9,6 @@ type Module struct {
 	symbols map[string]SymbolInfo
 	// import modules
 	imports []Module
-	// rootScope of this module
-	rootScope *Scope
 	// lexer
 	lexer *syntax.Lexer
 }
@@ -21,7 +19,6 @@ func NewModule(name string, l *syntax.Lexer) *Module {
 		name: &name,
 		symbols: map[string]SymbolInfo{},
 		imports: []Module{},
-		rootScope: NewScope(),
 		lexer: l,
 	}
 }

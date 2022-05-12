@@ -1,6 +1,9 @@
 package runtime
 
-import zerr "github.com/DemoHn/Zn/pkg/error"
+import (
+	zerr "github.com/DemoHn/Zn/pkg/error"
+	"github.com/DemoHn/Zn/pkg/syntax"
+)
 
 // Context is a global variable that stores current execution
 // states, global configurations
@@ -9,8 +12,8 @@ type Context struct {
 	globals map[string]Value
 	// import - imported value from stdlib or elsewhere
 	imports map[string]Value
-	// Scope -
-	scope *Scope
+	// scopeStack - trace scopes
+	scopeStack []Scope
 }
 
 // NewContext - create new Zn Context. Notice through the life-cycle
@@ -19,10 +22,32 @@ func NewContext(globalsMap map[string]Value) *Context {
 	return &Context{
 		globals: globalsMap,
 		imports: map[string]Value{},
-		scope:   NewScope(),
+		scopeStack: []Scope{},
 	}
 }
 
+// ImportModule -
+func (ctx *Context) ImportModule(moduleName string, l *syntax.Lexer) {
+	module := NewModule(moduleName, l)
+	scope := NewScope(module)
+
+	// push scope into scopeStack
+	ctx.scopeStack = append(ctx.scopeStack, scope)
+}
+
+func (ctx *Context) GetCurrentScope() *Scope {
+	stackLen := len(ctx.scopeStack)
+	if stackLen == 0 {
+		return nil
+	}
+
+	lastScope := ctx.scopeStack[stackLen-1]
+	return &lastScope
+}
+
+func (ctx *Context) PushNewScope() *Scope {
+
+}
 
 // GetScope -
 func (ctx *Context) GetScope() *Scope {

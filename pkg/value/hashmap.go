@@ -6,7 +6,6 @@ import (
 )
 
 type hmGetterFunc func(*HashMap, *r.Context) (r.Value, error)
-type hmSetterFunc func(*HashMap, *r.Context, r.Value) error
 type hmMethodFunc func(*HashMap, *r.Context, []r.Value) (r.Value, error)
 
 // HashMap - represents for 列表类
@@ -86,6 +85,8 @@ func (hm *HashMap) SetProperty(c *r.Context, name string, value r.Value) error {
 func (hm *HashMap) ExecMethod(c *r.Context, name string, values []r.Value) (r.Value, error) {
 	hmMethodMap := map[string]hmMethodFunc{
 		"读取": hmExecGet,
+		"写入": hmExecSet,
+		"移除": hmExecDelete,
 	}
 	if fn, ok := hmMethodMap[name]; ok {
 		return fn(hm, c, values)
@@ -137,45 +138,35 @@ func hmExecGet(hm *HashMap, c *r.Context, values []r.Value) (r.Value, error) {
 	}
 	return result, nil
 }
-/**
-case "读取":
-		if err := ValidateExactParams(values, "string"); err != nil {
-			return nil, err
-		}
-		// key name
-		keyName := values[0].(*String).value
-		val, ok := hm.value[keyName]
-		if ok {
-			return val, nil
-		}
-		return NewNull(), nil
-	case "写入":
-		if err := ValidateExactParams(values, "string", "any"); err != nil {
-			return nil, err
-		}
-		// key name
-		keyName := values[0].(*String).value
-		hm.AppendKVPair(KVPair{keyName, values[1]})
-		return values[1], nil
-	case "移除":
-		if err := ValidateExactParams(values, "string"); err != nil {
-			return nil, err
-		}
-		// key name
-		keyName := values[0].(*String).value
-		val, ok := hm.value[keyName]
-		if ok {
-			delete(hm.value, keyName)
-			// find & delete key from keyOrder
-			for idx, vk := range hm.keyOrder {
-				// if found, delete item from keyOrder to stop loop
-				if vk == keyName {
-					hm.keyOrder = append(hm.keyOrder[:idx], hm.keyOrder[idx+1:]...)
-				}
-			}
-			return val, nil
-		}
-		// if delete key not found in hashmap, return null directly
-		return NewNull(), nil
+
+func hmExecSet(hm *HashMap, c *r.Context, values []r.Value) (r.Value, error) {
+	if err := ValidateExactParams(values, "string", "any"); err != nil {
+		return nil, err
 	}
- */
+	// key name
+	keyName := values[0].(*String).value
+	hm.AppendKVPair(KVPair{keyName, values[1]})
+	return values[1], nil
+}
+
+func hmExecDelete(hm *HashMap, c *r.Context, values []r.Value) (r.Value, error) {
+	if err := ValidateExactParams(values, "string"); err != nil {
+		return nil, err
+	}
+	// key name
+	keyName := values[0].(*String).value
+	val, ok := hm.value[keyName]
+	if ok {
+		delete(hm.value, keyName)
+		// find & delete key from keyOrder
+		for idx, vk := range hm.keyOrder {
+			// if found, delete item from keyOrder to stop loop
+			if vk == keyName {
+				hm.keyOrder = append(hm.keyOrder[:idx], hm.keyOrder[idx+1:]...)
+			}
+		}
+		return val, nil
+	}
+	// if delete key not found in hashmap, return null directly
+	return NewNull(), nil
+}

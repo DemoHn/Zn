@@ -34,7 +34,7 @@ func NewNumberFromString(value string) (*Number, error) {
 
 // String -
 func (n *Number) String() string {
-	return fmt.Sprintf("%f", n.value)
+	return fmt.Sprintf("%v", n.value)
 }
 
 // GetValue -
