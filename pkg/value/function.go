@@ -44,12 +44,10 @@ func NewClosure(paramHandler funcExecutor, executor funcExecutor) ClosureRef {
 // yields final result
 func (cs *ClosureRef) Exec(c *r.Context, thisValue r.Value, params []r.Value) (r.Value, error) {
 	// init scope
-	currentScope := c.GetScope()
-	newScope := currentScope.CreateChildScope()
+	newScope := c.PushChildScope()
 	newScope.SetThisValue(thisValue)
-	// set and revert scope
-	c.SetScope(newScope)
-	defer c.SetScope(currentScope)
+
+	defer c.PopScope()
 
 	if cs.ParamHandler != nil {
 		if _, err := cs.ParamHandler(c, params); err != nil {

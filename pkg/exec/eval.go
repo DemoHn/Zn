@@ -25,6 +25,8 @@ const errCodeMethodNotFound = 0x2505
 // a r.Value object and mostly won't change scopes (but search a variable from scope is frequently used)
 
 func evalProgram(c *r.Context, program *syntax.Program) error {
+	// TODO: include module
+	c.PushScope(nil)
 	otherStmts, err := evalPreStmtBlock(c, program.Content)
 	if err != nil {
 		return err
@@ -37,7 +39,7 @@ func evalProgram(c *r.Context, program *syntax.Program) error {
 // EvalStatement - eval statement
 func evalStatement(c *r.Context, stmt syntax.Statement) error {
 	var returnValue r.Value
-	var sp = c.GetScope()
+	var sp = c.GetCurrentScope()
 
 	// set return value
 	defer func() {
@@ -49,7 +51,7 @@ func evalStatement(c *r.Context, stmt syntax.Statement) error {
 		sp.SetReturnValue(finalReturnValue)
 
 		// set parent return value
-		parentScope := sp.FindParentScope()
+		parentScope := c.FindParentScope()
 		if parentScope != nil {
 			parentScope.SetReturnValue(finalReturnValue)
 		}
@@ -68,7 +70,7 @@ func evalStatement(c *r.Context, stmt syntax.Statement) error {
 		fn := BuildFunctionFromNode(v)
 		return c.BindSymbol(v.FuncName.GetLiteral(), fn)
 	case *syntax.ClassDeclareStmt:
-		if sp.FindParentScope() != nil {
+		if c.FindParentScope() != nil {
 			return zerr.NewErrorSLOT("只能在代码主层级定义类")
 		}
 		// bind classRef
@@ -168,14 +170,13 @@ func evalNewObject(c *r.Context, node syntax.VDAssignPair) error {
 
 // evalWhileLoopStmt -
 func evalWhileLoopStmt(c *r.Context, node *syntax.WhileLoopStmt) error {
-	currentScope := c.GetScope()
 	// create new scope
-	newScope := currentScope.CreateChildScope()
+	newScope := c.PushChildScope()
 	newScope.SetThisValue(value.NewLoopCtl())
 	// set context's current scope with new one
-	c.SetScope(newScope)
+
 	// after finish executing this block, revert scope to old one
-	defer c.SetScope(currentScope)
+	defer c.PopScope()
 
 	for {
 		// #1. first execute expr
@@ -275,10 +276,8 @@ func evalStmtBlock(c *r.Context, block *syntax.BlockStmt) error {
 }
 
 func evalBranchStmt(c *r.Context, node *syntax.BranchStmt) error {
-	// set scope
-	currentScope := c.GetScope()
-	c.SetScope(currentScope.CreateChildScope())
-	defer c.SetScope(currentScope)
+	c.PushChildScope()
+	defer c.PopScope()
 
 	// #1. condition header
 	ifExpr, err := evalExpression(c, node.IfTrueExpr)
@@ -317,12 +316,9 @@ func evalBranchStmt(c *r.Context, node *syntax.BranchStmt) error {
 }
 
 func evalIterateStmt(c *r.Context, node *syntax.IterateStmt) error {
-	currentScope := c.GetScope()
-	newScope := currentScope.CreateChildScope()
+	newScope := c.PushChildScope()
 	newScope.SetThisValue(value.NewLoopCtl())
-	// set new scope (and revert to old when done)
-	c.SetScope(newScope)
-	defer c.SetScope(currentScope)
+	defer c.PopScope()
 
 	// pre-defined key, value variable name
 	var keySlot, valueSlot string
@@ -469,7 +465,7 @@ func evalFunctionCall(c *r.Context, expr *syntax.FuncCallExpr) (r.Value, error) 
 				// add yield result
 				vtag := expr.YieldResult.GetLiteral()
 				// bind yield result
-				c.BindScopeSymbolDecl(c.GetScope(), vtag, v)
+				c.BindScopeSymbolDecl(c.GetCurrentScope(), vtag, v)
 			}
 			// return result
 			return v, nil
@@ -508,7 +504,7 @@ func evalFunctionCall(c *r.Context, expr *syntax.FuncCallExpr) (r.Value, error) 
 		// add yield result
 		ytag := expr.YieldResult.GetLiteral()
 		// bind yield result
-		c.BindScopeSymbolDecl(c.GetScope(), ytag, v2)
+		c.BindScopeSymbolDecl(c.GetCurrentScope(), ytag, v2)
 	}
 
 	// return result
@@ -517,11 +513,9 @@ func evalFunctionCall(c *r.Context, expr *syntax.FuncCallExpr) (r.Value, error) 
 
 // 以 A （执行：B、C、D）
 func evalMemberMethodExpr(c *r.Context, expr *syntax.MemberMethodExpr) (r.Value, error) {
-	currentScope := c.GetScope()
-	newScope := currentScope.CreateChildScope()
-	// set scope
-	c.SetScope(newScope)
-	defer c.SetScope(currentScope)
+	currentScope := c.GetCurrentScope()
+	newScope := c.PushChildScope()
+	defer c.PopScope()
 
 	// 1. parse root expr
 	rootExpr, err := evalExpression(c, expr.Root)
@@ -529,7 +523,7 @@ func evalMemberMethodExpr(c *r.Context, expr *syntax.MemberMethodExpr) (r.Value,
 		return nil, err
 	}
 	// set this value
-	c.GetScope().SetThisValue(rootExpr)
+	newScope.SetThisValue(rootExpr)
 
 	var vlast r.Value
 
@@ -837,7 +831,7 @@ func BuildClosureFromNode(paramTags []*syntax.ParamItem, stmtBlock *syntax.Block
 				}
 			}
 		}
-		return c.GetScope().GetReturnValue(), nil
+		return c.GetCurrentScope().GetReturnValue(), nil
 	}
 
 	var paramHandler = func(c *r.Context, params []r.Value) (r.Value, error) {

@@ -57,5 +57,5 @@ func execProgram(c *r.Context, program *syntax.Program) (r.Value, error) {
 		return nil, err
 	}
 	 */
-	return c.GetScope().GetReturnValue(), nil
+	return c.GetCurrentScope().GetReturnValue(), nil
 }

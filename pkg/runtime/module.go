@@ -23,16 +23,6 @@ func NewModule(name string, l *syntax.Lexer) *Module {
 	}
 }
 
-// NewAnonymousModule - create module but no module name
-func NewAnonymousModule(l *syntax.Lexer) *Module {
-	return &Module{
-		name: nil,
-		symbols: map[string]SymbolInfo{},
-		imports: []Module{},
-		rootScope: NewScope(),
-		lexer: l,
-	}
-}
 
 
 

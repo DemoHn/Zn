@@ -31,30 +31,6 @@ func NewScope(module *Module) Scope {
 	}
 }
 
-// CreateChildScope -
-func (sp *Scope) CreateChildScope() *Scope {
-	newScope := &Scope{
-		parent:      sp,
-		child:       nil,
-		symbolMap:   map[string]SymbolInfo{},
-		thisValue:   nil,
-		returnValue: nil,
-	}
-
-	sp.child = newScope
-	return newScope
-}
-
-// FindParentScope - find parent scope
-func (sp *Scope) FindParentScope() *Scope {
-	return sp.parent
-}
-
-// FindChildScope - find child scope
-func (sp *Scope) FindChildScope() *Scope {
-	return sp.child
-}
-
 // GetThisValue -
 func (sp *Scope) GetThisValue() Value {
 	return sp.thisValue
