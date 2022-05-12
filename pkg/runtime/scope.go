@@ -22,8 +22,8 @@ type SymbolInfo struct {
 	isConst bool
 }
 
-func NewScope(module *Module) Scope {
-	return Scope{
+func NewScope(module *Module) *Scope {
+	return &Scope{
 		module:      module,
 		symbolMap:   map[string]SymbolInfo{},
 		thisValue:   nil,

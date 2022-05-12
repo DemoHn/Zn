@@ -12,7 +12,7 @@ type Context struct {
 	// import - imported value from stdlib or elsewhere
 	imports map[string]Value
 	// scopeStack - trace scopes
-	scopeStack []Scope
+	scopeStack []*Scope
 }
 
 // NewContext - create new Zn Context. Notice through the life-cycle
@@ -21,7 +21,7 @@ func NewContext(globalsMap map[string]Value) *Context {
 	return &Context{
 		globals: globalsMap,
 		imports: map[string]Value{},
-		scopeStack: []Scope{},
+		scopeStack: []*Scope{},
 	}
 }
 
@@ -31,8 +31,7 @@ func (ctx *Context) GetCurrentScope() *Scope {
 		return nil
 	}
 
-	lastScope := ctx.scopeStack[stackLen-1]
-	return &lastScope
+	return ctx.scopeStack[stackLen-1]
 }
 
 // FindParentScope - get the previous one of current scope
@@ -42,8 +41,7 @@ func (ctx *Context) FindParentScope() *Scope {
 		return nil
 	}
 
-	lastScope := ctx.scopeStack[stackLen-2]
-	return &lastScope
+	return ctx.scopeStack[stackLen-2]
 }
 
 func (ctx *Context) PushScope(module *Module) *Scope {
