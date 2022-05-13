@@ -59,7 +59,7 @@ func PropertyNotFound(name string) *Error {
 // MethodNotFound -
 func MethodNotFound(name string) *Error {
 	return &Error{
-		Code:    0x2504,
+		Code:    0x2505,
 		Message: fmt.Sprintf("方法「%s」不存在", name),
 		Extra:   name,
 	}

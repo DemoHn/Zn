@@ -470,6 +470,7 @@ func evalFunctionCall(c *r.Context, expr *syntax.FuncCallExpr) (r.Value, error) 
 			// return result
 			return v, nil
 		}
+
 		if errX, ok := err.(*zerr.Error); ok {
 			if errX.Code != errCodeMethodNotFound {
 				return nil, err
@@ -480,19 +481,19 @@ func evalFunctionCall(c *r.Context, expr *syntax.FuncCallExpr) (r.Value, error) 
 	}
 
 	// if function value not found from object scope, look up from local scope
-	if zf == nil {
-		// find function definition
-		v, err := c.FindSymbol(vtag)
-		if err != nil {
-			return nil, err
-		}
-		// assert value
-		zval, ok := v.(*value.Function)
-		if !ok {
-			return nil, zerr.InvalidFuncVariable(vtag)
-		}
-		zf = zval.GetValue()
+
+	// find function definition
+	v, err := c.FindSymbol(vtag)
+	if err != nil {
+		return nil, err
 	}
+	// assert value
+	zval, ok := v.(*value.Function)
+	if !ok {
+		return nil, zerr.InvalidFuncVariable(vtag)
+	}
+	zf = zval.GetValue()
+
 
 	// exec function call via its ClosureRef
 	v2, err := zf.Exec(c, thisValue, params)
