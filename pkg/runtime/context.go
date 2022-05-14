@@ -2,11 +2,13 @@ package runtime
 
 import (
 	zerr "github.com/DemoHn/Zn/pkg/error"
+	"github.com/DemoHn/Zn/pkg/syntax"
 )
 
 // Context is a global variable that stores current execution
 // states, global configurations
 type Context struct {
+	astBuilder syntax.ASTBuilder
 	// globals - stores all global variables
 	globals map[string]Value
 	// scopeStack - trace scopes
@@ -15,11 +17,16 @@ type Context struct {
 
 // NewContext - create new Zn Context. Notice through the life-cycle
 // of one code execution, there's only one running context to store all states.
-func NewContext(globalsMap map[string]Value) *Context {
+func NewContext(globalsMap map[string]Value, builder syntax.ASTBuilder) *Context {
 	return &Context{
+		astBuilder: builder,
 		globals: globalsMap,
 		scopeStack: []*Scope{},
 	}
+}
+
+func (ctx *Context) GetBuilder() syntax.ASTBuilder {
+	return ctx.astBuilder
 }
 
 func (ctx *Context) GetCurrentScope() *Scope {

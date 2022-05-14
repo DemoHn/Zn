@@ -25,8 +25,6 @@ const errCodeMethodNotFound = 0x2505
 // a r.Value object and mostly won't change scopes (but search a variable from scope is frequently used)
 
 func evalProgram(c *r.Context, program *syntax.Program) error {
-	// TODO: include module
-	c.PushScope(nil)
 	otherStmts, err := evalPreStmtBlock(c, program.Content)
 	if err != nil {
 		return err

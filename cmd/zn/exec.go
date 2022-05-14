@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/DemoHn/Zn/pkg/io"
 	r "github.com/DemoHn/Zn/pkg/runtime"
+	"github.com/DemoHn/Zn/pkg/syntax/zh"
 	"github.com/DemoHn/Zn/pkg/value"
 	eio "io"
 	"os"
@@ -18,8 +19,8 @@ const version = "rev06"
 func EnterREPL() {
 	linerR := liner.NewLiner()
 	linerR.SetCtrlCAborts(true)
-	c := r.NewContext(exec.GlobalValues)
-
+	zhBuilder := zh.NewParserZH()
+	c := r.NewContext(exec.GlobalValues, zhBuilder)
 
 	// REPL loop
 	for {
@@ -37,10 +38,7 @@ func EnterREPL() {
 		// append history
 		linerR.AppendHistory(text)
 		// add special command
-		if text == ".print" {
-			printSymbols(c)
-			continue
-		} else if text == ".exit" {
+		if text == ".exit" {
 			break
 		}
 
@@ -48,7 +46,7 @@ func EnterREPL() {
 		in := io.NewByteStream([]byte(text))
 		result, err2 := exec.ExecuteCode(c, in)
 		if err2 != nil {
-			fmt.Println(err2.Error())
+			prettyPrintError(c, err2)
 		} else {
 			if result != nil {
 				prettyDisplayValue(result, os.Stdout)
@@ -59,17 +57,18 @@ func EnterREPL() {
 
 // ExecProgram - exec program from file directly
 func ExecProgram(file string) {
-	c := r.NewContext(exec.GlobalValues)
+	zhBuilder := zh.NewParserZH()
+	c := r.NewContext(exec.GlobalValues, zhBuilder)
 	in, errF := io.NewFileStream(file)
 	if errF != nil {
-		fmt.Println(errF.Error())
+		prettyPrintError(c, errF)
 		return
 	}
 
 	_, err := exec.ExecuteCode(c, in)
 	// when exec program, unlike REPL, it's not necessary to print last executed value
 	if err != nil {
-		fmt.Println(err.Error())
+		prettyPrintError(c, err)
 	}
 }
 
@@ -101,23 +100,7 @@ func prettyDisplayValue(v r.Value, w eio.Writer) {
 	w.Write([]byte(displayData))
 }
 
-// printSymbols -
-func printSymbols(c *r.Context) {
-	/** TODO
-	strs := []string{}
-	for k, symArr := range ctx.GetSymbols() {
-		if symArr != nil {
-			for _, symItem := range symArr {
-				symStr := "ε"
-				if symItem.Value != nil {
-					symStr = symItem.Value.String()
-				}
-				strs = append(strs, fmt.Sprintf("‹%s, %d› => %s", k, symItem.NestLevel, symStr))
-			}
-		}
-	}
-
-	data := strings.Join(strs, "\n")
-	fmt.Println(data)
-	*/
+func prettyPrintError(c *r.Context, err error) {
+	// TODO: print error correctly
+	fmt.Println(err.Error())
 }
