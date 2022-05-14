@@ -34,16 +34,6 @@ func (ctx *Context) GetCurrentScope() *Scope {
 	return ctx.scopeStack[stackLen-1]
 }
 
-// FindParentScope - get the previous one of current scope
-func (ctx *Context) FindParentScope() *Scope {
-	stackLen := len(ctx.scopeStack)
-	if stackLen <= 1 {
-		return nil
-	}
-
-	return ctx.scopeStack[stackLen-2]
-}
-
 func (ctx *Context) PushScope(module *Module) *Scope {
 	scope := NewScope(module)
 	// push scope into scopeStack
@@ -58,14 +48,12 @@ func (ctx *Context) PushChildScope() *Scope {
 	if sp == nil {
 		return nil
 	}
-	scope := NewScope(sp.module)
+	childScope := NewChildScope(sp)
 	// push scope into scopeStack
-	ctx.scopeStack = append(ctx.scopeStack, scope)
+	ctx.scopeStack = append(ctx.scopeStack, childScope)
 
 	return ctx.GetCurrentScope()
 }
-
-
 
 func (ctx *Context) PopScope() {
 	stackLen := len(ctx.scopeStack)

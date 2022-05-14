@@ -51,7 +51,7 @@ func evalStatement(c *r.Context, stmt syntax.Statement) error {
 		sp.SetReturnValue(finalReturnValue)
 
 		// set parent return value
-		parentScope := c.FindParentScope()
+		parentScope := sp.FindParentScope()
 		if parentScope != nil {
 			parentScope.SetReturnValue(finalReturnValue)
 		}
@@ -70,7 +70,7 @@ func evalStatement(c *r.Context, stmt syntax.Statement) error {
 		fn := BuildFunctionFromNode(v)
 		return c.BindSymbol(v.FuncName.GetLiteral(), fn)
 	case *syntax.ClassDeclareStmt:
-		if c.FindParentScope() != nil {
+		if sp.FindParentScope() != nil {
 			return zerr.NewErrorSLOT("只能在代码主层级定义类")
 		}
 		// bind classRef

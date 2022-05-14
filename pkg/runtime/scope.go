@@ -4,6 +4,7 @@ package runtime
 // including local variables map and current "return" value.
 // NOTE: Scope is a doubly linked list
 type Scope struct {
+	parent *Scope
 	// symbolMap - stores current scope stored symbols
 	symbolMap map[string]SymbolInfo
 	// module - get current module
@@ -24,11 +25,26 @@ type SymbolInfo struct {
 
 func NewScope(module *Module) *Scope {
 	return &Scope{
+		parent: 	nil,
 		module:      module,
 		symbolMap:   map[string]SymbolInfo{},
 		thisValue:   nil,
 		returnValue: nil,
 	}
+}
+
+func NewChildScope(sp *Scope) *Scope {
+	return &Scope{
+		parent: 	 sp,
+		module:      sp.module,
+		symbolMap:   map[string]SymbolInfo{},
+		thisValue:   nil,
+		returnValue: nil,
+	}
+}
+
+func (sp *Scope) FindParentScope() *Scope {
+	return sp.parent
 }
 
 // GetThisValue -
