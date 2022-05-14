@@ -9,8 +9,6 @@ import (
 type Context struct {
 	// globals - stores all global variables
 	globals map[string]Value
-	// import - imported value from stdlib or elsewhere
-	imports map[string]Value
 	// scopeStack - trace scopes
 	scopeStack []*Scope
 }
@@ -20,7 +18,6 @@ type Context struct {
 func NewContext(globalsMap map[string]Value) *Context {
 	return &Context{
 		globals: globalsMap,
-		imports: map[string]Value{},
 		scopeStack: []*Scope{},
 	}
 }
@@ -74,10 +71,6 @@ func (ctx *Context) FindSymbol(name string) (Value, error) {
 	// find on globals first
 	if symVal, inGlobals := ctx.globals[name]; inGlobals {
 		return symVal, nil
-	}
-	// next in imports
-	if imVal, inImports := ctx.imports[name]; inImports {
-		return imVal, nil
 	}
 	// ...then in symbols
 	for i := len(ctx.scopeStack)-1; i >= 0; i-- {
@@ -165,24 +158,4 @@ func (ctx *Context) FindThisValue() (Value, error) {
 	}
 
 	return nil, zerr.PropertyNotFound("thisValue")
-}
-
-// fetch from imports
-// GetImportValue -
-func (ctx *Context) GetImportValue(name string) (Value, error) {
-	// find on globals first
-	if symVal, inImports := ctx.imports[name]; inImports {
-		return symVal, nil
-	}
-
-	return nil, zerr.NameNotDefined(name)
-}
-
-// SetImportValue -
-func (ctx *Context) SetImportValue(name string, value Value) error {
-	if _, inImports := ctx.imports[name]; inImports {
-		return zerr.NameRedeclared(name)
-	}
-	ctx.imports[name] = value
-	return nil
 }

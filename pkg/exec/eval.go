@@ -77,7 +77,7 @@ func evalStatement(c *r.Context, stmt syntax.Statement) error {
 		className := v.ClassName.GetLiteral()
 		classRef := BuildClassFromNode(className, v)
 
-		return c.SetImportValue(className, &classRef)
+		return c.BindSymbol(className, &classRef)
 	case *syntax.IterateStmt:
 		return evalIterateStmt(c, v)
 	case *syntax.FunctionReturnStmt:
@@ -138,7 +138,7 @@ func evalVarDeclareStmt(c *r.Context, node *syntax.VarDeclareStmt) error {
 func evalNewObject(c *r.Context, node syntax.VDAssignPair) error {
 	vtag := node.ObjClass.GetLiteral()
 	// get class definition
-	importVal, err := c.GetImportValue(vtag)
+	importVal, err := c.FindSymbol(vtag)
 	if err != nil {
 		return err
 	}
@@ -210,6 +210,7 @@ func evalWhileLoopStmt(c *r.Context, node *syntax.WhileLoopStmt) error {
 
 // evalPreStmtBlock - execute classRef, functionDeclare, imports first, then other statements inside the block
 func evalPreStmtBlock(c *r.Context, block *syntax.BlockStmt) (*syntax.BlockStmt, error) {
+	sp := c.GetCurrentScope()
 	otherStmts := &syntax.BlockStmt{
 		Children: []syntax.Statement{},
 	}
@@ -218,15 +219,30 @@ func evalPreStmtBlock(c *r.Context, block *syntax.BlockStmt) (*syntax.BlockStmt,
 		switch v := stmtI.(type) {
 		case *syntax.FunctionDeclareStmt:
 			fn := BuildFunctionFromNode(v)
-			if err := c.BindSymbol(v.FuncName.GetLiteral(), fn); err != nil {
+			vtag := v.FuncName.GetLiteral()
+			if err := c.BindSymbol(vtag, fn); err != nil {
 				return nil, err
+			}
+
+			// add symbol to module
+			if module := sp.GetModule(); module != nil {
+				if err := module.AddSymbol(vtag, fn, true); err != nil {
+					return nil, err
+				}
 			}
 		case *syntax.ClassDeclareStmt:
 			// bind classRef
 			className := v.ClassName.GetLiteral()
 			classRef := BuildClassFromNode(className, v)
-			if err := c.SetImportValue(className, &classRef); err != nil {
+			if err := c.BindSymbol(className, &classRef); err != nil {
 				return nil, err
+			}
+
+			// add symbol to module
+			if module := sp.GetModule(); module != nil {
+				if err := module.AddSymbol(className, &classRef, true); err != nil {
+					return nil, err
+				}
 			}
 		case *syntax.ImportStmt:
 			// TODO: support non-stdlib imports
@@ -276,6 +292,7 @@ func evalStmtBlock(c *r.Context, block *syntax.BlockStmt) error {
 }
 
 func evalBranchStmt(c *r.Context, node *syntax.BranchStmt) error {
+	// create inner scope for if statement
 	c.PushChildScope()
 	defer c.PopScope()
 

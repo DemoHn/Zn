@@ -47,6 +47,10 @@ func (sp *Scope) FindParentScope() *Scope {
 	return sp.parent
 }
 
+func (sp *Scope) GetModule() *Module {
+	return sp.module
+}
+
 // GetThisValue -
 func (sp *Scope) GetThisValue() Value {
 	return sp.thisValue
