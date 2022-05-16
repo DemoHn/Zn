@@ -44,7 +44,8 @@ func EnterREPL() {
 
 		// execute program
 		in := io.NewByteStream([]byte(text))
-		result, err2 := exec.ExecuteCode(c, in)
+		c.PushScope(nil)
+		result, err2 := exec.ExecuteREPLCode(c, in)
 		if err2 != nil {
 			prettyPrintError(c, err2)
 		} else {
@@ -65,9 +66,8 @@ func ExecProgram(file string) {
 		return
 	}
 
-	_, err := exec.ExecuteCode(c, in)
 	// when exec program, unlike REPL, it's not necessary to print last executed value
-	if err != nil {
+	if _, err := exec.ExecuteModule(c, in, file); err != nil {
 		prettyPrintError(c, err)
 	}
 }

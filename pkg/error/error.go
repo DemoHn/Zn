@@ -12,8 +12,3 @@ type Error struct {
 func (e *Error) Error() string {
 	return e.Message
 }
-
-func (e *Error) Display() string {
-	// TODO - add display logic
-	return e.Error()
-}

@@ -60,6 +60,11 @@ func (f *FileStream) Read(n int) ([]rune, error) {
 	return f.read(n)
 }
 
+// GetPath -
+func (f *FileStream) GetPath() string {
+	return f.path
+}
+
 func (f *FileStream) read(n int) ([]rune, error) {
 	data, remains, err := readRune(f.reader, f.encBuffer, n)
 	if err != nil {
