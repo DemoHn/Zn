@@ -101,6 +101,15 @@ func ExactParamsError(exactParams int) *Error {
 	}
 }
 
+// ModuleNotFound -
+func ModuleNotFound(name string) *Error {
+	return &Error{
+		Code: 0x2801,
+		Message: fmt.Sprintf("未找到「%s」模块", name),
+		Extra: name,
+	}
+}
+
 // Internal Error Class, for Zn Internal exception (rare to happen)
 // e.g. Unexpected switch-case
 

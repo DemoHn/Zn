@@ -8,6 +8,8 @@ import (
 	"github.com/DemoHn/Zn/pkg/value"
 	eio "io"
 	"os"
+	"path/filepath"
+	"strings"
 
 	"github.com/DemoHn/Zn/pkg/exec"
 	"github.com/peterh/liner"
@@ -63,14 +65,14 @@ func EnterREPL() {
 func ExecProgram(file string) {
 	zhBuilder := zh.NewParserZH()
 	c := r.NewContext(exec.GlobalValues, zhBuilder)
-	in, errF := io.NewFileStream(file)
-	if errF != nil {
-		prettyPrintError(c, errF)
-		return
-	}
+
+	rootDir := filepath.Dir(file)
+	// get module name
+	_, fileName := filepath.Split(file)
+	rootModule := strings.TrimSuffix(fileName, filepath.Ext(fileName))
 
 	// when exec program, unlike REPL, it's not necessary to print last executed value
-	if _, err := exec.ExecuteModule(c, in, file); err != nil {
+	if _, err := exec.ExecuteModule(c, rootModule, rootDir); err != nil {
 		prettyPrintError(c, err)
 	}
 }

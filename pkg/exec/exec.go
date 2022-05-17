@@ -1,18 +1,29 @@
 package exec
 
 import (
-	"fmt"
+	"errors"
 	zerr "github.com/DemoHn/Zn/pkg/error"
 	"github.com/DemoHn/Zn/pkg/io"
 	r "github.com/DemoHn/Zn/pkg/runtime"
 	"github.com/DemoHn/Zn/pkg/syntax"
+	"os"
 	"path/filepath"
 	"strings"
 )
 
 // ExecuteModule - execute program from input Zn code (whether input source is a file or REPL)
-func ExecuteModule(c *r.Context, in *io.FileStream, rootPath string) (r.Value, error) {
-	// #1. read source code
+func ExecuteModule(c *r.Context, name string, rootDir string) (r.Value, error) {
+	// #1. find filepath of current module
+	path, err := getModulePath(name, rootDir)
+	if err != nil {
+		return nil, err
+	}
+
+	// #2. read source code
+	in, err := io.NewFileStream(path)
+	if err != nil {
+		return nil, err
+	}
 	source, err := in.ReadAll()
 	if err != nil {
 		return nil, err
@@ -21,18 +32,14 @@ func ExecuteModule(c *r.Context, in *io.FileStream, rootPath string) (r.Value, e
 	lexer := syntax.NewLexer(source)
 	p := syntax.NewParser(lexer, c.GetBuilder())
 
-	// #2. parse program
+	// #3. parse program
 	program, err := p.Parse()
 	if err != nil {
 		return nil, err
 	}
 
-	moduleName, err := findModuleName(in.GetPath(), rootPath)
-	if err != nil {
-		return nil, err
-	}
-	// #3. create module
-	module := r.NewModule(moduleName)
+	// #4. create module
+	module := r.NewModule(name)
 	c.PushScope(module)
 	defer c.PopScope()
 
@@ -68,24 +75,16 @@ func ExecuteREPLCode(c *r.Context, in io.InputStream) (r.Value, error) {
 	return c.GetCurrentScope().GetReturnValue(), nil
 }
 
-// findModuleName - currentPath MUST BE in the directory and its child directories
-// of rootPath
-// Since we only support absolute path right now
-func findModuleName(currentPath string, rootPath string) (string, error) {
-	relFile, err := filepath.Rel(filepath.Dir(rootPath), currentPath)
-	if err != nil {
-		return "", zerr.NewErrorSLOT("定位模块位置出错")
+// getModulePath - get filepath of current module relative to rootPath
+func getModulePath(name string, rootDir string) (string, error) {
+	dirs := strings.Split(name, "-")
+	// add .zn for last item
+	dirs[len(dirs)-1] = dirs[len(dirs)-1] + ".zn"
+
+	path := filepath.Join(rootDir, filepath.Join(dirs...))
+	if _, err := os.Stat(path); errors.Is(err, os.ErrNotExist) {
+		return "", zerr.ModuleNotFound(name)
 	}
 
-	relDir, relFileName := filepath.Split(relFile)
-	// remove .zn   eg. A.zn -> A
-	relFileName = strings.TrimSuffix(relFileName, filepath.Ext(relFileName))
-	if relDir == "" {
-		return relFileName, nil
-	}
-
-	relDir = strings.ReplaceAll(relDir, "/", "-")
-	relDir = strings.ReplaceAll(relDir, "\\", "-")
-
-	return fmt.Sprintf("%s-%s", relDir, relFileName), nil
+	return path, nil
 }
