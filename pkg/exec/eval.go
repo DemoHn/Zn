@@ -243,34 +243,28 @@ func evalPreStmtBlock(c *r.Context, block *syntax.BlockStmt) (*syntax.BlockStmt,
 				}
 			}
 		case *syntax.ImportStmt:
-			// TODO: support non-stdlib imports
-			/**
 			libName := v.ImportName.GetLiteral()
-			libData, ok := stdlib.PackageList[libName]
-			if !ok {
-				return nil, zerr.NewErrorSLOT("对应的类库不存在")
-			}
-
-			itemsList := []string{}
+			var itemsList []string
+			// TODO: when import identifiers not specified, we need to
+			// import the module and execute directly
 			// if itemList is [] (e.g. 导入《 ... 》)
 			// then we import all items in this library
+			/**
 			if len(v.ImportItems) == 0 {
 				for k := range libData {
 					itemsList = append(itemsList, k)
 				}
 			} else {
-				for _, id := range v.ImportItems {
-					itemsList = append(itemsList, id.GetLiteral())
+			*/
+			for _, id := range v.ImportItems {
+				itemsList = append(itemsList, id.GetLiteral())
+			}
+
+			if module := sp.GetModule(); module != nil {
+				if err := module.AddImportSymbols(v.ImportLibType, libName, itemsList); err != nil {
+					return nil, err
 				}
 			}
-			// import name globally
-			for _, itemName := range itemsList {
-				libItem, ok2 := libData[itemName]
-				if ok2 {
-					c.SetImportValue(itemName, libItem)
-				}
-			}
-			 */
 		default:
 			otherStmts.Children = append(otherStmts.Children, stmtI)
 		}

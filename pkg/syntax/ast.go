@@ -149,17 +149,17 @@ type IterateStmt struct {
 // ImportStmt - 导入《 ... 》 statement
 type ImportStmt struct {
 	StmtBase
-	ImportLibType libTypeE
+	ImportLibType uint8
 	ImportName    *String
 	ImportItems   []*ID
 }
 
-type libTypeE uint8
 
 // declare import libType enum
 const (
 	// LibTypeStd - standard lib
-	LibTypeStd libTypeE = 1
+	LibTypeStd uint8 = 1
+	LibTypeCustom uint8 = 2
 )
 
 // BlockStmt -

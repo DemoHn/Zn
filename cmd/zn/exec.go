@@ -44,7 +44,10 @@ func EnterREPL() {
 
 		// execute program
 		in := io.NewByteStream([]byte(text))
-		c.PushScope(nil)
+		module := r.NewModule("")
+		// global execution scope
+		c.PushScope(module)
+
 		result, err2 := exec.ExecuteREPLCode(c, in)
 		if err2 != nil {
 			prettyPrintError(c, err2)

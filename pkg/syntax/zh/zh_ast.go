@@ -1089,14 +1089,17 @@ func ParseFunctionReturnStmt(p *ParserZH) *syntax.FunctionReturnStmt {
 // IDTail      -> 、 ID IDTail
 //             ->
 func ParseImportStmt(p *ParserZH) *syntax.ImportStmt {
-	stmt := &syntax.ImportStmt{
-		ImportLibType: syntax.LibTypeStd, // 目前只支持标准库的导入
-	}
-	match, tk := p.tryConsume(TypeLibString)
+	stmt := &syntax.ImportStmt{}
+	match, tk := p.tryConsume(TypeLibString, TypeString)
 	if !match {
 		panic(zerr.InvalidSyntaxCurr())
 	}
-	// currently, string must be starts with '《' (LeftQuoteI)
+
+	if tk.Type == TypeLibString {
+		stmt.ImportLibType = syntax.LibTypeStd
+	} else {
+		stmt.ImportLibType = syntax.LibTypeCustom
+	}
 
 	stmt.ImportName = newString(p, tk)
 

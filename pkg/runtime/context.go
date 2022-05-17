@@ -11,6 +11,8 @@ type Context struct {
 	astBuilder syntax.ASTBuilder
 	// globals - stores all global variables
 	globals map[string]Value
+
+	moduleMap map[string]*Module
 	// scopeStack - trace scopes
 	scopeStack []*Scope
 }
