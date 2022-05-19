@@ -8,11 +8,11 @@ import (
 // Context is a global variable that stores current execution
 // states, global configurations
 type Context struct {
+	*DependencyTree
+
 	astBuilder syntax.ASTBuilder
 	// globals - stores all global variables
 	globals map[string]Value
-
-	moduleMap map[string]*Module
 	// scopeStack - trace scopes
 	scopeStack []*Scope
 }
@@ -21,6 +21,7 @@ type Context struct {
 // of one code execution, there's only one running context to store all states.
 func NewContext(globalsMap map[string]Value, builder syntax.ASTBuilder) *Context {
 	return &Context{
+		DependencyTree: NewDependencyTree(),
 		astBuilder: builder,
 		globals: globalsMap,
 		scopeStack: []*Scope{},
@@ -70,7 +71,6 @@ func (ctx *Context) PopScope() {
 	// pop last element
 	ctx.scopeStack = ctx.scopeStack[:stackLen-1]
 }
-
 
 //// scope symbols getters / setters
 

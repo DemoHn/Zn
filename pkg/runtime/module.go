@@ -54,6 +54,14 @@ func (m *Module) GetSymbol(symbol string) (Value, error) {
 	return nil, zerr.NameNotDefined(symbol)
 }
 
+func (m *Module) GetSymbols() []string {
+	var res []string
+	for sym := range m.symbols {
+		res = append(res, sym)
+	}
+	return res
+}
+
 func (m *Module) AddImportSymbols(moduleType uint8, name string, items []string) error {
 	for _, item := range items {
 		if _, ok := m.importSymbolMap[item]; ok {

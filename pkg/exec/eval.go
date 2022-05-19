@@ -244,25 +244,36 @@ func evalPreStmtBlock(c *r.Context, block *syntax.BlockStmt) (*syntax.BlockStmt,
 			}
 		case *syntax.ImportStmt:
 			libName := v.ImportName.GetLiteral()
-			var itemsList []string
-			// TODO: when import identifiers not specified, we need to
-			// import the module and execute directly
-			// if itemList is [] (e.g. 导入《 ... 》)
-			// then we import all items in this library
-			/**
-			if len(v.ImportItems) == 0 {
-				for k := range libData {
-					itemsList = append(itemsList, k)
-				}
-			} else {
-			*/
-			for _, id := range v.ImportItems {
-				itemsList = append(itemsList, id.GetLiteral())
-			}
 
-			if module := sp.GetModule(); module != nil {
-				if err := module.AddImportSymbols(v.ImportLibType, libName, itemsList); err != nil {
+			if v.ImportLibType == syntax.LibTypeStd {
+				// TODO: import standard module
+			} else if v.ImportLibType == syntax.LibTypeCustom {
+				// execute custom module first (in order to get all importable elements)
+				if _, err := ExecuteModule(c, libName); err != nil {
 					return nil, err
+				}
+				// digest module cache to import all valid elements to THIS MODULE's import symbol Map
+				if extModule := c.GetModuleCache(libName); extModule != nil {
+					// add all symbols
+					var itemsList []string
+					if module := sp.GetModule(); module != nil {
+						// import all symbols
+						if len(v.ImportItems) == 0 {
+							itemsList = extModule.GetSymbols()
+						} else {
+							// import selected symbols
+							for _, id := range v.ImportItems {
+								sym := id.GetLiteral()
+								if _, err2 := extModule.GetSymbol(sym); err2 == nil {
+									itemsList = append(itemsList, sym)
+								}
+							}
+						}
+
+						if err := module.AddImportSymbols(v.ImportLibType, libName, itemsList); err != nil {
+							return nil, err
+						}
+					}
 				}
 			}
 		default:

@@ -71,8 +71,9 @@ func ExecProgram(file string) {
 	_, fileName := filepath.Split(file)
 	rootModule := strings.TrimSuffix(fileName, filepath.Ext(fileName))
 
+	c.SetRootDir(rootDir)
 	// when exec program, unlike REPL, it's not necessary to print last executed value
-	if _, err := exec.ExecuteModule(c, rootModule, rootDir); err != nil {
+	if _, err := exec.ExecuteModule(c, rootModule); err != nil {
 		prettyPrintError(c, err)
 	}
 }
