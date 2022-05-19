@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/DemoHn/Zn/pkg/io"
 	r "github.com/DemoHn/Zn/pkg/runtime"
-	"github.com/DemoHn/Zn/pkg/syntax/zh"
 	"github.com/DemoHn/Zn/pkg/value"
 	eio "io"
 	"os"
@@ -21,8 +20,7 @@ const version = "rev06"
 func EnterREPL() {
 	linerR := liner.NewLiner()
 	linerR.SetCtrlCAborts(true)
-	zhBuilder := zh.NewParserZH()
-	c := r.NewContext(exec.GlobalValues, zhBuilder)
+	c := r.NewContext(exec.GlobalValues)
 
 	// REPL loop
 	for {
@@ -63,8 +61,7 @@ func EnterREPL() {
 
 // ExecProgram - exec program from file directly
 func ExecProgram(file string) {
-	zhBuilder := zh.NewParserZH()
-	c := r.NewContext(exec.GlobalValues, zhBuilder)
+	c := r.NewContext(exec.GlobalValues)
 
 	rootDir := filepath.Dir(file)
 	// get module name

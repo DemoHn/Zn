@@ -248,7 +248,11 @@ func (p *ParserZH) expectBlockIndent() (bool, int) {
 func (p *ParserZH) getPeekIndent() int {
 	var peekLine = p.StartLineIdxP2
 
-	return p.getLineInfo(peekLine).Indents
+	lineInfo := p.getLineInfo(peekLine)
+	if lineInfo == nil {
+		return 0
+	}
+	return lineInfo.Indents
 }
 
 // find which line the given `cursor` is located

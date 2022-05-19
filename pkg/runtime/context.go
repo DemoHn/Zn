@@ -2,15 +2,12 @@ package runtime
 
 import (
 	zerr "github.com/DemoHn/Zn/pkg/error"
-	"github.com/DemoHn/Zn/pkg/syntax"
 )
 
 // Context is a global variable that stores current execution
 // states, global configurations
 type Context struct {
 	*DependencyTree
-
-	astBuilder syntax.ASTBuilder
 	// globals - stores all global variables
 	globals map[string]Value
 	// scopeStack - trace scopes
@@ -19,17 +16,12 @@ type Context struct {
 
 // NewContext - create new Zn Context. Notice through the life-cycle
 // of one code execution, there's only one running context to store all states.
-func NewContext(globalsMap map[string]Value, builder syntax.ASTBuilder) *Context {
+func NewContext(globalsMap map[string]Value) *Context {
 	return &Context{
 		DependencyTree: NewDependencyTree(),
-		astBuilder: builder,
 		globals: globalsMap,
 		scopeStack: []*Scope{},
 	}
-}
-
-func (ctx *Context) GetBuilder() syntax.ASTBuilder {
-	return ctx.astBuilder
 }
 
 func (ctx *Context) GetCurrentScope() *Scope {
@@ -82,13 +74,21 @@ func (ctx *Context) FindSymbol(name string) (Value, error) {
 		return symVal, nil
 	}
 	// ...then in symbols
-	for i := len(ctx.scopeStack)-1; i >= 0; i-- {
-		sp := ctx.scopeStack[i]
+	sp := ctx.GetCurrentScope()
+	for sp != nil {
+		// 1. look up from current module's import map
+		if module := sp.GetModule(); module != nil {
+			if val, err := module.GetSymbol(name); err == nil {
+				return val, nil
+			}
+		}
+		// 2. look up from scope's symbol map
 		sym, ok := sp.symbolMap[name]
 		if ok {
 			return sym.value, nil
 		}
-		// if not found, search in prev scope
+
+		sp = sp.parent
 	}
 	return nil, zerr.NameNotDefined(name)
 }
@@ -99,8 +99,8 @@ func (ctx *Context) SetSymbol(name string, value Value) error {
 		return zerr.NameRedeclared(name)
 	}
 	// ...then in symbols
-	for i := len(ctx.scopeStack)-1; i >= 0; i-- {
-		sp := ctx.scopeStack[i]
+	sp := ctx.GetCurrentScope()
+	for sp != nil {
 		sym, ok := sp.symbolMap[name]
 		if ok {
 			if sym.isConst {
@@ -109,7 +109,8 @@ func (ctx *Context) SetSymbol(name string, value Value) error {
 			sp.symbolMap[name] = SymbolInfo{value, false}
 			return nil
 		}
-		// if not found, search in previous scope
+
+		sp = sp.parent
 	}
 	return zerr.NameNotDefined(name)
 }
@@ -156,14 +157,14 @@ func (ctx *Context) BindScopeSymbolDecl(scope *Scope, name string, value Value) 
 
 // FindThisValue -
 func (ctx *Context) FindThisValue() (Value, error) {
-	for i := len(ctx.scopeStack)-1; i >= 0; i-- {
-		sp := ctx.scopeStack[i]
+	sp := ctx.GetCurrentScope()
+	for sp != nil {
 		thisValue := sp.thisValue
 		if thisValue != nil {
 			return thisValue, nil
 		}
 
-		// otherwise, find thisValue from previous scope
+		sp = sp.parent
 	}
 
 	return nil, zerr.PropertyNotFound("thisValue")

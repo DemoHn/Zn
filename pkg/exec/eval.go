@@ -254,24 +254,25 @@ func evalPreStmtBlock(c *r.Context, block *syntax.BlockStmt) (*syntax.BlockStmt,
 				}
 				// digest module cache to import all valid elements to THIS MODULE's import symbol Map
 				if extModule := c.GetModuleCache(libName); extModule != nil {
-					// add all symbols
-					var itemsList []string
 					if module := sp.GetModule(); module != nil {
 						// import all symbols
 						if len(v.ImportItems) == 0 {
-							itemsList = extModule.GetSymbols()
+							for symName, symbolInfo := range extModule.GetSymbols() {
+								if err := module.AddSymbol(symName, symbolInfo.GetValue(), false); err != nil {
+									return nil, err
+								}
+							}
 						} else {
 							// import selected symbols
 							for _, id := range v.ImportItems {
 								sym := id.GetLiteral()
-								if _, err2 := extModule.GetSymbol(sym); err2 == nil {
-									itemsList = append(itemsList, sym)
+								if val, err2 := extModule.GetSymbol(sym); err2 == nil {
+									// insert into CURRENT MODULE's symbol map
+									if err := module.AddSymbol(sym, val, false); err != nil {
+										return nil, err
+									}
 								}
 							}
-						}
-
-						if err := module.AddImportSymbols(v.ImportLibType, libName, itemsList); err != nil {
-							return nil, err
 						}
 					}
 				}

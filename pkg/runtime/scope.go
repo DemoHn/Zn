@@ -23,6 +23,10 @@ type SymbolInfo struct {
 	isConst bool
 }
 
+func (s SymbolInfo) GetValue() Value {
+	return s.value
+}
+
 func NewScope(module *Module) *Scope {
 	return &Scope{
 		parent: 	nil,

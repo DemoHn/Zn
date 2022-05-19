@@ -4,6 +4,7 @@ import (
 	"github.com/DemoHn/Zn/pkg/io"
 	r "github.com/DemoHn/Zn/pkg/runtime"
 	"github.com/DemoHn/Zn/pkg/syntax"
+	"github.com/DemoHn/Zn/pkg/syntax/zh"
 )
 
 // ExecuteModule - execute program from input Zn code (whether input source is a file or REPL)
@@ -25,7 +26,7 @@ func ExecuteModule(c *r.Context, name string) (r.Value, error) {
 	}
 
 	lexer := syntax.NewLexer(source)
-	p := syntax.NewParser(lexer, c.GetBuilder())
+	p := syntax.NewParser(lexer, zh.NewParserZH())
 
 	// #3. parse program
 	program, err := p.Parse()
@@ -58,7 +59,7 @@ func ExecuteREPLCode(c *r.Context, in io.InputStream) (r.Value, error) {
 	}
 
 	lexer := syntax.NewLexer(source)
-	p := syntax.NewParser(lexer, c.GetBuilder())
+	p := syntax.NewParser(lexer, zh.NewParserZH())
 
 	// #2. parse program
 	program, err := p.Parse()
