@@ -37,63 +37,30 @@ func InvalidChar(ch rune) *Error {
 	}
 }
 
-const (
-	PeekCursorFlag uint8 = 9
-	CurrentCursorFlag uint8 = 8
-)
-
 //// syntax error
 // InvalidSyntax -
-func InvalidSyntax() *Error {
+func InvalidSyntax(startIdx int) *Error {
 	return &Error{
 		Code:    0x2250,
-		Message: "当前语法不符合规范，无法解析",
-		Extra:   PeekCursorFlag,
+		Message: "当前语法不符合规范",
+		Extra:   startIdx,
 	}
 }
 
-// InvalidSyntaxCurr -
-func InvalidSyntaxCurr() *Error {
-	return &Error{
-		Code:    0x2250,
-		Message: "当前语法不符合规范，无法解析",
-		Extra:   CurrentCursorFlag,
-	}
-}
-
-func UnexpectedIndent() *Error {
+func UnexpectedIndent(startIdx int) *Error {
 	return &Error{
 		Code:    0x2251,
-		Message: "出现不符合预期的缩进，无法解析",
-		Extra:   PeekCursorFlag,
-	}
-}
-
-// IncompleteStmt -
-func IncompleteStmt() *Error {
-	return &Error{
-		Code: 0x2252,
-		Message: "不完整的语句",
-		Extra: PeekCursorFlag,
-	}
-}
-
-// IncompleteStmtCurr - return IncompleteStmt error, and denote
-// its cursor to p.current() instead of p.peek() by default.
-func IncompleteStmtCurr() *Error {
-	return &Error{
-		Code: 0x2252,
-		Message: "不完整的语句",
-		Extra: CurrentCursorFlag,
+		Message: "出现不符合预期的缩进",
+		Extra:   startIdx,
 	}
 }
 
 // ExprMustTypeID -
-func ExprMustTypeID() *Error {
+func ExprMustTypeID(startIdx int) *Error {
 	return &Error{
 		Code: 0x2253,
 		Message: "表达式须为「标识符」",
-		Extra: PeekCursorFlag,
+		Extra: startIdx,
 	}
 }
 

@@ -107,6 +107,28 @@ func (l *Lexer) SetCursor(cursor int) {
 	l.cursor = cursor
 }
 
+func (l *Lexer) GetCurrentLine() int {
+	return l.currentLine
+}
+// find which line the given `cursor` is located
+func (l *Lexer) FindLineIdx(cursor int, startLoopIdx int) int {
+	i := startLoopIdx
+	for i < len(l.Lines) {
+		if cursor < l.Lines[i].StartIdx {
+			return i - 1
+		}
+		i += 1
+	}
+	return i - 1
+}
+
+func (l *Lexer) GetLineInfo(idx int) *LineInfo {
+	if idx < len(l.Lines) {
+		return &l.Lines[idx]
+	}
+	return nil
+}
+
 func (l *Lexer) PreNextToken() error {
 	// build first line info
 	if l.beginLex {

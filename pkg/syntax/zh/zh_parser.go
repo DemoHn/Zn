@@ -48,7 +48,7 @@ func (p *ParserZH) ParseAST(l *syntax.Lexer) (pg *syntax.Program, err error) {
 
 	// ensure there's no remaining token after parsing global block
 	if p.peek().Type != TypeEOF {
-		err = zerr.InvalidSyntaxCurr()
+		err = p.getInvalidSyntaxCurr()
 	}
 	return
 }
@@ -66,8 +66,8 @@ func (p *ParserZH) next() *syntax.Token {
 	// get peek token's startLine and endLine
 	p.StartLineIdxP1 = p.StartLineIdxP2
 	p.EndLineIdxP1 = p.EndLineIdxP2
-	p.StartLineIdxP2 = p.findLineIdx(tk.StartIdx, p.StartLineIdxP2)
-	p.EndLineIdxP2 = p.findLineIdx(tk.EndIdx, p.EndLineIdxP2)
+	p.StartLineIdxP2 = p.FindLineIdx(tk.StartIdx, p.StartLineIdxP2)
+	p.EndLineIdxP2 = p.FindLineIdx(tk.EndIdx, p.EndLineIdxP2)
 
 	return p.TokenP1
 }
@@ -224,8 +224,7 @@ func (p *ParserZH) tryConsume(validTypes ...uint8) (bool, *syntax.Token) {
 func (p *ParserZH) consume(validTypes ...uint8) {
 	match, _ := p.tryConsume(validTypes...)
 	if !match {
-		err := zerr.InvalidSyntax()
-		panic(err)
+		panic(p.getInvalidSyntaxPeek())
 	}
 }
 
@@ -235,8 +234,8 @@ func (p *ParserZH) expectBlockIndent() (bool, int) {
 	var peekLine = p.StartLineIdxP2
 	var currLine = p.StartLineIdxP1
 
-	var peekIndent = p.getLineInfo(peekLine).Indents
-	var currIndent = p.getLineInfo(currLine).Indents
+	var peekIndent = p.GetLineInfo(peekLine).Indents
+	var currIndent = p.GetLineInfo(currLine).Indents
 
 	if peekIndent == currIndent+1 {
 		return true, peekIndent
@@ -248,36 +247,51 @@ func (p *ParserZH) expectBlockIndent() (bool, int) {
 func (p *ParserZH) getPeekIndent() int {
 	var peekLine = p.StartLineIdxP2
 
-	lineInfo := p.getLineInfo(peekLine)
+	lineInfo := p.GetLineInfo(peekLine)
 	if lineInfo == nil {
 		return 0
 	}
 	return lineInfo.Indents
 }
 
-// find which line the given `cursor` is located
-func (p *ParserZH) findLineIdx(cursor int, startLoopIdx int) int {
-	i := startLoopIdx
-	for i < len(p.Lines) {
-		if cursor < p.Lines[i].StartIdx {
-			return i - 1
-		}
-		i += 1
-	}
-	return i - 1
-}
-
-func (p *ParserZH) getLineInfo(idx int) *syntax.LineInfo {
-	if idx < len(p.Lines) {
-		return &p.Lines[idx]
-	}
-	return nil
-}
 
 // equals to s.SetCurrentLine(<line of tk>)
 func (p *ParserZH) setStmtCurrentLine(s syntax.Statement, tk *syntax.Token) {
 	if tk != nil {
-		idx := p.findLineIdx(tk.StartIdx, 0)
+		idx := p.FindLineIdx(tk.StartIdx, 0)
 		s.SetCurrentLine(idx)
 	}
+}
+
+// wrap 0x2250 InvalidSyntaxCurr - with current token's startIdx
+func (p *ParserZH) getInvalidSyntaxCurr() *zerr.Error {
+	startIdx := p.TokenP1.StartIdx
+	return zerr.InvalidSyntax(startIdx)
+}
+
+func (p *ParserZH) getInvalidSyntaxPeek() *zerr.Error {
+	startIdx := p.TokenP1.StartIdx
+	if p.TokenP2 != nil {
+		startIdx = p.TokenP2.StartIdx
+	}
+
+	return zerr.InvalidSyntax(startIdx)
+}
+
+func (p *ParserZH) getUnexpectedIndentPeek() *zerr.Error {
+	startIdx := p.TokenP1.StartIdx
+	if p.TokenP2 != nil {
+		startIdx = p.TokenP2.StartIdx
+	}
+
+	return zerr.UnexpectedIndent(startIdx)
+}
+
+func (p *ParserZH) getExprMustTypeIDPeek() *zerr.Error {
+	startIdx := p.TokenP1.StartIdx
+	if p.TokenP2 != nil {
+		startIdx = p.TokenP2.StartIdx
+	}
+
+	return zerr.ExprMustTypeID(startIdx)
 }

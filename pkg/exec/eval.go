@@ -249,8 +249,12 @@ func evalPreStmtBlock(c *r.Context, block *syntax.BlockStmt) (*syntax.BlockStmt,
 				// TODO: import standard module
 			} else if v.ImportLibType == syntax.LibTypeCustom {
 				// execute custom module first (in order to get all importable elements)
-				if _, err := ExecuteModule(c, libName); err != nil {
-					return nil, err
+				extModule := c.GetModuleCache(libName)
+				if extModule == nil {
+					// not found in cache
+					if _, err := ExecuteModule(c, libName); err != nil {
+						return nil, err
+					}
 				}
 				// digest module cache to import all valid elements to THIS MODULE's import symbol Map
 				if extModule := c.GetModuleCache(libName); extModule != nil {

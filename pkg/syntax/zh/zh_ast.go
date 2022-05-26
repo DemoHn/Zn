@@ -1,7 +1,6 @@
 package zh
 
 import (
-	zerr "github.com/DemoHn/Zn/pkg/error"
 	"github.com/DemoHn/Zn/pkg/syntax"
 )
 
@@ -241,7 +240,7 @@ func parseExpressionLv4(p *ParserZH, cfg syntax.EqMarkConfig) syntax.Expression 
 
 		vid, ok := exprL.(syntax.Assignable)
 		if !ok {
-			panic(zerr.ExprMustTypeID())
+			panic(p.getExprMustTypeIDPeek())
 		}
 		exprR := ParseMemberExpr(p)
 		finalExpr := &syntax.VarAssignExpr{
@@ -299,7 +298,7 @@ func ParseMemberExpr(p *ParserZH) syntax.Expression {
 
 			return memberExpr
 		}
-		panic(zerr.InvalidSyntax())
+		panic(p.getInvalidSyntaxPeek())
 	}
 
 	memberTailParser = func(expr syntax.Expression) syntax.Expression {
@@ -332,14 +331,14 @@ func ParseMemberExpr(p *ParserZH) syntax.Expression {
 				}
 				return memberTailParser(mExpr)
 			}
-			panic(zerr.InvalidSyntax())
+			panic(p.getInvalidSyntaxPeek())
 		case TypeObjDotW, TypeObjDotIIW:
 			newExpr := calleeTailParser(true, syntax.RootTypeExpr, expr)
 			// replace current memberExpr as newExpr
 			return memberTailParser(newExpr)
 		}
 
-		panic(zerr.InvalidSyntax())
+		panic(p.getInvalidSyntaxPeek())
 	}
 
 	// #1. parse 其 expr
@@ -401,7 +400,7 @@ func ParseBasicExpr(p *ParserZH) syntax.Expression {
 		p.setStmtCurrentLine(e, tk)
 		return e
 	}
-	panic(zerr.InvalidSyntax())
+	panic(p.getInvalidSyntaxPeek())
 }
 
 // ParseArrayExpr - yield ArrayExpr node (support both hashMap and arrayList)
@@ -458,7 +457,7 @@ func ParseArrayExpr(p *ParserZH) syntax.UnionMapList {
 			ar.Items = append(ar.Items, exprI)
 		}
 	} else {
-		panic(zerr.InvalidSyntax())
+		panic(p.getInvalidSyntaxPeek())
 	}
 
 	if isArrayType {
@@ -474,7 +473,7 @@ func ParseArrayExpr(p *ParserZH) syntax.UnionMapList {
 					return ar
 				}
 			} else {
-				panic(zerr.InvalidSyntax())
+				panic(p.getInvalidSyntaxPeek())
 			}
 		}
 	} else {
@@ -633,7 +632,7 @@ func ParseVarDeclareStmt(p *ParserZH) *syntax.VarDeclareStmt {
 	if match, _ := p.tryConsume(TypeFuncCall); match {
 		expected, blockIndent := p.expectBlockIndent()
 		if !expected {
-			panic(zerr.InvalidSyntaxCurr())
+			panic(p.getInvalidSyntaxCurr())
 		}
 
 		parseItemListBlock(p, blockIndent, func() {
@@ -677,7 +676,7 @@ func parseVDAssignPair(p *ParserZH) syntax.VDAssignPair {
 	}
 	match, tk := p.tryConsume(validKeywords...)
 	if !match {
-		panic(zerr.InvalidSyntaxCurr())
+		panic(p.getInvalidSyntaxCurr())
 	}
 
 	switch tk.Type {
@@ -749,7 +748,7 @@ func ParseWhileLoopStmt(p *ParserZH) *syntax.WhileLoopStmt {
 	// #3. parse block
 	expected, blockIndent := p.expectBlockIndent()
 	if !expected {
-		panic(zerr.InvalidSyntax())
+		panic(p.getInvalidSyntaxPeek())
 	}
 	block := ParseBlockStmt(p, blockIndent)
 	return &syntax.WhileLoopStmt{
@@ -854,7 +853,7 @@ func ParseBranchStmt(p *ParserZH, mainIndent int) *syntax.BranchStmt {
 		// #3. parse block statements
 		ok, blockIndent := p.expectBlockIndent()
 		if !ok {
-			panic(zerr.UnexpectedIndent())
+			panic(p.getUnexpectedIndentPeek())
 		}
 		condBlock = ParseBlockStmt(p, blockIndent)
 
@@ -907,7 +906,7 @@ func ParseFunctionDeclareStmt(p *ParserZH) *syntax.FunctionDeclareStmt {
 	// #3. parse block manually
 	ok, blockIndent := p.expectBlockIndent()
 	if !ok {
-		panic(zerr.UnexpectedIndent())
+		panic(p.getUnexpectedIndentPeek())
 	}
 	// #3.1 parse param def list
 	parseItemListBlock(p, blockIndent, func() {
@@ -957,7 +956,7 @@ func ParseGetterDeclareStmt(p *ParserZH) *syntax.GetterDeclareStmt {
 	// #3. parse block manually
 	ok, blockIndent := p.expectBlockIndent()
 	if !ok {
-		panic(zerr.UnexpectedIndent())
+		panic(p.getUnexpectedIndentPeek())
 	}
 	// #3.1 parse param def list
 	parseItemListBlock(p, blockIndent, func() {
@@ -988,7 +987,7 @@ func ParseVarOneLeadStmt(p *ParserZH) syntax.Statement {
 			if idX, ok := exprI.(*syntax.ID); ok {
 				return parseIteratorStmtRest(p, []*syntax.ID{idX})
 			}
-			panic(zerr.InvalidSyntax())
+			panic(p.getInvalidSyntaxPeek())
 		case TypeFuncQuoteL:
 			result := &syntax.MemberMethodExpr{
 				Root:        exprI,
@@ -1032,9 +1031,9 @@ func ParseVarOneLeadStmt(p *ParserZH) syntax.Statement {
 		if okX && okY {
 			return parseIteratorStmtRest(p, []*syntax.ID{idX, idY})
 		}
-		panic(zerr.InvalidSyntax())
+		panic(p.getInvalidSyntaxPeek())
 	}
-	panic(zerr.InvalidSyntax())
+	panic(p.getInvalidSyntaxPeek())
 }
 
 // ParseIteratorStmt - parse iterate stmt that starts with 遍历 keyword only
@@ -1057,7 +1056,7 @@ func parseIteratorStmtRest(p *ParserZH, idList []*syntax.ID) *syntax.IterateStmt
 	// 3. parse iterate block
 	expected, blockIndent := p.expectBlockIndent()
 	if !expected {
-		panic(zerr.InvalidSyntax())
+		panic(p.getInvalidSyntaxPeek())
 	}
 	block := ParseBlockStmt(p, blockIndent)
 
@@ -1092,7 +1091,7 @@ func ParseImportStmt(p *ParserZH) *syntax.ImportStmt {
 	stmt := &syntax.ImportStmt{}
 	match, tk := p.tryConsume(TypeLibString, TypeString)
 	if !match {
-		panic(zerr.InvalidSyntaxCurr())
+		panic(p.getInvalidSyntaxCurr())
 	}
 
 	if tk.Type == TypeLibString {
@@ -1154,7 +1153,7 @@ func ParseClassDeclareStmt(p *ParserZH) *syntax.ClassDeclareStmt {
 	// #3. parse block
 	expected, blockIndent := p.expectBlockIndent()
 	if !expected {
-		panic(zerr.InvalidSyntax())
+		panic(p.getInvalidSyntaxPeek())
 	}
 
 	// parse block
@@ -1169,7 +1168,7 @@ func ParseClassDeclareStmt(p *ParserZH) *syntax.ClassDeclareStmt {
 
 		match, tk := p.tryConsume(validChildTypes...)
 		if !match {
-			panic(zerr.InvalidSyntaxCurr())
+			panic(p.getInvalidSyntaxCurr())
 		}
 		switch tk.Type {
 		case TypeFuncW:
@@ -1232,7 +1231,7 @@ func parsePropertyDeclareStmt(p *ParserZH) *syntax.PropertyDeclareStmt {
 func parseID(p *ParserZH) *syntax.ID {
 	match, tk := p.tryConsume(TypeIdentifier)
 	if !match {
-		panic(zerr.InvalidSyntaxCurr())
+		panic(p.getInvalidSyntaxCurr())
 	}
 	return newID(p, tk)
 }
@@ -1241,7 +1240,7 @@ func parseID(p *ParserZH) *syntax.ID {
 func parseFuncID(p *ParserZH) *syntax.ID {
 	match, tk := p.tryConsume(TypeIdentifier, TypeNumber)
 	if !match {
-		panic(zerr.InvalidSyntaxCurr())
+		panic(p.getInvalidSyntaxCurr())
 	}
 	return newID(p, tk)
 }

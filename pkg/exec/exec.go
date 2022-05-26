@@ -31,7 +31,7 @@ func ExecuteModule(c *r.Context, name string) (r.Value, error) {
 	// #3. parse program
 	program, err := p.Parse()
 	if err != nil {
-		return nil, err
+		return nil, WrapSyntaxError(lexer, name, err)
 	}
 
 	// #4. create module
