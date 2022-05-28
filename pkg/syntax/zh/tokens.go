@@ -333,7 +333,7 @@ end:
 			EndIdx:   l.GetCursor(),
 		}, nil
 	}
-	return syntax.Token{}, zerr.InvalidChar(ch)
+	return syntax.Token{}, zerr.InvalidChar(ch, l.GetCursor())
 }
 
 func parseMarkers(l *syntax.Lexer) (syntax.Token, error) {
@@ -394,7 +394,7 @@ func parseMarkers(l *syntax.Lexer) (syntax.Token, error) {
 			tokenType = TypeGTMark
 		}
 	default:
-		return syntax.Token{}, zerr.InvalidChar(ch)
+		return syntax.Token{}, zerr.InvalidChar(ch, l.GetCursor())
 	}
 	// include all necessary chars
 	l.Next()
@@ -523,7 +523,7 @@ func parseIdentifier(l *syntax.Lexer) (syntax.Token, error) {
 
 	// 0. first char must be an identifier
 	if !isIdentifierChar(ch) {
-		return syntax.Token{}, zerr.InvalidChar(ch)
+		return syntax.Token{}, zerr.InvalidChar(ch, l.GetCursor())
 	}
 	for {
 		ch = l.Next()
@@ -576,7 +576,7 @@ func parseIdentifier(l *syntax.Lexer) (syntax.Token, error) {
 			literal = append(literal, ch)
 			continue
 		}
-		return syntax.Token{}, zerr.InvalidChar(ch)
+		return syntax.Token{}, zerr.InvalidChar(ch, l.GetCursor())
 	}
 }
 
@@ -631,7 +631,7 @@ func parseComment(l *syntax.Lexer) (bool, syntax.Token, error) {
 				isComment = true
 				multiCommentType = commentTypeSingle
 			} else {
-				return false, syntax.Token{}, zerr.InvalidChar(l.GetCurrentChar())
+				return false, syntax.Token{}, zerr.InvalidChar(l.GetCurrentChar(), l.GetCursor())
 			}
 		}
 	case Slash:

@@ -177,7 +177,7 @@ func (l *Lexer) setIndentType(count int, ch rune) (int, error) {
 	switch t {
 	case IndentUnknown:
 		if count > 0 && l.IndentType != t {
-			return 0, zerr.InvalidIndentType(l.IndentType, t)
+			return 0, zerr.InvalidIndentType(l.IndentType, t, l.cursor)
 		}
 	case IndentSpace, IndentTab:
 		// init ls.IndentType
@@ -186,11 +186,11 @@ func (l *Lexer) setIndentType(count int, ch rune) (int, error) {
 		}
 		// when t = space, the character count must be 4 * N
 		if t == IndentSpace && count%4 != 0 {
-			return 0, zerr.InvalidIndentSpaceCount(count)
+			return 0, zerr.InvalidIndentSpaceCount(count, l.cursor)
 		}
 		// when t does not match indentType, throw error
 		if l.IndentType != t {
-			return 0, zerr.InvalidIndentType(l.IndentType, t)
+			return 0, zerr.InvalidIndentType(l.IndentType, t, l.cursor)
 		}
 	}
 	// when indentType = TAB, count = indents

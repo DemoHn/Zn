@@ -20,49 +20,68 @@ type ExtraInfo struct {
 type SyntaxErrorWrapper struct {
 	lexer *syntax.Lexer
 	moduleName string
-	err *zerr.Error
+	err error
 }
 
 func WrapSyntaxError(lexer *syntax.Lexer, moduleName string, err error) *SyntaxErrorWrapper {
-	var e *zerr.Error
-	if errZ, ok := err.(*zerr.Error); ok {
-		e = errZ
-	}
-
 	return &SyntaxErrorWrapper{
 		lexer:      lexer,
 		moduleName: moduleName,
-		err:        e,
+		err:        err,
 	}
 }
 
 func (sw *SyntaxErrorWrapper) Error() string {
-	info := ExtraInfo{
-		ErrorClass: "语法错误",
-		ModuleName: sw.moduleName,
-	}
+	errClass := "语法错误"
+	var errLines []string
 
+	code := 0
 	if sw.lexer != nil {
-		if zerr.IsSyntaxError(sw.err) {
-			startIdx := sw.err.Extra.(int)
-			lineIdx := sw.lexer.FindLineIdx(startIdx, 0)
-			// read text from line
-			info.Text, info.ColNum = extractLineTextAndCursor(sw.lexer, startIdx)
-			info.LineNum = lineIdx + 1
-		} else if zerr.IsLexError(sw.err) {
-			startIdx := sw.lexer.GetCursor()
-			lineIdx := sw.lexer.FindLineIdx(startIdx, 0)
-			// read text from line
-			info.Text, info.ColNum = extractLineTextAndCursor(sw.lexer, startIdx)
-			info.LineNum = lineIdx + 1
+		if serr, ok := sw.err.(*zerr.SyntaxError); ok {
+			code = serr.Code
+			lineIdx := sw.lexer.FindLineIdx(serr.Cursor, 0)
+			// add line 1
+			errLines = append(errLines, fmtErrorLocationHeadLine(sw.moduleName, lineIdx + 1))
+			// add line 2
+			errLines = append(errLines, fmtErrorSourceTextLine(sw.lexer, serr.Cursor, true))
 		}
 	}
-	// show all error lines
-	var mask uint16 = 0x0000
-	return printError(sw.err, mask, info)
+
+	if sw.err != nil {
+		errLines = append(errLines, fmtErrorMessageLine(code, errClass, sw.err.Error()))
+	}
+
+	return strings.Join(errLines, "\n")
 }
 
-func extractLineTextAndCursor(l *syntax.Lexer, cursorIdx int) (string, int) {
+
+// print error lines - display detailed error info to user
+// general format:
+//
+// 在 [FILE] 模块中，位于第 [LINE] 行：
+//     [ LINE TEXT WITHOUT INDENTS AND CRLF ]
+// [[ERRCODE]] [ERRCLASS]：[ERRTEXT]
+//
+// example error:
+//
+// 在 draft/example.zn 中，位于第 12 行：
+//     如果代码不为空：
+//    ^
+// [2021] 语法错误：此行现行缩进类型为「TAB」，与前设缩进类型「空格」不符！
+
+// fmtErrorLocationHeadLine -
+// e.g. 在 draft/example.zn 中，位于第 12 行发生异常：
+func fmtErrorLocationHeadLine(moduleName string, lineNum int) string {
+	return fmt.Sprintf("在「%s」模块中，位于第 %d 行发生异常：", moduleName, lineNum)
+}
+
+// fmtErrorSourceTextLine -
+// cursorIdx: global index inside the source text from denoted lexer
+// if withCursorMark == false, hide the "^" mark that indicates the specific location where error occurs.
+// e.g.:
+//     如果代码不为空：
+//        ^
+func fmtErrorSourceTextLine(l *syntax.Lexer, cursorIdx int, withCursorMark bool) string {
 	startIdx := cursorIdx
 	endIdx := startIdx
 	// find prev until meeting first CR/LF
@@ -87,67 +106,25 @@ func extractLineTextAndCursor(l *syntax.Lexer, cursorIdx int) (string, int) {
 
 	// get relative cursor offset (notice one Chinese char counts for 2 unit offsets)
 	lineText := string(l.Source[startIdx:endIdx])
-	return lineText, cursorIdx - startIdx
+	fmtLine := fmt.Sprintf("    %s", lineText)
+	if withCursorMark {
+		cursorText := fmt.Sprintf("\n    %s^", strings.Repeat(" ", calcCursorOffset(lineText, cursorIdx - startIdx)))
+		fmtLine += cursorText
+	}
+
+	return fmtLine
 }
 
-// printError - display detailed error info to user
-// general format:
-//
-// 在 [FILE] 模块中，位于第 [LINE] 行：
-//     [ LINE TEXT WITHOUT INDENTS AND CRLF ]
-// [[ERRCODE]] [ERRCLASS]：[ERRTEXT]
-//
-// example error:
-//
-// 在 draft/example.zn 中，位于第 12 行：
-//     如果代码不为空：
-//    ^
-// [2021] 语法错误：此行现行缩进类型为「TAB」，与前设缩进类型「空格」不符！
-func printError(e *zerr.Error, mask uint16, info ExtraInfo) string {
-	var line1, line2, line3, line4 string
-	// line1
-	if onMask(mask, dpHideFileName) {
-		if onMask(mask, dpHideLineNum) {
-			line1 = "发生异常："
-		} else {
-			line1 = fmt.Sprintf("在第 %d 行发生异常：", info.LineNum)
-		}
-	} else if onMask(mask, dpHideLineNum) {
-		line1 = fmt.Sprintf("在「%s」模块中发生异常：", info.ModuleName)
-	} else {
-		line1 = fmt.Sprintf("在「%s」模块中，位于第 %d 行发生异常：", info.ModuleName, info.LineNum)
+// fmtErrorMessageLine - format error message line
+// NOTE: if code == 0, "[code]" is not shown
+// [<code>] <errName>：<errMessage>
+// e.g.: [2021] 语法错误：此行现行缩进类型为「TAB」，与前设缩进类型「空格」不符！
+func fmtErrorMessageLine(code int, errName string, errMessage string) string {
+	fmtCode := ""
+	if code != 0 {
+		fmtCode = fmt.Sprintf("[%d]", code)
 	}
-	// line2
-	if onMask(mask, dpHideLineText) {
-		line2 = ""
-	} else {
-		line2 = fmt.Sprintf("    %s", info.Text)
-	}
-	// line3
-	if onMask(mask, dpHideLineText) || onMask(mask, dpHideLineCursor) {
-		line3 = ""
-		if !onMask(mask, dpHideLineText) {
-			line3 = "    "
-		}
-	} else {
-		line3 = fmt.Sprintf("   %s^", strings.Repeat(" ", calcCursorOffset(info.Text, info.ColNum)+1))
-	}
-	// line4
-	if onMask(mask, dpHideErrClass) {
-		line4 = e.Message
-	} else {
-		errClassText := fmt.Sprintf("[%04X] %s", e.Code, info.ErrorClass)
-		line4 = fmt.Sprintf("%s：%s", errClassText, e.Message)
-	}
-
-	lines := []string{line1, line2, line3, line4}
-	var texts []string
-	for _, line := range lines {
-		if line != "" {
-			texts = append(texts, line)
-		}
-	}
-	return strings.Join(texts, "\n")
+	return fmt.Sprintf("%s%s：%s", errName, fmtCode, errMessage)
 }
 
 func calcCursorOffset(text string, col int) int {
@@ -191,14 +168,3 @@ func calcCursorOffset(text string, col int) int {
 func onMask(target uint16, mask uint16) bool {
 	return (target & mask) > 0
 }
-
-// declare display masks
-//                    16 8 4 2 1
-// X X X X X X X X X X O O O O O
-const (
-	dpHideFileName   uint16 = 0x0001
-	dpHideLineCursor uint16 = 0x0002
-	dpHideLineNum    uint16 = 0x0004
-	dpHideLineText   uint16 = 0x0008
-	dpHideErrClass   uint16 = 0x0010
-)

@@ -36,7 +36,6 @@ func (p *Parser) Parse() (ast *Program, err error) {
 			if !ok {
 				panic(r)
 			}
-			// handleDeferError(p, err)
 		}
 	}()
 

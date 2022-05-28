@@ -264,12 +264,12 @@ func (p *ParserZH) setStmtCurrentLine(s syntax.Statement, tk *syntax.Token) {
 }
 
 // wrap 0x2250 InvalidSyntaxCurr - with current token's startIdx
-func (p *ParserZH) getInvalidSyntaxCurr() *zerr.Error {
+func (p *ParserZH) getInvalidSyntaxCurr() error {
 	startIdx := p.TokenP1.StartIdx
 	return zerr.InvalidSyntax(startIdx)
 }
 
-func (p *ParserZH) getInvalidSyntaxPeek() *zerr.Error {
+func (p *ParserZH) getInvalidSyntaxPeek() error {
 	startIdx := p.TokenP1.StartIdx
 	if p.TokenP2 != nil {
 		startIdx = p.TokenP2.StartIdx
@@ -278,7 +278,7 @@ func (p *ParserZH) getInvalidSyntaxPeek() *zerr.Error {
 	return zerr.InvalidSyntax(startIdx)
 }
 
-func (p *ParserZH) getUnexpectedIndentPeek() *zerr.Error {
+func (p *ParserZH) getUnexpectedIndentPeek() error {
 	startIdx := p.TokenP1.StartIdx
 	if p.TokenP2 != nil {
 		startIdx = p.TokenP2.StartIdx
@@ -287,7 +287,7 @@ func (p *ParserZH) getUnexpectedIndentPeek() *zerr.Error {
 	return zerr.UnexpectedIndent(startIdx)
 }
 
-func (p *ParserZH) getExprMustTypeIDPeek() *zerr.Error {
+func (p *ParserZH) getExprMustTypeIDPeek() error {
 	startIdx := p.TokenP1.StartIdx
 	if p.TokenP2 != nil {
 		startIdx = p.TokenP2.StartIdx
