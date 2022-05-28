@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/DemoHn/Zn/pkg/io"
 	r "github.com/DemoHn/Zn/pkg/runtime"
+	"github.com/DemoHn/Zn/pkg/syntax"
 	"github.com/DemoHn/Zn/pkg/value"
 	eio "io"
 	"os"
@@ -44,17 +45,29 @@ func EnterREPL() {
 
 		// execute program
 		in := io.NewByteStream([]byte(text))
-		module := r.NewModule("")
-		// global execution scope
-		c.PushScope(module)
+		module := r.NewModule("REPL")
 
-		result, err2 := exec.ExecuteREPLCode(c, in)
+		// #1. read source code
+		source, err := in.ReadAll()
+		if err != nil {
+			prettyPrintError(c, err)
+			return
+		}
+
+		lexer := syntax.NewLexer(source)
+		// global execution scope
+		// TODO: fix global scope
+		c.PushScope(module, lexer)
+
+		// execute code
+		result, err2 := exec.ExecuteREPLCode(c, lexer)
 		if err2 != nil {
 			prettyPrintError(c, err2)
-		} else {
-			if result != nil {
-				prettyDisplayValue(result, os.Stdout)
-			}
+			return
+		}
+
+		if result != nil {
+			prettyDisplayValue(result, os.Stdout)
 		}
 	}
 }

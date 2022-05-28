@@ -39,7 +39,7 @@ func ExecuteModule(c *r.Context, name string) (r.Value, error) {
 	// build module cache to dep tree
 	c.BuildModuleCache(module)
 	// create new scope (and pop the scope after execution)
-	c.PushScope(module)
+	c.PushScope(module, lexer)
 	defer c.PopScope()
 
 	if err := evalProgram(c, program); err != nil {
@@ -51,14 +51,8 @@ func ExecuteModule(c *r.Context, name string) (r.Value, error) {
 }
 
 // ExecuteREPLCode - execute program from input Zn code (whether input source is a file or REPL)
-func ExecuteREPLCode(c *r.Context, in io.InputStream) (r.Value, error) {
-	// #1. read source code
-	source, err := in.ReadAll()
-	if err != nil {
-		return nil, err
-	}
-
-	lexer := syntax.NewLexer(source)
+func ExecuteREPLCode(c *r.Context, lexer *syntax.Lexer) (r.Value, error) {
+	// #1. construct parser
 	p := syntax.NewParser(lexer, zh.NewParserZH())
 
 	// #2. parse program

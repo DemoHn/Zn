@@ -38,6 +38,8 @@ func evalProgram(c *r.Context, program *syntax.Program) error {
 func evalStatement(c *r.Context, stmt syntax.Statement) error {
 	var returnValue r.Value
 	var sp = c.GetCurrentScope()
+	// set current line
+	c.SetCurrentLine(stmt.GetCurrentLine())
 
 	// set return value
 	defer func() {
@@ -214,6 +216,9 @@ func evalPreStmtBlock(c *r.Context, block *syntax.BlockStmt) (*syntax.BlockStmt,
 	}
 
 	for _, stmtI := range block.Children {
+		// set current execLine
+		c.SetCurrentLine(stmtI.GetCurrentLine())
+
 		switch v := stmtI.(type) {
 		case *syntax.FunctionDeclareStmt:
 			fn := BuildFunctionFromNode(v)

@@ -2,6 +2,7 @@ package runtime
 
 import (
 	zerr "github.com/DemoHn/Zn/pkg/error"
+	"github.com/DemoHn/Zn/pkg/syntax"
 )
 
 // Context is a global variable that stores current execution
@@ -33,8 +34,8 @@ func (ctx *Context) GetCurrentScope() *Scope {
 	return ctx.scopeStack[stackLen-1]
 }
 
-func (ctx *Context) PushScope(module *Module) *Scope {
-	scope := NewScope(module)
+func (ctx *Context) PushScope(module *Module, lexer *syntax.Lexer) *Scope {
+	scope := NewScope(module, lexer)
 	// push scope into scopeStack
 	ctx.scopeStack = append(ctx.scopeStack, scope)
 
@@ -62,6 +63,13 @@ func (ctx *Context) PopScope() {
 
 	// pop last element
 	ctx.scopeStack = ctx.scopeStack[:stackLen-1]
+}
+
+// SetCurrentLine - set lineIdx to current running scope
+func (ctx *Context) SetCurrentLine(line int) {
+	if sp := ctx.GetCurrentScope(); sp != nil {
+		sp.SetExecLineIdx(line)
+	}
 }
 
 //// scope symbols getters / setters
