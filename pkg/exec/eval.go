@@ -2,6 +2,7 @@ package exec
 
 import (
 	"fmt"
+	"github.com/DemoHn/Zn/stdlib"
 
 	zerr "github.com/DemoHn/Zn/pkg/error"
 	r "github.com/DemoHn/Zn/pkg/runtime"
@@ -249,11 +250,16 @@ func evalPreStmtBlock(c *r.Context, block *syntax.BlockStmt) (*syntax.BlockStmt,
 		case *syntax.ImportStmt:
 			libName := v.ImportName.GetLiteral()
 
+			var extModule *r.Module
 			if v.ImportLibType == syntax.LibTypeStd {
-				// TODO: import standard module
+				var err error
+				extModule, err = stdlib.FindModule(libName)
+				if err != nil {
+					return nil, err
+				}
 			} else if v.ImportLibType == syntax.LibTypeCustom {
 				// execute custom module first (in order to get all importable elements)
-				extModule := c.GetModuleCache(libName)
+				extModule = c.GetModuleCache(libName)
 				if extModule == nil {
 					// not found in cache
 					if _, err := ExecuteModule(c, libName); err != nil {
@@ -261,24 +267,26 @@ func evalPreStmtBlock(c *r.Context, block *syntax.BlockStmt) (*syntax.BlockStmt,
 					}
 				}
 				// digest module cache to import all valid elements to THIS MODULE's import symbol Map
-				if extModule := c.GetModuleCache(libName); extModule != nil {
-					if module := sp.GetModule(); module != nil {
-						// import all symbols
-						if len(v.ImportItems) == 0 {
-							for symName, symbolInfo := range extModule.GetSymbols() {
-								if err := module.AddSymbol(symName, symbolInfo.GetValue(), false); err != nil {
-									return nil, err
-								}
+				extModule = c.GetModuleCache(libName)
+			}
+
+			if extModule != nil {
+				if module := sp.GetModule(); module != nil {
+					// import all symbols
+					if len(v.ImportItems) == 0 {
+						for symName, symbolInfo := range extModule.GetSymbols() {
+							if err := module.AddSymbol(symName, symbolInfo.GetValue(), false); err != nil {
+								return nil, err
 							}
-						} else {
-							// import selected symbols
-							for _, id := range v.ImportItems {
-								sym := id.GetLiteral()
-								if val, err2 := extModule.GetSymbol(sym); err2 == nil {
-									// insert into CURRENT MODULE's symbol map
-									if err := module.AddSymbol(sym, val, false); err != nil {
-										return nil, err
-									}
+						}
+					} else {
+						// import selected symbols
+						for _, id := range v.ImportItems {
+							sym := id.GetLiteral()
+							if val, err2 := extModule.GetSymbol(sym); err2 == nil {
+								// insert into CURRENT MODULE's symbol map
+								if err := module.AddSymbol(sym, val, false); err != nil {
+									return nil, err
 								}
 							}
 						}
