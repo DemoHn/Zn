@@ -20,7 +20,7 @@ func readRune(r io.Reader, remains []byte, b int) ([]rune, []byte, error) {
 
 	t, err := r.Read(p)
 	if err != nil && err != io.EOF {
-		return rs, []byte{}, zerr.ReadFileError(err)
+		return rs, []byte{}, zerr.ReadFileError(err, " <buffer> ")
 	}
 
 	buf := append(remains, p[:t]...)

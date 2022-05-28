@@ -3,6 +3,7 @@ package exec
 import (
 	"fmt"
 	zerr "github.com/DemoHn/Zn/pkg/error"
+	r "github.com/DemoHn/Zn/pkg/runtime"
 	"github.com/DemoHn/Zn/pkg/syntax"
 	"strings"
 )
@@ -54,6 +55,78 @@ func (sw *SyntaxErrorWrapper) Error() string {
 	return strings.Join(errLines, "\n")
 }
 
+type RuntimeErrorWrapper struct {
+	traceback []r.ExecCursor
+	err error
+}
+
+func WrapRuntimeError(c *r.Context, err error) *RuntimeErrorWrapper {
+	var traceback []r.ExecCursor
+	// append execCursor from the last (the most recent) scope to the first scope
+	for i := len(c.ScopeStack)-1; i >= 0; i-- {
+		traceback = append(traceback, c.ScopeStack[i].GetExecCursor())
+	}
+
+	return &RuntimeErrorWrapper{
+		traceback: traceback,
+		err:        err,
+	}
+}
+
+func (rw *RuntimeErrorWrapper) Error() string {
+	errClass := "运行错误"
+	var errLines []string
+	code := 0
+
+	if werr, ok := rw.err.(*zerr.Error); ok {
+		code = werr.Code
+
+		if len(rw.traceback) > 0 {
+			// append head lines
+			headTrace := rw.traceback[0]
+			errLines = append(errLines, fmtErrorLocationHeadLine(headTrace.ModuleName, headTrace.CurrentLine + 1))
+			// get line text
+			l := headTrace.Lexer
+			if lineInfo := l.GetLineInfo(headTrace.CurrentLine); lineInfo != nil {
+				startIdx := lineInfo.StartIdx
+				errLines = append(errLines, fmtErrorSourceTextLine(l, startIdx, false))
+			}
+
+			// append body
+			for _, tr := range rw.traceback[1:] {
+				errLines = append(errLines, fmtErrorLocationBodyLine(tr.ModuleName, tr.CurrentLine + 1))
+				// get line text
+				l := tr.Lexer
+				if lineInfo := l.GetLineInfo(tr.CurrentLine); lineInfo != nil {
+					startIdx := lineInfo.StartIdx
+					errLines = append(errLines, fmtErrorSourceTextLine(l, startIdx, false))
+				}
+			}
+		}
+	}
+
+	if rw.err != nil {
+		errLines = append(errLines, fmtErrorMessageLine(code, errClass, rw.err.Error()))
+	}
+
+	return strings.Join(errLines, "\n")
+}
+
+func DisplayError(err error) string {
+	switch e := err.(type) {
+	case *SyntaxErrorWrapper, *RuntimeErrorWrapper:
+		return e.Error()
+	case *zerr.IOError:
+		cls := "IO错误"
+		return fmtErrorMessageLine(e.Code, cls, e.Error())
+	case *zerr.SyntaxError:
+		cls := "语法错误"
+		return fmtErrorMessageLine(e.Code, cls, e.Error())
+	default:
+		return err.Error()
+	}
+}
+
 
 // print error lines - display detailed error info to user
 // general format:
@@ -70,9 +143,15 @@ func (sw *SyntaxErrorWrapper) Error() string {
 // [2021] 语法错误：此行现行缩进类型为「TAB」，与前设缩进类型「空格」不符！
 
 // fmtErrorLocationHeadLine -
-// e.g. 在 draft/example.zn 中，位于第 12 行发生异常：
+// e.g. 在「example」模块中，位于第 12 行发生异常：
 func fmtErrorLocationHeadLine(moduleName string, lineNum int) string {
 	return fmt.Sprintf("在「%s」模块中，位于第 %d 行发生异常：", moduleName, lineNum)
+}
+
+// fmtErrorLocationBodyLine -
+// e.g. 来自「example2」模块，第 12 行：
+func fmtErrorLocationBodyLine(moduleName string, lineNum int) string {
+	return fmt.Sprintf("来自「%s」模块，第 %d 行：", moduleName, lineNum)
 }
 
 // fmtErrorSourceTextLine -

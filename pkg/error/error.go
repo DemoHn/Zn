@@ -10,11 +10,3 @@ type Error struct {
 func (e *Error) Error() string {
 	return e.Message
 }
-
-func IsSyntaxError(e *Error) bool {
-	return e.Code >> 8 == 0x22
-}
-
-func IsLexError(e *Error) bool {
-	return e.Code >> 8 == 0x20
-}

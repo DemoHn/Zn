@@ -175,9 +175,6 @@ func evalWhileLoopStmt(c *r.Context, node *syntax.WhileLoopStmt) error {
 	newScope.SetThisValue(value.NewLoopCtl())
 	// set context's current scope with new one
 
-	// after finish executing this block, revert scope to old one
-	defer c.PopScope()
-
 	for {
 		// #1. first execute expr
 		trueExpr, err := evalExpression(c, node.TrueExpr)
@@ -191,6 +188,7 @@ func evalWhileLoopStmt(c *r.Context, node *syntax.WhileLoopStmt) error {
 		}
 		// break the loop if expr yields not true
 		if !vTrueExpr.GetValue() {
+			c.PopScope()
 			return nil
 		}
 		// #3. stmt block
@@ -200,6 +198,7 @@ func evalWhileLoopStmt(c *r.Context, node *syntax.WhileLoopStmt) error {
 					continue
 				}
 				if s.SigType == zerr.SigTypeBreak {
+					c.PopScope()
 					return nil
 				}
 			}
@@ -307,7 +306,6 @@ func evalStmtBlock(c *r.Context, block *syntax.BlockStmt) error {
 func evalBranchStmt(c *r.Context, node *syntax.BranchStmt) error {
 	// create inner scope for if statement
 	c.PushChildScope()
-	defer c.PopScope()
 
 	// #1. condition header
 	ifExpr, err := evalExpression(c, node.IfTrueExpr)
@@ -321,7 +319,9 @@ func evalBranchStmt(c *r.Context, node *syntax.BranchStmt) error {
 
 	// exec if-branch
 	if vIfExpr.GetValue() {
-		return evalStmtBlock(c, node.IfTrueBlock)
+		if err := evalStmtBlock(c, node.IfTrueBlock); err != nil {
+			return err
+		}
 	}
 	// exec else-if branches
 	for idx, otherExpr := range node.OtherExprs {
@@ -335,20 +335,26 @@ func evalBranchStmt(c *r.Context, node *syntax.BranchStmt) error {
 		}
 		// exec else-if branch
 		if vOtherExprI.GetValue() {
-			return evalStmtBlock(c, node.OtherBlocks[idx])
+			if err := evalStmtBlock(c, node.OtherBlocks[idx]); err != nil {
+				return err
+			}
 		}
 	}
 	// exec else branch if possible
 	if node.HasElse {
-		return evalStmtBlock(c, node.IfFalseBlock)
+		if err := evalStmtBlock(c, node.IfFalseBlock); err != nil {
+			return err
+		}
 	}
+	// ONLY IF there's no error occurred during execution, it's required to pop scope
+	// otherwise traceback will lost
+	c.PopScope()
 	return nil
 }
 
 func evalIterateStmt(c *r.Context, node *syntax.IterateStmt) error {
 	newScope := c.PushChildScope()
 	newScope.SetThisValue(value.NewLoopCtl())
-	defer c.PopScope()
 
 	// pre-defined key, value variable name
 	var keySlot, valueSlot string
@@ -411,6 +417,8 @@ func evalIterateStmt(c *r.Context, node *syntax.IterateStmt) error {
 						continue
 					}
 					if s.SigType == zerr.SigTypeBreak {
+						// execution quit normally, here to pop scope
+						c.PopScope()
 						return nil
 					}
 				}
@@ -428,6 +436,8 @@ func evalIterateStmt(c *r.Context, node *syntax.IterateStmt) error {
 						continue
 					}
 					if s.SigType == zerr.SigTypeBreak {
+						// execution quit normally, here to pop scope
+						c.PopScope()
 						return nil
 					}
 				}
@@ -437,6 +447,8 @@ func evalIterateStmt(c *r.Context, node *syntax.IterateStmt) error {
 	default:
 		return zerr.InvalidExprType("array", "hashmap")
 	}
+
+	c.PopScope()
 	return nil
 }
 
@@ -546,7 +558,6 @@ func evalFunctionCall(c *r.Context, expr *syntax.FuncCallExpr) (r.Value, error) 
 func evalMemberMethodExpr(c *r.Context, expr *syntax.MemberMethodExpr) (r.Value, error) {
 	currentScope := c.GetCurrentScope()
 	newScope := c.PushChildScope()
-	defer c.PopScope()
 
 	// 1. parse root expr
 	rootExpr, err := evalExpression(c, expr.Root)
@@ -570,9 +581,12 @@ func evalMemberMethodExpr(c *r.Context, expr *syntax.MemberMethodExpr) (r.Value,
 	if expr.YieldResult != nil {
 		vtag := expr.YieldResult.GetLiteral()
 		// bind yield result
-		c.BindScopeSymbolDecl(currentScope, vtag, vlast)
+		if err := c.BindScopeSymbolDecl(currentScope, vtag, vlast); err != nil {
+			return nil, err
+		}
 	}
 
+	c.PopScope()
 	return vlast, nil
 }
 

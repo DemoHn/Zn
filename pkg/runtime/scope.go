@@ -12,7 +12,7 @@ type Scope struct {
 	// module - get current module
 	module *Module
 	// execCursor - record current execution line
-	execCursor *ExecCursor
+	execCursor ExecCursor
 	// thisValue - "this" variable of the scope
 	thisValue Value
 	// returnValue - return value of scope
@@ -29,9 +29,9 @@ type SymbolInfo struct {
 
 type ExecCursor struct {
 	*syntax.Lexer
-	currentLine int
+	CurrentLine int
+	ModuleName string
 }
-
 
 func (s SymbolInfo) GetValue() Value {
 	return s.value
@@ -44,13 +44,15 @@ func NewScope(module *Module, lexer *syntax.Lexer) *Scope {
 		symbolMap:   map[string]SymbolInfo{},
 		thisValue:   nil,
 		returnValue: nil,
-		execCursor: &ExecCursor{
+		execCursor: ExecCursor{
 			Lexer:       lexer,
-			currentLine: 0,
+			CurrentLine: 0,
+			ModuleName:  module.name,
 		},
 	}
 }
 
+// create scope within SAME module
 func NewChildScope(sp *Scope) *Scope {
 	return &Scope{
 		parent: 	 sp,
@@ -58,10 +60,7 @@ func NewChildScope(sp *Scope) *Scope {
 		symbolMap:   map[string]SymbolInfo{},
 		thisValue:   nil,
 		returnValue: nil,
-		execCursor: &ExecCursor{
-			Lexer:       sp.execCursor.Lexer,
-			currentLine: sp.execCursor.currentLine,
-		},
+		execCursor: sp.execCursor,
 	}
 }
 
@@ -94,5 +93,9 @@ func (sp *Scope) SetReturnValue(v Value) {
 }
 
 func (sp *Scope) SetExecLineIdx(line int) {
-	sp.execCursor.currentLine = line
+	sp.execCursor.CurrentLine = line
+}
+
+func (sp *Scope) GetExecCursor() ExecCursor {
+	return sp.execCursor
 }

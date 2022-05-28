@@ -20,6 +20,7 @@ func ExecuteModule(c *r.Context, name string) (r.Value, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	source, err := in.ReadAll()
 	if err != nil {
 		return nil, err
@@ -40,13 +41,13 @@ func ExecuteModule(c *r.Context, name string) (r.Value, error) {
 	c.BuildModuleCache(module)
 	// create new scope (and pop the scope after execution)
 	c.PushScope(module, lexer)
-	defer c.PopScope()
 
 	if err := evalProgram(c, program); err != nil {
-		return nil, err
+		return nil, WrapRuntimeError(c, err)
 	}
 
 	returnValue := c.GetCurrentScope().GetReturnValue()
+	c.PopScope()
 	return returnValue, nil
 }
 
@@ -62,7 +63,7 @@ func ExecuteREPLCode(c *r.Context, lexer *syntax.Lexer) (r.Value, error) {
 	}
 
 	if err := evalProgram(c, program); err != nil {
-		return nil, err
+		return nil, WrapRuntimeError(c, err)
 	}
 
 	return c.GetCurrentScope().GetReturnValue(), nil

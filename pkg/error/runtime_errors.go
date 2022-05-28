@@ -117,7 +117,7 @@ func ModuleNotFound(name string) *Error {
 func UnExpectedCase(tag string, value string) *Error {
 	return &Error{
 		Code:    0x6001,
-		Message: fmt.Sprintf("未定义的条件项：「%s」的值为「%s」", tag, value),
+		Message: fmt.Sprintf("未定义的条件分支：「%s」的值为「%s」", tag, value),
 		Extra:   nil,
 	}
 }

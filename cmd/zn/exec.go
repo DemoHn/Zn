@@ -113,10 +113,9 @@ func prettyDisplayValue(v r.Value, w eio.Writer) {
 		displayData = fmt.Sprintf("%s\n", valStr)
 	}
 
-	w.Write([]byte(displayData))
+	_, _ = w.Write([]byte(displayData))
 }
 
 func prettyPrintError(c *r.Context, err error) {
-	// TODO: print error correctly
-	fmt.Println(err.Error())
+	_, _ = os.Stdout.Write([]byte(exec.DisplayError(err)))
 }

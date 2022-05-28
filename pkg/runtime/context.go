@@ -8,36 +8,37 @@ import (
 // Context is a global variable that stores current execution
 // states, global configurations
 type Context struct {
-	*DependencyTree
 	// globals - stores all global variables
 	globals map[string]Value
-	// scopeStack - trace scopes
-	scopeStack []*Scope
+
+	*DependencyTree
+	// ScopeStack - trace scopes
+	ScopeStack []*Scope
 }
 
 // NewContext - create new Zn Context. Notice through the life-cycle
 // of one code execution, there's only one running context to store all states.
 func NewContext(globalsMap map[string]Value) *Context {
 	return &Context{
+		globals:        globalsMap,
 		DependencyTree: NewDependencyTree(),
-		globals: globalsMap,
-		scopeStack: []*Scope{},
+		ScopeStack:     []*Scope{},
 	}
 }
 
 func (ctx *Context) GetCurrentScope() *Scope {
-	stackLen := len(ctx.scopeStack)
+	stackLen := len(ctx.ScopeStack)
 	if stackLen == 0 {
 		return nil
 	}
 
-	return ctx.scopeStack[stackLen-1]
+	return ctx.ScopeStack[stackLen-1]
 }
 
 func (ctx *Context) PushScope(module *Module, lexer *syntax.Lexer) *Scope {
 	scope := NewScope(module, lexer)
-	// push scope into scopeStack
-	ctx.scopeStack = append(ctx.scopeStack, scope)
+	// push scope into ScopeStack
+	ctx.ScopeStack = append(ctx.ScopeStack, scope)
 
 	return ctx.GetCurrentScope()
 }
@@ -49,20 +50,20 @@ func (ctx *Context) PushChildScope() *Scope {
 		return nil
 	}
 	childScope := NewChildScope(sp)
-	// push scope into scopeStack
-	ctx.scopeStack = append(ctx.scopeStack, childScope)
+	// push scope into ScopeStack
+	ctx.ScopeStack = append(ctx.ScopeStack, childScope)
 
 	return ctx.GetCurrentScope()
 }
 
 func (ctx *Context) PopScope() {
-	stackLen := len(ctx.scopeStack)
+	stackLen := len(ctx.ScopeStack)
 	if stackLen == 0 {
 		return
 	}
 
 	// pop last element
-	ctx.scopeStack = ctx.scopeStack[:stackLen-1]
+	ctx.ScopeStack = ctx.ScopeStack[:stackLen-1]
 }
 
 // SetCurrentLine - set lineIdx to current running scope

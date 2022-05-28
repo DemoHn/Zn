@@ -1,7 +1,6 @@
 package value
 
 import (
-	"fmt"
 	zerr "github.com/DemoHn/Zn/pkg/error"
 	r "github.com/DemoHn/Zn/pkg/runtime"
 )
@@ -47,18 +46,22 @@ func (cs *ClosureRef) Exec(c *r.Context, thisValue r.Value, params []r.Value) (r
 	newScope := c.PushChildScope()
 	newScope.SetThisValue(thisValue)
 
-	defer c.PopScope()
-
 	if cs.ParamHandler != nil {
 		if _, err := cs.ParamHandler(c, params); err != nil {
 			return nil, err
 		}
 	}
 	if cs.Executor == nil {
-		return nil, fmt.Errorf("执行逻辑不能为空")
+		return nil, zerr.NewErrorSLOT("执行逻辑不能为空")
 	}
 	// do execution
-	return cs.Executor(c, params)
+	val, err := cs.Executor(c, params)
+	if err != nil {
+		return nil, err
+	}
+
+	c.PopScope()
+	return val, nil
 }
 
 // GetValue -
