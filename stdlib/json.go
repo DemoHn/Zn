@@ -11,8 +11,8 @@ import (
 	"strings"
 )
 
-var moduleName = "JSON"
-var jsonModule = r.NewModule(moduleName)
+var jsonModuleName = "JSON"
+var jsonModule = r.NewModule(jsonModuleName)
 
 
 // parseJsonFunc - 解析JSON
@@ -115,8 +115,9 @@ func buildPlainStrItem(item r.Value) interface{} {
 }
 
 func init() {
-	jsonModule.RegisterFunction("解析JSON", parseJsonFunc)
-	jsonModule.RegisterFunction("生成JSON", generateJsonFunc)
+	// register functions
+	RegisterFunctionForModule(jsonModule, "解析JSON", parseJsonFunc)
+	RegisterFunctionForModule(jsonModule, "生成JSON", generateJsonFunc)
 
-	RegisterModule(moduleName, jsonModule)
+	RegisterModule(jsonModuleName, jsonModule)
 }

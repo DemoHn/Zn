@@ -2,10 +2,7 @@ package runtime
 
 import (
 	zerr "github.com/DemoHn/Zn/pkg/error"
-	"github.com/DemoHn/Zn/pkg/value"
 )
-
-type funcExecutor = func(*Context, []Value) (Value, error)
 
 type Module struct {
 	// name = nil when module is anonymous
@@ -46,18 +43,9 @@ func (m *Module) GetSymbols() map[string]SymbolInfo {
 	return m.symbols
 }
 
-// RegisterFunction - add function into module
-func (m *Module) RegisterFunction(name string, fn funcExecutor) {
+func (m *Module) RegisterValue(name string, value Value) {
 	m.symbols[name] = SymbolInfo{
-		value:   value.NewFunction(name, fn),
-		isConst: true,
-	}
-}
-
-// RegisterClass - add class info module
-func (m *Module) RegisterClass(name string, ref value.ClassRef) {
-	m.symbols[name] = SymbolInfo{
-		value:   &ref,
+		value:   value,
 		isConst: true,
 	}
 }

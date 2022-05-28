@@ -3,9 +3,12 @@ package stdlib
 import (
 	zerr "github.com/DemoHn/Zn/pkg/error"
 	r "github.com/DemoHn/Zn/pkg/runtime"
+	"github.com/DemoHn/Zn/pkg/value"
 )
 
-var stdlibMap map[string]*r.Module
+type funcExecutor = func(*r.Context, []r.Value) (r.Value, error)
+
+var stdlibMap = map[string]*r.Module{}
 
 func RegisterModule(name string, module *r.Module) {
 	stdlibMap[name] = module
@@ -16,4 +19,15 @@ func FindModule(name string) (*r.Module, error) {
 		return module, nil
 	}
 	return nil, zerr.ModuleNotFound(name)
+}
+
+
+// RegisterFunction - add function into module
+func RegisterFunctionForModule(m *r.Module, name string, fn funcExecutor) {
+	m.RegisterValue(name, value.NewFunction(name, fn))
+}
+
+// RegisterClass - add class info module
+func RegisterClassForModule(m *r.Module, name string, ref value.ClassRef) {
+	m.RegisterValue(name, &ref)
 }
