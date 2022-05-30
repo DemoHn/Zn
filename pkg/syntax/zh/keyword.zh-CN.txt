@@ -45,6 +45,8 @@ DE      的
 DUI     对
 DEy     得
 DAOy    到
+PAO     抛
+CHU     出
 ===============================
 # Part II： 定义每一个关键词及其对应的 tokenType。
 # 使用说明：
@@ -81,3 +83,4 @@ LogicEqualW     74      等于
 IteratorW       76      遍历
 ImportW         77      导入
 GetResultW      78      得到
+ThrowErrorW     79      抛出

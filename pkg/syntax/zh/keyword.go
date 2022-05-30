@@ -32,6 +32,8 @@ const (
 	GlyphQI rune = 0x5176
 	// GlyphZAI - 再 - 再如
 	GlyphZAI rune = 0x518D
+	// GlyphCHU - 出 - 抛出
+	GlyphCHU rune = 0x51FA
 	// GlyphZE - 则 - 否则
 	GlyphZE rune = 0x5219
 	// GlyphDAOy - 到 - 得到
@@ -66,6 +68,8 @@ const (
 	GlyphCHENG rune = 0x6210
 	// GlyphHUO - 或 - 或
 	GlyphHUO rune = 0x6216
+	// GlyphPAO - 抛 - 抛出
+	GlyphPAO rune = 0x629B
 	// GlyphSHI - 是 - 是为，是
 	GlyphSHI rune = 0x662F
 	// GlyphGUO - 果 - 如果
@@ -118,6 +122,7 @@ const (
 	TypeIteratorW     uint8 = 76 // 遍历
 	TypeImportW       uint8 = 77 // 导入
 	TypeGetResultW    uint8 = 78 // 得到
+	TypeThrowErrorW   uint8 = 79 // 抛出
 )
 
 // parseKeyword -
@@ -251,6 +256,13 @@ func parseKeyword(l *syntax.Lexer, moveForward bool) (bool, syntax.Token, error)
 		}
 	case GlyphHUO:
 		tk.Type = TypeLogicOrW
+	case GlyphPAO:
+		if l.Peek() == GlyphCHU {
+			wordLen = 2
+			tk.Type = TypeThrowErrorW
+		} else {
+			return false, syntax.Token{}, nil
+		}
 	case GlyphSHI:
 		if l.Peek() == GlyphWEI {
 			wordLen = 2

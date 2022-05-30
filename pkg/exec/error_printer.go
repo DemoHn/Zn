@@ -63,7 +63,7 @@ type RuntimeErrorWrapper struct {
 func WrapRuntimeError(c *r.Context, err error) *RuntimeErrorWrapper {
 	var traceback []r.ExecCursor
 	// append execCursor from the last (the most recent) scope to the first scope
-	for i := len(c.ScopeStack)-1; i >= 0; i-- {
+	for i := 0; i < len(c.ScopeStack); i++ {
 		traceback = append(traceback, c.ScopeStack[i].GetExecCursor())
 	}
 
@@ -80,27 +80,27 @@ func (rw *RuntimeErrorWrapper) Error() string {
 
 	if werr, ok := rw.err.(*zerr.Error); ok {
 		code = werr.Code
+	}
 
-		if len(rw.traceback) > 0 {
-			// append head lines
-			headTrace := rw.traceback[0]
-			errLines = append(errLines, fmtErrorLocationHeadLine(headTrace.ModuleName, headTrace.CurrentLine + 1))
+	if len(rw.traceback) > 0 {
+		// append head lines
+		headTrace := rw.traceback[0]
+		errLines = append(errLines, fmtErrorLocationHeadLine(headTrace.ModuleName, headTrace.CurrentLine + 1))
+		// get line text
+		l := headTrace.Lexer
+		if lineInfo := l.GetLineInfo(headTrace.CurrentLine); lineInfo != nil {
+			startIdx := lineInfo.StartIdx
+			errLines = append(errLines, fmtErrorSourceTextLine(l, startIdx, false))
+		}
+
+		// append body
+		for _, tr := range rw.traceback[1:] {
+			errLines = append(errLines, fmtErrorLocationBodyLine(tr.ModuleName, tr.CurrentLine + 1))
 			// get line text
-			l := headTrace.Lexer
-			if lineInfo := l.GetLineInfo(headTrace.CurrentLine); lineInfo != nil {
+			l := tr.Lexer
+			if lineInfo := l.GetLineInfo(tr.CurrentLine); lineInfo != nil {
 				startIdx := lineInfo.StartIdx
 				errLines = append(errLines, fmtErrorSourceTextLine(l, startIdx, false))
-			}
-
-			// append body
-			for _, tr := range rw.traceback[1:] {
-				errLines = append(errLines, fmtErrorLocationBodyLine(tr.ModuleName, tr.CurrentLine + 1))
-				// get line text
-				l := tr.Lexer
-				if lineInfo := l.GetLineInfo(tr.CurrentLine); lineInfo != nil {
-					startIdx := lineInfo.StartIdx
-					errLines = append(errLines, fmtErrorSourceTextLine(l, startIdx, false))
-				}
 			}
 		}
 	}
