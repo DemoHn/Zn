@@ -642,6 +642,19 @@ $PG($BK($VD($VP(vars[]=($ID(对象表)) expr[]=($HM(key[]=($NUM(1)) value[]=($ST
 
 const memberExprCasesOK = `
 ========
+0. normal arith expr
+--------
+{5 + 8} * 3 - 7 / 4
+--------
+$PG($BK(
+	$AR(type=(SUB) left=(
+		$AR(type=(MUL) left=(
+			$AR(type=(ADD) left=(
+				$NUM(5)) right=($NUM(8))
+			)) right=($NUM(3)))
+		) right=($AR(type=(DIV) left=($NUM(7)) right=($NUM(4)))))
+))
+========
 1. normal dot member
 --------
 天之涯

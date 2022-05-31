@@ -82,6 +82,20 @@ func StringifyAST(node Node) string {
 		lstr := StringifyAST(v.LeftExpr)
 		rstr := StringifyAST(v.RightExpr)
 		return fmt.Sprintf("%s(L=(%s) R=(%s))", typeStrMap[v.Type], lstr, rstr)
+	case *ArithExpr:
+		t := ""
+		switch  v.Type {
+		case ArithAdd:
+			t = "ADD"
+		case ArithSub:
+			t = "SUB"
+		case ArithMul:
+			t = "MUL"
+		case ArithDiv:
+			t = "DIV"
+		}
+
+		return fmt.Sprintf("$AR(type=(%s) left=(%s) right=(%s))", t, StringifyAST(v.LeftExpr), StringifyAST(v.RightExpr))
 	case *MemberExpr:
 		var str = ""
 		var sType = ""

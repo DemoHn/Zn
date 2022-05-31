@@ -29,7 +29,7 @@ func (b *StmtBase) SetCurrentLine(line int) {
 	b.currentLine = line
 }
 
-// Expression - a speical type of statement - that yields value after execution
+// Expression - a special type of statement - that yields value after execution
 type Expression interface {
 	Statement
 	exprNode()
@@ -325,6 +325,12 @@ const (
 	LogicGTE uint8 = 7 // 不小于
 	LogicLT  uint8 = 8 // 小于
 	LogicLTE uint8 = 9 // 不大于
+
+	// arith types
+	ArithAdd uint8 = 10 // +
+	ArithSub uint8 = 11 // -
+	ArithMul uint8 = 12 // *
+	ArithDiv uint8 = 13 // /
 )
 
 // LogicExpr - logical expression return TRUE (真) or FALSE (假) only
@@ -332,6 +338,14 @@ type LogicExpr struct {
 	ExprBase
 	Type      uint8
 	LeftExpr  Expression
+	RightExpr Expression
+}
+
+// ArithExpr - arithmetic expression like (+ - * /)
+type ArithExpr struct {
+	ExprBase
+	Type uint8
+	LeftExpr Expression
 	RightExpr Expression
 }
 

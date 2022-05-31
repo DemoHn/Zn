@@ -93,19 +93,14 @@ func ParseStatement(p *ParserZH) syntax.Statement {
 //       -> [不大于  <=] VaE
 //       ->
 //
-// VaE   -> IdxE VaE'
+// VaE   -> ArE VaE'
 // VaE'  -> 为  IdxE
 //       -> 为  & IdxE
 //       ->
 //
-// IdxE  -> BsE IdxE'
-// IdxE' -> #  Number   IdxE'
-// IdxE' -> #  String   IdxE'
-//       -> #  {  Expr  }  IdxE'
-//
 // precedences:
 //
-// #, #{}  >  为  >  等于，大于，etc.  >  且  >  或
+// #, #{}  >  *，/  >  +，-  >  为  >  等于，大于，etc.  >  且  >  或
 func ParseExpression(p *ParserZH) syntax.Expression {
 	cfg := syntax.EqMarkConfig{
 		AsVarAssign: true,
@@ -230,7 +225,7 @@ func parseExpressionLv4(p *ParserZH, cfg syntax.EqMarkConfig) syntax.Expression 
 		validTypes = append(validTypes, TypeAssignMark)
 	}
 
-	exprL := ParseMemberExpr(p)
+	exprL := ParseArithExpr(p)
 	if match, tk := p.tryConsume(validTypes...); match {
 		// parse &
 		refMarkForLogicYes := false
@@ -242,7 +237,7 @@ func parseExpressionLv4(p *ParserZH, cfg syntax.EqMarkConfig) syntax.Expression 
 		if !ok {
 			panic(p.getExprMustTypeIDPeek())
 		}
-		exprR := ParseMemberExpr(p)
+		exprR := ParseArithExpr(p)
 		finalExpr := &syntax.VarAssignExpr{
 			TargetVar:  vid,
 			RefMark:    refMarkForLogicYes,
@@ -253,6 +248,72 @@ func parseExpressionLv4(p *ParserZH, cfg syntax.EqMarkConfig) syntax.Expression 
 		return finalExpr
 	}
 	return exprL
+}
+
+// ParseArithExpr - parse arithmetic expression for calculation
+//
+// CFG:
+// ArE   -> MdE ArE'
+//
+// ArE'  -> + MdE ArE'
+//       -> - MdE ArE'
+//       ->
+//
+// MdE   -> MemE MdE'
+//
+// MdE'  -> * MemE MdE'
+//       -> / MemE MdE'
+//       ->
+func ParseArithExpr(p *ParserZH) syntax.Expression {
+	var parseTail func(syntax.Expression) syntax.Expression
+
+	parseTail = func(el syntax.Expression) syntax.Expression {
+		if match, tk := p.tryConsume(TypePlus, TypeMinus); match {
+			exprR := parseArithMulDivExpr(p)
+
+			t := syntax.ArithAdd
+			if tk.Type == TypeMinus {
+				t = syntax.ArithSub
+			}
+			finalExpr := &syntax.ArithExpr{
+				Type:      t,
+				LeftExpr:  el,
+				RightExpr: exprR,
+			}
+			p.setStmtCurrentLine(finalExpr, tk)
+			return parseTail(finalExpr)
+		}
+		return el
+	}
+
+	exprL := parseArithMulDivExpr(p)
+	return parseTail(exprL)
+}
+
+func parseArithMulDivExpr(p *ParserZH) syntax.Expression {
+	var parseTail func(syntax.Expression) syntax.Expression
+
+	parseTail = func(el syntax.Expression) syntax.Expression {
+		if match, tk := p.tryConsume(TypeMultiply, TypeDivision); match {
+			exprR := ParseMemberExpr(p)
+
+			t := syntax.ArithMul
+			if tk.Type == TypeDivision {
+				t = syntax.ArithDiv
+			}
+			finalExpr := &syntax.ArithExpr{
+				Type:      t,
+				LeftExpr:  el,
+				RightExpr: exprR,
+			}
+			p.setStmtCurrentLine(finalExpr, tk)
+			return parseTail(finalExpr)
+		}
+		return el
+	}
+
+	exprL := ParseMemberExpr(p)
+	return parseTail(exprL)
 }
 
 // ParseMemberExpr -
