@@ -70,11 +70,14 @@ func (iv *IV) ReduceLHS(c *r.Context, input r.Value) error {
 		if !ok {
 			return zerr.InvalidExprType("array")
 		}
-		if iv.index < 0 || iv.index >= len(arr.value) {
+		// in Zn, array index starts from 1, while in Golang, array index starts from 0,
+		// thus, X#2 (Zn) <--> x[2-1] --> x[1] (Go)
+		realIndex := iv.index - 1
+		if realIndex < 0 || realIndex >= len(arr.value) {
 			return zerr.IndexOutOfRange()
 		}
 		// set array value
-		arr.value[iv.index] = input
+		arr.value[realIndex] = input
 		return nil
 	case IVTypeHashMap:
 		hm, ok := iv.root.(*HashMap)
@@ -97,11 +100,14 @@ func (iv *IV) ReduceRHS(c *r.Context) (r.Value, error) {
 		if !ok {
 			return nil, zerr.InvalidExprType("array")
 		}
-		if iv.index < 0 || iv.index >= len(arr.value) {
+		// in Zn, array index starts from 1, while in Golang, array index starts from 0,
+		// thus, X#2 (Zn) <--> x[2-1] --> x[1] (Go)
+		realIndex := iv.index - 1
+		if realIndex < 0 || realIndex >= len(arr.value) {
 			return nil, zerr.IndexOutOfRange()
 		}
 		// set array value
-		return arr.value[iv.index], nil
+		return arr.value[realIndex], nil
 	case IVTypeHashMap:
 		hm, ok := iv.root.(*HashMap)
 		if !ok {
