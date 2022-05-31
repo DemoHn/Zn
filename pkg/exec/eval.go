@@ -470,6 +470,8 @@ func evalExpression(c *r.Context, expr syntax.Expression) (r.Value, error) {
 			return evalLogicCombiner(c, e)
 		}
 		return evalLogicComparator(c, e)
+	case *syntax.ArithExpr:
+		return evalArithExpr(c, e)
 	case *syntax.MemberExpr:
 		iv, err := getMemberExprIV(c, e)
 		if err != nil {
@@ -692,6 +694,45 @@ func evalLogicComparator(c *r.Context, expr *syntax.LogicExpr) (*value.Bool, err
 	}
 
 	return value.NewBool(cmpRes), cmpErr
+}
+
+func evalArithExpr(c *r.Context, expr *syntax.ArithExpr) (*value.Number, error) {
+	// exec left Expr
+	leftExpr, err := evalExpression(c, expr.LeftExpr)
+	if err != nil {
+		return nil, err
+	}
+
+	leftNum, ok := leftExpr.(*value.Number)
+	if !ok {
+		return nil, zerr.InvalidExprType("number")
+	}
+	// exec right expr
+	rightExpr, err := evalExpression(c, expr.RightExpr)
+	if err != nil {
+		return nil, err
+	}
+
+	rightNum, ok := rightExpr.(*value.Number)
+	if !ok {
+		return nil, zerr.InvalidExprType("number")
+	}
+
+	// calculate num
+	switch expr.Type {
+	case syntax.ArithAdd:
+		return value.NewNumber(leftNum.GetValue() + rightNum.GetValue()), nil
+	case syntax.ArithSub:
+		return value.NewNumber(leftNum.GetValue() - rightNum.GetValue()), nil
+	case syntax.ArithMul:
+		return value.NewNumber(leftNum.GetValue() * rightNum.GetValue()), nil
+	case syntax.ArithDiv:
+		if rightNum.GetValue() == 0 {
+			return nil, zerr.NewErrorSLOT("被除数不得为0")
+		}
+		return value.NewNumber(leftNum.GetValue() + rightNum.GetValue()), nil
+	}
+	return nil, zerr.UnExpectedCase("运算项", fmt.Sprintf("%d", expr.Type))
 }
 
 // eval prime expr

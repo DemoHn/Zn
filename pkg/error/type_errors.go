@@ -30,7 +30,7 @@ func InvalidExprType(assertType ...string) *Error {
 
 	return &Error{
 		Code:    0x2301,
-		Message: fmt.Sprintf("表达式不符合期望之%s类型", strings.Join(labels, "、")),
+		Message: fmt.Sprintf("表达式不符合期望的%s类型", strings.Join(labels, "、")),
 		Extra:   labels,
 	}
 }

@@ -96,6 +96,10 @@ func (sp *Scope) SetExecLineIdx(line int) {
 	sp.execCursor.CurrentLine = line
 }
 
+func (sp *Scope) SetLexer(l *syntax.Lexer) {
+	sp.execCursor.Lexer = l
+}
+
 func (sp *Scope) GetExecCursor() ExecCursor {
 	return sp.execCursor
 }

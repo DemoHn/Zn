@@ -23,6 +23,10 @@ func EnterREPL() {
 	linerR.SetCtrlCAborts(true)
 	c := r.NewContext(exec.GlobalValues)
 
+	// init global module and scope
+	module := r.NewModule("REPL")
+	c.PushScope(module, nil)
+
 	// REPL loop
 	for {
 		text, err := linerR.Prompt("Zn> ")
@@ -45,7 +49,7 @@ func EnterREPL() {
 
 		// execute program
 		in := io.NewByteStream([]byte(text))
-		module := r.NewModule("REPL")
+
 
 		// #1. read source code
 		source, err := in.ReadAll()
@@ -55,9 +59,7 @@ func EnterREPL() {
 		}
 
 		lexer := syntax.NewLexer(source)
-		// global execution scope
-		// TODO: fix global scope
-		c.PushScope(module, lexer)
+		c.GetCurrentScope().SetLexer(lexer)
 
 		// execute code
 		result, err2 := exec.ExecuteREPLCode(c, lexer)
