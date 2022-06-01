@@ -19,64 +19,56 @@ type kwItem struct {
 	literal []rune
 }
 
-var keywordFileTemplate = `package lex
+var keywordFileTemplate = `package zh
 
-//// keyword character (ideoglyphs) definition
-// keywords are all ideoglyphs that its length varies from its definitions.
+import (
+	"github.com/DemoHn/Zn/pkg/syntax"
+)
+
+//// keyword character (ideographs) definition
+// keywords are all ideographs that its length varies from its definitions.
 // so here we define all possible chars that may be an element of one keyword.
 const (
 	%s
 )
-
-// KeywordLeads - all glyphs that would be possible of the first character of one keyword.
-var KeywordLeads = []rune{
-	%s
-}
 
 // Keyword token types
 const (
 	%s
 )
 
-// KeywordTypeMap -
-var KeywordTypeMap = map[TokenType][]rune{
-	%s
-}
 
 // parseKeyword -
 // @return bool matchKeyword
 // @return *Token token
 //
 // when matchKeyword = true, a keyword token will be generated
-// matchKeyword = false, regard it as normal identifer
+// matchKeyword = false, regard it as normal identifier
 // and return directly.
-func (l *Lexer) parseKeyword(ch rune, moveForward bool) (bool, *Token) {
-	var tk *Token
+func parseKeyword(l *syntax.Lexer, moveForward bool) (bool, syntax.Token, error) {
+	var tk syntax.Token
 	var wordLen = 1
 
-	rg := newTokenRange(l)
+	startIdx := l.GetCursor()
+    ch := l.GetCurrentChar()
+	
+	tk.StartIdx = startIdx
 	// manual matching one or consecutive keywords
 	switch ch {
 		%s
 	}
 
-	if tk != nil {
+	// tk not empty
+	if tk.Type != 0 {
 		if moveForward {
-			switch wordLen {
-			case 1:
-				l.pushBuffer(ch)
-			case 2:
-				l.pushBuffer(ch, l.next())
-			case 3:
-				l.pushBuffer(ch, l.next(), l.next())
+			for i := 1; i <= wordLen; i++ {
+				l.Next()
 			}
 		}
-		rg.EndLine = rg.StartLine
-		rg.EndIdx = rg.StartIdx + wordLen
-		tk.Range = rg
-		return true, tk
+		tk.EndIdx = l.GetCursor()
+		return true, tk, nil
 	}
-	return false, nil
+	return false, syntax.Token{}, nil
 }`
 
 var optKWOutputFile string
@@ -100,9 +92,7 @@ var GenKeywordCmd = &cobra.Command{
 
 		genCode := fmt.Sprintf(keywordFileTemplate,
 			genCharConsts(charsList, charMap, containMap),
-			genKeywordLeadsConsts(leadsMap, charMap),
 			genKeywordTypeConsts(keywordMap),
-			genKeywordTypeMap(keywordMap, charMap),
 			genKeywordParsingLogic(leadsMap, keywordMap, charMap),
 		)
 		prettifyAndWriteCode(genCode, optKWOutputFile)
@@ -228,38 +218,6 @@ func genCharConsts(chars []rune, charMap map[rune]string, containsMap map[rune][
 	return strings.Join(codeList, "\n\t")
 }
 
-func genKeywordLeadsConsts(leadsMap map[rune][]int, charMap map[rune]string) string {
-	//// dump leads
-	leads := make([]rune, len(leadsMap))
-	i := 0
-	for k := range leadsMap {
-		leads[i] = k
-		i++
-	}
-	sort.Slice(leads, func(i, j int) bool {
-		return leads[i] < leads[j]
-	})
-
-	codeList := []string{}
-
-	tmpStrs := []string{}
-	for idx, ch := range leads {
-		if idx > 0 && idx%3 == 0 {
-			tmpStrs = append(tmpStrs, "") // add an empty string to compose tail comma
-			codeList = append(codeList, strings.Join(tmpStrs, ","))
-			tmpStrs = []string{}
-		}
-		tmpStrs = append(tmpStrs, charMap[ch])
-	}
-	// compose final ones
-	if len(tmpStrs) > 0 {
-		tmpStrs = append(tmpStrs, "") // add an empty string to compose tail comma
-		codeList = append(codeList, strings.Join(tmpStrs, ","))
-	}
-
-	return strings.Join(codeList, "\n\t")
-}
-
 func genKeywordTypeConsts(keywordMap map[int]kwItem) string {
 	types := make([]int, len(keywordMap))
 	i := 0
@@ -275,32 +233,7 @@ func genKeywordTypeConsts(keywordMap map[int]kwItem) string {
 
 	for _, t := range types {
 		codeList = append(codeList, fmt.Sprintf(
-			"%s TokenType = %d // %s", keywordMap[t].name, t, string(keywordMap[t].literal),
-		))
-	}
-	return strings.Join(codeList, "\n\t")
-}
-
-func genKeywordTypeMap(keywordMap map[int]kwItem, charMap map[rune]string) string {
-	types := make([]int, len(keywordMap))
-	i := 0
-	for k := range keywordMap {
-		types[i] = k
-		i++
-	}
-	sort.Slice(types, func(i, j int) bool {
-		return types[i] < types[j]
-	})
-
-	codeList := []string{}
-
-	for _, t := range types {
-		chars := []string{}
-		for _, k := range keywordMap[t].literal {
-			chars = append(chars, charMap[k])
-		}
-		codeList = append(codeList, fmt.Sprintf(
-			"%s: {%s},", keywordMap[t].name, strings.Join(chars, ", "),
+			"%s uint8 = %d // %s", keywordMap[t].name, t, string(keywordMap[t].literal),
 		))
 	}
 	return strings.Join(codeList, "\n\t")
@@ -374,7 +307,7 @@ func genKeywordParsingLogic(leadsMap map[rune][]int, keywordMap map[int]kwItem, 
 		// generate blocks
 		// CASE I: only one char valid
 		if len(nestMap.threeChars) == 0 && len(nestMap.twoChars) == 0 && len(nestMap.oneChar) == 1 {
-			codeList = append(codeList, fmt.Sprintf("tk = NewKeywordToken(%s)", nestMap.oneChar[0]))
+			codeList = append(codeList, fmt.Sprintf("tk.Type = %s", nestMap.oneChar[0]))
 		} else {
 			firstIfBlock := true
 			// append two chars keyword
@@ -386,9 +319,9 @@ func genKeywordParsingLogic(leadsMap map[rune][]int, keywordMap map[int]kwItem, 
 					startIf = "} else if"
 				}
 				codeList = append(codeList,
-					fmt.Sprintf("%s l.peek() == %s {", startIf, tch[0]),
+					fmt.Sprintf("%s l.Peek() == %s {", startIf, tch[0]),
 					"wordLen = 2",
-					fmt.Sprintf("tk = NewKeywordToken(%s)", tch[1]),
+					fmt.Sprintf("tk.Type = %s", tch[1]),
 				)
 			}
 			// append three chars keyword
@@ -400,22 +333,22 @@ func genKeywordParsingLogic(leadsMap map[rune][]int, keywordMap map[int]kwItem, 
 					startIff = "} else if"
 				}
 				codeList = append(codeList,
-					fmt.Sprintf("%s l.peek() == %s && l.peek2() == %s {", startIff, rch[0], rch[1]),
+					fmt.Sprintf("%s l.Peek() == %s && l.Peek2() == %s {", startIff, rch[0], rch[1]),
 					"wordLen = 3",
-					fmt.Sprintf("tk = NewKeywordToken(%s)", rch[2]),
+					fmt.Sprintf("tk.Type = %s", rch[2]),
 				)
 			}
 			// generate else block
 			if len(nestMap.oneChar) == 1 {
 				codeList = append(codeList,
 					"} else {",
-					fmt.Sprintf("tk = NewKeywordToken(%s)", nestMap.oneChar[0]),
+					fmt.Sprintf("tk.Type = %s", nestMap.oneChar[0]),
 					"}",
 				)
 			} else {
 				codeList = append(codeList,
 					"} else {",
-					"return false, nil",
+					"return false, syntax.Token{}, nil",
 					"}",
 				)
 			}
@@ -440,5 +373,5 @@ func getCharsList(charMap map[rune]string) []rune {
 }
 
 func init() {
-	GenKeywordCmd.Flags().StringVarP(&optKWOutputFile, "outFile", "o", "lex/keyword.go", "导出文件位置")
+	GenKeywordCmd.Flags().StringVarP(&optKWOutputFile, "outFile", "o", "pkg/syntax/zh/keyword.go", "导出文件位置")
 }

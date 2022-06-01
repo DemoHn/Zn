@@ -2,11 +2,13 @@ package cmds
 
 import (
 	"fmt"
+	"github.com/DemoHn/Zn/pkg/io"
+	"github.com/DemoHn/Zn/pkg/syntax"
+	"github.com/DemoHn/Zn/pkg/syntax/zh"
 	"io/ioutil"
 	"math"
 	"strings"
 
-	"github.com/DemoHn/Zn/lex"
 	"github.com/flopp/go-findfont"
 	"github.com/fogleman/gg"
 	"github.com/golang/freetype/truetype"
@@ -125,35 +127,41 @@ func drawColorText(dc *gg.Context, tMap [][]colorTextMap) {
 
 func parseCodeFromFile(file string) ([][]colorTextMap, error) {
 
-	ts, err := lex.NewFileStream(file)
+	ts, err := io.NewFileStream(file)
 	if err != nil {
-		return nil, fmt.Errorf("解析代码错误：具体报错为 %s", err.Display())
+		return nil, fmt.Errorf("解析代码错误：具体报错为 %s", err.Error())
 	}
-	l := lex.NewLexer(ts)
+	src, err := ts.ReadAll()
+	if err != nil {
+		return nil, err
+	}
+	l := syntax.NewLexer(src)
 	// generate [][]colorTextMap:
 	//  []{    <-- all lines
 	//     []colorTextMap{   <-- data in one line
 	//
 	//     }
 	//  }
-	tMap := [][]colorTextMap{}
-	tMapItems := []colorTextMap{}
+	var tMap [][]colorTextMap
+	var tMapItems []colorTextMap
 	lastLine := 0
 	lastIndex := 0
-	var lastTok *lex.Token
+	var lastTok syntax.Token
 	for {
-		tok, err := l.NextToken()
-		indentType := l.LineStack.IndentType
+		// TODO: support more languages than ZH
+		tok, err := zh.NextToken(l)
+		indentType := l.IndentType
 		if err != nil {
-			return nil, fmt.Errorf("解析代码错误：具体报错为 %s", err.Display())
+			return nil, fmt.Errorf("解析代码错误：具体报错为 %s", err.Error())
 		}
 
-		if tok.Type == lex.TypeEOF {
+		if tok.Type == zh.TypeEOF {
 			// before break, commit last line
 			tMap = append(tMap, tMapItems)
 			break
 		}
-		lineNum := tok.Range.StartLine
+		lineNum := findLineNum(tok.StartIdx, l, lastLine)
+
 		if lineNum > lastLine {
 			// commit old ones
 			if lastLine != 0 {
@@ -166,31 +174,31 @@ func parseCodeFromFile(file string) ([][]colorTextMap, error) {
 			}
 			// add indents
 			indentStr := ""
-			if indentType == lex.IdetTab {
-				indentStr = strings.Repeat("\t", l.LineStack.GetLineIndent(lineNum))
-			} else if indentType == lex.IdetSpace {
-				indentStr = strings.Repeat(" ", l.LineStack.GetLineIndent(lineNum)*4)
+			if indentType == syntax.IndentTab {
+				indentStr = strings.Repeat("\t", l.Lines[lineNum-1].Indents)
+			} else if indentType == syntax.IndentSpace {
+				indentStr = strings.Repeat(" ", l.Lines[lineNum-1].Indents*4)
 			}
 			if indentStr != "" {
 				tMapItems = append(tMapItems, colorTextMap{
 					text:  indentStr,
-					color: matchColorScheme(lex.TypeSpace, lastTok),
+					color: matchColorScheme(0, lastTok),
 				})
 			}
 		}
 		// set spaces between tokens
 		if lineNum == lastLine {
-			colDiff := tok.Range.StartIdx - lastIndex
+			colDiff := tok.StartIdx - lastIndex
 			if colDiff > 0 {
 				nbsps := strings.Repeat(" ", colDiff)
 				tMapItems = append(tMapItems, colorTextMap{
 					text:  nbsps,
-					color: matchColorScheme(lex.TypeSpace, lastTok),
+					color: matchColorScheme(0, lastTok),
 				})
 			}
 		}
 		// add literal (support multi-line token)
-		literals := splitMultiLineString(tok.Literal)
+		literals := splitMultiLineString(l.Source[tok.StartIdx:tok.EndIdx])
 		for idx, lt := range literals {
 			tMapItems = append(tMapItems, colorTextMap{
 				text:  lt,
@@ -202,15 +210,26 @@ func parseCodeFromFile(file string) ([][]colorTextMap, error) {
 			}
 		}
 
-		lastLine = tok.Range.EndLine
-		lastIndex = tok.Range.EndIdx
+		lastLine = findLineNum(tok.EndIdx, l, lastLine)
+		lastIndex = tok.EndIdx
 		lastTok = tok
 	}
 
 	return tMap, nil
 }
 
-func matchColorScheme(tkType lex.TokenType, lastTok *lex.Token) string {
+func findLineNum(cursor int, l *syntax.Lexer, lastLine int) int {
+	i := lastLine
+	for i < len(l.Lines) {
+		if cursor < l.Lines[i].StartIdx {
+			return i
+		}
+		i += 1
+	}
+	return i
+}
+
+func matchColorScheme(tkType uint8, lastTok syntax.Token) string {
 	const (
 		// GitHub style (light) color scheme
 		csKeyword  = "#d73a49"
@@ -225,23 +244,23 @@ func matchColorScheme(tkType lex.TokenType, lastTok *lex.Token) string {
 
 	colorScheme := csNormal
 	switch tkType {
-	case lex.TypeString:
+	case zh.TypeString:
 		colorScheme = csString
-	case lex.TypeNumber:
+	case zh.TypeNumber:
 		colorScheme = csNumber
-	case lex.TypeFuncCall, lex.TypeFuncDeclare:
+	case zh.TypeFuncCall, zh.TypeFuncDeclare:
 		colorScheme = csToken
-	case lex.TypeComment:
+	case zh.TypeComment:
 		colorScheme = csComment
-	case lex.TypeIdentifier:
-		if lastTok != nil {
+	case zh.TypeIdentifier:
+		if lastTok.Type != 0 {
 			// if lastToken is （ or 之 or 如何, that means the identifier is a member or a function name
-			if lastTok.Type == lex.TypeObjDotW || lastTok.Type == lex.TypeObjDotIIW || lastTok.Type == lex.TypeFuncQuoteL || lastTok.Type == lex.TypeFuncW {
+			if lastTok.Type == zh.TypeObjDotW || lastTok.Type == zh.TypeObjDotIIW || lastTok.Type == zh.TypeFuncQuoteL || lastTok.Type == zh.TypeFuncW {
 				colorScheme = csMember
 			}
 		}
 	}
-	if tkType >= lex.TypeDeclareW && tkType <= lex.TypeGetResultW {
+	if tkType >= zh.TypeDeclareW && tkType <= zh.TypeGetResultW {
 		colorScheme = csKeyword
 	}
 	return colorScheme

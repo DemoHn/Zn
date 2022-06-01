@@ -2,23 +2,30 @@ package zn
 
 import (
 	"fmt"
-	"io"
+	"github.com/DemoHn/Zn/pkg/io"
+	r "github.com/DemoHn/Zn/pkg/runtime"
+	"github.com/DemoHn/Zn/pkg/syntax"
+	"github.com/DemoHn/Zn/pkg/value"
+	eio "io"
 	"os"
+	"path/filepath"
+	"strings"
 
-	"github.com/DemoHn/Zn/exec"
-	"github.com/DemoHn/Zn/exec/ctx"
-	"github.com/DemoHn/Zn/exec/val"
-	"github.com/DemoHn/Zn/lex"
+	"github.com/DemoHn/Zn/pkg/exec"
 	"github.com/peterh/liner"
 )
 
-const version = "rev04"
+const version = "rev06"
 
 // EnterREPL - enter REPL to handle data
 func EnterREPL() {
 	linerR := liner.NewLiner()
 	linerR.SetCtrlCAborts(true)
-	c := ctx.NewContext(exec.GlobalValues)
+	c := r.NewContext(exec.GlobalValues)
+
+	// init global module and scope
+	module := r.NewModule("REPL")
+	c.PushScope(module, nil)
 
 	// REPL loop
 	for {
@@ -36,39 +43,50 @@ func EnterREPL() {
 		// append history
 		linerR.AppendHistory(text)
 		// add special command
-		if text == ".print" {
-			printSymbols(c)
-			continue
-		} else if text == ".exit" {
+		if text == ".exit" {
 			break
 		}
 
 		// execute program
-		in := lex.NewTextStream(text)
-		result, err2 := exec.ExecuteCode(c, in)
+		in := io.NewByteStream([]byte(text))
+
+
+		// #1. read source code
+		source, err := in.ReadAll()
+		if err != nil {
+			prettyPrintError(c, err)
+			return
+		}
+
+		lexer := syntax.NewLexer(source)
+		c.GetCurrentScope().SetLexer(lexer)
+
+		// execute code
+		result, err2 := exec.ExecuteREPLCode(c, lexer)
 		if err2 != nil {
-			fmt.Println(err2.Display())
-		} else {
-			if result != nil {
-				prettyDisplayValue(result, os.Stdout)
-			}
+			prettyPrintError(c, err2)
+			return
+		}
+
+		if result != nil {
+			prettyDisplayValue(result, os.Stdout)
 		}
 	}
 }
 
 // ExecProgram - exec program from file directly
 func ExecProgram(file string) {
-	c := ctx.NewContext(exec.GlobalValues)
-	in, errF := lex.NewFileStream(file)
-	if errF != nil {
-		fmt.Println(errF.Display())
-		return
-	}
+	c := r.NewContext(exec.GlobalValues)
 
-	_, err := exec.ExecuteCode(c, in)
+	rootDir := filepath.Dir(file)
+	// get module name
+	_, fileName := filepath.Split(file)
+	rootModule := strings.TrimSuffix(fileName, filepath.Ext(fileName))
+
+	c.SetRootDir(rootDir)
 	// when exec program, unlike REPL, it's not necessary to print last executed value
-	if err != nil {
-		fmt.Println(err.Display())
+	if _, err := exec.ExecuteModule(c, rootModule); err != nil {
+		prettyPrintError(c, err)
 	}
 }
 
@@ -78,45 +96,28 @@ func ShowVersion() {
 }
 
 //// display helpers
-func prettyDisplayValue(v ctx.Value, w io.Writer) {
+func prettyDisplayValue(v r.Value, w eio.Writer) {
 	var displayData = ""
-	var valStr = val.StringifyValue(v)
+	var valStr = value.StringifyValue(v)
 	switch v.(type) {
-	case *val.Decimal:
+	case *value.Number:
 		// FG color: Cyan (lightblue)
 		displayData = fmt.Sprintf("\x1b[38;5;147m%s\x1b[0m\n", valStr)
-	case *val.String:
+	case *value.String:
 		// FG color: Green
 		displayData = fmt.Sprintf("\x1b[38;5;184m%s\x1b[0m\n", valStr)
-	case *val.Bool:
+	case *value.Bool:
 		// FG color: White
 		displayData = fmt.Sprintf("\x1b[38;5;231m%s\x1b[0m\n", valStr)
-	case *val.Null, *val.Function:
+	case *value.Null, *value.Function:
 		displayData = fmt.Sprintf("‹\x1b[38;5;80m%s\x1b[0m›\n", valStr)
 	default:
 		displayData = fmt.Sprintf("%s\n", valStr)
 	}
 
-	w.Write([]byte(displayData))
+	_, _ = w.Write([]byte(displayData))
 }
 
-// printSymbols -
-func printSymbols(c *ctx.Context) {
-	/** TODO
-	strs := []string{}
-	for k, symArr := range ctx.GetSymbols() {
-		if symArr != nil {
-			for _, symItem := range symArr {
-				symStr := "ε"
-				if symItem.Value != nil {
-					symStr = symItem.Value.String()
-				}
-				strs = append(strs, fmt.Sprintf("‹%s, %d› => %s", k, symItem.NestLevel, symStr))
-			}
-		}
-	}
-
-	data := strings.Join(strs, "\n")
-	fmt.Println(data)
-	*/
+func prettyPrintError(c *r.Context, err error) {
+	_, _ = os.Stdout.Write([]byte(exec.DisplayError(err)))
 }

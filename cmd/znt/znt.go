@@ -22,7 +22,6 @@ func main() {
 }
 
 func init() {
-	rootCommand.AddCommand(cmds.MdPrettyCmd)
 	rootCommand.AddCommand(cmds.GenCodeImageCmd)
 	rootCommand.AddCommand(cmds.GenKeywordCmd)
 }
