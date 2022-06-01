@@ -81,6 +81,9 @@ func (rw *RuntimeErrorWrapper) Error() string {
 	if werr, ok := rw.err.(*zerr.RuntimeError); ok {
 		code = werr.Code
 	}
+	if ex, ok := rw.err.(*zerr.Exception); ok {
+		errClass = ex.Name
+	}
 
 	if len(rw.traceback) > 0 {
 		// append head lines

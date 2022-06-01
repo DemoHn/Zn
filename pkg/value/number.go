@@ -145,7 +145,7 @@ func numExecDiv(n *Number, c *r.Context, values []r.Value) (r.Value, error) {
 	for _, v := range values {
 		vr, _ := v.(*Number)
 		if vr.value == 0 {
-			return nil, zerr.NewErrorSLOT("被除数不能为0")
+			return nil, zerr.ArithDivZero()
 		}
 		sum /= vr.value
 	}

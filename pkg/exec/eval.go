@@ -726,7 +726,7 @@ func evalArithExpr(c *r.Context, expr *syntax.ArithExpr) (*value.Number, error) 
 		return value.NewNumber(leftNum.GetValue() * rightNum.GetValue()), nil
 	case syntax.ArithDiv:
 		if rightNum.GetValue() == 0 {
-			return nil, zerr.NewErrorSLOT("被除数不得为0")
+			return nil, zerr.ArithDivZero()
 		}
 		return value.NewNumber(leftNum.GetValue() + rightNum.GetValue()), nil
 	}

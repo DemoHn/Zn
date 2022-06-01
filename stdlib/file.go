@@ -22,12 +22,12 @@ func readTextFromFileFunc(c *r.Context, values []r.Value) (r.Value, error) {
 	// open file
 	file, err := os.Open(v.String())
 	if err != nil {
-		return nil, zerr.NewErrorSLOT("打开文件失败：" + err.Error())
+		return nil, zerr.NewRuntimeException("打开文件失败：" + err.Error())
 	}
 	defer file.Close()
 	data, err := ioutil.ReadAll(file)
 	if err != nil {
-		return nil, zerr.NewErrorSLOT("读取文件失败" + err.Error())
+		return nil, zerr.NewRuntimeException("读取文件失败：" + err.Error())
 	}
 	return value.NewString(string(data)), nil
 }
@@ -42,7 +42,7 @@ func writeTextFromFileFunc(c *r.Context, values []r.Value) (r.Value, error) {
 
 	err := ioutil.WriteFile(fileName.String(), []byte(content.String()), 0644)
 	if err != nil {
-		return nil, zerr.NewErrorSLOT("写入文件失败" + err.Error())
+		return nil, zerr.NewRuntimeException("写入文件失败：" + err.Error())
 	}
 	return nil, nil
 }
@@ -55,7 +55,7 @@ func readDirFunc(c *r.Context, values []r.Value) (r.Value, error) {
 	dirName := values[0].(*value.String)
 	dirs, err := os.ReadDir(dirName.String())
 	if err != nil {
-		return nil, zerr.NewErrorSLOT("读取目录失败" + err.Error())
+		return nil, zerr.NewRuntimeException("读取目录失败：" + err.Error())
 	}
 
 	info := value.NewArray([]r.Value{})

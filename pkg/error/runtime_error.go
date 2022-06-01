@@ -34,6 +34,8 @@ const (
 	ErrInvalidParamType = 72
 	ErrInvalidCompareLType = 73
 	ErrInvalidCompareRType = 74
+	// arith error
+	ErrArithDivZero = 80
 )
 
 var typeNameMap = map[string]string{
@@ -248,6 +250,13 @@ func InvalidCompareRType(assertType ...string) *RuntimeError {
 	}
 }
 
+func ArithDivZero() *RuntimeError {
+	return &RuntimeError{
+		Code:    ErrArithDivZero,
+		Message: "被除数不得为0",
+		Extra:   nil,
+	}
+}
 
 //// SLOT
 func NewErrorSLOT(info string) error {

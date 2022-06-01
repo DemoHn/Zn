@@ -190,7 +190,7 @@ func arrayGetDivResult(ar *Array, c *r.Context) (r.Value, error) {
 			sum = vparam.value
 		} else {
 			if vparam.value == 0 {
-				return nil, zerr.NewErrorSLOT("被除数不得为0")
+				return nil, zerr.ArithDivZero()
 			}
 			sum = sum / vparam.value
 		}
