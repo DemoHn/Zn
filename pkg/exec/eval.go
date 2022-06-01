@@ -76,7 +76,7 @@ func evalStatement(c *r.Context, stmt syntax.Statement) error {
 		className := v.ClassName.GetLiteral()
 		classRef := BuildClassFromNode(className, v)
 
-		return c.BindSymbol(className, &classRef)
+		return c.BindSymbol(className, classRef)
 	case *syntax.IterateStmt:
 		return evalIterateStmt(c, v)
 	case *syntax.FunctionReturnStmt:
@@ -86,6 +86,36 @@ func evalStatement(c *r.Context, stmt syntax.Statement) error {
 		}
 		// send RETURN break
 		return zerr.NewReturnSignal(val)
+	case *syntax.ThrowExceptionStmt:
+		// profoundly return an ERROR to terminate the process
+		name := v.ExceptionClass.GetLiteral()
+		expClassRef, err := c.FindSymbol(name)
+		if err != nil {
+			return err
+		}
+
+		if ref, ok := expClassRef.(*value.ClassRef); ok {
+			// exec expressions
+			var exprs []r.Value
+			for _, param := range v.Params {
+				exprI, err := evalExpression(c, param)
+				if err != nil {
+					return err
+				}
+				exprs = append(exprs, exprI)
+			}
+			// get exception value!
+			val, err := ref.Construct(c, exprs)
+			if err != nil {
+				return err
+			}
+			// val MUST BE an Exception Value!
+			if expVal, ok := val.(*value.Exception); ok {
+				return zerr.NewRuntimeException(expVal.GetMessage())
+			}
+			return zerr.NewErrorSLOT(fmt.Sprintf("「%s」构造出来的对象须是一个异常类型的值！", name))
+		}
+		return zerr.NewErrorSLOT(fmt.Sprintf("「%s」必须是一个类型！", name))
 	case syntax.Expression:
 		expr, err := evalExpression(c, v)
 		returnValue = expr
@@ -160,7 +190,7 @@ func evalNewObject(c *r.Context, node syntax.VDAssignPair) error {
 			return err
 		}
 
-		if c.BindSymbol(vtag, finalObj); err != nil {
+		if err := c.BindSymbol(vtag, finalObj); err != nil {
 			return err
 		}
 	}
@@ -235,13 +265,13 @@ func evalPreStmtBlock(c *r.Context, block *syntax.BlockStmt) (*syntax.BlockStmt,
 			// bind classRef
 			className := v.ClassName.GetLiteral()
 			classRef := BuildClassFromNode(className, v)
-			if err := c.BindSymbol(className, &classRef); err != nil {
+			if err := c.BindSymbol(className, classRef); err != nil {
 				return nil, err
 			}
 
 			// add symbol to module
 			if module := sp.GetModule(); module != nil {
-				if err := module.AddSymbol(className, &classRef, true); err != nil {
+				if err := module.AddSymbol(className, classRef, true); err != nil {
 					return nil, err
 				}
 			}
@@ -416,7 +446,9 @@ func evalIterateStmt(c *r.Context, node *syntax.IterateStmt) error {
 	switch tv := targetExpr.(type) {
 	case *value.Array:
 		for idx, v := range tv.GetValue() {
-			idxVar := value.NewNumber(float64(idx))
+			// in iterate statement, index starts from 1 instead of 0
+			realIdx := idx + 1
+			idxVar := value.NewNumber(float64(realIdx))
 			if err := execIterationBlockFn(idxVar, v); err != nil {
 				if s, ok := err.(*zerr.Signal); ok {
 					if s.SigType == zerr.SigTypeContinue {
@@ -515,7 +547,9 @@ func evalFunctionCall(c *r.Context, expr *syntax.FuncCallExpr) (r.Value, error) 
 				// add yield result
 				vtag := expr.YieldResult.GetLiteral()
 				// bind yield result
-				c.BindScopeSymbolDecl(c.GetCurrentScope(), vtag, v)
+				if err := c.BindScopeSymbolDecl(c.GetCurrentScope(), vtag, v); err != nil {
+					return nil, err
+				}
 			}
 			// return result
 			return v, nil
@@ -555,7 +589,9 @@ func evalFunctionCall(c *r.Context, expr *syntax.FuncCallExpr) (r.Value, error) 
 		// add yield result
 		ytag := expr.YieldResult.GetLiteral()
 		// bind yield result
-		c.BindScopeSymbolDecl(c.GetCurrentScope(), ytag, v2)
+		if err := c.BindScopeSymbolDecl(c.GetCurrentScope(), ytag, v2); err != nil {
+			return nil, err
+		}
 	}
 
 	// return result
@@ -893,7 +929,7 @@ func exprsToValues(c *r.Context, exprs []syntax.Expression) ([]r.Value, error) {
 
 // BuildClosureFromNode - create a closure (with default param handler logic)
 // from Zn code (*syntax.BlockStmt). It's the constructor of 如何XX or (anoymous function in the future)
-func BuildClosureFromNode(paramTags []*syntax.ParamItem, stmtBlock *syntax.BlockStmt) value.ClosureRef {
+func BuildClosureFromNode(paramTags []*syntax.ParamItem, stmtBlock *syntax.BlockStmt) *value.ClosureRef {
 	var executor = func(c *r.Context, params []r.Value) (r.Value, error) {
 		// iterate block round I - function hoisting
 		// NOTE: function hoisting means bind function definitions at the beginning
@@ -952,14 +988,8 @@ func BuildClosureFromNode(paramTags []*syntax.ParamItem, stmtBlock *syntax.Block
 }
 
 // BuildClassFromNode -
-func BuildClassFromNode(name string, classNode *syntax.ClassDeclareStmt) value.ClassRef {
-	ref := value.ClassRef{
-		Name:         name,
-		Constructor:  nil,
-		PropList:     []string{},
-		CompPropList: map[string]value.ClosureRef{},
-		MethodList:   map[string]value.ClosureRef{},
-	}
+func BuildClassFromNode(name string, classNode *syntax.ClassDeclareStmt) *value.ClassRef {
+	ref := value.NewClassRef(name)
 
 	// define default constructor
 	var constructor = func(c *r.Context, params []r.Value) (r.Value, error) {

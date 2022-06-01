@@ -8,7 +8,7 @@ import (
 // Object - 对象型
 type Object struct {
 	propList map[string]r.Value
-	ref      ClassRef
+	ref      *ClassRef
 }
 
 // ClassRef - aka. Class Definition Reference
@@ -25,13 +25,13 @@ type ClassRef struct {
 	// CompPropList - CompProp stands for "Computed Property", which means the value is get or set
 	// from a pre-defined function. Computed property offers more extensions for manipulations
 	// of properties.
-	CompPropList map[string]ClosureRef
+	CompPropList map[string]*ClosureRef
 	// MethodList - stores all available methods definition of class
-	MethodList map[string]ClosureRef
+	MethodList map[string]*ClosureRef
 }
 
 // NewObject -
-func NewObject(ref ClassRef) *Object {
+func NewObject(ref *ClassRef) *Object {
 	return &Object{
 		propList: map[string]r.Value{},
 		ref:      ref,
@@ -39,13 +39,13 @@ func NewObject(ref ClassRef) *Object {
 }
 
 // NewClassRef - create new empty r.ClassRef
-func NewClassRef(name string) ClassRef {
-	return ClassRef{
+func NewClassRef(name string) *ClassRef {
+	return &ClassRef{
 		Name:         name,
 		Constructor:  nil,
 		PropList:     []string{},
-		CompPropList: map[string]ClosureRef{},
-		MethodList:   map[string]ClosureRef{},
+		CompPropList: map[string]*ClosureRef{},
+		MethodList:   map[string]*ClosureRef{},
 	}
 }
 
@@ -60,7 +60,7 @@ func (zo *Object) SetPropList(propList map[string]r.Value) {
 }
 
 // GetRef -
-func (zo *Object) GetRef() ClassRef {
+func (zo *Object) GetRef() *ClassRef {
 	return zo.ref
 }
 

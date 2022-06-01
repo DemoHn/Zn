@@ -9,7 +9,7 @@ type funcExecutor = func(*r.Context, []r.Value) (r.Value, error)
 
 // Function - 方法类
 type Function struct {
-	value ClosureRef
+	value *ClosureRef
 }
 
 // ClosureRef - aka. Closure Execution Reference
@@ -27,13 +27,13 @@ func NewFunction(name string, executor funcExecutor) *Function {
 }
 
 // NewFunctionFromClosure -
-func NewFunctionFromClosure(closure ClosureRef) *Function {
+func NewFunctionFromClosure(closure *ClosureRef) *Function {
 	return &Function{closure}
 }
 
 // NewClosure - wraps a closure from native code (Golang code)
-func NewClosure(paramHandler funcExecutor, executor funcExecutor) ClosureRef {
-	return ClosureRef{
+func NewClosure(paramHandler funcExecutor, executor funcExecutor) *ClosureRef {
+	return &ClosureRef{
 		ParamHandler: paramHandler,
 		Executor:     executor,
 	}
@@ -66,7 +66,7 @@ func (cs *ClosureRef) Exec(c *r.Context, thisValue r.Value, params []r.Value) (r
 
 // GetValue -
 func (fn *Function) GetValue() *ClosureRef {
-	return &fn.value
+	return fn.value
 }
 
 // GetProperty -

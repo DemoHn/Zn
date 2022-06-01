@@ -28,6 +28,6 @@ func RegisterFunctionForModule(m *r.Module, name string, fn funcExecutor) {
 }
 
 // RegisterClass - add class info module
-func RegisterClassForModule(m *r.Module, name string, ref value.ClassRef) {
-	m.RegisterValue(name, &ref)
+func RegisterClassForModule(m *r.Module, name string, ref *value.ClassRef) {
+	m.RegisterValue(name, ref)
 }

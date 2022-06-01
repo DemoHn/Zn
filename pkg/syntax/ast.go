@@ -210,6 +210,13 @@ type PropertyDeclareStmt struct {
 	InitValue  Expression
 }
 
+// ThrowExceptionStmt - throw error
+type ThrowExceptionStmt struct {
+	StmtBase
+	ExceptionClass *ID
+	Params []Expression
+}
+
 // ParamItem - parameter item
 type ParamItem struct {
 	ID      *ID

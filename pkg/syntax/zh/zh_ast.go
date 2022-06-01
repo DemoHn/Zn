@@ -38,6 +38,7 @@ func ParseStatement(p *ParserZH) syntax.Statement {
 		TypeIteratorW,
 		TypeObjDefineW,
 		TypeImportW,
+		TypeThrowErrorW,
 	}
 	match, tk := p.tryConsume(validTypes...)
 	if match {
@@ -65,6 +66,8 @@ func ParseStatement(p *ParserZH) syntax.Statement {
 			s = ParseClassDeclareStmt(p)
 		case TypeImportW:
 			s = ParseImportStmt(p)
+		case TypeThrowErrorW:
+			s = ParseThrowExceptionStmt(p)
 		}
 		p.setStmtCurrentLine(s, tk)
 		return s
@@ -1028,7 +1031,7 @@ func ParseGetterDeclareStmt(p *ParserZH) *syntax.GetterDeclareStmt {
 }
 
 // ParseVarOneLeadStmt -
-// There're 2 possible statements
+// There are 2 possible statements
 //
 // 1. 以 K、V 遍历...
 // 2. 以 A （执行方法）
@@ -1136,6 +1139,41 @@ func ParseFunctionReturnStmt(p *ParserZH) *syntax.FunctionReturnStmt {
 	expr := ParseExpression(p)
 	return &syntax.FunctionReturnStmt{
 		ReturnExpr: expr,
+	}
+}
+
+// ParseThrowExceptionStmt - parse "throw" exception statement
+//
+// CFG:
+//  TEStmt    ->  抛出  ID  ：  Expr   TExpr'  ！
+//  TExpr'    ->  、  Expr  TExpr'
+//            ->
+func ParseThrowExceptionStmt(p *ParserZH) *syntax.ThrowExceptionStmt {
+	var exprs []syntax.Expression
+
+	p.consume(TypeThrowErrorW)
+	// get id
+	exceptionClass := parseID(p)
+	p.consume(TypeFuncCall)
+
+	exprI := ParseExpression(p)
+	exprs = append(exprs, exprI)
+
+	for {
+		if match, _ := p.tryConsume(TypePauseCommaSep); match {
+			exprX := ParseExpression(p)
+			exprs = append(exprs, exprX)
+		} else {
+			break
+		}
+	}
+
+	// parse "！" as last token
+	p.consume(TypeExceptionT)
+
+	return &syntax.ThrowExceptionStmt{
+		ExceptionClass: exceptionClass,
+		Params:         exprs,
 	}
 }
 
