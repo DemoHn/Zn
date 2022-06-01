@@ -10,8 +10,6 @@ import (
 	"github.com/DemoHn/Zn/pkg/value"
 )
 
-const errCodeMethodNotFound = 0x2505
-
 // eval.go evaluates program from generated AST tree with specific scopes
 // common signature of eval functions:
 //
@@ -523,8 +521,8 @@ func evalFunctionCall(c *r.Context, expr *syntax.FuncCallExpr) (r.Value, error) 
 			return v, nil
 		}
 
-		if errX, ok := err.(*zerr.Error); ok {
-			if errX.Code != errCodeMethodNotFound {
+		if errX, ok := err.(*zerr.RuntimeError); ok {
+			if errX.Code != zerr.ErrMethodNotFound {
 				return nil, err
 			}
 		} else {

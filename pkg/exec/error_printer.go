@@ -78,7 +78,7 @@ func (rw *RuntimeErrorWrapper) Error() string {
 	var errLines []string
 	code := 0
 
-	if werr, ok := rw.err.(*zerr.Error); ok {
+	if werr, ok := rw.err.(*zerr.RuntimeError); ok {
 		code = werr.Code
 	}
 
