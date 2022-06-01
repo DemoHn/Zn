@@ -1150,8 +1150,6 @@ func ParseFunctionReturnStmt(p *ParserZH) *syntax.FunctionReturnStmt {
 //            ->
 func ParseThrowExceptionStmt(p *ParserZH) *syntax.ThrowExceptionStmt {
 	var exprs []syntax.Expression
-
-	p.consume(TypeThrowErrorW)
 	// get id
 	exceptionClass := parseID(p)
 	p.consume(TypeFuncCall)

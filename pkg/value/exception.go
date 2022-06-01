@@ -14,7 +14,7 @@ func NewException(message string) *Exception {
 }
 
 func (e *Exception) GetMessage() string {
-	return e.GetMessage()
+	return e.Message
 }
 
 // GetProperty -
