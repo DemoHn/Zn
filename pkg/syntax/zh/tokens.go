@@ -604,10 +604,15 @@ func parseComment(l *syntax.Lexer) (bool, syntax.Token, error) {
 	var multiCommentType int
 	switch ch {
 	case CharZHU:
-		p := l.Peek()
-		// parse 注：
-		if p == Colon {
-			l.Next()
+		// parse number marks; e.g. 注123456：
+		for {
+			if !isPureNumber(l.Next()) {
+				break
+			}
+		}
+
+		// parse ：after 「注」
+		if l.GetCurrentChar() == Colon {
 			isComment = true
 			switch l.Next() {
 			case LeftDoubleQuoteI:
@@ -620,19 +625,7 @@ func parseComment(l *syntax.Lexer) (bool, syntax.Token, error) {
 				multiCommentType = commentTypeSingle
 			}
 		} else {
-			// parse 注123456：
-			for {
-				if !isPureNumber(l.Next()) {
-					break
-				}
-			}
-			// consume numbers and now parse colon
-			if l.GetCurrentChar() == Colon {
-				isComment = true
-				multiCommentType = commentTypeSingle
-			} else {
-				return false, syntax.Token{}, zerr.InvalidChar(l.GetCurrentChar(), l.GetCursor())
-			}
+			return false, syntax.Token{}, zerr.InvalidChar(l.GetCurrentChar(), l.GetCursor())
 		}
 	case Slash:
 		p := l.Peek()

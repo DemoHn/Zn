@@ -41,13 +41,13 @@ func ExecuteModule(c *r.Context, name string) (r.Value, error) {
 	c.BuildModuleCache(module)
 	// create new scope (and pop the scope after execution)
 	c.PushScope(module, lexer)
+	defer c.PopScope()
 
 	if err := evalProgram(c, program); err != nil {
 		return nil, WrapRuntimeError(c, err)
 	}
 
 	returnValue := c.GetCurrentScope().GetReturnValue()
-	c.PopScope()
 	return returnValue, nil
 }
 

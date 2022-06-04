@@ -15,8 +15,6 @@ type Lexer struct {
 	Lines []LineInfo
 	// current cursor
 	cursor int
-	// current line
-	currentLine int
 	// beginLex
 	beginLex bool
 }
@@ -69,7 +67,6 @@ func NewLexer(source []rune) *Lexer {
 		IndentType:  IndentUnknown,
 		Lines:       []LineInfo{},
 		cursor:      0,
-		currentLine: 0,
 		beginLex:    true,
 	}
 }
@@ -107,9 +104,6 @@ func (l *Lexer) SetCursor(cursor int) {
 	l.cursor = cursor
 }
 
-func (l *Lexer) GetCurrentLine() int {
-	return l.currentLine
-}
 // find which line the given `cursor` is located
 func (l *Lexer) FindLineIdx(cursor int, startLoopIdx int) int {
 	i := startLoopIdx
@@ -216,7 +210,6 @@ func (l *Lexer) parseBeginLex() error {
 		Indents:  0,
 		StartIdx: 0,
 	})
-	l.currentLine += 1
 	// parse indents
 	if containsRune(ch, []rune{RuneTAB, RuneSP}) {
 		count := 1
@@ -232,7 +225,7 @@ func (l *Lexer) parseBeginLex() error {
 			return err
 		}
 		// set line indents
-		l.Lines[l.currentLine-1].Indents = indents
+		l.Lines[0].Indents = indents
 	}
 	return nil
 }
@@ -263,7 +256,6 @@ head:
 		Indents:  0,
 		StartIdx: l.GetCursor(),
 	})
-	l.currentLine += 1
 
 	if withIndent {
 		// parse next line's indents
@@ -281,8 +273,8 @@ head:
 			return err
 		}
 
+		lastIdx := len(l.Lines) - 1
 		// set indent num of current line
-		lastIdx := l.currentLine - 1
 		l.Lines[lastIdx].Indents = indentNum
 	}
 

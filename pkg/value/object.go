@@ -110,17 +110,12 @@ func (zo *Object) ExecMethod(c *r.Context, name string, values []r.Value) (r.Val
 // Construct - yield new instance of this class
 func (cr *ClassRef) Construct(c *r.Context, params []r.Value) (r.Value, error) {
 	c.PushChildScope()
+	defer c.PopScope()
 
 	if cr.Constructor != nil {
-		val, err := cr.Constructor(c, params)
-		if err != nil {
-			return nil, err
-		}
-		c.PopScope()
-		return val, nil
+		return cr.Constructor(c, params)
 	}
 
-	c.PopScope()
 	return nil, nil
 }
 

@@ -201,6 +201,7 @@ func evalNewObject(c *r.Context, node syntax.VDAssignPair) error {
 func evalWhileLoopStmt(c *r.Context, node *syntax.WhileLoopStmt) error {
 	// create new scope
 	newScope := c.PushChildScope()
+	defer c.PopScope()
 	newScope.SetThisValue(value.NewLoopCtl())
 	// set context's current scope with new one
 
@@ -217,7 +218,6 @@ func evalWhileLoopStmt(c *r.Context, node *syntax.WhileLoopStmt) error {
 		}
 		// break the loop if expr yields not true
 		if !vTrueExpr.GetValue() {
-			c.PopScope()
 			return nil
 		}
 		// #3. stmt block
@@ -227,7 +227,6 @@ func evalWhileLoopStmt(c *r.Context, node *syntax.WhileLoopStmt) error {
 					continue
 				}
 				if s.SigType == zerr.SigTypeBreak {
-					c.PopScope()
 					return nil
 				}
 			}
@@ -342,6 +341,7 @@ func evalStmtBlock(c *r.Context, block *syntax.BlockStmt) error {
 func evalBranchStmt(c *r.Context, node *syntax.BranchStmt) error {
 	// create inner scope for if statement
 	c.PushChildScope()
+	defer c.PopScope()
 
 	// #1. condition header
 	ifExpr, err := evalExpression(c, node.IfTrueExpr)
@@ -382,14 +382,12 @@ func evalBranchStmt(c *r.Context, node *syntax.BranchStmt) error {
 			return err
 		}
 	}
-	// ONLY IF there's no error occurred during execution, it's required to pop scope
-	// otherwise traceback will lost
-	c.PopScope()
 	return nil
 }
 
 func evalIterateStmt(c *r.Context, node *syntax.IterateStmt) error {
 	newScope := c.PushChildScope()
+	defer c.PopScope()
 	newScope.SetThisValue(value.NewLoopCtl())
 
 	// pre-defined key, value variable name
@@ -455,8 +453,6 @@ func evalIterateStmt(c *r.Context, node *syntax.IterateStmt) error {
 						continue
 					}
 					if s.SigType == zerr.SigTypeBreak {
-						// execution quit normally, here to pop scope
-						c.PopScope()
 						return nil
 					}
 				}
@@ -474,8 +470,6 @@ func evalIterateStmt(c *r.Context, node *syntax.IterateStmt) error {
 						continue
 					}
 					if s.SigType == zerr.SigTypeBreak {
-						// execution quit normally, here to pop scope
-						c.PopScope()
 						return nil
 					}
 				}
@@ -486,7 +480,6 @@ func evalIterateStmt(c *r.Context, node *syntax.IterateStmt) error {
 		return zerr.InvalidExprType("array", "hashmap")
 	}
 
-	c.PopScope()
 	return nil
 }
 
@@ -527,7 +520,7 @@ func evalFunctionCall(c *r.Context, expr *syntax.FuncCallExpr) (r.Value, error) 
 	// for a function call, if thisValue NOT FOUND, that means the target closure is a FUNCTION
 	// instead of a METHOD (which is defined on class definition statement)
 	//
-	// If thisValue != nil, we will attempt to find clsoure from its method list;
+	// If thisValue != nil, we will attempt to find closure from its method list;
 	// then look up from scope's values.
 	//
 	// If thisValue == nil, we will look up target closure from scope's values directly.
@@ -602,6 +595,7 @@ func evalFunctionCall(c *r.Context, expr *syntax.FuncCallExpr) (r.Value, error) 
 func evalMemberMethodExpr(c *r.Context, expr *syntax.MemberMethodExpr) (r.Value, error) {
 	currentScope := c.GetCurrentScope()
 	newScope := c.PushChildScope()
+	defer c.PopScope()
 
 	// 1. parse root expr
 	rootExpr, err := evalExpression(c, expr.Root)
@@ -630,7 +624,6 @@ func evalMemberMethodExpr(c *r.Context, expr *syntax.MemberMethodExpr) (r.Value,
 		}
 	}
 
-	c.PopScope()
 	return vlast, nil
 }
 

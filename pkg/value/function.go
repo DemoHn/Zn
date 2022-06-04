@@ -44,6 +44,7 @@ func NewClosure(paramHandler funcExecutor, executor funcExecutor) *ClosureRef {
 func (cs *ClosureRef) Exec(c *r.Context, thisValue r.Value, params []r.Value) (r.Value, error) {
 	// init scope
 	newScope := c.PushChildScope()
+	defer c.PopScope()
 	newScope.SetThisValue(thisValue)
 
 	if cs.ParamHandler != nil {
@@ -60,7 +61,6 @@ func (cs *ClosureRef) Exec(c *r.Context, thisValue r.Value, params []r.Value) (r
 		return nil, err
 	}
 
-	c.PopScope()
 	return val, nil
 }
 
