@@ -355,9 +355,7 @@ func evalBranchStmt(c *r.Context, node *syntax.BranchStmt) error {
 
 	// exec if-branch
 	if vIfExpr.GetValue() {
-		if err := evalStmtBlock(c, node.IfTrueBlock); err != nil {
-			return err
-		}
+		return evalStmtBlock(c, node.IfTrueBlock)
 	}
 	// exec else-if branches
 	for idx, otherExpr := range node.OtherExprs {
@@ -371,16 +369,12 @@ func evalBranchStmt(c *r.Context, node *syntax.BranchStmt) error {
 		}
 		// exec else-if branch
 		if vOtherExprI.GetValue() {
-			if err := evalStmtBlock(c, node.OtherBlocks[idx]); err != nil {
-				return err
-			}
+			return evalStmtBlock(c, node.OtherBlocks[idx])
 		}
 	}
 	// exec else branch if possible
 	if node.HasElse {
-		if err := evalStmtBlock(c, node.IfFalseBlock); err != nil {
-			return err
-		}
+		return evalStmtBlock(c, node.IfFalseBlock)
 	}
 	return nil
 }

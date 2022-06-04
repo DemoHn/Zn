@@ -180,7 +180,7 @@ func StringifyValue(value r.Value) string {
 		for _, item := range v.value {
 			strs = append(strs, StringifyValue(item))
 		}
-		return fmt.Sprintf("【%s】", strings.Join(strs, "，"))
+		return fmt.Sprintf("【%s】", strings.Join(strs, "、"))
 	case *Bool:
 		data := "真"
 		if !v.value {
@@ -197,7 +197,7 @@ func StringifyValue(value r.Value) string {
 		strs := []string{}
 		for _, key := range v.keyOrder {
 			value := v.value[key]
-			strs = append(strs, fmt.Sprintf("%s == %s", key, StringifyValue(value)))
+			strs = append(strs, fmt.Sprintf("%s = %s", key, StringifyValue(value)))
 		}
 		return fmt.Sprintf("【%s】", strings.Join(strs, "，"))
 	}

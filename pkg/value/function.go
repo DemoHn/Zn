@@ -56,12 +56,7 @@ func (cs *ClosureRef) Exec(c *r.Context, thisValue r.Value, params []r.Value) (r
 		return nil, zerr.NewErrorSLOT("执行逻辑不能为空")
 	}
 	// do execution
-	val, err := cs.Executor(c, params)
-	if err != nil {
-		return nil, err
-	}
-
-	return val, nil
+	return cs.Executor(c, params)
 }
 
 // GetValue -
