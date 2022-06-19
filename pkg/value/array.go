@@ -3,6 +3,7 @@ package value
 import (
 	zerr "github.com/DemoHn/Zn/pkg/error"
 	r "github.com/DemoHn/Zn/pkg/runtime"
+	"math"
 	"strings"
 )
 
@@ -77,6 +78,7 @@ func (ar *Array) ExecMethod(c *r.Context, name string, values []r.Value) (r.Valu
 		"合并": arrayExecMerge,
 		"包含": arrayExecContains,
 		"寻找": arrayExecFind,
+		"交换": arrayExecSwap,
 	}
 
 	if fn, ok := arrayMethodMap[name]; ok {
@@ -327,6 +329,31 @@ func arrayExecFind(ar *Array, c *r.Context, values []r.Value) (r.Value, error) {
 	}
 	return NewNumber(float64(idx)), nil
 }
+
+func arrayExecSwap(ar *Array, c *r.Context, values []r.Value) (r.Value, error) {
+	if err := ValidateExactParams(values, "number", "number"); err != nil {
+		return nil, err
+	}
+	// check if all indexes in the range of array
+	l := len(ar.value)
+
+	cursor0 := int(math.Floor(values[0].(*Number).GetValue()) - 1)
+	cursor1 := int(math.Floor(values[1].(*Number).GetValue()) - 1)
+
+	if cursor0 < 0 || cursor0 >= l {
+		return nil, zerr.IndexOutOfRange()
+	}
+	if cursor1 < 0 || cursor1 >= l {
+		return nil, zerr.IndexOutOfRange()
+	}
+	// swap item
+	tmp := ar.value[cursor0]
+	ar.value[cursor0] = ar.value[cursor1]
+	ar.value[cursor1] = tmp
+
+	return ar, nil
+}
+
 
 ////// method handlers
 func insertArrayValue(target []r.Value, idx int, insertItem r.Value) []r.Value {
