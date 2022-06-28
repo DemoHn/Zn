@@ -41,7 +41,7 @@ const (
 	LeftDoubleQuoteI   rune = 0x300C // 「
 	RightDoubleQuoteI  rune = 0x300D // 」
 	LeftDoubleQuoteII  rune = 0x201C // “
-	RightDoubleQuoteII rune = 0x201D // ”
+	RightDoubleQuoteII rune = 0x201D // “
 	LeftSingleQuoteI   rune = 0x300E // 『
 	RightSingleQuoteI  rune = 0x300F // 』
 	LeftSingleQuoteII  rune = 0x2018 // ‘

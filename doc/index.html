@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Document</title>
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+  <meta name="description" content="Description">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0">
+  <link rel="stylesheet" href="//cdn.jsdelivr.net/npm/docsify/themes/vue.css" />
+
+</head>
+<body>
+  <div id="app"></div>
+  <script>
+    window.$docsify = {
+      name: 'Zn',
+      repo: '',
+      /* loadNavbar: true, */
+    }
+  </script>
+  <!-- Docsify v4 -->
+  <script src="//cdn.jsdelivr.net/npm/docsify@4"></script>
+  <script src="//cdn.jsdelivr.net/npm/docsify/lib/plugins/emoji.min.js"></script>
+  <!-- define Zn Grammar via Prism, ref: https://prismjs.com/#supported-languages -->
+  <script>
+    (function (Prism) {
+      Prism.languages.zn = {
+        'variable': {
+          'pattern': /(（\s*)[^：）]+/,
+          'lookbehind': true,
+        },
+        'punctuation': {
+          'pattern': /[，、：；？！【】{}&@#（）]/
+        },
+        'operator': {
+          'pattern': /(?:\s)\+(?:\s)|(?:\s)\-(?:\s)|(?:\s)\*(?:\s)|(?:\s)\/(?:\s)|\/=|==|>=|<=|=|>|</,
+        },
+        'comment': {
+          'pattern': /\/\*[\s\S]*?\*\/|\/\/.*|注[0-9]*：「[\s\S]*?」|注[0-9]*：“[\s\S]*?”|注[0-9]*：(?!「“).*/,
+          'greedy': true
+        },
+        'string': {
+          'pattern': /「[\s\S]*?」|“[\s\S]*?“|《[\s\S]*?》|『[\s\S]*?』|‘[\s\S]*?‘/,
+          'greedy': true
+        },
+        'number': {
+          'pattern': /[-+]?[0-9]*\.?[0-9]+((([eE][-+])|(\*(10)?\^[-+]?))[0-9]+)?/,
+        },
+        'quote-identifier': {
+          'pattern': /·[^\s]+·/
+        },
+        'zn-class-name': {
+          'pattern': /(成为\s*)[^：]+/,
+          'lookbehind': true,
+          'greedy': true,
+        },
+        'keyword': {
+          'pattern': /令|成为|恒为|为|再如|如果|如何|何为|已知|返回|是|不等于|不大于|不小于|小于|大于|以|否则|每当|定义|其|或|且|之|的|是为|等于|遍历|导入|得到|抛出/,
+          'greedy': true,
+        },
+      }
+    })(Prism)
+  </script>
+  <style>
+    code.lang-zn .token.operator {
+      color: blueviolet;
+    }
+
+    code.lang-zn .token.zn-class-name {
+      color: #666666;
+      font-weight: bold;
+    }
+  </style>
+</body>
+</html>
