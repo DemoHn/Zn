@@ -2,6 +2,7 @@ package exec
 
 import (
 	"fmt"
+
 	"github.com/DemoHn/Zn/stdlib"
 
 	zerr "github.com/DemoHn/Zn/pkg/error"
@@ -565,7 +566,6 @@ func evalFunctionCall(c *r.Context, expr *syntax.FuncCallExpr) (r.Value, error) 
 	}
 	zf = zval.GetValue()
 
-
 	// exec function call via its ClosureRef
 	v2, err := zf.Exec(c, thisValue, params)
 	if err != nil {
@@ -751,7 +751,7 @@ func evalArithExpr(c *r.Context, expr *syntax.ArithExpr) (*value.Number, error) 
 		if rightNum.GetValue() == 0 {
 			return nil, zerr.ArithDivZero()
 		}
-		return value.NewNumber(leftNum.GetValue() + rightNum.GetValue()), nil
+		return value.NewNumber(leftNum.GetValue() / rightNum.GetValue()), nil
 	}
 	return nil, zerr.UnExpectedCase("运算项", fmt.Sprintf("%d", expr.Type))
 }

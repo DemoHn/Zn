@@ -2,26 +2,27 @@ package exec
 
 import (
 	"fmt"
+	"strings"
+
 	zerr "github.com/DemoHn/Zn/pkg/error"
 	r "github.com/DemoHn/Zn/pkg/runtime"
 	"github.com/DemoHn/Zn/pkg/syntax"
-	"strings"
 )
 
 type ExtraInfo struct {
 	ModuleName string
-	File    string
-	LineNum int
-	ColNum  int
-	Text    string
+	File       string
+	LineNum    int
+	ColNum     int
+	Text       string
 	ErrorClass string
 }
 
 // SyntaxErrorWrapper - wrap IO errors with file info (current lexer etc.)
 type SyntaxErrorWrapper struct {
-	lexer *syntax.Lexer
+	lexer      *syntax.Lexer
 	moduleName string
-	err error
+	err        error
 }
 
 func WrapSyntaxError(lexer *syntax.Lexer, moduleName string, err error) *SyntaxErrorWrapper {
@@ -42,7 +43,7 @@ func (sw *SyntaxErrorWrapper) Error() string {
 			code = serr.Code
 			lineIdx := sw.lexer.FindLineIdx(serr.Cursor, 0)
 			// add line 1
-			errLines = append(errLines, fmtErrorLocationHeadLine(sw.moduleName, lineIdx + 1))
+			errLines = append(errLines, fmtErrorLocationHeadLine(sw.moduleName, lineIdx+1))
 			// add line 2
 			errLines = append(errLines, fmtErrorSourceTextLine(sw.lexer, serr.Cursor, true))
 		}
@@ -57,7 +58,7 @@ func (sw *SyntaxErrorWrapper) Error() string {
 
 type RuntimeErrorWrapper struct {
 	traceback []r.ExecCursor
-	err error
+	err       error
 }
 
 func WrapRuntimeError(c *r.Context, err error) *RuntimeErrorWrapper {
@@ -69,7 +70,7 @@ func WrapRuntimeError(c *r.Context, err error) *RuntimeErrorWrapper {
 
 	return &RuntimeErrorWrapper{
 		traceback: traceback,
-		err:        err,
+		err:       err,
 	}
 }
 
@@ -88,7 +89,7 @@ func (rw *RuntimeErrorWrapper) Error() string {
 	if len(rw.traceback) > 0 {
 		// append head lines
 		headTrace := rw.traceback[0]
-		errLines = append(errLines, fmtErrorLocationHeadLine(headTrace.ModuleName, headTrace.CurrentLine + 1))
+		errLines = append(errLines, fmtErrorLocationHeadLine(headTrace.ModuleName, headTrace.CurrentLine+1))
 		// get line text
 		l := headTrace.Lexer
 		if lineInfo := l.GetLineInfo(headTrace.CurrentLine); lineInfo != nil {
@@ -98,7 +99,7 @@ func (rw *RuntimeErrorWrapper) Error() string {
 
 		// append body
 		for _, tr := range rw.traceback[1:] {
-			errLines = append(errLines, fmtErrorLocationBodyLine(tr.ModuleName, tr.CurrentLine + 1))
+			errLines = append(errLines, fmtErrorLocationBodyLine(tr.ModuleName, tr.CurrentLine+1))
 			// get line text
 			l := tr.Lexer
 			if lineInfo := l.GetLineInfo(tr.CurrentLine); lineInfo != nil {
@@ -129,7 +130,6 @@ func DisplayError(err error) string {
 		return err.Error()
 	}
 }
-
 
 // print error lines - display detailed error info to user
 // general format:
@@ -166,6 +166,9 @@ func fmtErrorLocationBodyLine(moduleName string, lineNum int) string {
 func fmtErrorSourceTextLine(l *syntax.Lexer, cursorIdx int, withCursorMark bool) string {
 	startIdx := cursorIdx
 	endIdx := startIdx
+	for l.Source[startIdx] == syntax.RuneCR || l.Source[startIdx] == syntax.RuneLF {
+		startIdx -= 1
+	}
 	// find prev until meeting first CR/LF
 	for startIdx > 0 {
 		if l.Source[startIdx] == syntax.RuneCR || l.Source[startIdx] == syntax.RuneLF {
@@ -190,7 +193,7 @@ func fmtErrorSourceTextLine(l *syntax.Lexer, cursorIdx int, withCursorMark bool)
 	lineText := string(l.Source[startIdx:endIdx])
 	fmtLine := fmt.Sprintf("    %s", lineText)
 	if withCursorMark {
-		cursorText := fmt.Sprintf("\n    %s^", strings.Repeat(" ", calcCursorOffset(lineText, cursorIdx - startIdx)))
+		cursorText := fmt.Sprintf("\n    %s^", strings.Repeat(" ", calcCursorOffset(lineText, cursorIdx-startIdx)))
 		fmtLine += cursorText
 	}
 

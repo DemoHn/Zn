@@ -2,10 +2,12 @@ package value
 
 import (
 	"fmt"
-	zerr "github.com/DemoHn/Zn/pkg/error"
-	r "github.com/DemoHn/Zn/pkg/runtime"
+	"math"
 	"strconv"
 	"strings"
+
+	zerr "github.com/DemoHn/Zn/pkg/error"
+	r "github.com/DemoHn/Zn/pkg/runtime"
 )
 
 type numGetterFunc func(*Number, *r.Context) (r.Value, error)
@@ -63,12 +65,14 @@ func (n *Number) SetProperty(c *r.Context, name string, value r.Value) error {
 // ExecMethod -
 func (n *Number) ExecMethod(c *r.Context, name string, values []r.Value) (r.Value, error) {
 	numMethodMap := map[string]numMethodFunc{
-		"加": numExecAdd,
-		"减": numExecSub,
-		"乘": numExecMul,
-		"除": numExecDiv,
-		"自增": numExecSelfAdd,
-		"自减": numExecSelfSub,
+		"加":    numExecAdd,
+		"减":    numExecSub,
+		"乘":    numExecMul,
+		"除":    numExecDiv,
+		"自增":   numExecSelfAdd,
+		"自减":   numExecSelfSub,
+		"向下取整": numExecFloor,
+		"向上取整": numExecCeil,
 	}
 	if fn, ok := numMethodMap[name]; ok {
 		return fn(n, c, values)
@@ -175,4 +179,12 @@ func numExecSelfSub(n *Number, c *r.Context, values []r.Value) (r.Value, error) 
 	n.value = n.value - target.value
 
 	return n, nil
+}
+
+func numExecFloor(n *Number, c *r.Context, values []r.Value) (r.Value, error) {
+	return NewNumber(math.Floor(n.value)), nil
+}
+
+func numExecCeil(n *Number, c *r.Context, values []r.Value) (r.Value, error) {
+	return NewNumber(math.Ceil(n.value)), nil
 }
