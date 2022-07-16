@@ -6,36 +6,38 @@ import (
 )
 
 type RuntimeError struct {
-	Code int
+	Code    int
 	Message string
-	Extra interface{}
+	Extra   interface{}
 }
 
 func (r *RuntimeError) Error() string {
 	return r.Message
 }
+
 const (
-	ErrIndexOutOfRange = 30
-	ErrIndexKeyNotFound = 31
-	ErrNameNotDefined = 32
-	ErrNameRedeclared = 33
-	ErrAssignToConstant = 34
-	ErrPropertyNotFound = 35
-	ErrMethodNotFound = 36
-	ErrLeastParamsError = 40
+	ErrIndexOutOfRange          = 30
+	ErrIndexKeyNotFound         = 31
+	ErrNameNotDefined           = 32
+	ErrNameRedeclared           = 33
+	ErrAssignToConstant         = 34
+	ErrPropertyNotFound         = 35
+	ErrMethodNotFound           = 36
+	ErrLeastParamsError         = 40
 	ErrMismatchParamLengthError = 41
-	ErrMostParamsError = 42
-	ErrExactParamsError = 43
-	ErrModuleNotFound = 50
-	ErrUnExpectedCase = 60
+	ErrMostParamsError          = 42
+	ErrExactParamsError         = 43
+	ErrModuleNotFound           = 50
+	ErrUnExpectedCase           = 60
 	// type error
-	ErrInvalidExprType = 70
+	ErrInvalidExprType     = 70
 	ErrInvalidFuncVariable = 71
-	ErrInvalidParamType = 72
+	ErrInvalidParamType    = 72
 	ErrInvalidCompareLType = 73
 	ErrInvalidCompareRType = 74
 	// arith error
-	ErrArithDivZero = 80
+	ErrArithDivZero          = 80
+	ErrArithRootLessThanZero = 81
 )
 
 var typeNameMap = map[string]string{
@@ -152,9 +154,9 @@ func ExactParamsError(exactParams int) *RuntimeError {
 // ModuleNotFound -
 func ModuleNotFound(name string) *RuntimeError {
 	return &RuntimeError{
-		Code: ErrModuleNotFound,
+		Code:    ErrModuleNotFound,
 		Message: fmt.Sprintf("未找到「%s」模块", name),
-		Extra: name,
+		Extra:   name,
 	}
 }
 
@@ -254,6 +256,14 @@ func ArithDivZero() *RuntimeError {
 	return &RuntimeError{
 		Code:    ErrArithDivZero,
 		Message: "被除数不得为0",
+		Extra:   nil,
+	}
+}
+
+func ArithRootLessThanZero() *RuntimeError {
+	return &RuntimeError{
+		Code:    ErrArithRootLessThanZero,
+		Message: "计算平方根时，底数须不小于0",
 		Extra:   nil,
 	}
 }

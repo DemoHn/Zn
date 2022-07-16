@@ -47,9 +47,10 @@ func (n *Number) GetValue() float64 {
 // GetProperty -
 func (n *Number) GetProperty(c *r.Context, name string) (r.Value, error) {
 	numGetterMap := map[string]numGetterFunc{
-		"文本": numGetText,
-		"平方": numGetSquare,
-		"立方": numGetCube,
+		"文本":  numGetText,
+		"平方":  numGetSquare,
+		"立方":  numGetCube,
+		"平方根": numGetSquareRoot,
 	}
 	if fn, ok := numGetterMap[name]; ok {
 		return fn(n, c)
@@ -94,6 +95,14 @@ func numGetSquare(n *Number, c *r.Context) (r.Value, error) {
 
 func numGetCube(n *Number, c *r.Context) (r.Value, error) {
 	res := n.value * n.value * n.value
+	return NewNumber(res), nil
+}
+
+func numGetSquareRoot(n *Number, c *r.Context) (r.Value, error) {
+	if n.value < 0 {
+		return nil, zerr.ArithRootLessThanZero()
+	}
+	res := math.Sqrt(n.value)
 	return NewNumber(res), nil
 }
 
