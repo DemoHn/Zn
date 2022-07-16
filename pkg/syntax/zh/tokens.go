@@ -50,9 +50,9 @@ const (
 
 //// 3. commentType
 const (
-	commentTypeSingle = 1 // single line
-	commentTypeSlash = 2 // multiple line, starts with '/*'
-	commentTypeQuoteI = 3 // multiple line, starts with '注：「'
+	commentTypeSingle  = 1 // single line
+	commentTypeSlash   = 2 // multiple line, starts with '/*'
+	commentTypeQuoteI  = 3 // multiple line, starts with '注：「'
 	commentTypeQuoteII = 4 // multiple line, starts with '注：“'
 )
 
@@ -328,7 +328,7 @@ end:
 	if syntax.ContainsInt(state, endStates) {
 		return syntax.Token{
 			Type:     TypeNumber,
-			Literal: literal,
+			Literal:  literal,
 			StartIdx: startIdx,
 			EndIdx:   l.GetCursor(),
 		}, nil
@@ -415,18 +415,18 @@ func parseVarQuote(l *syntax.Lexer) (syntax.Token, error) {
 		switch ch {
 		case syntax.RuneEOF:
 			return syntax.Token{
-				Type: TypeIdentifier,
+				Type:     TypeIdentifier,
 				StartIdx: startIdx,
-				EndIdx: l.GetCursor(),
-				Literal: literal,
+				EndIdx:   l.GetCursor(),
+				Literal:  literal,
 			}, nil
 		case MiddleDot:
 			l.Next()
 			return syntax.Token{
-				Type: TypeIdentifier,
+				Type:     TypeIdentifier,
 				StartIdx: startIdx,
-				EndIdx: l.GetCursor(),
-				Literal: literal,
+				EndIdx:   l.GetCursor(),
+				Literal:  literal,
 			}, nil
 		default:
 			literal = append(literal, ch)
@@ -445,12 +445,12 @@ func parseString(l *syntax.Lexer) (syntax.Token, error) {
 
 	quoteNum := 1
 	tkType := TypeString
-	quoteMatchMap := map[rune]rune {
-		LeftDoubleQuoteI: RightDoubleQuoteI,
+	quoteMatchMap := map[rune]rune{
+		LeftDoubleQuoteI:  RightDoubleQuoteI,
 		LeftDoubleQuoteII: RightDoubleQuoteII,
-		LeftSingleQuoteI: RightSingleQuoteI,
+		LeftSingleQuoteI:  RightSingleQuoteI,
 		LeftSingleQuoteII: RightSingleQuoteII,
-		LeftLibQuoteI: RightLibQuoteI,
+		LeftLibQuoteI:     RightLibQuoteI,
 	}
 
 	// get token type
@@ -465,10 +465,10 @@ func parseString(l *syntax.Lexer) (syntax.Token, error) {
 		switch ch {
 		case syntax.RuneEOF:
 			return syntax.Token{
-				Type: tkType,
-				Literal: literal,
+				Type:     tkType,
+				Literal:  literal,
 				StartIdx: startIdx,
-				EndIdx: l.GetCursor(),
+				EndIdx:   l.GetCursor(),
 			}, nil
 		case syntax.RuneCR, syntax.RuneLF:
 			p := l.Peek()
@@ -494,10 +494,10 @@ func parseString(l *syntax.Lexer) (syntax.Token, error) {
 					// return strings
 					l.Next()
 					return syntax.Token{
-						Type: tkType,
-						Literal: literal,
+						Type:     tkType,
+						Literal:  literal,
 						StartIdx: startIdx,
-						EndIdx: l.GetCursor(),
+						EndIdx:   l.GetCursor(),
 					}, nil
 				}
 			}
@@ -530,10 +530,10 @@ func parseIdentifier(l *syntax.Lexer) (syntax.Token, error) {
 		// 1. when next char is space, stop here
 		if syntax.IsWhiteSpace(ch) {
 			return syntax.Token{
-				Type: TypeIdentifier,
+				Type:     TypeIdentifier,
 				StartIdx: startIdx,
-				EndIdx: l.GetCursor(),
-				Literal: literal,
+				EndIdx:   l.GetCursor(),
+				Literal:  literal,
 			}, nil
 		}
 
@@ -544,10 +544,10 @@ func parseIdentifier(l *syntax.Lexer) (syntax.Token, error) {
 		}
 		if isKeyword {
 			return syntax.Token{
-				Type: TypeIdentifier,
+				Type:     TypeIdentifier,
 				StartIdx: startIdx,
-				EndIdx: l.GetCursor(),
-				Literal: literal,
+				EndIdx:   l.GetCursor(),
+				Literal:  literal,
 			}, nil
 		}
 		// 3. when next char is a start of comment, stop here
@@ -555,19 +555,19 @@ func parseIdentifier(l *syntax.Lexer) (syntax.Token, error) {
 		// NOTE: we will regard comment type「注」 as a regular identifier
 		if ch == Slash && syntax.ContainsRune(l.Peek(), []rune{Slash, MultiplyMark, Equal}) {
 			return syntax.Token{
-				Type: TypeIdentifier,
+				Type:     TypeIdentifier,
 				StartIdx: startIdx,
-				EndIdx: l.GetCursor(),
-				Literal: literal,
+				EndIdx:   l.GetCursor(),
+				Literal:  literal,
 			}, nil
 		}
 		// 4. when next char is a mark, stop here
 		if syntax.ContainsRune(ch, terminators) {
 			return syntax.Token{
-				Type: TypeIdentifier,
+				Type:     TypeIdentifier,
 				StartIdx: startIdx,
-				EndIdx: l.GetCursor(),
-				Literal: literal,
+				EndIdx:   l.GetCursor(),
+				Literal:  literal,
 			}, nil
 		}
 		// 5. otherwise, if it's an identifier with +, -, *, /, .
@@ -657,9 +657,9 @@ func parseComment(l *syntax.Lexer) (bool, syntax.Token, error) {
 				// single line
 				if multiCommentType == commentTypeSingle {
 					return true, syntax.Token{
-						Type: TypeComment,
+						Type:     TypeComment,
 						StartIdx: startIdx,
-						EndIdx: l.GetCursor(),
+						EndIdx:   l.GetCursor(),
 					}, nil
 				}
 				p := l.Peek()
@@ -707,9 +707,9 @@ func parseComment(l *syntax.Lexer) (bool, syntax.Token, error) {
 					l.Next()
 					l.Next()
 					return true, syntax.Token{
-						Type: TypeComment,
+						Type:     TypeComment,
 						StartIdx: startIdx,
-						EndIdx: l.GetCursor(),
+						EndIdx:   l.GetCursor(),
 					}, nil
 				}
 			}

@@ -31,9 +31,9 @@ type LineInfo struct {
 
 // Token - general token type
 type Token struct {
-	Type     uint8
+	Type uint8
 	// stores token's actual content (optional)
-	Literal []rune
+	Literal  []rune
 	StartIdx int
 	EndIdx   int
 }
@@ -51,7 +51,6 @@ const (
 	RuneLF  rune = 0x000A // \n
 )
 
-
 // whiteSpaces - all kinds of valid spaces
 var whiteSpaces = []rune{
 	// where 0x0020 <--> SP
@@ -63,11 +62,11 @@ var whiteSpaces = []rune{
 
 func NewLexer(source []rune) *Lexer {
 	return &Lexer{
-		Source:      source,
-		IndentType:  IndentUnknown,
-		Lines:       []LineInfo{},
-		cursor:      0,
-		beginLex:    true,
+		Source:     source,
+		IndentType: IndentUnknown,
+		Lines:      []LineInfo{},
+		cursor:     0,
+		beginLex:   true,
 	}
 }
 
@@ -131,19 +130,24 @@ func (l *Lexer) PreNextToken() error {
 			return err
 		}
 	}
-	// when current char CR/LF, parse newline
-	ch := l.GetCurrentChar()
-	if ch == RuneCR || ch == RuneLF {
-		if err := l.parseLine(ch, true); err != nil {
-			return err
+
+	for {
+		ch := l.GetCurrentChar()
+		// when current char are spaces, skip them directly
+		if IsWhiteSpace(ch) {
+			if err := l.parseSpaces(ch); err != nil {
+				return err
+			}
+			// when current char CR/LF, parse newline
+		} else if ch == RuneCR || ch == RuneLF {
+			if err := l.parseLine(ch, true); err != nil {
+				return err
+			}
+		} else {
+			break
 		}
 	}
 
-	if IsWhiteSpace(ch) {
-		if err := l.parseSpaces(ch); err != nil {
-			return err
-		}
-	}
 	return nil
 }
 
@@ -151,6 +155,7 @@ func (l *Lexer) PreNextToken() error {
 func (l *Lexer) ParseCRLF(c rune) error {
 	return l.parseLine(c, false)
 }
+
 // getChar - get value from lineBuffer
 func (l *Lexer) getChar(idx int) rune {
 	if idx >= len(l.Source) {
