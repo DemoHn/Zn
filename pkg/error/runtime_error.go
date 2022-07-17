@@ -263,7 +263,7 @@ func ArithDivZero() *RuntimeError {
 func ArithRootLessThanZero() *RuntimeError {
 	return &RuntimeError{
 		Code:    ErrArithRootLessThanZero,
-		Message: "计算平方根时，底数须不小于0",
+		Message: "计算平方根时，底数须大于0",
 		Extra:   nil,
 	}
 }

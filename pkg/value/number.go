@@ -99,7 +99,7 @@ func numGetCube(n *Number, c *r.Context) (r.Value, error) {
 }
 
 func numGetSquareRoot(n *Number, c *r.Context) (r.Value, error) {
-	if n.value < 0 {
+	if n.value <= 0 {
 		return nil, zerr.ArithRootLessThanZero()
 	}
 	res := math.Sqrt(n.value)
