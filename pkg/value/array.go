@@ -1,10 +1,11 @@
 package value
 
 import (
-	zerr "github.com/DemoHn/Zn/pkg/error"
-	r "github.com/DemoHn/Zn/pkg/runtime"
 	"math"
 	"strings"
+
+	zerr "github.com/DemoHn/Zn/pkg/error"
+	r "github.com/DemoHn/Zn/pkg/runtime"
 )
 
 type arrayGetterFunc func(*Array, *r.Context) (r.Value, error)
@@ -34,10 +35,12 @@ func (ar *Array) AppendValue(value r.Value) {
 // GetProperty -
 func (ar *Array) GetProperty(c *r.Context, name string) (r.Value, error) {
 	arrayGetterMap := map[string]arrayGetterFunc{
-		"和": arrayGetAddResult,
-		"差": arrayGetSubResult,
-		"积": arrayGetMulResult,
-		"商": arrayGetDivResult,
+		/*
+			"和": arrayGetAddResult,
+			"差": arrayGetSubResult,
+			"积": arrayGetMulResult,
+			"商": arrayGetDivResult,
+		*/
 		"文本": arrayGetText,
 		"首项": arrayGetFirstItem,
 		"末项": arrayGetLastItem,
@@ -353,7 +356,6 @@ func arrayExecSwap(ar *Array, c *r.Context, values []r.Value) (r.Value, error) {
 
 	return ar, nil
 }
-
 
 ////// method handlers
 func insertArrayValue(target []r.Value, idx int, insertItem r.Value) []r.Value {
