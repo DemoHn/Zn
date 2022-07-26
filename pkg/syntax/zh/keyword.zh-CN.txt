@@ -14,8 +14,6 @@ RU      如
 HE      何
 YI      已
 ZHIy    知
-FAN     返
-HUI     回
 BU      不
 DENG    等
 YU      于
@@ -43,6 +41,7 @@ DAO     导
 RUy     入
 DE      的
 DUI     对
+QU      取
 DEy     得
 DAOy    到
 PAO     抛
@@ -61,7 +60,7 @@ CondW           44      如果
 FuncW           45      如何
 GetterW         46      何为
 ParamAssignW    47      已知
-ReturnW         48      返回
+ReturnW         48      得出
 LogicYesIIW     49      是
 LogicNotEqW     51      不等于
 LogicLteW       52      不大于
@@ -82,5 +81,5 @@ ObjConstructW   73      是为
 LogicEqualW     74      等于
 IteratorW       76      遍历
 ImportW         77      导入
-GetResultW      78      得到
+GetResultW      78      取得
 ThrowErrorW     79      抛出

@@ -563,7 +563,7 @@ func ParseArrayExpr(p *ParserZH) syntax.UnionMapList {
 func tryParseEmptyMapList(p *ParserZH) (bool, syntax.UnionMapList) {
 	emptyTrialTypes := []uint8{
 		TypeArrayQuoteR, // for empty array
-		TypeAssignMark,   // for empty hashmap
+		TypeAssignMark,  // for empty hashmap
 	}
 
 	if match, tk := p.tryConsume(emptyTrialTypes...); match {
@@ -594,7 +594,7 @@ func tryParseEmptyMapList(p *ParserZH) (bool, syntax.UnionMapList) {
 // FuncID   -> ID
 //          -> Number
 //
-// YieldResultTail  ->  得到 ID
+// YieldResultTail  ->  取得 ID
 //                  ->
 func ParseFuncCallExpr(p *ParserZH, parseYieldResult bool) *syntax.FuncCallExpr {
 	var callExpr = &syntax.FuncCallExpr{
@@ -1075,7 +1075,7 @@ func ParseVarOneLeadStmt(p *ParserZH) syntax.Statement {
 				result.MethodChain = append(result.MethodChain, funcExprN)
 			}
 
-			// then parse 得到
+			// then parse 取得
 			if match, _ := p.tryConsume(TypeGetResultW); match {
 				id := parseID(p)
 				result.YieldResult = id
@@ -1131,10 +1131,10 @@ func parseIteratorStmtRest(p *ParserZH, idList []*syntax.ID) *syntax.IterateStmt
 	}
 }
 
-// ParseFunctionReturnStmt - yield FuncParamList node (without head token: 返回)
+// ParseFunctionReturnStmt - yield FuncParamList node (without head token: 得出)
 //
 // CFG:
-// FRStmt -> 返回 syntax.Expression
+// FRStmt -> 得出 syntax.Expression
 func ParseFunctionReturnStmt(p *ParserZH) *syntax.FunctionReturnStmt {
 	expr := ParseExpression(p)
 	return &syntax.FunctionReturnStmt{

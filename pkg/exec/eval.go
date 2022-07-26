@@ -507,7 +507,7 @@ func evalExpression(c *r.Context, expr syntax.Expression) (r.Value, error) {
 	}
 }
 
-// （显示：A、B、C），得到D
+// （显示：A、B、C），取得D
 func evalFunctionCall(c *r.Context, expr *syntax.FuncCallExpr) (r.Value, error) {
 	var zf *value.ClosureRef
 	vtag := expr.FuncName.GetLiteral()

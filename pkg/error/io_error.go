@@ -6,15 +6,15 @@ import (
 )
 
 type IOError struct {
-	Code int
+	Code    int
 	Message string
-	Path string
+	Path    string
 }
 
 // errCode: 1X
 const (
 	ErrFileNotFound = 10
-	ErrReadFile = 11
+	ErrReadFile     = 11
 )
 
 func (e *IOError) Error() string {
@@ -23,9 +23,9 @@ func (e *IOError) Error() string {
 
 func FileNotFound(path string) *IOError {
 	return &IOError{
-		Code: ErrFileNotFound,
+		Code:    ErrFileNotFound,
 		Message: fmt.Sprintf("未能找到文件，请检查它是否存在！"),
-		Path: fmt.Sprintf("文件「%s」", path),
+		Path:    fmt.Sprintf("文件「%s」", path),
 	}
 }
 
@@ -34,7 +34,7 @@ func ReadFileError(err error, path string) *IOError {
 	errTextMap := map[error]string{
 		io.ErrShortBuffer:   "需要更大的缓冲区",
 		io.ErrUnexpectedEOF: "未知文件结束符",
-		io.ErrNoProgress:    "多次尝试读取，皆无数据或返回错误",
+		io.ErrNoProgress:    "多次尝试读取，皆无数据或得出错误",
 		io.ErrShortWrite:    "数据没有完全写入",
 	}
 
@@ -44,8 +44,8 @@ func ReadFileError(err error, path string) *IOError {
 	}
 
 	return &IOError{
-		Code: ErrReadFile,
+		Code:    ErrReadFile,
 		Message: fmt.Sprintf("读取I/O流失败：%s", errText),
-		Path: path,
+		Path:    path,
 	}
 }

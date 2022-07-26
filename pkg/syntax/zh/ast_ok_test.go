@@ -1,10 +1,11 @@
 package zh
 
 import (
-	"github.com/DemoHn/Zn/pkg/syntax"
 	"regexp"
 	"strings"
 	"testing"
+
+	"github.com/DemoHn/Zn/pkg/syntax"
 )
 
 var testSuccessSuites = []string{
@@ -809,7 +810,7 @@ $PG($BK(
 ========
 2. normal member method expr with yield
 --------
-以A（运行方法），得到结果
+以A（运行方法），取得结果
 --------
 $PG($BK(
 	$MMF(root=($ID(A)) chain=($FN(name=($ID(运行方法)) params=())) yield=($ID(结果)))
@@ -817,7 +818,7 @@ $PG($BK(
 ========
 3. normal member method chain expr with yield
 --------
-以A（运行方法）、（方法2：A、B、C），得到结果
+以A（运行方法）、（方法2：A、B、C），取得结果
 --------
 $PG($BK(
 	$MMF(root=($ID(A)) chain=(
@@ -990,13 +991,13 @@ $PG($BK(
 	是为名、年龄
 
 	如何狂吠？
-		返回“汪汪汪”
+		得出“汪汪汪”
 
 	如何添加年龄？
-		返回20
+		得出20
 
 	何为总和？
-		返回20
+		得出20
 --------
 $PG($BK(
 	$CLS(
@@ -1049,14 +1050,14 @@ $PG($BK(
 	注3：方法列表
 	如何狂吠？
 		注：在方法里面添加注释
-		返回“汪汪汪”
+		得出“汪汪汪”
 
 	如何添加年龄？
-		返回20
+		得出20
 
 	注4：getter列表
 	何为总和？
-		返回20
+		得出20
 --------
 $PG($BK(
 	$CLS(
@@ -1199,7 +1200,7 @@ $PG($BK(
 如何搞个大新闻？
 	已知 &A、&B、&·华为手机·
 	如果C == 空：
-		返回1024
+		得出1024
 --------
 $PG($BK(
 	$FN(
@@ -1337,4 +1338,3 @@ func formatASTstr(input string) string {
 
 	return strings.TrimSpace(input)
 }
-
