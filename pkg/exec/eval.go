@@ -596,12 +596,12 @@ func evalMemberMethodExpr(c *r.Context, expr *syntax.MemberMethodExpr) (r.Value,
 	if err != nil {
 		return nil, err
 	}
-	// set this value
-	newScope.SetThisValue(rootExpr)
 
-	var vlast r.Value
+	var vlast r.Value = rootExpr
 
 	for _, methodExpr := range expr.MethodChain {
+		// set this value
+		newScope.SetThisValue(vlast)
 		v, err := evalFunctionCall(c, methodExpr)
 		if err != nil {
 			return nil, err
