@@ -163,7 +163,7 @@ func evalVarDeclareStmt(c *r.Context, node *syntax.VarDeclareStmt) error {
 	return nil
 }
 
-// eval A,B 成为 C：P1，P2，P3，...
+// eval A,B 成为（C：P1，P2，P3，...）
 // ensure VDAssignPair.Type MUST BE syntax.VDTypeObjNew
 func evalNewObject(c *r.Context, node syntax.VDAssignPair) error {
 	vtag := node.ObjClass.GetLiteral()

@@ -673,7 +673,7 @@ func ParseMemberFuncCallExpr(p *ParserZH) *syntax.MemberMethodExpr {
 //            ->
 //
 // VDItem     -> IdfList 为 Expr
-//            -> IdfList 成为 Idf ： Expr1、 Expr2、 ...
+//            -> IdfList 成为 （Idf ： Expr1、 Expr2、 ...）
 //            -> IdfList 恒为 Expr
 //
 //    IdfList -> I I'
@@ -771,6 +771,7 @@ func parseVDAssignPair(p *ParserZH) syntax.VDAssignPair {
 			AssignExpr: expr,
 		}
 	default: // ObjNewW
+		p.consume(TypeFuncQuoteL)
 		className := parseID(p)
 		// parse colon
 		match, _ := p.tryConsume(TypeFuncCall)
@@ -788,6 +789,7 @@ func parseVDAssignPair(p *ParserZH) syntax.VDAssignPair {
 			e := ParseExpression(p)
 			params = append(params, e)
 		})
+		p.consume(TypeFuncQuoteR)
 
 		return syntax.VDAssignPair{
 			Type:      syntax.VDTypeObjNew,
