@@ -13,6 +13,7 @@
 * [标准库](chXX-标准库.md)
     - [《JSON》](chXX-标准库.md#JSON)
     - [《文件》](chXX-标准库.md#文件)
+* [附：BNF语法](/zh-cn/manual/BNF.md)
 
 ## 关于本手册
 
