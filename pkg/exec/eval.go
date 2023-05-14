@@ -117,6 +117,11 @@ func evalStatement(c *r.Context, stmt syntax.Statement) error {
 			return zerr.NewErrorSLOT(fmt.Sprintf("「%s」构造出来的对象须是一个异常类型的值！", name))
 		}
 		return zerr.NewErrorSLOT(fmt.Sprintf("「%s」必须是一个类型！", name))
+	case *syntax.ContinueStmt:
+		// send continue signal
+		return zerr.NewContinueSignal()
+	case *syntax.BreakStmt:
+		return zerr.NewBreakSignal()
 	case syntax.Expression:
 		expr, err := evalExpression(c, v)
 		returnValue = expr
@@ -201,9 +206,9 @@ func evalNewObject(c *r.Context, node syntax.VDAssignPair) error {
 // evalWhileLoopStmt -
 func evalWhileLoopStmt(c *r.Context, node *syntax.WhileLoopStmt) error {
 	// create new scope
-	newScope := c.PushChildScope()
+	c.PushChildScope()
 	defer c.PopScope()
-	newScope.SetThisValue(value.NewLoopCtl())
+
 	// set context's current scope with new one
 
 	for {
@@ -381,9 +386,8 @@ func evalBranchStmt(c *r.Context, node *syntax.BranchStmt) error {
 }
 
 func evalIterateStmt(c *r.Context, node *syntax.IterateStmt) error {
-	newScope := c.PushChildScope()
+	c.PushChildScope()
 	defer c.PopScope()
-	newScope.SetThisValue(value.NewLoopCtl())
 
 	// pre-defined key, value variable name
 	var keySlot, valueSlot string

@@ -39,8 +39,11 @@ func ParseStatement(p *ParserZH) syntax.Statement {
 		TypeObjDefineW,
 		TypeImportW,
 		TypeThrowErrorW,
+		TypeBreakW,
+		TypeContinueW,
 	}
 	match, tk := p.tryConsume(validTypes...)
+
 	if match {
 		var s syntax.Statement
 		switch tk.Type {
@@ -68,6 +71,10 @@ func ParseStatement(p *ParserZH) syntax.Statement {
 			s = ParseImportStmt(p)
 		case TypeThrowErrorW:
 			s = ParseThrowExceptionStmt(p)
+		case TypeBreakW:
+			s = ParseBreakStmt(p)
+		case TypeContinueW:
+			s = ParseContinueStmt(p)
 		}
 		p.setStmtCurrentLine(s, tk)
 		return s
@@ -1325,6 +1332,20 @@ func parsePropertyDeclareStmt(p *ParserZH) *syntax.PropertyDeclareStmt {
 		PropertyID: idItem,
 		InitValue:  initExpr,
 	}
+}
+
+// ParseBreakStmt -
+// CFG:
+// ParseBreakStmt  ->  结束循环
+func ParseBreakStmt(p *ParserZH) *syntax.BreakStmt {
+	return &syntax.BreakStmt{}
+}
+
+// ParseContinueStmt -
+// CFG:
+// ParseContinueStmt  ->  继续循环
+func ParseContinueStmt(p *ParserZH) *syntax.ContinueStmt {
+	return &syntax.ContinueStmt{}
 }
 
 //// parse helpers

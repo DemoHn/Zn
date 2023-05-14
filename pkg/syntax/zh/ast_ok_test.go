@@ -859,7 +859,7 @@ const iterateCasesOK = `
 --------
 遍历【1、2、3】：
     令A为值
-    （结束循环）
+    结束循环
 --------
 $PG($BK(
 	$IT(
@@ -869,7 +869,7 @@ $PG($BK(
 			$VD($VP(vars[]=($ID(A)) expr[]=(
 			  	$ID(值)
 			)))
-			$FN(name=($ID(结束循环)) params=())
+			$BREAK
 		))
 	)
 ))
