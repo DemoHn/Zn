@@ -776,6 +776,7 @@ func parseVDAssignPair(p *ParserZH) syntax.VDAssignPair {
 		// parse colon
 		match, _ := p.tryConsume(TypeFuncCall)
 		if !match {
+			p.consume(TypeFuncQuoteR)
 			return syntax.VDAssignPair{
 				Type:      syntax.VDTypeObjNew,
 				Variables: idfList,

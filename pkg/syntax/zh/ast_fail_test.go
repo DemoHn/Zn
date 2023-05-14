@@ -1,14 +1,13 @@
 package zh
 
-
-
 import (
 	"fmt"
+	"strings"
+	"testing"
+
 	zerr "github.com/DemoHn/Zn/pkg/error"
 	"github.com/DemoHn/Zn/pkg/io"
 	"github.com/DemoHn/Zn/pkg/syntax"
-	"strings"
-	"testing"
 )
 
 var testFailSuites = []string{
@@ -55,7 +54,7 @@ A为B，
 B为C
     
 --------
-code=2250 line=2 col=1
+code=20 cursor=6
 ========
 6. block indent unexpected #2
 --------
@@ -65,13 +64,13 @@ code=2250 line=2 col=1
         B为C
     
 --------
-code=2250 line=2 col=1
+code=20 cursor=6
 ========
 8. keyword only
 --------
 令
 --------
-code=2250 line=1 col=0
+code=20 cursor=0
 `
 
 const whileLoopCasesFAIL = `
@@ -80,19 +79,19 @@ const whileLoopCasesFAIL = `
 --------
 每当
 --------
-code=2250 line=1 col=2
+code=20 cursor=2
 ========
 2. keyword only #2
 --------
 每当：
 --------
-code=2250 line=1 col=2
+code=20 cursor=2
 ========
 3. missing true blocks
 --------
 每当真：
 --------
-code=2250 line=1 col=4
+code=20 cursor=4
 ========
 4. unexpected indents
 --------
@@ -100,21 +99,21 @@ code=2250 line=1 col=4
 每当又是真：
     （显示：「每当」）
 --------
-code=2250 line=2 col=0
+code=20 cursor=5
 ========
 5. trueExpr <- var declare stmt
 --------
 每当令变量为真：
     （显示：「变量为真」）
 --------
-code=2250 line=1 col=2
+code=20 cursor=2
 ========
 6. block statement fail
 --------
 每当变量为真：
     令数组为【【233】
 --------
-code=2250 line=2 col=10
+code=20 cursor=22
 `
 
 const funcCallCasesFAIL = `
@@ -123,31 +122,31 @@ const funcCallCasesFAIL = `
 --------
 （显示代码 等
 --------
-code=2250 line=1 col=7
+code=20 cursor=6
 ========
 2. func name not ID
 --------
 （{80000}）
 --------
-code=2250 line=1 col=0
+code=20 cursor=0
 ========
 3. func name includes otehr expr
 --------
 （显示时间，「2020」）
 --------
-code=2250 line=1 col=6
+code=20 cursor=6
 ========
 4. additional right paren
 --------
 （显示时间：「2020」））
 --------
-code=2250 line=1 col=13
+code=20 cursor=13
 ========
 5. additional pause comma
 --------
 （显示时间：「2020」、、500）
 --------
-code=2250 line=1 col=13
+code=20 cursor=13
 `
 
 const arrayListCasesFAIL = `
@@ -156,25 +155,25 @@ const arrayListCasesFAIL = `
 --------
 【10，
 --------
-code=2250 line=1 col=4
+code=20 cursor=4
 ========
 3. incomplete map mark
 --------
 【「正定」 = 】
 --------
-code=2250 line=1 col=8
+code=20 cursor=8
 ========
 4. incomplete map mark #2
 --------
 【 = 「正定」 】
 --------
-code=2250 line=1 col=4
+code=20 cursor=4
 ========
 5. mixture of hashmap and array
 --------
 【 100，「正定」= 10 】
 --------
-code=2250 line=1 col=6
+code=20 cursor=6
 `
 
 const funcDeclareCasesFAIL = `
@@ -184,7 +183,7 @@ const funcDeclareCasesFAIL = `
 如何搞个大新闻？
 A为B
 --------
-code=2251 line=2 col=0
+code=21 cursor=9
 ========
 2. multiple 已知 blocks
 --------
@@ -192,30 +191,24 @@ code=2251 line=2 col=0
     已知A
     已知B
 --------
-code=2250 line=3 col=0
+code=20 cursor=21
 ========
 3. more than one ref mark
 --------
 如何搞个大新闻？
     已知A、&&B	
 --------
-code=2250 line=2 col=4
+code=20 cursor=17
 `
 
 const importStmtCasesFAIL = `
 ========
-1. invalid quote
---------
-导入“ASDF”
---------
-code=2250 line=1 col=2
-========
-2. incomplete 之
+1. incomplete 之
 --------
 导入《ASDF》 之
 令代码为空
 --------
-code=2250 line=1 col=9
+code=20 cursor=9
 `
 
 type astFailCase struct {

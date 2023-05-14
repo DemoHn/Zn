@@ -241,7 +241,7 @@ $PG($BK(
 ========
 8. define new object
 --------
-令圆周率成为数学：3.1415926
+令圆周率成为（数学：3.1415926）
 --------
 $PG($BK(
 	$VD(
@@ -253,7 +253,7 @@ $PG($BK(
 9. block declaration - mixture of const,assign,newObj
 --------
 令：
-	高脚杯、小盅成为SKU：「玻璃制品」、10、20、30
+	高脚杯、小盅成为（SKU：「玻璃制品」、10、20、30）
 	A、B、C为「Amazon」
 	D、E、F恒为空
 	G恒为空
@@ -270,7 +270,7 @@ $PG($BK(
 ========
 10. block declaration - new object without params
 --------
-令A成为B
+令A成为（B）
 --------
 $PG($BK(
 	$VD(
