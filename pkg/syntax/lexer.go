@@ -88,6 +88,11 @@ func (l *Lexer) Peek2() rune {
 	return l.getChar(l.cursor + 2)
 }
 
+// Peek2 - get the next 3 character without moving the cursor
+func (l *Lexer) Peek3() rune {
+	return l.getChar(l.cursor + 3)
+}
+
 // GetCursor - get current cursor
 func (l *Lexer) GetCursor() int {
 	return l.cursor

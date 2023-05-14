@@ -47,6 +47,12 @@ DAOy    到
 PAO     抛
 CHU     出
 SHU     输
+JIE     结
+SHUy    束
+JI      继
+XU      续
+XUN     循
+HUAN    环
 ===============================
 # Part II： 定义每一个关键词及其对应的 tokenType。
 # 使用说明：
@@ -84,3 +90,5 @@ IteratorW       76      遍历
 ImportW         77      导入
 GetResultW      78      得到
 ThrowErrorW     79      抛出
+ContinueW       80      继续循环
+BreakW          81      结束循环

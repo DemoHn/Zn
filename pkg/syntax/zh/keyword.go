@@ -62,6 +62,8 @@ const (
 	GlyphDANG rune = 0x5F53
 	// GlyphDEy - 得 - 得到
 	GlyphDEy rune = 0x5F97
+	// GlyphXUN - 循 - 继续循环，结束循环
+	GlyphXUN rune = 0x5FAA
 	// GlyphHENG - 恒 - 恒为
 	GlyphHENG rune = 0x6052
 	// GlyphCHENG - 成 - 成为
@@ -72,18 +74,28 @@ const (
 	GlyphPAO rune = 0x629B
 	// GlyphSHI - 是 - 是为，是
 	GlyphSHI rune = 0x662F
+	// GlyphSHUy - 束 - 结束循环
+	GlyphSHUy rune = 0x675F
 	// GlyphGUO - 果 - 如果
 	GlyphGUO rune = 0x679C
 	// GlyphMEI - 每 - 每当
 	GlyphMEI rune = 0x6BCF
 	// GlyphZHU - 注 -
 	GlyphZHU rune = 0x6CE8
+	// GlyphHUAN - 环 - 继续循环，结束循环
+	GlyphHUAN rune = 0x73AF
 	// GlyphDE - 的 - 的
 	GlyphDE rune = 0x7684
 	// GlyphZHIy - 知 - 已知
 	GlyphZHIy rune = 0x77E5
 	// GlyphDENG - 等 - 等于，不等于
 	GlyphDENG rune = 0x7B49
+	// GlyphJIE - 结 - 结束循环
+	GlyphJIE rune = 0x7ED3
+	// GlyphJI - 继 - 继续循环
+	GlyphJI rune = 0x7EE7
+	// GlyphXU - 续 - 继续循环
+	GlyphXU rune = 0x7EED
 	// GlyphSHU - 输 - 输出
 	GlyphSHU rune = 0x8F93
 	// GlyphBIAN - 遍 - 遍历
@@ -123,6 +135,8 @@ const (
 	TypeImportW       uint8 = 77 // 导入
 	TypeGetResultW    uint8 = 78 // 得到
 	TypeThrowErrorW   uint8 = 79 // 抛出
+	TypeContinueW     uint8 = 80 // 继续循环
+	TypeBreakW        uint8 = 81 // 结束循环
 )
 
 // parseKeyword -
@@ -283,6 +297,20 @@ func parseKeyword(l *syntax.Lexer, moveForward bool) (bool, syntax.Token, error)
 		if l.Peek() == GlyphYU {
 			wordLen = 2
 			tk.Type = TypeLogicEqualW
+		} else {
+			return false, syntax.Token{}, nil
+		}
+	case GlyphJIE:
+		if l.Peek() == GlyphSHUy && l.Peek2() == GlyphXUN && l.Peek3() == GlyphHUAN {
+			wordLen = 4
+			tk.Type = TypeBreakW
+		} else {
+			return false, syntax.Token{}, nil
+		}
+	case GlyphJI:
+		if l.Peek() == GlyphXU && l.Peek2() == GlyphXUN && l.Peek3() == GlyphHUAN {
+			wordLen = 4
+			tk.Type = TypeContinueW
 		} else {
 			return false, syntax.Token{}, nil
 		}
