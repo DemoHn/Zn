@@ -594,7 +594,7 @@ func tryParseEmptyMapList(p *ParserZH) (bool, syntax.UnionMapList) {
 // FuncID   -> ID
 //          -> Number
 //
-// YieldResultTail  ->  取得 ID
+// YieldResultTail  ->  得到 ID
 //                  ->
 func ParseFuncCallExpr(p *ParserZH, parseYieldResult bool) *syntax.FuncCallExpr {
 	var callExpr = &syntax.FuncCallExpr{
@@ -1077,7 +1077,7 @@ func ParseVarOneLeadStmt(p *ParserZH) syntax.Statement {
 				result.MethodChain = append(result.MethodChain, funcExprN)
 			}
 
-			// then parse 取得
+			// then parse 得到
 			if match, _ := p.tryConsume(TypeGetResultW); match {
 				id := parseID(p)
 				result.YieldResult = id
@@ -1133,10 +1133,10 @@ func parseIteratorStmtRest(p *ParserZH, idList []*syntax.ID) *syntax.IterateStmt
 	}
 }
 
-// ParseFunctionReturnStmt - yield FuncParamList node (without head token: 得出)
+// ParseFunctionReturnStmt - yield FuncParamList node (without head token: 输出)
 //
 // CFG:
-// FRStmt -> 得出 syntax.Expression
+// FRStmt -> 输出 syntax.Expression
 func ParseFunctionReturnStmt(p *ParserZH) *syntax.FunctionReturnStmt {
 	expr := ParseExpression(p)
 	return &syntax.FunctionReturnStmt{
