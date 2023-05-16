@@ -2,13 +2,13 @@ package value
 
 import (
 	"fmt"
-	zerr "github.com/DemoHn/Zn/pkg/error"
-	r "github.com/DemoHn/Zn/pkg/runtime"
 	"regexp"
 	"strconv"
 	"strings"
-)
 
+	zerr "github.com/DemoHn/Zn/pkg/error"
+	r "github.com/DemoHn/Zn/pkg/runtime"
+)
 
 // Define compareVerbs, for details of each verb, check the following comments
 // on compareValues() function.
@@ -51,7 +51,7 @@ func CompareValues(left r.Value, right r.Value, verb uint8) (bool, error) {
 			case CmpGt:
 				cmpResult = vl.value > vr.value
 			default:
-				return false, zerr.UnExpectedCase("比较原语", strconv.Itoa(int(verb)))
+				return false, zerr.UnexpectedCase("比较原语", strconv.Itoa(int(verb)))
 			}
 			return cmpResult, nil
 		}
@@ -254,7 +254,7 @@ Loop:
 		// matches 0 or more params
 		case "*", "+":
 			if matches[2] == "+" && idx > len(values) {
-				return zerr.NewErrorSLOT("通配符需要至少一个参数")
+				return zerr.UnexpectedParamWildcard()
 			}
 			for i := idx; i < len(values); i++ {
 				if err := validateOneParam(values[i], matches[1]); err != nil {

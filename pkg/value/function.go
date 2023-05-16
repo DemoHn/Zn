@@ -53,7 +53,7 @@ func (cs *ClosureRef) Exec(c *r.Context, thisValue r.Value, params []r.Value) (r
 		}
 	}
 	if cs.Executor == nil {
-		return nil, zerr.NewErrorSLOT("执行逻辑不能为空")
+		return nil, zerr.UnexpectedEmptyExecLogic()
 	}
 	// do execution
 	return cs.Executor(c, params)

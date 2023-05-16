@@ -23,18 +23,25 @@ const (
 	ErrAssignToConstant         = 34
 	ErrPropertyNotFound         = 35
 	ErrMethodNotFound           = 36
+	ErrClassNotOnRoot           = 37
 	ErrLeastParamsError         = 40
 	ErrMismatchParamLengthError = 41
 	ErrMostParamsError          = 42
 	ErrExactParamsError         = 43
 	ErrModuleNotFound           = 50
-	ErrUnExpectedCase           = 60
+	// internal error
+	ErrUnexpectedCase           = 60
+	ErrUnexpectedEmptyExecLogic = 61
+	ErrUnexpectedAssign         = 62
+	ErrUnexpectedParamWildcard  = 63
 	// type error
-	ErrInvalidExprType     = 70
-	ErrInvalidFuncVariable = 71
-	ErrInvalidParamType    = 72
-	ErrInvalidCompareLType = 73
-	ErrInvalidCompareRType = 74
+	ErrInvalidExprType            = 70
+	ErrInvalidFuncVariable        = 71
+	ErrInvalidParamType           = 72
+	ErrInvalidCompareLType        = 73
+	ErrInvalidCompareRType        = 74
+	ErrInvalidExceptionType       = 75
+	ErrInvalidExceptionObjectType = 76
 	// arith error
 	ErrArithDivZero          = 80
 	ErrArithRootLessThanZero = 81
@@ -115,6 +122,15 @@ func MethodNotFound(name string) *RuntimeError {
 	}
 }
 
+// ClassNotOnRoot -
+func ClassNotOnRoot(name string) *RuntimeError {
+	return &RuntimeError{
+		Code:    ErrClassNotOnRoot,
+		Message: fmt.Sprintf("只能在模块主层级定义「%s」类", name),
+		Extra:   name,
+	}
+}
+
 // LeastParamsError -
 func LeastParamsError(minParams int) *RuntimeError {
 	return &RuntimeError{
@@ -163,11 +179,35 @@ func ModuleNotFound(name string) *RuntimeError {
 // Internal Error Class, for Zn Internal exception (rare to happen)
 // e.g. Unexpected switch-case
 
-// UnExpectedCase -
-func UnExpectedCase(tag string, value string) *RuntimeError {
+// UnexpectedCase -
+func UnexpectedCase(tag string, value string) *RuntimeError {
 	return &RuntimeError{
-		Code:    ErrUnExpectedCase,
+		Code:    ErrUnexpectedCase,
 		Message: fmt.Sprintf("未定义的条件分支：「%s」的值为「%s」", tag, value),
+		Extra:   nil,
+	}
+}
+
+func UnexpectedEmptyExecLogic() *RuntimeError {
+	return &RuntimeError{
+		Code:    ErrUnexpectedEmptyExecLogic,
+		Message: "执行逻辑不能为空",
+		Extra:   nil,
+	}
+}
+
+func UnexpectedAssign() *RuntimeError {
+	return &RuntimeError{
+		Code:    ErrUnexpectedAssign,
+		Message: "方法不能被赋值",
+		Extra:   nil,
+	}
+}
+
+func UnexpectedParamWildcard() *RuntimeError {
+	return &RuntimeError{
+		Code:    ErrUnexpectedParamWildcard,
+		Message: "无效的参数通配符",
 		Extra:   nil,
 	}
 }
@@ -249,6 +289,22 @@ func InvalidCompareRType(assertType ...string) *RuntimeError {
 		Code:    ErrInvalidCompareRType,
 		Message: fmt.Sprintf("被比较值的类型应为%s", strings.Join(labels, "、")),
 		Extra:   labels,
+	}
+}
+
+func InvalidExceptionType(name string) *RuntimeError {
+	return &RuntimeError{
+		Code:    ErrInvalidExceptionType,
+		Message: fmt.Sprintf("「%s」必须是一个类型！", name),
+		Extra:   nil,
+	}
+}
+
+func InvalidExceptionObjectType(name string) *RuntimeError {
+	return &RuntimeError{
+		Code:    ErrInvalidExceptionObjectType,
+		Message: fmt.Sprintf("「%s」构造出来的对象须是一个异常类型的值！", name),
+		Extra:   nil,
 	}
 }
 
