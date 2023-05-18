@@ -9,7 +9,7 @@
 * 执行模型 TBD
 * 基本数据类型 TBD
 * [表达式](/zh-cn/manual/表达式.md)
-* 执行语句 TBD
+* 语句 TBD
 * [标准库](chXX-标准库.md)
     - [《JSON》](chXX-标准库.md#JSON)
     - [《文件》](chXX-标准库.md#文件)
