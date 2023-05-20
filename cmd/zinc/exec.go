@@ -1,15 +1,16 @@
-package zn
+package zinc
 
 import (
 	"fmt"
-	"github.com/DemoHn/Zn/pkg/io"
-	r "github.com/DemoHn/Zn/pkg/runtime"
-	"github.com/DemoHn/Zn/pkg/syntax"
-	"github.com/DemoHn/Zn/pkg/value"
 	eio "io"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/DemoHn/Zn/pkg/io"
+	r "github.com/DemoHn/Zn/pkg/runtime"
+	"github.com/DemoHn/Zn/pkg/syntax"
+	"github.com/DemoHn/Zn/pkg/value"
 
 	"github.com/DemoHn/Zn/pkg/exec"
 	"github.com/peterh/liner"
@@ -49,7 +50,6 @@ func EnterREPL() {
 
 		// execute program
 		in := io.NewByteStream([]byte(text))
-
 
 		// #1. read source code
 		source, err := in.ReadAll()

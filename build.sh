@@ -9,5 +9,5 @@ rm -f ./$ZN ./$ZN_DEV
 echo '=== build [Zn] ==='
 go build -o zinc
 
-echo '=== build [Zn-dev] ==='
-go build -o znt ./cmd/znt
+echo '=== build [Zn-devtool] ==='
+go build -o zinc-devtool ./cmd/zinc-devtool
