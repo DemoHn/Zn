@@ -31,6 +31,53 @@ NGINX 在接收到 HTTP 请求后，先简单解析这协议，然后把它转�
 
 ### 如何多模态处理请求？
 
-Zinc Server 应处理两类请求
-    1. 加载脚本
-    2. 执行程序
+> 我们在调查了几个编程语言(Go, JS, Python) 的 fastCGI 库，发现大家都对 fastCGI 库做了一层封装，将 fastCGI 输入请求自动转化成 HTTP 请求（比如将 `REQUEST_METHOD` 参数写进 http.Request 对象里）
+
+> 我设想的其他语言(比如 nodejs) 调用 zinc 脚本模式如下：
+
+```js
+// 准备灌给 zinc 的变量
+const pet0 = {
+    "name": "旺财",
+    "type": "dog",
+    "age": 12
+}
+
+const store0 = "北大医院"
+
+// 指定执行文件（或者 shared memory）
+const result = zincReaction("./宠物医院.zn", 医院=store0, 宠物=pet0)
+// result = "没得治"
+```
+
+```zn
+// 宠物医院.zn
+
+如果医院 == 「北大医院」：
+    输出「没得治」
+再如宠物#“age” > 20：
+    输出「没得治」
+
+输出「有得治」
+```
+
+> 对于 znServer 而言，如果 ZINC_ADAPTER 选择 http，那么输入值就按照 application 的格式转成 object；而后将输出对象转成文本以 text/html 形式输出
+
+> 相对于直接架一个 HTTP Server，使用 fastCGI 的好处非常明显：可以在 FCGI_PARAMS 里面加上自定义的参数，比如 ZINC_ADAPTER, SCRIPT_FILENAME -- 这些「加上私货」的参数可以直接控制 ZnServer 的处理模式以及执行代码的文件位置。
+
+### ZnServer 处理请求的流程
+
+**总纲**
+1. 输入和输出都使用 HTTP 格式
+2. 输入的 Body 取决于 HTTP Header 中的 Content-Type 字段 (MIME Type)
+
+
+**ZINC_ADAPTER 支持的模式**
+
+1. executor
+
+正常情况下，从 fastcgi body 中读取额外的输入参数，再执行对应的代码，再输出具体的值作为 http body 返回来。
+
+2. http_handler
+
+如同 PHP-FPM 的处理方式一样，从 WebServer 中接收HTTP请求，将请求参数灌到输入里面，再输出具体的值作为 http body 返回来。

@@ -29,7 +29,18 @@ func evalProgram(c *r.Context, program *syntax.Program) error {
 	if err != nil {
 		return err
 	}
-	return evalStmtBlock(c, otherStmts)
+	errBlock := evalStmtBlock(c, otherStmts)
+	if errBlock != nil {
+		if sig, ok := errBlock.(*zerr.Signal); ok {
+			if sig.SigType == zerr.SigTypeReturn {
+				if extra, ok2 := sig.Extra.(r.Value); ok2 {
+					c.GetCurrentScope().SetReturnValue(extra)
+					return nil
+				}
+			}
+		}
+	}
+	return errBlock
 }
 
 //// eval statements
