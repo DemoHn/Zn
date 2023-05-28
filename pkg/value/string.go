@@ -2,12 +2,13 @@ package value
 
 import (
 	"fmt"
-	zerr "github.com/DemoHn/Zn/pkg/error"
-	r "github.com/DemoHn/Zn/pkg/runtime"
 	"regexp"
 	"strconv"
 	"strings"
 	"unicode/utf8"
+
+	zerr "github.com/DemoHn/Zn/pkg/error"
+	r "github.com/DemoHn/Zn/pkg/runtime"
 )
 
 type strGetterFunc func(*String, *r.Context) (r.Value, error)
@@ -19,19 +20,16 @@ type String struct {
 
 // replace special chars from {/xx} placeholders
 var specialCharMap = map[string]string{
-	"{/CR}":  "\r",
-	"{/r}":   "\r",
-	"{/LF}":  "\n",
-	"{/n}":   "\n",
-	"{/TAB}": "\t",
-	"{/t}":   "\t",
-	"{/SO}":  "/",
-	"{/s}":   "/",
+	"`CR`":   "\r",
+	"`LF`":   "\n",
+	"`CRLF`": "\r\n",
+	"`TAB`":  "\t",
+	"`BK`":   "`",
 }
 
 func NewString(value string) *String {
 	v := replaceSpecialChars(value)
-	return  &String{v}
+	return &String{v}
 }
 
 // String - display string value's string
@@ -39,36 +37,29 @@ func (s *String) String() string {
 	return s.value
 }
 
-
 // replaceSpecialChars: A{/CR}B -> A\nB
 func replaceSpecialChars(s string) string {
-	re := regexp.MustCompile(`\{\/(\+?[0-9a-zA-Z]+?)\}`)
-	reUnicode := regexp.MustCompile(`\{\/\+([0-9a-fA-F]+)\}`)
+	re := regexp.MustCompile("`(CR|LF|CRLF|TAB|BK|U\\+[0-9A-Fa-f]{1,8})`")
 
 	return re.ReplaceAllStringFunc(s, func(ss string) string {
-		// #1. check if matched string is a special char
+		// #1. check if matched string is a special char (exclude U+xxxx)
 		if res, ok := specialCharMap[ss]; ok {
 			return res
 		}
 
-		// #2. check if matched string is a unicode representation
-		if matches := reUnicode.FindStringSubmatch(ss); len(matches) > 1 {
-			hexData, _ := strconv.ParseInt(matches[1], 16, 32)
-			hexData32 := int32(hexData)
-			return string([]rune{hexData32})
-		}
-
-		// #3. otherwise, return directly
-		return ss
+		// #2. match U+xxxx
+		hexData, _ := strconv.ParseInt(ss[2:len(ss)-1], 16, 32)
+		hexData32 := int32(hexData)
+		return string([]rune{hexData32})
 	})
 }
 
 // GetProperty -
 func (s *String) GetProperty(c *r.Context, name string) (r.Value, error) {
 	strGetterMap := map[string]strGetterFunc{
-		"长度": strGetLength,
-		"字数": strGetLength,
-		"文本": strGetText,
+		"长度":  strGetLength,
+		"字数":  strGetLength,
+		"文本":  strGetText,
 		"字符组": strGetCharArray,
 	}
 	if fn, ok := strGetterMap[name]; ok {
@@ -85,13 +76,13 @@ func (s *String) SetProperty(c *r.Context, name string, value r.Value) error {
 // ExecMethod -
 func (s *String) ExecMethod(c *r.Context, name string, values []r.Value) (r.Value, error) {
 	strMethodMap := map[string]strMethodFunc{
-		"替换": strExecReplace,
-		"分隔": strExecSplit,
-		"匹配": strExecMatch,
+		"替换":   strExecReplace,
+		"分隔":   strExecSplit,
+		"匹配":   strExecMatch,
 		"匹配开头": strExecMatchStart,
 		"匹配结尾": strExecMatchEnd,
-		"拼接": strExecJoin,
-		"格式化": strExecFormat,
+		"拼接":   strExecJoin,
+		"格式化":  strExecFormat,
 	}
 	if fn, ok := strMethodMap[name]; ok {
 		return fn(s, c, values)
@@ -212,4 +203,3 @@ func strExecFormat(s *String, c *r.Context, values []r.Value) (r.Value, error) {
 
 	return NewString(result), nil
 }
-
