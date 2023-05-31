@@ -2,56 +2,32 @@ package main
 
 import (
 	"fmt"
-	"io"
-	"net"
-	"net/http"
-	"net/http/fcgi"
-	"os"
 
+	"github.com/DemoHn/Zn/pkg/server"
 	"github.com/spf13/cobra"
 )
 
+const defaultConnUrl = "tcp://127.0.0.1:3862"
+
 var (
+	connUrl string
 	rootCmd = &cobra.Command{
-		Use:   "Zn-Server",
+		Use:   "zinc-server",
 		Short: "Zn FastCGI 服务器",
-		Long:  "Zn FastCGI 服务器",
+		Long:  "Zn FastCGI 服务器 - 监听上游传过来的请求，执行指定代码并输出结果；同时也可以当作 HTTP 处理器搭配 nginx 等使用，如 PHP-FPM 一般",
 		Run: func(c *cobra.Command, args []string) {
-			StartServer()
+			zns, err := server.NewFromURL(connUrl)
+			if err != nil {
+				fmt.Printf("启动服务器时发生错误：%v\n", err)
+				return
+			}
+
+			zns.Listen()
 		},
 	}
 )
 
-type home struct{}
-
-func (h *home) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-
-	fmt.Println(fcgi.ProcessEnv(r))
-	fmt.Println(r.Header)
-	fmt.Println(r.URL.Path, r.URL.Query())
-
-	buf, _ := io.ReadAll(r.Body)
-
-	w.WriteHeader(200)
-	w.Header().Add("Content-Type", "text/html")
-	w.Write([]byte(fmt.Sprintf("<h2>This is HTTP Text</h2> body: <h3>%s</h3>", string(buf))))
-}
-
-func StartServer() {
-	defer func() {
-		os.Remove("/Users/demohn/test.sock")
-	}()
-
-	l, e := net.Listen("unix", "/Users/demohn/test.sock")
-	if e != nil {
-		fmt.Printf("error:%s", e)
-	}
-
-	fmt.Println("going to serve...")
-	fcgi.Serve(l, &home{})
-	fmt.Println("serve done...")
-}
-
 func main() {
+	rootCmd.Flags().StringVarP(&connUrl, "listen", "l", defaultConnUrl, "设置服务器监听的URL 如 tcp://127.0.0.1:3862 或 unix:///tmp/zinc.sock")
 	rootCmd.Execute()
 }
