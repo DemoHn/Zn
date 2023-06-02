@@ -65,6 +65,15 @@ const result = zincReaction("./宠物医院.zn", 医院=store0, 宠物=pet0)
 
 > 相对于直接架一个 HTTP Server，使用 fastCGI 的好处非常明显：可以在 FCGI_PARAMS 里面加上自定义的参数，比如 ZINC_ADAPTER, SCRIPT_FILENAME -- 这些「加上私货」的参数可以直接控制 ZnServer 的处理模式以及执行代码的文件位置。
 
+> 在使用 `zinc` (不是 `zinc-server`) 执行程序时，最终向 stdout 输出的分为两个部分：
+
+1. `显示` 语句所输出的文本
+2. `输出` 语句所调用的值 （或者最后一个表达式）
+
+    - 如果最后一个表达式是`空`，那就不显示
+
+简单来说，把 `zinc` (以及 `zinc-server`) 当作一个大型的 jupyter notebook，把条件和表达式怼进去，出来最终的结果以及之前需要输出的值
+
 ### ZnServer 处理请求的流程
 
 **总纲**
@@ -81,3 +90,5 @@ const result = zincReaction("./宠物医院.zn", 医院=store0, 宠物=pet0)
 2. http_handler
 
 如同 PHP-FPM 的处理方式一样，从 WebServer 中接收HTTP请求，将请求参数灌到输入里面，再输出具体的值作为 http body 返回来。
+
+如果 ZINC_ADAPTER 不是上述两个值或者根本就没给，直接返回 403

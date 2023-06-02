@@ -10,7 +10,8 @@ import (
 type Context struct {
 	// globals - stores all global variables
 	globals map[string]Value
-
+	// hasPrinted - if stdout has been used to output message before program end, set `hasPrinted` -> true; so that after message is done
+	hasPrinted bool
 	*DependencyTree
 	// ScopeStack - trace scopes
 	ScopeStack []*Scope
@@ -21,6 +22,7 @@ type Context struct {
 func NewContext(globalsMap map[string]Value) *Context {
 	return &Context{
 		globals:        globalsMap,
+		hasPrinted:     false,
 		DependencyTree: NewDependencyTree(),
 		ScopeStack:     []*Scope{},
 	}
@@ -177,4 +179,13 @@ func (ctx *Context) FindThisValue() (Value, error) {
 	}
 
 	return nil, zerr.PropertyNotFound("thisValue")
+}
+
+// MarkHasPrinted - called by `显示` function only
+func (ctx *Context) MarkHasPrinted() {
+	ctx.hasPrinted = true
+}
+
+func (ctx *Context) GetHasPrinted() bool {
+	return ctx.hasPrinted
 }

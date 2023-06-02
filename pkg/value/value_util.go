@@ -2,6 +2,7 @@ package value
 
 import (
 	"fmt"
+	"os"
 	"regexp"
 	"strconv"
 	"strings"
@@ -338,6 +339,7 @@ var DisplayExecutor = func(c *r.Context, params []r.Value) (r.Value, error) {
 			items = append(items, StringifyValue(param))
 		}
 	}
-	fmt.Printf("%s\n", strings.Join(items, " "))
+	c.MarkHasPrinted()
+	os.Stdout.Write([]byte(fmt.Sprintf("%s\n", strings.Join(items, " "))))
 	return NewNull(), nil
 }

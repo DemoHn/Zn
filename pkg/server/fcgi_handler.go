@@ -13,8 +13,11 @@ import (
 )
 
 const (
-	TypeUnixSocket = "unix"
-	TypeTcp        = "tcp"
+	TypeUnixSocket    = "unix"
+	TypeTcp           = "tcp"
+	EnvZincAdapter    = "ZINC_ADAPTER"
+	ZincAPExecutor    = "executor"
+	ZincAPHTTPHandler = "http_handler"
 )
 
 type ZnServer struct {
@@ -68,7 +71,6 @@ func (zns *ZnServer) Listen() error {
 		log.Printf("Caught signal %s: shutting down.", sig)
 		// Stop listening (and unlink the socket if unix type):
 		l.Close()
-		// And we're done:
 		os.Exit(0)
 	}(sigc)
 
@@ -77,36 +79,25 @@ func (zns *ZnServer) Listen() error {
 }
 
 func (f *FCGIHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(200)
-	w.Header().Add("Content-Type", "text/html")
-	w.Write([]byte(fmt.Sprintf("<h2>This is HTTP Text</h2> body: <h3>%s</h3>", string("Hello World"))))
-}
-
-func listenToUnixSocket(socketPath string) (net.Listener, error) {
-	// Check if the socket file exists
-	if _, err := os.Stat(socketPath); os.IsNotExist(err) {
-		// Create a new socket file
-		return net.Listen("unix", socketPath)
-	}
-
-	// Check if the socket is occupied by another process
-	conn, err := net.Dial("unix", socketPath)
-	if err != nil {
-		if opErr, ok := err.(*net.OpError); ok {
-			if sysErr, ok := opErr.Err.(*os.SyscallError); ok {
-				if sysErr.Err == syscall.ECONNREFUSED {
-					return net.Listen("unix", socketPath)
-				} else {
-					return nil, fmt.Errorf("failed to connect to socket: %v", err)
-				}
-			} else {
-				return nil, fmt.Errorf("failed to connect to socket: %v", err)
-			}
-		} else {
-			return nil, fmt.Errorf("failed to connect to socket: %v", err)
+	cgiEnvs := fcgi.ProcessEnv(r)
+	// read ZINC_ADAPTER
+	if adapter, ok := cgiEnvs[EnvZincAdapter]; ok {
+		switch adapter {
+		case ZincAPExecutor:
+			w.WriteHeader(200)
+			w.Header().Add("Content-Type", "text/html")
+			w.Write([]byte("TBD - executor"))
+			return
+		case ZincAPHTTPHandler:
+			w.WriteHeader(200)
+			w.Header().Add("Content-Type", "text/html")
+			w.Write([]byte("TBD - http_handler"))
+			return
 		}
-	} else {
-		conn.Close()
-		return nil, fmt.Errorf("socket file is already occupied")
 	}
+	//// otherwise - return 403 directly
+
+	w.WriteHeader(403)
+	w.Header().Add("Content-Type", "text/html")
+	w.Write([]byte("Invalid ZINC_ADAPTER"))
 }

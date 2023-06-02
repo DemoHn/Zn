@@ -54,7 +54,7 @@ func EnterREPL() {
 		// #1. read source code
 		source, err := in.ReadAll()
 		if err != nil {
-			prettyPrintError(c, err)
+			prettyPrintError(c, os.Stdout, err)
 			return
 		}
 
@@ -64,7 +64,7 @@ func EnterREPL() {
 		// execute code
 		result, err2 := exec.ExecuteREPLCode(c, lexer)
 		if err2 != nil {
-			prettyPrintError(c, err2)
+			prettyPrintError(c, os.Stdout, err2)
 			return
 		}
 
@@ -85,8 +85,22 @@ func ExecProgram(file string) {
 
 	c.SetRootDir(rootDir)
 	// when exec program, unlike REPL, it's not necessary to print last executed value
-	if _, err := exec.ExecuteModule(c, rootModule); err != nil {
-		prettyPrintError(c, err)
+	rtnValue, err := exec.ExecuteModule(c, rootModule)
+	if err != nil {
+		prettyPrintError(c, os.Stdout, err)
+		return
+	}
+
+	// print return value
+	switch rtnValue.(type) {
+	case *value.Null:
+		return
+	default:
+		if c.GetHasPrinted() {
+			os.Stdout.Write([]byte{'\n'})
+		}
+		os.Stdout.Write([]byte(value.StringifyValue(rtnValue)))
+		os.Stdout.Write([]byte{'\n'})
 	}
 }
 
@@ -118,6 +132,6 @@ func prettyDisplayValue(v r.Value, w eio.Writer) {
 	_, _ = w.Write([]byte(displayData))
 }
 
-func prettyPrintError(c *r.Context, err error) {
-	_, _ = os.Stdout.Write([]byte(exec.DisplayError(err)))
+func prettyPrintError(c *r.Context, w eio.Writer, err error) {
+	_, _ = w.Write([]byte(exec.DisplayError(err)))
 }
