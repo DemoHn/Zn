@@ -42,8 +42,8 @@ func (p *ParserZH) ParseAST(l *syntax.Lexer) (pg *syntax.Program, err error) {
 	// parse global block
 	block := ParseBlockStmt(p, peekIndent)
 	pg = &syntax.Program{
-		Lexer:    l,
-		Content:  block,
+		Lexer:   l,
+		Content: block,
 	}
 
 	// ensure there's no remaining token after parsing global block
@@ -54,9 +54,20 @@ func (p *ParserZH) ParseAST(l *syntax.Lexer) (pg *syntax.Program, err error) {
 }
 
 func (p *ParserZH) next() *syntax.Token {
-	tk, err := NextToken(p.Lexer)
+	var tk syntax.Token // default tk.Type = 0 (TypeEOF)
+	var err error
+	// init next tk first
+	tk, err = NextToken(p.Lexer)
 	if err != nil {
 		panic(err)
+	}
+
+	// skip comment token until meet non-comment one
+	for tk.Type == TypeComment {
+		tk, err = NextToken(p.Lexer)
+		if err != nil {
+			panic(err)
+		}
 	}
 
 	// move advanced token buffer
@@ -253,7 +264,6 @@ func (p *ParserZH) getPeekIndent() int {
 	}
 	return lineInfo.Indents
 }
-
 
 // equals to s.SetCurrentLine(<line of tk>)
 func (p *ParserZH) setStmtCurrentLine(s syntax.Statement, tk *syntax.Token) {
