@@ -39,13 +39,13 @@ func RespondAsExecutor(w http.ResponseWriter, r *http.Request) {
 
 func writeErrorData(w http.ResponseWriter, err error) {
 	w.WriteHeader(500)
-	w.Header().Add("Content-Type", "text/plain")
+	w.Header().Add("Content-Type", "text/plain; charset=\"utf-8\"")
 	w.Write([]byte(err.Error()))
 }
 
 func writeSuccessData(w http.ResponseWriter, rtnValue runtime.Value) {
 	w.WriteHeader(200)
-	w.Header().Add("Content-Type", "text/plain")
+	w.Header().Add("Content-Type", "text/plain; charset=\"utf-8\"")
 
 	// print return value
 	switch rtnValue.(type) {

@@ -42,14 +42,17 @@ func ParseStatement(p *ParserZH) syntax.Statement {
 		TypeBreakW,
 		TypeContinueW,
 	}
+	// remove lineTerminationFlag at the beginning of executing
+	// a statement
+	p.unsetStmtCompleteFlag()
 	match, tk := p.tryConsume(validTypes...)
 
+	var s syntax.Statement
 	if match {
-		var s syntax.Statement
 		switch tk.Type {
 		case TypeStmtSep, TypeComment:
 			// skip them because it's meaningless for syntax parsing
-			s = new(syntax.EmptyStmt)
+			return new(syntax.EmptyStmt)
 		case TypeDeclareW:
 			s = ParseVarDeclareStmt(p)
 		case TypeCondW:
@@ -77,10 +80,17 @@ func ParseStatement(p *ParserZH) syntax.Statement {
 			s = ParseContinueStmt(p)
 		}
 		p.setStmtCurrentLine(s, tk)
-		return s
+	} else {
+		// other case, parse syntax.syntax.Expression
+		s = ParseExpression(p)
 	}
-	// other case, parse syntax.syntax.Expression
-	return ParseExpression(p)
+
+	// normally, a complete statement should occupy a whole line
+	// or following a stmt
+	if !(p.stmtCompleteFlag || p.meetStmtBreak()) {
+		panic(p.getInvalidSyntaxPeek())
+	}
+	return s
 }
 
 // ParseExpression - parse an syntax.Expression, see the following CFG for details
@@ -521,7 +531,7 @@ func ParseArrayExpr(p *ParserZH) syntax.UnionMapList {
 				Key:   exprI,
 				Value: exprR,
 			})
-			p.resetLineTermFlag()
+			p.unsetStmtCompleteFlag()
 		case TypePauseCommaSep:
 			isArrayType = true
 			// append item on array
@@ -562,7 +572,7 @@ func ParseArrayExpr(p *ParserZH) syntax.UnionMapList {
 				Key:   exprL,
 				Value: exprR,
 			})
-			p.resetLineTermFlag()
+			p.unsetStmtCompleteFlag()
 		}
 	}
 }
@@ -707,10 +717,13 @@ func ParseVarDeclareStmt(p *ParserZH) *syntax.VarDeclareStmt {
 		}
 
 		parseItemListBlock(p, blockIndent, func() {
+			if p.stmtCompleteFlag {
+				p.unsetStmtCompleteFlag()
+			}
 			// there are at least ONE vdAssignPair on each line!
 			vNode.AssignPair = append(vNode.AssignPair, parseVDAssignPair(p))
 			for {
-				if p.meetStmtLineBreak() && p.lineTermFlag {
+				if p.meetStmtLineBreak() && p.stmtCompleteFlag {
 					break
 				}
 				vNode.AssignPair = append(vNode.AssignPair, parseVDAssignPair(p))
@@ -897,6 +910,8 @@ func ParseBranchStmt(p *ParserZH, mainIndent int) *syntax.BranchStmt {
 			if p.getPeekIndent() != mainIndent {
 				return stmt
 			}
+			// suppose the if-statement has NOT been finished yet...
+			p.unsetStmtCompleteFlag()
 			// parse related keywords (如果 expr： , 再如 expr：, 否则：)
 			if match, tk := p.tryConsume(condKeywords...); match {
 				if tk.Type == TypeCondOtherW {
@@ -905,6 +920,9 @@ func ParseBranchStmt(p *ParserZH, mainIndent int) *syntax.BranchStmt {
 					hState = stateElseBranch
 				}
 			} else {
+				// NO 再如 orr 否则 matches, the if-statement has REALLY
+				// DONE
+				p.setStmtCompleteFlag()
 				return stmt
 			}
 		case stateElseBranch:
@@ -1272,6 +1290,7 @@ func ParseClassDeclareStmt(p *ParserZH) *syntax.ClassDeclareStmt {
 			TypeComment,
 			TypeObjConstructW,
 		}
+		p.unsetStmtCompleteFlag()
 
 		match, tk := p.tryConsume(validChildTypes...)
 		if !match {
@@ -1383,12 +1402,8 @@ func parsePauseCommaList(p *ParserZH, consumer consumerFunc) {
 }
 
 func parseItemListBlock(p *ParserZH, blockIndent int, consumer func()) {
-	itemConsumer := func() {
-		defer p.resetLineTermFlag()
-		consumer()
-	}
 	for (p.peek().Type != TypeEOF) && p.getPeekIndent() == blockIndent {
-		itemConsumer()
+		consumer()
 	}
 }
 

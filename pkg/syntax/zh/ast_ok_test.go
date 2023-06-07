@@ -426,7 +426,6 @@ $PG($BK(
 			)
 		$))
 	)
-	$
 	$IF(
 		ifExpr=($NEQ(L=($ID(C)) R=($ID(真))))
 		ifBlock=($BK(
@@ -1074,7 +1073,7 @@ $PG($BK(
 			$FN(
 				name=($ID(狂吠))
 				params=()				
-				blockTokens=($BK($
+				blockTokens=($BK(
 					$RT($STR(汪汪汪))
 				))
 			)
