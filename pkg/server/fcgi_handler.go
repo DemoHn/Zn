@@ -13,11 +13,11 @@ import (
 )
 
 const (
-	TypeUnixSocket    = "unix"
-	TypeTcp           = "tcp"
-	EnvZincAdapter    = "ZINC_ADAPTER"
-	ZincAPExecutor    = "executor"
-	ZincAPHTTPHandler = "http_handler"
+	TypeUnixSocket     = "unix"
+	TypeTcp            = "tcp"
+	EnvZincAdapter     = "ZINC_ADAPTER"
+	ZincAP_Playground  = "playground"
+	ZincAP_HTTPHandler = "http_handler"
 )
 
 type ZnServer struct {
@@ -67,8 +67,8 @@ func (zns *ZnServer) Listen() error {
 	signal.Notify(sigc, os.Interrupt, syscall.SIGTERM)
 	go func(c chan os.Signal) {
 		// Wait for a SIGINT or SIGKILL:
-		sig := <-c
-		log.Printf("Caught signal %s: shutting down.", sig)
+		<-c
+		log.Print("正在关闭服务器...")
 		// Stop listening (and unlink the socket if unix type):
 		l.Close()
 		os.Exit(0)
@@ -83,10 +83,10 @@ func (f *FCGIHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// read ZINC_ADAPTER
 	if adapter, ok := cgiEnvs[EnvZincAdapter]; ok {
 		switch adapter {
-		case ZincAPExecutor:
+		case ZincAP_Playground:
 			RespondAsExecutor(w, r)
 			return
-		case ZincAPHTTPHandler:
+		case ZincAP_HTTPHandler:
 			w.WriteHeader(200)
 			w.Header().Add("Content-Type", "text/html")
 			w.Write([]byte("TBD - http_handler"))

@@ -1,14 +1,14 @@
 package stdlib
 
 import (
-	zerr "github.com/DemoHn/Zn/pkg/error"
-	"github.com/DemoHn/Zn/pkg/value"
 	"io/ioutil"
 	"os"
 
+	zerr "github.com/DemoHn/Zn/pkg/error"
+	"github.com/DemoHn/Zn/pkg/value"
+
 	r "github.com/DemoHn/Zn/pkg/runtime"
 )
-
 
 var fileModuleName = "文件"
 var fileModule = r.NewModule(fileModuleName)
@@ -65,6 +65,7 @@ func readDirFunc(c *r.Context, values []r.Value) (r.Value, error) {
 	return info, nil
 }
 
+/*
 func init() {
 	// register functions
 	RegisterFunctionForModule(fileModule, "读取文件", readTextFromFileFunc)
@@ -73,3 +74,4 @@ func init() {
 
 	RegisterModule(fileModuleName, fileModule)
 }
+*/
