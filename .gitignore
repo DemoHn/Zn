@@ -7,8 +7,12 @@ zn.exe
 /zn
 znt.exe
 /znt
+zinc-devtool.exe
+/zinc-devtool
 zinc.exe
 /zinc
+zinc-server.exe
+/zinc-server
 coverage.out
 .idea
 .VSCodeCounter

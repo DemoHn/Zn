@@ -241,7 +241,7 @@ $PG($BK(
 ========
 8. define new object
 --------
-令圆周率成为数学：3.1415926
+令圆周率成为（数学：3.1415926）
 --------
 $PG($BK(
 	$VD(
@@ -253,7 +253,7 @@ $PG($BK(
 9. block declaration - mixture of const,assign,newObj
 --------
 令：
-	高脚杯、小盅成为SKU：「玻璃制品」、10、20、30
+	高脚杯、小盅成为（SKU：「玻璃制品」、10、20、30）
 	A、B、C为「Amazon」
 	D、E、F恒为空
 	G恒为空
@@ -270,7 +270,7 @@ $PG($BK(
 ========
 10. block declaration - new object without params
 --------
-令A成为B
+令A成为（B）
 --------
 $PG($BK(
 	$VD(
@@ -426,7 +426,6 @@ $PG($BK(
 			)
 		$))
 	)
-	$
 	$IF(
 		ifExpr=($NEQ(L=($ID(C)) R=($ID(真))))
 		ifBlock=($BK(
@@ -810,7 +809,7 @@ $PG($BK(
 ========
 2. normal member method expr with yield
 --------
-以A（运行方法），取得结果
+以A（运行方法），得到结果
 --------
 $PG($BK(
 	$MMF(root=($ID(A)) chain=($FN(name=($ID(运行方法)) params=())) yield=($ID(结果)))
@@ -818,7 +817,7 @@ $PG($BK(
 ========
 3. normal member method chain expr with yield
 --------
-以A（运行方法）、（方法2：A、B、C），取得结果
+以A（运行方法）、（方法2：A、B、C），得到结果
 --------
 $PG($BK(
 	$MMF(root=($ID(A)) chain=(
@@ -859,7 +858,7 @@ const iterateCasesOK = `
 --------
 遍历【1、2、3】：
     令A为值
-    （结束循环）
+    结束循环
 --------
 $PG($BK(
 	$IT(
@@ -869,7 +868,7 @@ $PG($BK(
 			$VD($VP(vars[]=($ID(A)) expr[]=(
 			  	$ID(值)
 			)))
-			$FN(name=($ID(结束循环)) params=())
+			$BREAK
 		))
 	)
 ))
@@ -991,13 +990,13 @@ $PG($BK(
 	是为名、年龄
 
 	如何狂吠？
-		得出“汪汪汪”
+		输出“汪汪汪”
 
 	如何添加年龄？
-		得出20
+		输出20
 
 	何为总和？
-		得出20
+		输出20
 --------
 $PG($BK(
 	$CLS(
@@ -1050,14 +1049,14 @@ $PG($BK(
 	注3：方法列表
 	如何狂吠？
 		注：在方法里面添加注释
-		得出“汪汪汪”
+		输出“汪汪汪”
 
 	如何添加年龄？
-		得出20
+		输出20
 
 	注4：getter列表
 	何为总和？
-		得出20
+		输出20
 --------
 $PG($BK(
 	$CLS(
@@ -1074,7 +1073,7 @@ $PG($BK(
 			$FN(
 				name=($ID(狂吠))
 				params=()				
-				blockTokens=($BK($
+				blockTokens=($BK(
 					$RT($STR(汪汪汪))
 				))
 			)
@@ -1200,7 +1199,7 @@ $PG($BK(
 如何搞个大新闻？
 	已知 &A、&B、&·华为手机·
 	如果C == 空：
-		得出1024
+		输出1024
 --------
 $PG($BK(
 	$FN(

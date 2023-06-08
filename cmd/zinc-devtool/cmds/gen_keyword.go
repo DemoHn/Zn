@@ -239,7 +239,7 @@ func genKeywordTypeConsts(keywordMap map[int]kwItem) string {
 	return strings.Join(codeList, "\n\t")
 }
 
-// mostly support 3 characters
+// mostly support 4 characters
 func genKeywordParsingLogic(leadsMap map[rune][]int, keywordMap map[int]kwItem, charMap map[rune]string) string {
 	//// dump leads
 	leads := make([]rune, len(leadsMap))
@@ -264,6 +264,7 @@ func genKeywordParsingLogic(leadsMap map[rune][]int, keywordMap map[int]kwItem, 
 			oneChar    []string   // [TypeI]
 			twoChars   [][]string // [ [CharII, TypeII], ... ]
 			threeChars [][]string // [ [CharII, CharIII, TypeIII], ... ]
+			fourChars  [][]string // [ [CharII, CharIII, CharIV, TypeIV], ... ]
 		}{}
 		/** if-block general template:
 
@@ -272,6 +273,9 @@ func genKeywordParsingLogic(leadsMap map[rune][]int, keywordMap map[int]kwItem, 
 			tk = NewKeywordToken(TypeX)
 		} else if l.peek() === GlyphA && l.peek2() == GlyphB {
 			wordLen = 3
+			tk = NewKeywordToken(TypeX)
+		} else if l.peek() == GlyphA && l.peek2() == GlyphB && l.peek3() == GlyphC {
+			wordLen = 4
 			tk = NewKeywordToken(TypeX)
 		} else {
 			return false, nil
@@ -294,6 +298,13 @@ func genKeywordParsingLogic(leadsMap map[rune][]int, keywordMap map[int]kwItem, 
 					charMap[kw.literal[2]],
 					kw.name,
 				})
+			case 4:
+				nestMap.fourChars = append(nestMap.fourChars, []string{
+					charMap[kw.literal[1]],
+					charMap[kw.literal[2]],
+					charMap[kw.literal[3]],
+					kw.name,
+				})
 			}
 		}
 		// sort nestMap.twoChars & nestMap.threeChars
@@ -303,10 +314,13 @@ func genKeywordParsingLogic(leadsMap map[rune][]int, keywordMap map[int]kwItem, 
 		sort.Slice(nestMap.threeChars, func(i, j int) bool {
 			return strings.Compare(nestMap.threeChars[i][0], nestMap.threeChars[j][0]) < 0
 		})
+		sort.Slice(nestMap.fourChars, func(i, j int) bool {
+			return strings.Compare(nestMap.fourChars[i][0], nestMap.fourChars[j][0]) < 0
+		})
 
 		// generate blocks
 		// CASE I: only one char valid
-		if len(nestMap.threeChars) == 0 && len(nestMap.twoChars) == 0 && len(nestMap.oneChar) == 1 {
+		if len(nestMap.fourChars) == 0 && len(nestMap.threeChars) == 0 && len(nestMap.twoChars) == 0 && len(nestMap.oneChar) == 1 {
 			codeList = append(codeList, fmt.Sprintf("tk.Type = %s", nestMap.oneChar[0]))
 		} else {
 			firstIfBlock := true
@@ -336,6 +350,20 @@ func genKeywordParsingLogic(leadsMap map[rune][]int, keywordMap map[int]kwItem, 
 					fmt.Sprintf("%s l.Peek() == %s && l.Peek2() == %s {", startIff, rch[0], rch[1]),
 					"wordLen = 3",
 					fmt.Sprintf("tk.Type = %s", rch[2]),
+				)
+			}
+			// append four chars keyword
+			for _, rch := range nestMap.fourChars {
+				startIff := "if"
+				if firstIfBlock {
+					firstIfBlock = false
+				} else {
+					startIff = "} else if"
+				}
+				codeList = append(codeList,
+					fmt.Sprintf("%s l.Peek() == %s && l.Peek2() == %s && l.Peek3() == %s {", startIff, rch[0], rch[1], rch[2]),
+					"wordLen = 4",
+					fmt.Sprintf("tk.Type = %s", rch[3]),
 				)
 			}
 			// generate else block

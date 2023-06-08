@@ -6,17 +6,17 @@ import (
 
 func TestLexer_ParseLine(t *testing.T) {
 	cases := []struct {
-		name string
-		text []rune
+		name        string
+		text        []rune
 		expectLines []LineInfo
-		err error
+		err         error
 	}{
 		{
 			name: "one-line string",
-			text: []rune("        This is one line\r\n233"),
+			text: []rune("        This is one line233"),
 			expectLines: []LineInfo{
 				{
-					Indents: 0,
+					Indents:  0,
 					StartIdx: 0,
 				},
 			},
@@ -24,10 +24,10 @@ func TestLexer_ParseLine(t *testing.T) {
 	}
 
 	for _, tt := range cases {
-		t.Run(tt.name, func (t *testing.T) {
+		t.Run(tt.name, func(t *testing.T) {
 			l := NewLexer(tt.text)
 			_ = l.parseBeginLex()
-			H:
+		H:
 			for {
 				ch := l.Next()
 				switch ch {

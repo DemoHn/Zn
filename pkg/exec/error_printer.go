@@ -166,15 +166,17 @@ func fmtErrorLocationBodyLine(moduleName string, lineNum int) string {
 func fmtErrorSourceTextLine(l *syntax.Lexer, cursorIdx int, withCursorMark bool) string {
 	startIdx := cursorIdx
 	endIdx := startIdx
-	for l.Source[startIdx] == syntax.RuneCR || l.Source[startIdx] == syntax.RuneLF {
+	// append EOF to source to avoid index exceed exception
+	sourceT := append(l.Source, 0)
+	for sourceT[startIdx] == syntax.RuneCR || sourceT[startIdx] == syntax.RuneLF {
 		startIdx -= 1
 	}
 	// find prev until meeting first CR/LF
 	for startIdx > 0 {
-		if l.Source[startIdx] == syntax.RuneCR || l.Source[startIdx] == syntax.RuneLF {
+		if sourceT[startIdx] == syntax.RuneCR || sourceT[startIdx] == syntax.RuneLF {
 			startIdx += 1
 			// skip indent chars
-			for l.Source[startIdx] == syntax.RuneSP || l.Source[startIdx] == syntax.RuneTAB {
+			for sourceT[startIdx] == syntax.RuneSP || sourceT[startIdx] == syntax.RuneTAB {
 				startIdx += 1
 			}
 			break
@@ -182,15 +184,15 @@ func fmtErrorSourceTextLine(l *syntax.Lexer, cursorIdx int, withCursorMark bool)
 		startIdx -= 1
 	}
 	// find next until meeting first CR/LF
-	for endIdx < len(l.Source) {
-		if l.Source[endIdx] == syntax.RuneCR || l.Source[endIdx] == syntax.RuneLF {
+	for endIdx < len(sourceT) {
+		if sourceT[endIdx] == syntax.RuneCR || sourceT[endIdx] == syntax.RuneLF {
 			break
 		}
 		endIdx += 1
 	}
 
 	// get relative cursor offset (notice one Chinese char counts for 2 unit offsets)
-	lineText := string(l.Source[startIdx:endIdx])
+	lineText := string(sourceT[startIdx:endIdx])
 	fmtLine := fmt.Sprintf("    %s", lineText)
 	if withCursorMark {
 		cursorText := fmt.Sprintf("\n    %s^", strings.Repeat(" ", calcCursorOffset(lineText, cursorIdx-startIdx)))
@@ -248,8 +250,4 @@ func calcCursorOffset(text string, col int) int {
 	}
 
 	return offsets
-}
-
-func onMask(target uint16, mask uint16) bool {
-	return (target & mask) > 0
 }

@@ -59,6 +59,7 @@ const (
 //// 4. var quote
 const (
 	MiddleDot rune = 0x00B7 // ·
+	BackTick  rune = 0x0060 // `
 )
 
 //// token constants and constructors (without keyword token)
@@ -182,7 +183,7 @@ func NextToken(l *syntax.Lexer) (syntax.Token, error) {
 		}
 	case LeftLibQuoteI, LeftDoubleQuoteI, LeftDoubleQuoteII, LeftSingleQuoteI, LeftSingleQuoteII:
 		return parseString(l)
-	case MiddleDot:
+	case MiddleDot, BackTick:
 		return parseVarQuote(l)
 	}
 
@@ -420,7 +421,7 @@ func parseVarQuote(l *syntax.Lexer) (syntax.Token, error) {
 				EndIdx:   l.GetCursor(),
 				Literal:  literal,
 			}, nil
-		case MiddleDot:
+		case MiddleDot, BackTick:
 			l.Next()
 			return syntax.Token{
 				Type:     TypeIdentifier,

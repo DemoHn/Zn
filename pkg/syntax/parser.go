@@ -20,8 +20,8 @@ type ASTBuilder interface {
 // NewParser - create a new parser from source
 func NewParser(lexer *Lexer, astBuilder ASTBuilder) *Parser {
 	return &Parser{
-		Lexer:        lexer,
-		ASTBuilder:   astBuilder,
+		Lexer:      lexer,
+		ASTBuilder: astBuilder,
 	}
 }
 
@@ -84,7 +84,7 @@ func StringifyAST(node Node) string {
 		return fmt.Sprintf("%s(L=(%s) R=(%s))", typeStrMap[v.Type], lstr, rstr)
 	case *ArithExpr:
 		t := ""
-		switch  v.Type {
+		switch v.Type {
 		case ArithAdd:
 			t = "ADD"
 		case ArithSub:
@@ -271,6 +271,10 @@ func StringifyAST(node Node) string {
 			strings.Join(methodStr, " "),
 			strings.Join(getterStr, " "),
 		)
+	case *BreakStmt:
+		return "$BREAK"
+	case *ContinueStmt:
+		return "$CONTINUE"
 	case *PropertyDeclareStmt:
 		return fmt.Sprintf(
 			"$PD(id=(%s) expr=(%s))",

@@ -45,8 +45,8 @@ func (e *ExprBase) GetCurrentLine() int { return e.currentLine }
 
 // SetCurrentLine -
 func (e *ExprBase) SetCurrentLine(line int) { e.currentLine = line }
-func (e *ExprBase) stmtNode()                    {}
-func (e *ExprBase) exprNode()                    {}
+func (e *ExprBase) stmtNode()               {}
+func (e *ExprBase) exprNode()               {}
 
 // Assignable - a special type of expression - that is, it could be assigned as
 // a value.
@@ -72,8 +72,8 @@ type UnionMapList interface {
 // Program -
 type Program struct {
 	StmtBase
-	*Lexer // include lexing info
-	Content    *BlockStmt
+	*Lexer  // include lexing info
+	Content *BlockStmt
 }
 
 // NodeList - a simple struct that packs several nodes, with custom tag to indicate its feature.
@@ -154,11 +154,18 @@ type ImportStmt struct {
 	ImportItems   []*ID
 }
 
+type BreakStmt struct {
+	StmtBase
+}
+
+type ContinueStmt struct {
+	StmtBase
+}
 
 // declare import libType enum
 const (
 	// LibTypeStd - standard lib
-	LibTypeStd uint8 = 1
+	LibTypeStd    uint8 = 1
 	LibTypeCustom uint8 = 2
 )
 
@@ -214,7 +221,7 @@ type PropertyDeclareStmt struct {
 type ThrowExceptionStmt struct {
 	StmtBase
 	ExceptionClass *ID
-	Params []Expression
+	Params         []Expression
 }
 
 // ParamItem - parameter item
@@ -290,9 +297,9 @@ type FuncCallExpr struct {
 //    数组#2
 type MemberExpr struct {
 	ExprBase
-	Root       Expression  // root Expr (maybe null when rootType is 2 or 3)
-	RootType   uint8   // 1 - RootTypeExpr, 2 - RootTypeProp (aka. 其)
-	MemberType uint8 // 1 - memberID, 3 - memberIndex
+	Root       Expression // root Expr (maybe null when rootType is 2 or 3)
+	RootType   uint8      // 1 - RootTypeExpr, 2 - RootTypeProp (aka. 其)
+	MemberType uint8      // 1 - memberID, 3 - memberIndex
 	// union: memberItem
 	MemberID    *ID
 	MemberIndex Expression
@@ -314,13 +321,11 @@ const (
 	RootTypeProp uint8 = 2 // 其 X
 )
 
-
 // declare member types
 const (
 	MemberID    uint8 = 1 // T 之 prop
 	MemberIndex uint8 = 2 // T # num
 )
-
 
 // declare some logic types
 const (
@@ -351,8 +356,8 @@ type LogicExpr struct {
 // ArithExpr - arithmetic expression like (+ - * /)
 type ArithExpr struct {
 	ExprBase
-	Type uint8
-	LeftExpr Expression
+	Type      uint8
+	LeftExpr  Expression
 	RightExpr Expression
 }
 

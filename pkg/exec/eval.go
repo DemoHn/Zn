@@ -29,7 +29,18 @@ func evalProgram(c *r.Context, program *syntax.Program) error {
 	if err != nil {
 		return err
 	}
-	return evalStmtBlock(c, otherStmts)
+	errBlock := evalStmtBlock(c, otherStmts)
+	if errBlock != nil {
+		if sig, ok := errBlock.(*zerr.Signal); ok {
+			if sig.SigType == zerr.SigTypeReturn {
+				if extra, ok2 := sig.Extra.(r.Value); ok2 {
+					c.GetCurrentScope().SetReturnValue(extra)
+					return nil
+				}
+			}
+		}
+	}
+	return errBlock
 }
 
 //// eval statements
@@ -70,11 +81,12 @@ func evalStatement(c *r.Context, stmt syntax.Statement) error {
 		fn := BuildFunctionFromNode(v)
 		return c.BindSymbol(v.FuncName.GetLiteral(), fn)
 	case *syntax.ClassDeclareStmt:
+		className := v.ClassName.GetLiteral()
 		if sp.FindParentScope() != nil {
-			return zerr.NewErrorSLOT("只能在代码主层级定义类")
+			return zerr.ClassNotOnRoot(className)
+
 		}
 		// bind classRef
-		className := v.ClassName.GetLiteral()
 		classRef := BuildClassFromNode(className, v)
 
 		return c.BindSymbol(className, classRef)
@@ -114,15 +126,20 @@ func evalStatement(c *r.Context, stmt syntax.Statement) error {
 			if expVal, ok := val.(*value.Exception); ok {
 				return zerr.NewRuntimeException(expVal.GetMessage())
 			}
-			return zerr.NewErrorSLOT(fmt.Sprintf("「%s」构造出来的对象须是一个异常类型的值！", name))
+			return zerr.InvalidExceptionObjectType(name)
 		}
-		return zerr.NewErrorSLOT(fmt.Sprintf("「%s」必须是一个类型！", name))
+		return zerr.InvalidExceptionType(name)
+	case *syntax.ContinueStmt:
+		// send continue signal
+		return zerr.NewContinueSignal()
+	case *syntax.BreakStmt:
+		return zerr.NewBreakSignal()
 	case syntax.Expression:
 		expr, err := evalExpression(c, v)
 		returnValue = expr
 		return err
 	default:
-		return zerr.UnExpectedCase("语句类型", fmt.Sprintf("%T", v))
+		return zerr.UnexpectedCase("语句类型", fmt.Sprintf("%T", v))
 	}
 }
 
@@ -201,9 +218,9 @@ func evalNewObject(c *r.Context, node syntax.VDAssignPair) error {
 // evalWhileLoopStmt -
 func evalWhileLoopStmt(c *r.Context, node *syntax.WhileLoopStmt) error {
 	// create new scope
-	newScope := c.PushChildScope()
+	c.PushChildScope()
 	defer c.PopScope()
-	newScope.SetThisValue(value.NewLoopCtl())
+
 	// set context's current scope with new one
 
 	for {
@@ -381,9 +398,8 @@ func evalBranchStmt(c *r.Context, node *syntax.BranchStmt) error {
 }
 
 func evalIterateStmt(c *r.Context, node *syntax.IterateStmt) error {
-	newScope := c.PushChildScope()
+	c.PushChildScope()
 	defer c.PopScope()
-	newScope.SetThisValue(value.NewLoopCtl())
 
 	// pre-defined key, value variable name
 	var keySlot, valueSlot string
@@ -507,7 +523,7 @@ func evalExpression(c *r.Context, expr syntax.Expression) (r.Value, error) {
 	}
 }
 
-// （显示：A、B、C），取得D
+// （显示：A、B、C），得到D
 func evalFunctionCall(c *r.Context, expr *syntax.FuncCallExpr) (r.Value, error) {
 	var zf *value.ClosureRef
 	vtag := expr.FuncName.GetLiteral()
@@ -711,7 +727,7 @@ func evalLogicComparator(c *r.Context, expr *syntax.LogicExpr) (*value.Bool, err
 		cmp2, cmpErr = value.CompareValues(left, right, value.CmpEq)
 		cmpRes = cmp1 || cmp2
 	default:
-		return nil, zerr.UnExpectedCase("比较类型", fmt.Sprintf("%d", logicType))
+		return nil, zerr.UnexpectedCase("比较类型", fmt.Sprintf("%d", logicType))
 	}
 
 	return value.NewBool(cmpRes), cmpErr
@@ -753,7 +769,7 @@ func evalArithExpr(c *r.Context, expr *syntax.ArithExpr) (*value.Number, error) 
 		}
 		return value.NewNumber(leftNum.GetValue() / rightNum.GetValue()), nil
 	}
-	return nil, zerr.UnExpectedCase("运算项", fmt.Sprintf("%d", expr.Type))
+	return nil, zerr.UnexpectedCase("运算项", fmt.Sprintf("%d", expr.Type))
 }
 
 // eval prime expr
@@ -813,7 +829,7 @@ func evalPrimeExpr(c *r.Context, expr syntax.Expression) (r.Value, error) {
 		}
 		return value.NewHashMap(znPairs), nil
 	default:
-		return nil, zerr.UnExpectedCase("表达式类型", fmt.Sprintf("%T", e))
+		return nil, zerr.UnexpectedCase("表达式类型", fmt.Sprintf("%T", e))
 	}
 }
 
@@ -844,9 +860,9 @@ func evalVarAssignExpr(c *r.Context, expr *syntax.VarAssignExpr) (r.Value, error
 			}
 			return vr, iv.ReduceLHS(c, vr)
 		}
-		return nil, zerr.NewErrorSLOT("方法不能被赋值")
+		return nil, zerr.UnexpectedAssign()
 	default:
-		return nil, zerr.UnExpectedCase("被赋值", fmt.Sprintf("%T", v))
+		return nil, zerr.UnexpectedCase("被赋值", fmt.Sprintf("%T", v))
 	}
 }
 
@@ -894,10 +910,10 @@ func getMemberExprIV(c *r.Context, expr *syntax.MemberExpr) (*value.IV, error) {
 			}
 			return nil, zerr.InvalidExprType("array", "hashmap")
 		}
-		return nil, zerr.UnExpectedCase("子项类型", fmt.Sprintf("%d", expr.MemberType))
+		return nil, zerr.UnexpectedCase("子项类型", fmt.Sprintf("%d", expr.MemberType))
 	}
 
-	return nil, zerr.UnExpectedCase("根元素类型", fmt.Sprintf("%d", expr.RootType))
+	return nil, zerr.UnexpectedCase("根元素类型", fmt.Sprintf("%d", expr.RootType))
 }
 
 //// helpers

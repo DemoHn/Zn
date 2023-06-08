@@ -2,13 +2,14 @@ package value
 
 import (
 	"fmt"
-	zerr "github.com/DemoHn/Zn/pkg/error"
-	r "github.com/DemoHn/Zn/pkg/runtime"
+	"os"
 	"regexp"
 	"strconv"
 	"strings"
-)
 
+	zerr "github.com/DemoHn/Zn/pkg/error"
+	r "github.com/DemoHn/Zn/pkg/runtime"
+)
 
 // Define compareVerbs, for details of each verb, check the following comments
 // on compareValues() function.
@@ -51,7 +52,7 @@ func CompareValues(left r.Value, right r.Value, verb uint8) (bool, error) {
 			case CmpGt:
 				cmpResult = vl.value > vr.value
 			default:
-				return false, zerr.UnExpectedCase("比较原语", strconv.Itoa(int(verb)))
+				return false, zerr.UnexpectedCase("比较原语", strconv.Itoa(int(verb)))
 			}
 			return cmpResult, nil
 		}
@@ -254,7 +255,7 @@ Loop:
 		// matches 0 or more params
 		case "*", "+":
 			if matches[2] == "+" && idx > len(values) {
-				return zerr.NewErrorSLOT("通配符需要至少一个参数")
+				return zerr.UnexpectedParamWildcard()
 			}
 			for i := idx; i < len(values); i++ {
 				if err := validateOneParam(values[i], matches[1]); err != nil {
@@ -338,6 +339,7 @@ var DisplayExecutor = func(c *r.Context, params []r.Value) (r.Value, error) {
 			items = append(items, StringifyValue(param))
 		}
 	}
-	fmt.Printf("%s\n", strings.Join(items, " "))
+	c.MarkHasPrinted()
+	os.Stdout.Write([]byte(fmt.Sprintf("%s\n", strings.Join(items, " "))))
 	return NewNull(), nil
 }

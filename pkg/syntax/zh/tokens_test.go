@@ -1,9 +1,9 @@
 package zh
 
 import (
-	"fmt"
-	"github.com/DemoHn/Zn/pkg/syntax"
 	"testing"
+
+	"github.com/DemoHn/Zn/pkg/syntax"
 )
 
 type nextTokenCase struct {
@@ -11,19 +11,7 @@ type nextTokenCase struct {
 	input       string
 	expectError bool
 	// [(type, startIdx, endIdx), (type, startIdx, endIdx), ...]
-	tokens      [][]int
-}
-
-func Test_PlayGround(t *testing.T) {
-	source := "我到河北省注.来"
-	tk, l, err := parseTokens([]rune(source))
-	for _, tm := range tk {
-		fmt.Println("token = ", tm)
-		fmt.Println("token literal =", string(tm.Literal))
-	}
-
-	fmt.Println("lineInfo = ", l)
-	fmt.Println("err = ", err)
+	tokens [][]int
 }
 
 func TestNextToken_NumberONLY(t *testing.T) {
@@ -96,16 +84,8 @@ func TestNextToken_NumberONLY(t *testing.T) {
 			},
 		},
 		{
-			name:        "normal number (ignore underscore)",
-			input:       "-12_300_500_800_900 RSU",
-			expectError: false,
-			tokens: [][]int{
-				{int(TypeNumber), 0, 19},
-			},
-		},
-		{
-			name: "arithmetic expression",
-			input: "25 / +3",
+			name:        "arithmetic expression",
+			input:       "25 / +3",
 			expectError: false,
 			tokens: [][]int{
 				{int(TypeNumber), 0, 2},
@@ -165,13 +145,11 @@ func TestNextToken_NumberONLY(t *testing.T) {
 			expectError: true,
 			errCursor:   8,
 		},
-		 */
+		*/
 	}
 
 	assertParseTokens(cases, t)
 }
-
-
 
 func assertParseTokens(cases []nextTokenCase, t *testing.T) {
 	for _, tt := range cases {

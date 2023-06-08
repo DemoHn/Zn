@@ -46,6 +46,13 @@ DEy     得
 DAOy    到
 PAO     抛
 CHU     出
+SHU     输
+JIE     结
+SHUy    束
+JI      继
+XU      续
+XUN     循
+HUAN    环
 ===============================
 # Part II： 定义每一个关键词及其对应的 tokenType。
 # 使用说明：
@@ -60,7 +67,7 @@ CondW           44      如果
 FuncW           45      如何
 GetterW         46      何为
 ParamAssignW    47      已知
-ReturnW         48      得出
+ReturnW         48      输出
 LogicYesIIW     49      是
 LogicNotEqW     51      不等于
 LogicLteW       52      不大于
@@ -81,5 +88,7 @@ ObjConstructW   73      是为
 LogicEqualW     74      等于
 IteratorW       76      遍历
 ImportW         77      导入
-GetResultW      78      取得
+GetResultW      78      得到
 ThrowErrorW     79      抛出
+ContinueW       80      继续循环
+BreakW          81      结束循环

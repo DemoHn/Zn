@@ -20,14 +20,16 @@ type ParserZH struct {
 	StartLineIdxP2 int
 	// which line is endIdx located
 	EndLineIdxP2 int
-	// line termination flag
-	lineTermFlag bool
+	// statement completion flag - if set true, next statement MUST
+	// 1) start from another line OR
+	// 2) seperate former statement with '；'
+	stmtCompleteFlag bool
 }
 
 // NewParserZH -
 func NewParserZH() *ParserZH {
 	return &ParserZH{
-		lineTermFlag: false,
+		stmtCompleteFlag: false,
 	}
 }
 
@@ -42,8 +44,8 @@ func (p *ParserZH) ParseAST(l *syntax.Lexer) (pg *syntax.Program, err error) {
 	// parse global block
 	block := ParseBlockStmt(p, peekIndent)
 	pg = &syntax.Program{
-		Lexer:    l,
-		Content:  block,
+		Lexer:   l,
+		Content: block,
 	}
 
 	// ensure there's no remaining token after parsing global block
@@ -54,9 +56,20 @@ func (p *ParserZH) ParseAST(l *syntax.Lexer) (pg *syntax.Program, err error) {
 }
 
 func (p *ParserZH) next() *syntax.Token {
-	tk, err := NextToken(p.Lexer)
+	var tk syntax.Token // default tk.Type = 0 (TypeEOF)
+	var err error
+	// init next tk first
+	tk, err = NextToken(p.Lexer)
 	if err != nil {
 		panic(err)
+	}
+
+	// skip comment token until meet non-comment one
+	for tk.Type == TypeComment {
+		tk, err = NextToken(p.Lexer)
+		if err != nil {
+			panic(err)
+		}
 	}
 
 	// move advanced token buffer
@@ -69,6 +82,9 @@ func (p *ParserZH) next() *syntax.Token {
 	p.StartLineIdxP2 = p.FindLineIdx(tk.StartIdx, p.StartLineIdxP2)
 	p.EndLineIdxP2 = p.FindLineIdx(tk.EndIdx, p.EndLineIdxP2)
 
+	if p.meetStmtLineBreak() {
+		p.setStmtCompleteFlag()
+	}
 	return p.TokenP1
 }
 
@@ -124,8 +140,8 @@ func (p *ParserZH) peek() *syntax.Token {
 //
 // Example 3#
 //
-// ·时·等于12 且{
-//     ·分·等于0 或 ·分·等于30
+// `时`等于12 且{
+//     `分`等于0 或 `分`等于30
 // }等于真
 func (p *ParserZH) meetStmtLineBreak() bool {
 	current := p.current()
@@ -184,12 +200,12 @@ func (p *ParserZH) meetStmtBreak() bool {
 	return false
 }
 
-func (p *ParserZH) resetLineTermFlag() {
-	p.lineTermFlag = false
+func (p *ParserZH) unsetStmtCompleteFlag() {
+	p.stmtCompleteFlag = false
 }
 
-func (p *ParserZH) setLineTermFlag() {
-	p.lineTermFlag = true
+func (p *ParserZH) setStmtCompleteFlag() {
+	p.stmtCompleteFlag = true
 }
 
 // trying to consume one token. if the token is valid in the given range of tokenTypes,
@@ -204,13 +220,12 @@ func (p *ParserZH) tryConsume(validTypes ...uint8) (bool, *syntax.Token) {
 		p.next()
 		tk = p.peek()
 	}
-	if p.meetStmtLineBreak() && p.lineTermFlag {
+	if p.stmtCompleteFlag {
 		return false, nil
 	}
 
 	for _, vt := range validTypes {
 		if vt == tk.Type {
-			p.setLineTermFlag()
 			p.next()
 			return true, tk
 		}
@@ -253,7 +268,6 @@ func (p *ParserZH) getPeekIndent() int {
 	}
 	return lineInfo.Indents
 }
-
 
 // equals to s.SetCurrentLine(<line of tk>)
 func (p *ParserZH) setStmtCurrentLine(s syntax.Statement, tk *syntax.Token) {

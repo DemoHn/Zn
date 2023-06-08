@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/DemoHn/Zn/cmd/znt/cmds"
+	"github.com/DemoHn/Zn/cmd/zinc-devtool/cmds"
 	"github.com/spf13/cobra"
 )
 

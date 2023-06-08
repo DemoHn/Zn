@@ -32,15 +32,15 @@ const (
 	GlyphQI rune = 0x5176
 	// GlyphZAI - 再 - 再如
 	GlyphZAI rune = 0x518D
-	// GlyphCHU - 出 - 抛出，得出
+	// GlyphCHU - 出 - 输出，抛出
 	GlyphCHU rune = 0x51FA
 	// GlyphZE - 则 - 否则
 	GlyphZE rune = 0x5219
-	// GlyphDAOy - 到 -
+	// GlyphDAOy - 到 - 得到
 	GlyphDAOy rune = 0x5230
 	// GlyphLI - 历 - 遍历
 	GlyphLI rune = 0x5386
-	// GlyphQU - 取 - 取得
+	// GlyphQU - 取 -
 	GlyphQU rune = 0x53D6
 	// GlyphFOU - 否 - 否则
 	GlyphFOU rune = 0x5426
@@ -60,8 +60,10 @@ const (
 	GlyphYI rune = 0x5DF2
 	// GlyphDANG - 当 - 每当
 	GlyphDANG rune = 0x5F53
-	// GlyphDEy - 得 - 得出，取得
+	// GlyphDEy - 得 - 得到
 	GlyphDEy rune = 0x5F97
+	// GlyphXUN - 循 - 继续循环，结束循环
+	GlyphXUN rune = 0x5FAA
 	// GlyphHENG - 恒 - 恒为
 	GlyphHENG rune = 0x6052
 	// GlyphCHENG - 成 - 成为
@@ -72,18 +74,30 @@ const (
 	GlyphPAO rune = 0x629B
 	// GlyphSHI - 是 - 是为，是
 	GlyphSHI rune = 0x662F
+	// GlyphSHUy - 束 - 结束循环
+	GlyphSHUy rune = 0x675F
 	// GlyphGUO - 果 - 如果
 	GlyphGUO rune = 0x679C
 	// GlyphMEI - 每 - 每当
 	GlyphMEI rune = 0x6BCF
 	// GlyphZHU - 注 -
 	GlyphZHU rune = 0x6CE8
+	// GlyphHUAN - 环 - 继续循环，结束循环
+	GlyphHUAN rune = 0x73AF
 	// GlyphDE - 的 - 的
 	GlyphDE rune = 0x7684
 	// GlyphZHIy - 知 - 已知
 	GlyphZHIy rune = 0x77E5
 	// GlyphDENG - 等 - 等于，不等于
 	GlyphDENG rune = 0x7B49
+	// GlyphJIE - 结 - 结束循环
+	GlyphJIE rune = 0x7ED3
+	// GlyphJI - 继 - 继续循环
+	GlyphJI rune = 0x7EE7
+	// GlyphXU - 续 - 继续循环
+	GlyphXU rune = 0x7EED
+	// GlyphSHU - 输 - 输出
+	GlyphSHU rune = 0x8F93
 	// GlyphBIAN - 遍 - 遍历
 	GlyphBIAN rune = 0x904D
 )
@@ -98,7 +112,7 @@ const (
 	TypeFuncW         uint8 = 45 // 如何
 	TypeGetterW       uint8 = 46 // 何为
 	TypeParamAssignW  uint8 = 47 // 已知
-	TypeReturnW       uint8 = 48 // 得出
+	TypeReturnW       uint8 = 48 // 输出
 	TypeLogicYesIIW   uint8 = 49 // 是
 	TypeLogicNotEqW   uint8 = 51 // 不等于
 	TypeLogicLteW     uint8 = 52 // 不大于
@@ -119,8 +133,10 @@ const (
 	TypeLogicEqualW   uint8 = 74 // 等于
 	TypeIteratorW     uint8 = 76 // 遍历
 	TypeImportW       uint8 = 77 // 导入
-	TypeGetResultW    uint8 = 78 // 取得
+	TypeGetResultW    uint8 = 78 // 得到
 	TypeThrowErrorW   uint8 = 79 // 抛出
+	TypeContinueW     uint8 = 80 // 继续循环
+	TypeBreakW        uint8 = 81 // 结束循环
 )
 
 // parseKeyword -
@@ -179,13 +195,6 @@ func parseKeyword(l *syntax.Lexer, moveForward bool) (bool, syntax.Token, error)
 		} else {
 			return false, syntax.Token{}, nil
 		}
-	case GlyphQU:
-		if l.Peek() == GlyphDEy {
-			wordLen = 2
-			tk.Type = TypeGetResultW
-		} else {
-			return false, syntax.Token{}, nil
-		}
 	case GlyphFOU:
 		if l.Peek() == GlyphZE {
 			wordLen = 2
@@ -239,9 +248,9 @@ func parseKeyword(l *syntax.Lexer, moveForward bool) (bool, syntax.Token, error)
 			return false, syntax.Token{}, nil
 		}
 	case GlyphDEy:
-		if l.Peek() == GlyphCHU {
+		if l.Peek() == GlyphDAOy {
 			wordLen = 2
-			tk.Type = TypeReturnW
+			tk.Type = TypeGetResultW
 		} else {
 			return false, syntax.Token{}, nil
 		}
@@ -288,6 +297,27 @@ func parseKeyword(l *syntax.Lexer, moveForward bool) (bool, syntax.Token, error)
 		if l.Peek() == GlyphYU {
 			wordLen = 2
 			tk.Type = TypeLogicEqualW
+		} else {
+			return false, syntax.Token{}, nil
+		}
+	case GlyphJIE:
+		if l.Peek() == GlyphSHUy && l.Peek2() == GlyphXUN && l.Peek3() == GlyphHUAN {
+			wordLen = 4
+			tk.Type = TypeBreakW
+		} else {
+			return false, syntax.Token{}, nil
+		}
+	case GlyphJI:
+		if l.Peek() == GlyphXU && l.Peek2() == GlyphXUN && l.Peek3() == GlyphHUAN {
+			wordLen = 4
+			tk.Type = TypeContinueW
+		} else {
+			return false, syntax.Token{}, nil
+		}
+	case GlyphSHU:
+		if l.Peek() == GlyphCHU {
+			wordLen = 2
+			tk.Type = TypeReturnW
 		} else {
 			return false, syntax.Token{}, nil
 		}

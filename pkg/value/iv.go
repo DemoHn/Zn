@@ -2,10 +2,10 @@ package value
 
 import (
 	"fmt"
+
 	zerr "github.com/DemoHn/Zn/pkg/error"
 	r "github.com/DemoHn/Zn/pkg/runtime"
 )
-
 
 // declare IVTypes
 const (
@@ -89,7 +89,7 @@ func (iv *IV) ReduceLHS(c *r.Context, input r.Value) error {
 	case IVTypeMember:
 		return iv.root.SetProperty(c, iv.member, input)
 	}
-	return zerr.UnExpectedCase("IVReduceType", fmt.Sprintf("%d", iv.reduceType))
+	return zerr.UnexpectedCase("IVReduceType", fmt.Sprintf("%d", iv.reduceType))
 }
 
 // ReduceRHS -
@@ -121,5 +121,5 @@ func (iv *IV) ReduceRHS(c *r.Context) (r.Value, error) {
 	case IVTypeMember:
 		return iv.root.GetProperty(c, iv.member)
 	}
-	return nil, zerr.UnExpectedCase("IVReduceType", fmt.Sprintf("%d", iv.reduceType))
+	return nil, zerr.UnexpectedCase("IVReduceType", fmt.Sprintf("%d", iv.reduceType))
 }
