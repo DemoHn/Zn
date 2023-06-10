@@ -36,7 +36,7 @@ func ExecuteModule(c *r.Context, name string) (r.Value, error) {
 	}
 
 	// #4. create module
-	module := r.NewModule(name)
+	module := r.NewModuleOLD(name)
 	// build module cache to dep tree
 	c.BuildModuleCache(module)
 	// create new scope (and pop the scope after execution)

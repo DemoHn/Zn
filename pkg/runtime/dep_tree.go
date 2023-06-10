@@ -2,22 +2,23 @@ package runtime
 
 import (
 	"errors"
-	zerr "github.com/DemoHn/Zn/pkg/error"
 	"os"
 	"path/filepath"
 	"strings"
+
+	zerr "github.com/DemoHn/Zn/pkg/error"
 )
 
 // DependencyTree - manage all dependencies
 type DependencyTree struct {
-	rootDir string
-	moduleCacheMap map[string]*Module
+	rootDir        string
+	moduleCacheMap map[string]*ModuleOLD
 }
 
 func NewDependencyTree() *DependencyTree {
 	return &DependencyTree{
 		rootDir:        "",
-		moduleCacheMap: map[string]*Module{},
+		moduleCacheMap: map[string]*ModuleOLD{},
 	}
 }
 
@@ -39,11 +40,11 @@ func (dp *DependencyTree) GetModulePath(name string) (string, error) {
 	return path, nil
 }
 
-func (dp *DependencyTree) BuildModuleCache(module *Module) {
+func (dp *DependencyTree) BuildModuleCache(module *ModuleOLD) {
 	dp.moduleCacheMap[module.name] = module
 }
 
-func (dp *DependencyTree) GetModuleCache(name string) *Module {
+func (dp *DependencyTree) GetModuleCache(name string) *ModuleOLD {
 	if m, ok := dp.moduleCacheMap[name]; ok {
 		return m
 	}

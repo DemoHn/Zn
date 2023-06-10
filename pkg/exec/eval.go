@@ -295,7 +295,7 @@ func evalPreStmtBlock(c *r.Context, block *syntax.BlockStmt) (*syntax.BlockStmt,
 		case *syntax.ImportStmt:
 			libName := v.ImportName.GetLiteral()
 
-			var extModule *r.Module
+			var extModule *r.ModuleOLD
 			if v.ImportLibType == syntax.LibTypeStd {
 				var err error
 				extModule, err = stdlib.FindModule(libName)

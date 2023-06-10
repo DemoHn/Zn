@@ -6,13 +6,8 @@ import "github.com/DemoHn/Zn/pkg/syntax"
 // including local variables map and current "return" value.
 // NOTE: Scope is a doubly linked list
 type Scope struct {
-	parent *Scope
 	// symbolMap - stores current scope stored symbols
 	symbolMap map[string]SymbolInfo
-	// module - get current module
-	module *Module
-	// execCursor - record current execution line
-	execCursor ExecCursor
 	// thisValue - "this" variable of the scope
 	thisValue Value
 	// returnValue - return value of scope
@@ -27,40 +22,15 @@ type SymbolInfo struct {
 	isConst bool
 }
 
-type ExecCursor struct {
-	*syntax.Lexer
-	CurrentLine int
-	ModuleName string
-}
-
 func (s SymbolInfo) GetValue() Value {
 	return s.value
 }
 
-func NewScope(module *Module, lexer *syntax.Lexer) *Scope {
+func NewScope() *Scope {
 	return &Scope{
-		parent: 	nil,
-		module:      module,
 		symbolMap:   map[string]SymbolInfo{},
 		thisValue:   nil,
 		returnValue: nil,
-		execCursor: ExecCursor{
-			Lexer:       lexer,
-			CurrentLine: 0,
-			ModuleName:  module.name,
-		},
-	}
-}
-
-// create scope within SAME module
-func NewChildScope(sp *Scope) *Scope {
-	return &Scope{
-		parent: 	 sp,
-		module:      sp.module,
-		symbolMap:   map[string]SymbolInfo{},
-		thisValue:   nil,
-		returnValue: nil,
-		execCursor: sp.execCursor,
 	}
 }
 
@@ -68,7 +38,7 @@ func (sp *Scope) FindParentScope() *Scope {
 	return sp.parent
 }
 
-func (sp *Scope) GetModule() *Module {
+func (sp *Scope) GetModule() *ModuleOLD {
 	return sp.module
 }
 

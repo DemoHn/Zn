@@ -13,8 +13,15 @@ type Context struct {
 	// hasPrinted - if stdout has been used to output message before program end, set `hasPrinted` -> true; so that after message is done
 	hasPrinted bool
 	*DependencyTree
-	// ScopeStack - trace scopes
-	ScopeStack []*Scope
+
+	currentModule *Module
+	// callStack - get current call module & line for traceback
+	callStack []CallInfo
+}
+
+type CallInfo struct {
+	*Module
+	LineIdx int
 }
 
 // NewContext - create new Zn Context. Notice through the life-cycle
@@ -24,7 +31,7 @@ func NewContext(globalsMap map[string]Value) *Context {
 		globals:        globalsMap,
 		hasPrinted:     false,
 		DependencyTree: NewDependencyTree(),
-		ScopeStack:     []*Scope{},
+		callStack:      []CallInfo{},
 	}
 }
 
@@ -37,7 +44,7 @@ func (ctx *Context) GetCurrentScope() *Scope {
 	return ctx.ScopeStack[stackLen-1]
 }
 
-func (ctx *Context) PushScope(module *Module, lexer *syntax.Lexer) *Scope {
+func (ctx *Context) PushScope(module *ModuleOLD, lexer *syntax.Lexer) *Scope {
 	scope := NewScope(module, lexer)
 	// push scope into ScopeStack
 	ctx.ScopeStack = append(ctx.ScopeStack, scope)

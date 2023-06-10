@@ -3,17 +3,17 @@ package stdlib
 import (
 	"encoding/json"
 	"fmt"
-	zerr "github.com/DemoHn/Zn/pkg/error"
-	r "github.com/DemoHn/Zn/pkg/runtime"
-	"github.com/DemoHn/Zn/pkg/value"
 	"math"
 	"strconv"
 	"strings"
+
+	zerr "github.com/DemoHn/Zn/pkg/error"
+	r "github.com/DemoHn/Zn/pkg/runtime"
+	"github.com/DemoHn/Zn/pkg/value"
 )
 
 var jsonModuleName = "JSON"
-var jsonModule = r.NewModule(jsonModuleName)
-
+var jsonModule = r.NewModuleOLD(jsonModuleName)
 
 // parseJsonFunc - 解析JSON
 func parseJsonFunc(c *r.Context, values []r.Value) (r.Value, error) {

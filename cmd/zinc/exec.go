@@ -25,7 +25,7 @@ func EnterREPL() {
 	c := r.NewContext(exec.GlobalValues)
 
 	// init global module and scope
-	module := r.NewModule("REPL")
+	module := r.NewModuleOLD("REPL")
 	c.PushScope(module, nil)
 
 	// REPL loop
