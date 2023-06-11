@@ -217,7 +217,7 @@ func evalNewObject(c *r.Context, node syntax.VDAssignPair) error {
 // evalWhileLoopStmt -
 func evalWhileLoopStmt(c *r.Context, node *syntax.WhileLoopStmt) error {
 	// create new scope
-	c.PushChildScope()
+	c.PushScope()
 	defer c.PopScope()
 
 	// set context's current scope with new one
@@ -303,7 +303,7 @@ func evalPreStmtBlock(c *r.Context, block *syntax.BlockStmt) (*syntax.BlockStmt,
 				}
 			} else if v.ImportLibType == syntax.LibTypeCustom {
 				// execute custom module first (in order to get all importable elements)
-				extModule = c.GetModuleCache(libName)
+				extModule = c.FindModule(libName)
 				if extModule == nil {
 					// not found in cache
 					if _, err := ExecuteModule(c, libName); err != nil {
@@ -311,7 +311,7 @@ func evalPreStmtBlock(c *r.Context, block *syntax.BlockStmt) (*syntax.BlockStmt,
 					}
 				}
 				// digest module cache to import all valid elements to THIS MODULE's import symbol Map
-				extModule = c.GetModuleCache(libName)
+				extModule = c.FindModule(libName)
 			}
 
 			if extModule != nil {
@@ -357,7 +357,7 @@ func evalStmtBlock(c *r.Context, block *syntax.BlockStmt) error {
 
 func evalBranchStmt(c *r.Context, node *syntax.BranchStmt) error {
 	// create inner scope for if statement
-	c.PushChildScope()
+	c.PushScope()
 	defer c.PopScope()
 
 	// #1. condition header
@@ -397,7 +397,7 @@ func evalBranchStmt(c *r.Context, node *syntax.BranchStmt) error {
 }
 
 func evalIterateStmt(c *r.Context, node *syntax.IterateStmt) error {
-	c.PushChildScope()
+	c.PushScope()
 	defer c.PopScope()
 
 	// pre-defined key, value variable name
@@ -603,7 +603,7 @@ func evalFunctionCall(c *r.Context, expr *syntax.FuncCallExpr) (r.Value, error) 
 // 以 A （执行：B、C、D）
 func evalMemberMethodExpr(c *r.Context, expr *syntax.MemberMethodExpr) (r.Value, error) {
 	currentScope := c.GetCurrentScope()
-	newScope := c.PushChildScope()
+	newScope := c.PushScope()
 	defer c.PopScope()
 
 	// 1. parse root expr

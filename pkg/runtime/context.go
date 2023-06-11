@@ -55,8 +55,8 @@ func (ctx *Context) FindParentScope() *Scope {
 	return nil
 }
 
-// PushChildScope - create new scope with same module from parent scope
-func (ctx *Context) PushChildScope() *Scope {
+// PushScope - create new scope with same module from parent scope
+func (ctx *Context) PushScope() *Scope {
 	sp := ctx.GetCurrentScope()
 	if sp == nil {
 		return nil
@@ -103,6 +103,14 @@ func (ctx *Context) ExitModule() {
 
 		ctx.currentModule = last.Module
 	}
+}
+
+func (ctx *Context) GetModulePath(moduleName string) (string, error) {
+	return ctx.moduleGraph.GetModulePath(moduleName)
+}
+
+func (ctx *Context) FindModule(name string) *Module {
+	return ctx.moduleGraph.FindModule(name)
 }
 
 func (ctx *Context) GetCurrentModule() *Module {

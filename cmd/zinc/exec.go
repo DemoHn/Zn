@@ -22,7 +22,7 @@ const version = "rev06"
 func EnterREPL() {
 	linerR := liner.NewLiner()
 	linerR.SetCtrlCAborts(true)
-	c := r.NewContext(exec.GlobalValues)
+	c := r.NewContext("", exec.GlobalValues)
 
 	// init global module and scope
 	module := r.NewModule("REPL", nil)
@@ -76,14 +76,13 @@ func EnterREPL() {
 
 // ExecProgram - exec program from file directly
 func ExecProgram(file string) {
-	c := r.NewContext(exec.GlobalValues)
-
 	rootDir := filepath.Dir(file)
 	// get module name
 	_, fileName := filepath.Split(file)
 	rootModule := strings.TrimSuffix(fileName, filepath.Ext(fileName))
 
-	c.SetRootDir(rootDir)
+	c := r.NewContext(rootDir, exec.GlobalValues)
+
 	// when exec program, unlike REPL, it's not necessary to print last executed value
 	rtnValue, err := exec.ExecuteModule(c, rootModule)
 	if err != nil {

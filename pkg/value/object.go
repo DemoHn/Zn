@@ -109,7 +109,7 @@ func (zo *Object) ExecMethod(c *r.Context, name string, values []r.Value) (r.Val
 //// NOTE: ClassRef is also a type of Value
 // Construct - yield new instance of this class
 func (cr *ClassRef) Construct(c *r.Context, params []r.Value) (r.Value, error) {
-	c.PushChildScope()
+	c.PushScope()
 	defer c.PopScope()
 
 	if cr.Constructor != nil {

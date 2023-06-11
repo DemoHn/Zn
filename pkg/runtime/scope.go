@@ -24,6 +24,10 @@ func (s SymbolInfo) GetValue() Value {
 	return s.value
 }
 
+func MakeSymbolInfo(value Value, isConst bool) SymbolInfo {
+	return SymbolInfo{value, isConst}
+}
+
 func NewScope() *Scope {
 	return &Scope{
 		symbolMap:   map[string]SymbolInfo{},
