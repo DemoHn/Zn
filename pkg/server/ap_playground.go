@@ -1,40 +1,24 @@
 package server
 
 import (
-	"fmt"
 	"net/http"
-	"net/http/fcgi"
-	"path/filepath"
-	"strings"
 
 	"github.com/DemoHn/Zn/pkg/exec"
 	"github.com/DemoHn/Zn/pkg/runtime"
 	"github.com/DemoHn/Zn/pkg/value"
 )
 
-const EnvScriptFilename = "SCRIPT_FILENAME"
-
 // if exec code ok - return 200 with result (ignore outputs from「显示」)
-func RespondAsExecutor(w http.ResponseWriter, r *http.Request) {
+func RespondAsPlayground(w http.ResponseWriter, r *http.Request) {
 	// exec program
-	c := runtime.NewContext(exec.GlobalValues)
-	// get filename
-	cgiEnvs := fcgi.ProcessEnv(r)
-	if scriptFile, ok := cgiEnvs[EnvScriptFilename]; ok {
-		rootDir, fileName := filepath.Split(scriptFile)
-		rootModule := strings.TrimSuffix(fileName, filepath.Ext(fileName))
+	c := runtime.NewContext("", exec.GlobalValues)
 
-		c.SetRootDir(rootDir)
-		rtnValue, err := exec.ExecuteModule(c, rootModule)
-		if err != nil {
-			writeErrorData(w, err)
-			return
-		}
-		writeSuccessData(w, rtnValue)
+	rtnValue, err := exec.ExecuteModule(c, "")
+	if err != nil {
+		writeErrorData(w, err)
 		return
 	}
-	// else: no SCRIPT_FILENAME found
-	writeErrorData(w, fmt.Errorf("待执行的文件参数未指定"))
+	writeSuccessData(w, rtnValue)
 }
 
 func writeErrorData(w http.ResponseWriter, err error) {

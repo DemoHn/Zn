@@ -84,7 +84,7 @@ func (f *FCGIHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if adapter, ok := cgiEnvs[EnvZincAdapter]; ok {
 		switch adapter {
 		case ZincAP_Playground:
-			RespondAsExecutor(w, r)
+			RespondAsPlayground(w, r)
 			return
 		case ZincAP_HTTPHandler:
 			w.WriteHeader(200)

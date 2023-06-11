@@ -83,12 +83,14 @@ const result = zincReaction("./宠物医院.zn", 医院=store0, 宠物=pet0)
 
 **ZINC_ADAPTER 支持的模式**
 
-1. executor
+1. playground
 
-正常情况下，从 fastcgi body 中读取额外的输入参数，再执行对应的代码，再输出具体的值作为 http body 返回来。
+正常情况下，从 fastcgi body 中读取待执行的程序，再输出具体的值作为 http body 返回来。这玩意特别适合直接怼进 HTTP 页面时作为 Playground 运行时
 
 2. http_handler
 
 如同 PHP-FPM 的处理方式一样，从 WebServer 中接收HTTP请求，将请求参数灌到输入里面，再输出具体的值作为 http body 返回来。
 
 如果 ZINC_ADAPTER 不是上述两个值或者根本就没给，直接返回 403
+
+
