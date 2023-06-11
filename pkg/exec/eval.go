@@ -62,7 +62,7 @@ func evalStatement(c *r.Context, stmt syntax.Statement) error {
 		sp.SetReturnValue(finalReturnValue)
 
 		// set parent return value
-		parentScope := sp.FindParentScope()
+		parentScope := c.FindParentScope()
 		if parentScope != nil {
 			parentScope.SetReturnValue(finalReturnValue)
 		}
@@ -82,7 +82,7 @@ func evalStatement(c *r.Context, stmt syntax.Statement) error {
 		return c.BindSymbol(v.FuncName.GetLiteral(), fn)
 	case *syntax.ClassDeclareStmt:
 		className := v.ClassName.GetLiteral()
-		if sp.FindParentScope() != nil {
+		if c.FindParentScope() != nil {
 			return zerr.ClassNotOnRoot(className)
 		}
 		// bind classRef

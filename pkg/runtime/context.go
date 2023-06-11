@@ -11,7 +11,9 @@ type Context struct {
 	globals map[string]Value
 	// hasPrinted - if stdout has been used to output message before program end, set `hasPrinted` -> true; so that after message is done
 	hasPrinted bool
-	*DependencyTree
+
+	// modulegraph - store module dependency & all preloaded modules
+	moduleGraph *ModuleGraph
 
 	currentModule *Module
 	// callStack - get current call module & line for traceback
@@ -25,19 +27,30 @@ type CallInfo struct {
 
 // NewContext - create new Zn Context. Notice through the life-cycle
 // of one code execution, there's only one running context to store all states.
-func NewContext(globalsMap map[string]Value) *Context {
+func NewContext(rootDir string, globalsMap map[string]Value) *Context {
 	return &Context{
-		globals:        globalsMap,
-		hasPrinted:     false,
-		DependencyTree: NewDependencyTree(),
-		currentModule:  nil,
-		callStack:      []CallInfo{},
+		globals:       globalsMap,
+		hasPrinted:    false,
+		moduleGraph:   NewModuleGraph(rootDir),
+		currentModule: nil,
+		callStack:     []CallInfo{},
 	}
 }
 
 func (ctx *Context) GetCurrentScope() *Scope {
 	if ctx.currentModule != nil {
 		return ctx.currentModule.GetCurrentScope()
+	}
+	return nil
+}
+
+func (ctx *Context) FindParentScope() *Scope {
+	if ctx.currentModule != nil {
+		sLen := len(ctx.currentModule.scopeStack)
+
+		if sLen > 1 {
+			return ctx.currentModule.scopeStack[sLen-2]
+		}
 	}
 	return nil
 }
@@ -163,17 +176,18 @@ func (ctx *Context) BindScopeSymbolDecl(scope *Scope, name string, value Value) 
 
 // FindThisValue -
 func (ctx *Context) FindThisValue() (Value, error) {
-	sp := ctx.GetCurrentScope()
-	for sp != nil {
-		thisValue := sp.thisValue
-		if thisValue != nil {
-			return thisValue, nil
+	if ctx.currentModule != nil {
+		m := ctx.currentModule
+		for cursor := len(m.scopeStack) - 1; cursor >= 0; cursor-- {
+			sp := m.scopeStack[cursor]
+			if sp.thisValue != nil {
+				return sp.thisValue, nil
+			}
 		}
 
-		sp = sp.parent
+		return nil, zerr.PropertyNotFound("thisValue")
 	}
-
-	return nil, zerr.PropertyNotFound("thisValue")
+	return nil, zerr.UnexpectedNilModule()
 }
 
 // MarkHasPrinted - called by `显示` function only
