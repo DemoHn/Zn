@@ -45,12 +45,21 @@ func NewModule(name string, lexer *syntax.Lexer) *Module {
 	}
 }
 
-func (m *Module) SetExecLineIdx(line int) {
+// SetCurrentLine - set lineIdx to current running scope of the module
+func (m *Module) SetCurrentLine(line int) {
 	m.currentLine = line
 }
 
 func (m *Module) SetLexer(l *syntax.Lexer) {
 	m.lexer = l
+}
+
+func (m *Module) GetName() string {
+	return m.name
+}
+
+func (m *Module) GetLexer() *syntax.Lexer {
+	return m.lexer
 }
 
 //// scopeStack operation
@@ -93,13 +102,6 @@ func (m *Module) RegisterValue(name string, value Value) {
 
 	rootScope := m.scopeStack[0]
 	rootScope.SetSymbolValue(name, true, value)
-}
-
-// SetCurrentLine - set lineIdx to current running scope of the module
-func (m *Module) SetCurrentLine(line int) {
-	if sp := m.GetCurrentScope(); sp != nil {
-		sp.SetExecLineIdx(line)
-	}
 }
 
 // FindScopeValue - find symbol in the context from the latest scope

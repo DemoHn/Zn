@@ -65,6 +65,41 @@ func (ctx *Context) SetCurrentLine(line int) {
 	}
 }
 
+//// enter & exist modules
+func (ctx *Context) EnterModule(module *Module) {
+	m := ctx.currentModule
+	// push callstack
+	if m != nil {
+		ctx.callStack = append(ctx.callStack, CallInfo{
+			Module:      m,
+			LastLineIdx: m.currentLine,
+		})
+	}
+
+	// set current module
+	ctx.currentModule = module
+}
+
+func (ctx *Context) ExitModule() {
+	sLen := len(ctx.callStack)
+	if sLen > 0 {
+		// get last module in callstack
+		last := ctx.callStack[sLen-1]
+		// pop last one
+		ctx.callStack = ctx.callStack[:sLen-1]
+
+		ctx.currentModule = last.Module
+	}
+}
+
+func (ctx *Context) GetCurrentModule() *Module {
+	return ctx.currentModule
+}
+
+func (ctx *Context) GetCallStack() []CallInfo {
+	return ctx.callStack
+}
+
 //// scope symbols getters / setters
 
 // FindSymbol - find symbol in the context from current scope

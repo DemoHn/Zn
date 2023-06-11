@@ -25,8 +25,8 @@ func EnterREPL() {
 	c := r.NewContext(exec.GlobalValues)
 
 	// init global module and scope
-	module := r.NewModuleOLD("REPL")
-	c.PushScope(module, nil)
+	module := r.NewModule("REPL", nil)
+	c.EnterModule(module)
 
 	// REPL loop
 	for {
@@ -59,7 +59,7 @@ func EnterREPL() {
 		}
 
 		lexer := syntax.NewLexer(source)
-		c.GetCurrentScope().SetLexer(lexer)
+		c.GetCurrentModule().SetLexer(lexer)
 
 		// execute code
 		result, err2 := exec.ExecuteREPLCode(c, lexer)

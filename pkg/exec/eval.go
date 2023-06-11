@@ -84,7 +84,6 @@ func evalStatement(c *r.Context, stmt syntax.Statement) error {
 		className := v.ClassName.GetLiteral()
 		if sp.FindParentScope() != nil {
 			return zerr.ClassNotOnRoot(className)
-
 		}
 		// bind classRef
 		classRef := BuildClassFromNode(className, v)
@@ -255,7 +254,7 @@ func evalWhileLoopStmt(c *r.Context, node *syntax.WhileLoopStmt) error {
 
 // evalPreStmtBlock - execute classRef, functionDeclare, imports first, then other statements inside the block
 func evalPreStmtBlock(c *r.Context, block *syntax.BlockStmt) (*syntax.BlockStmt, error) {
-	sp := c.GetCurrentScope()
+	module := c.GetCurrentModule()
 	otherStmts := &syntax.BlockStmt{
 		Children: []syntax.Statement{},
 	}
@@ -273,7 +272,7 @@ func evalPreStmtBlock(c *r.Context, block *syntax.BlockStmt) (*syntax.BlockStmt,
 			}
 
 			// add symbol to module
-			if module := sp.GetModule(); module != nil {
+			if module != nil {
 				if err := module.AddSymbol(vtag, fn, true); err != nil {
 					return nil, err
 				}
@@ -287,7 +286,7 @@ func evalPreStmtBlock(c *r.Context, block *syntax.BlockStmt) (*syntax.BlockStmt,
 			}
 
 			// add symbol to module
-			if module := sp.GetModule(); module != nil {
+			if module != nil {
 				if err := module.AddSymbol(className, classRef, true); err != nil {
 					return nil, err
 				}
@@ -316,7 +315,7 @@ func evalPreStmtBlock(c *r.Context, block *syntax.BlockStmt) (*syntax.BlockStmt,
 			}
 
 			if extModule != nil {
-				if module := sp.GetModule(); module != nil {
+				if module != nil {
 					// import all symbols
 					if len(v.ImportItems) == 0 {
 						for symName, symbolInfo := range extModule.GetSymbols() {
