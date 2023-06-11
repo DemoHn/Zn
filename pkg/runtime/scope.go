@@ -56,7 +56,7 @@ func (sp *Scope) SetReturnValue(v Value) {
 	sp.returnValue = v
 }
 
-func (sp *Scope) SetSymbolValue(name string, isConst bool, v Value) {
+func (sp *Scope) SetSymbolValue(name string, v Value, isConst bool) {
 	sp.symbolMap[name] = SymbolInfo{
 		isConst: isConst,
 		value:   v,

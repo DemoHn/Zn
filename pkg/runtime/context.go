@@ -155,7 +155,7 @@ func (ctx *Context) BindSymbol(name string, value Value) error {
 		return zerr.NameRedeclared(name)
 	}
 	if ctx.currentModule != nil {
-		return ctx.currentModule.BindSymbol(name, SymbolInfo{value, false}, true)
+		return ctx.currentModule.BindSymbol(name, value, false, true)
 	}
 	return zerr.UnexpectedNilModule()
 }
@@ -166,7 +166,7 @@ func (ctx *Context) BindSymbolDecl(name string, value Value, isConst bool) error
 		return zerr.NameRedeclared(name)
 	}
 	if ctx.currentModule != nil {
-		return ctx.currentModule.BindSymbol(name, SymbolInfo{value, isConst}, false)
+		return ctx.currentModule.BindSymbol(name, value, isConst, false)
 	}
 	return zerr.UnexpectedNilModule()
 }
@@ -177,7 +177,7 @@ func (ctx *Context) BindScopeSymbolDecl(scope *Scope, name string, value Value) 
 		return zerr.NameRedeclared(name)
 	}
 	if scope != nil {
-		scope.SetSymbolValue(name, false, value)
+		scope.SetSymbolValue(name, value, false)
 	}
 	return nil
 }

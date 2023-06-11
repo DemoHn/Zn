@@ -65,13 +65,12 @@ func readDirFunc(c *r.Context, values []r.Value) (r.Value, error) {
 	return info, nil
 }
 
-/*
 func init() {
 	// register functions
 	RegisterFunctionForModule(fileModule, "读取文件", readTextFromFileFunc)
 	RegisterFunctionForModule(fileModule, "写入文件", writeTextFromFileFunc)
 	RegisterFunctionForModule(fileModule, "读取目录", readDirFunc)
 
-	RegisterModule(fileModuleName, fileModule)
+	// 2023/6/11 - NOT add this module to the standard library for now
+	//	RegisterModule(fileModuleName, fileModule)
 }
-*/

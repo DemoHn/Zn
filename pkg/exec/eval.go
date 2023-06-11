@@ -273,7 +273,7 @@ func evalPreStmtBlock(c *r.Context, block *syntax.BlockStmt) (*syntax.BlockStmt,
 
 			// add symbol to module
 			if module != nil {
-				if err := module.AddSymbol(vtag, fn, true); err != nil {
+				if err := module.AddExportValue(vtag, fn); err != nil {
 					return nil, err
 				}
 			}
@@ -287,14 +287,14 @@ func evalPreStmtBlock(c *r.Context, block *syntax.BlockStmt) (*syntax.BlockStmt,
 
 			// add symbol to module
 			if module != nil {
-				if err := module.AddSymbol(className, classRef, true); err != nil {
+				if err := module.AddExportValue(className, classRef); err != nil {
 					return nil, err
 				}
 			}
 		case *syntax.ImportStmt:
 			libName := v.ImportName.GetLiteral()
 
-			var extModule *r.ModuleOLD
+			var extModule *r.Module
 			if v.ImportLibType == syntax.LibTypeStd {
 				var err error
 				extModule, err = stdlib.FindModule(libName)
@@ -314,24 +314,22 @@ func evalPreStmtBlock(c *r.Context, block *syntax.BlockStmt) (*syntax.BlockStmt,
 				extModule = c.FindModule(libName)
 			}
 
-			if extModule != nil {
-				if module != nil {
-					// import all symbols
-					if len(v.ImportItems) == 0 {
-						for symName, symbolInfo := range extModule.GetSymbols() {
-							if err := module.AddSymbol(symName, symbolInfo.GetValue(), false); err != nil {
-								return nil, err
-							}
+			if extModule != nil && module != nil {
+				// import all symbols
+				if len(v.ImportItems) == 0 {
+					for name, val := range extModule.GetAllExportValues() {
+						if err := module.BindSymbol(name, val, true, false); err != nil {
+							return nil, err
 						}
-					} else {
-						// import selected symbols
-						for _, id := range v.ImportItems {
-							sym := id.GetLiteral()
-							if val, err2 := extModule.GetSymbol(sym); err2 == nil {
-								// insert into CURRENT MODULE's symbol map
-								if err := module.AddSymbol(sym, val, false); err != nil {
-									return nil, err
-								}
+					}
+				} else {
+					// import selected symbols
+					for _, id := range v.ImportItems {
+						name := id.GetLiteral()
+						if val, err2 := extModule.GetExportValue(name); err2 == nil {
+							// insert into CURRENT MODULE's symbol map
+							if err := module.BindSymbol(name, val, true, false); err != nil {
+								return nil, err
 							}
 						}
 					}

@@ -33,6 +33,11 @@ type Module struct {
 	- The child scope of `scopeStack[N]` is `scopeStack[N+1]`
 	*/
 	scopeStack []*Scope
+
+	// exportValues - all classes and functions are exported for external
+	// imports - so here we insert all exportable values to this map after first scan
+	// note: all export values are constants.
+	exportValues map[string]Value
 }
 
 func NewModule(name string, lexer *syntax.Lexer) *Module {
@@ -94,16 +99,6 @@ func (m *Module) PopScope() {
 	m.scopeStack = m.scopeStack[:stackLen-1]
 }
 
-func (m *Module) RegisterValue(name string, value Value) {
-	// find root scope
-	if len(m.scopeStack) == 0 {
-		panic("--empty scopeStack--")
-	}
-
-	rootScope := m.scopeStack[0]
-	rootScope.SetSymbolValue(name, true, value)
-}
-
 // FindScopeValue - find symbol in the context from the latest scope
 // up to its first one
 func (m *Module) FindScopeValue(name string) (Value, error) {
@@ -131,7 +126,7 @@ func (m *Module) SetScopeValue(name string, value Value) error {
 			if sym.isConst {
 				return zerr.AssignToConstant()
 			}
-			sp.SetSymbolValue(name, false, value)
+			sp.SetSymbolValue(name, value, false)
 			return nil
 		}
 	}
@@ -139,7 +134,7 @@ func (m *Module) SetScopeValue(name string, value Value) error {
 }
 
 // BindValue - bind a non-const value on current scope - however, if the same symbol has bound, then an error occurs.
-func (m *Module) BindSymbol(name string, sym SymbolInfo, rebindCheck bool) error {
+func (m *Module) BindSymbol(name string, value Value, isConst bool, rebindCheck bool) error {
 	if sp := m.GetCurrentScope(); sp != nil {
 		// bind value on current scope
 		if rebindCheck {
@@ -149,7 +144,29 @@ func (m *Module) BindSymbol(name string, sym SymbolInfo, rebindCheck bool) error
 		}
 
 		// set value
-		sp.SetSymbolValue(name, sym.isConst, sym.value)
+		sp.SetSymbolValue(name, value, isConst)
 	}
 	return nil
+}
+
+//// imports & exports
+func (m *Module) AddExportValue(name string, value Value) error {
+	if _, ok := m.exportValues[name]; ok {
+		return zerr.NameRedeclared(name)
+	}
+
+	m.exportValues[name] = value
+	return nil
+}
+
+func (m *Module) GetAllExportValues() map[string]Value {
+	return m.exportValues
+}
+
+func (m *Module) GetExportValue(name string) (Value, error) {
+	if v, ok := m.exportValues[name]; ok {
+		return v, nil
+	}
+
+	return nil, zerr.NameNotDefined(name)
 }
