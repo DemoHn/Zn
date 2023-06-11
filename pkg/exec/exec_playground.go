@@ -15,7 +15,7 @@ type PlaygroundExecutor struct {
 func NewPlaygroundExecutor(code []byte) *PlaygroundExecutor {
 	return &PlaygroundExecutor{
 		source:  code,
-		context: r.NewContext(GlobalValues, r.NewAnonymousModule(nil)),
+		context: r.NewContext(globalValues, r.NewAnonymousModule(nil)),
 	}
 }
 

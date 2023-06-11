@@ -42,6 +42,8 @@ type Module struct {
 	*/
 	scopeStack []*Scope
 
+	// importRefs - after importing symbols from other external modules,
+	// we need to save the relationship between symbol and its original module, so that we could shift to original module's scope
 	importRefs map[string]*Module
 	// exportValues - all classes and functions are exported for external
 	// imports - so here we insert all exportable values to this map after first scan
@@ -197,4 +199,17 @@ func (m *Module) GetExportValue(name string) (Value, error) {
 	}
 
 	return nil, zerr.NameNotDefined(name)
+}
+
+func (m *Module) SetImportRef(symbol string, module *Module) error {
+	if _, ok := m.importRefs[symbol]; ok {
+		return zerr.NameRedeclared(symbol)
+	}
+
+	m.importRefs[symbol] = module
+	return nil
+}
+
+func (m *Module) GetImportRef(symbol string) *Module {
+	return m.importRefs[symbol]
 }

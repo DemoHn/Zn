@@ -80,7 +80,7 @@ func (fl *FileExecutor) initRootModule() error {
 
 	// #3. create module & init context
 	lexer := syntax.NewLexer(source)
-	fl.context = r.NewContext(GlobalValues, r.NewModule(fl.rootModule, lexer))
+	fl.context = r.NewContext(globalValues, r.NewModule(fl.rootModule, lexer))
 	// set source code finder
 	fl.context.SetModuleCodeFinder(fl.buildModuleCodeFinder())
 
