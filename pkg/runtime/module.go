@@ -46,7 +46,8 @@ func NewModule(name string, lexer *syntax.Lexer) *Module {
 		lexer:       lexer,
 		currentLine: 0,
 		// init root scope to ensure scopeStack NOT empty
-		scopeStack: []*Scope{NewScope()},
+		scopeStack:   []*Scope{NewScope()},
+		exportValues: map[string]Value{},
 	}
 }
 

@@ -198,14 +198,14 @@ func fmtErrorSourceTextLine(l *syntax.Lexer, cursorIdx int, withCursorMark bool)
 
 // fmtErrorMessageLine - format error message line
 // NOTE: if code == 0, "[code]" is not shown
-// [<code>] <errName>：<errMessage>
-// e.g.: [2021] 语法错误：此行现行缩进类型为「TAB」，与前设缩进类型「空格」不符！
+// <errName>[<code>]：<errMessage>
+// e.g.: 语法错误[20]：此行现行缩进类型为「TAB」，与前设缩进类型「空格」不符！
 func fmtErrorMessageLine(code int, errName string, errMessage string) string {
 	fmtCode := ""
 	if code != 0 {
 		fmtCode = fmt.Sprintf("[%d]", code)
 	}
-	return fmt.Sprintf("%s%s：%s", errName, fmtCode, errMessage)
+	return fmt.Sprintf("%s%s：%s\n", errName, fmtCode, errMessage)
 }
 
 func calcCursorOffset(text string, col int) int {
