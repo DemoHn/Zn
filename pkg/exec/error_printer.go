@@ -20,16 +20,16 @@ type ExtraInfo struct {
 
 // SyntaxErrorWrapper - wrap IO errors with file info (current lexer etc.)
 type SyntaxErrorWrapper struct {
-	lexer      *syntax.Lexer
-	moduleName string
-	err        error
+	lexer  *syntax.Lexer
+	module *r.Module
+	err    error
 }
 
-func WrapSyntaxError(lexer *syntax.Lexer, moduleName string, err error) *SyntaxErrorWrapper {
+func WrapSyntaxError(lexer *syntax.Lexer, module *r.Module, err error) *SyntaxErrorWrapper {
 	return &SyntaxErrorWrapper{
-		lexer:      lexer,
-		moduleName: moduleName,
-		err:        err,
+		lexer:  lexer,
+		module: module,
+		err:    err,
 	}
 }
 
@@ -43,7 +43,7 @@ func (sw *SyntaxErrorWrapper) Error() string {
 			code = serr.Code
 			lineIdx := sw.lexer.FindLineIdx(serr.Cursor, 0)
 			// add line 1
-			errLines = append(errLines, fmtErrorLocationHeadLine(sw.moduleName, lineIdx+1))
+			errLines = append(errLines, fmtErrorLocationHeadLine(sw.module, lineIdx+1))
 			// add line 2
 			errLines = append(errLines, fmtErrorSourceTextLine(sw.lexer, serr.Cursor, true))
 		}
@@ -83,7 +83,7 @@ func (rw *RuntimeErrorWrapper) Error() string {
 	if len(rw.traceback) > 0 {
 		// append head lines
 		headTrace := rw.traceback[0]
-		errLines = append(errLines, fmtErrorLocationHeadLine(headTrace.Module.GetName(), headTrace.LastLineIdx+1))
+		errLines = append(errLines, fmtErrorLocationHeadLine(headTrace.Module, headTrace.LastLineIdx+1))
 		// get line text
 		l := headTrace.GetLexer()
 		if lineInfo := l.GetLineInfo(headTrace.LastLineIdx); lineInfo != nil {
@@ -141,8 +141,11 @@ func DisplayError(err error) string {
 
 // fmtErrorLocationHeadLine -
 // e.g. 在「example」模块中，位于第 12 行发生异常：
-func fmtErrorLocationHeadLine(moduleName string, lineNum int) string {
-	return fmt.Sprintf("在「%s」模块中，位于第 %d 行发生异常：", moduleName, lineNum)
+func fmtErrorLocationHeadLine(module *r.Module, lineNum int) string {
+	if module.IsAnonymous() {
+		return fmt.Sprintf("在主模块中，位于第 %d 行发生异常：", lineNum)
+	}
+	return fmt.Sprintf("在「%s」模块中，位于第 %d 行发生异常：", module.GetName(), lineNum)
 }
 
 // fmtErrorLocationBodyLine -

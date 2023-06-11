@@ -27,12 +27,12 @@ type CallInfo struct {
 
 // NewContext - create new Zn Context. Notice through the life-cycle
 // of one code execution, there's only one running context to store all states.
-func NewContext(rootDir string, globalsMap map[string]Value) *Context {
+func NewContext(globalsMap map[string]Value, initModule *Module) *Context {
 	return &Context{
 		globals:       globalsMap,
 		hasPrinted:    false,
-		moduleGraph:   NewModuleGraph(rootDir),
-		currentModule: nil,
+		moduleGraph:   NewModuleGraph(),
+		currentModule: initModule,
 		callStack:     []CallInfo{},
 	}
 }
@@ -103,10 +103,6 @@ func (ctx *Context) ExitModule() {
 
 		ctx.currentModule = last.Module
 	}
-}
-
-func (ctx *Context) GetModulePath(moduleName string) (string, error) {
-	return ctx.moduleGraph.GetModulePath(moduleName)
 }
 
 func (ctx *Context) FindModule(name string) *Module {

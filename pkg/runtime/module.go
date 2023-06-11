@@ -6,8 +6,11 @@ import (
 )
 
 type Module struct {
-	// name - module name
-	name        string
+	// name - module name (when anonymous = false, it should be non-empty)
+	name string
+	// anonymous - when anonymous = true, the module has no name
+	// but one context only allow ONE anonymous module
+	anonymous   bool
 	lexer       *syntax.Lexer
 	currentLine int
 	/* scopeStack - the call stack of execution scope
@@ -43,6 +46,19 @@ type Module struct {
 func NewModule(name string, lexer *syntax.Lexer) *Module {
 	return &Module{
 		name:        name,
+		anonymous:   false,
+		lexer:       lexer,
+		currentLine: 0,
+		// init root scope to ensure scopeStack NOT empty
+		scopeStack:   []*Scope{NewScope()},
+		exportValues: map[string]Value{},
+	}
+}
+
+func NewAnonymousModule(lexer *syntax.Lexer) *Module {
+	return &Module{
+		name:        "",
+		anonymous:   true,
 		lexer:       lexer,
 		currentLine: 0,
 		// init root scope to ensure scopeStack NOT empty
@@ -66,6 +82,10 @@ func (m *Module) GetName() string {
 
 func (m *Module) GetLexer() *syntax.Lexer {
 	return m.lexer
+}
+
+func (m *Module) IsAnonymous() bool {
+	return m.anonymous
 }
 
 //// scopeStack operation
