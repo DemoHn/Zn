@@ -254,6 +254,7 @@ func evalWhileLoopStmt(c *r.Context, node *syntax.WhileLoopStmt) error {
 
 // evalPreStmtBlock - execute classRef, functionDeclare, imports first, then other statements inside the block
 func evalPreStmtBlock(c *r.Context, block *syntax.BlockStmt) (*syntax.BlockStmt, error) {
+	// current module MUST exists
 	module := c.GetCurrentModule()
 	otherStmts := &syntax.BlockStmt{
 		Children: []syntax.Statement{},
@@ -271,11 +272,9 @@ func evalPreStmtBlock(c *r.Context, block *syntax.BlockStmt) (*syntax.BlockStmt,
 				return nil, err
 			}
 
-			// add symbol to module
-			if module != nil {
-				if err := module.AddExportValue(vtag, fn); err != nil {
-					return nil, err
-				}
+			// export symbol to module
+			if err := module.AddExportValue(vtag, fn); err != nil {
+				return nil, err
 			}
 		case *syntax.ClassDeclareStmt:
 			// bind classRef
@@ -285,23 +284,22 @@ func evalPreStmtBlock(c *r.Context, block *syntax.BlockStmt) (*syntax.BlockStmt,
 				return nil, err
 			}
 
-			// add symbol to module
-			if module != nil {
-				if err := module.AddExportValue(className, classRef); err != nil {
-					return nil, err
-				}
+			// export symbol to module
+			if err := module.AddExportValue(className, classRef); err != nil {
+				return nil, err
 			}
 		case *syntax.ImportStmt:
 			libName := v.ImportName.GetLiteral()
 
 			var extModule *r.Module
-			if v.ImportLibType == syntax.LibTypeStd {
+			switch v.ImportLibType {
+			case syntax.LibTypeStd:
 				var err error
 				extModule, err = stdlib.FindModule(libName)
 				if err != nil {
 					return nil, err
 				}
-			} else if v.ImportLibType == syntax.LibTypeCustom {
+			case syntax.LibTypeCustom:
 				// execute custom module first (in order to get all importable elements)
 				extModule = c.FindModule(libName)
 				/*
@@ -318,7 +316,7 @@ func evalPreStmtBlock(c *r.Context, block *syntax.BlockStmt) (*syntax.BlockStmt,
 				*/
 			}
 
-			if extModule != nil && module != nil {
+			if extModule != nil {
 				// import all symbols
 				if len(v.ImportItems) == 0 {
 					for name, val := range extModule.GetAllExportValues() {

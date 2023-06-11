@@ -15,6 +15,7 @@ type Context struct {
 	// modulegraph - store module dependency & all preloaded modules
 	moduleGraph *ModuleGraph
 
+	// current execution module. Must be NON-EMPTY at initialization
 	currentModule *Module
 	// callStack - get current call module & line for traceback
 	callStack []CallInfo
@@ -27,11 +28,16 @@ type CallInfo struct {
 
 // NewContext - create new Zn Context. Notice through the life-cycle
 // of one code execution, there's only one running context to store all states.
+// NOTE: initModule DO NOT accept nil value at initialization!!
 func NewContext(globalsMap map[string]Value, initModule *Module) *Context {
+	// init module dep graph
+	graph := NewModuleGraph()
+	graph.AddModule(initModule)
+
 	return &Context{
 		globals:       globalsMap,
 		hasPrinted:    false,
-		moduleGraph:   NewModuleGraph(),
+		moduleGraph:   graph,
 		currentModule: initModule,
 		callStack:     []CallInfo{},
 	}
@@ -127,10 +133,7 @@ func (ctx *Context) FindSymbol(name string) (Value, error) {
 		return symVal, nil
 	}
 
-	if ctx.currentModule != nil {
-		return ctx.currentModule.FindScopeValue(name)
-	}
-	return nil, zerr.UnexpectedNilModule()
+	return ctx.currentModule.FindScopeValue(name)
 }
 
 // SetSymbol -
@@ -139,10 +142,7 @@ func (ctx *Context) SetSymbol(name string, value Value) error {
 		return zerr.NameRedeclared(name)
 	}
 	// ...then in symbols
-	if ctx.currentModule != nil {
-		return ctx.currentModule.SetScopeValue(name, value)
-	}
-	return zerr.UnexpectedNilModule()
+	return ctx.currentModule.SetScopeValue(name, value)
 }
 
 // BindSymbol - bind non-const value with re-declaration check on same scope
@@ -150,10 +150,8 @@ func (ctx *Context) BindSymbol(name string, value Value) error {
 	if _, inGlobals := ctx.globals[name]; inGlobals {
 		return zerr.NameRedeclared(name)
 	}
-	if ctx.currentModule != nil {
-		return ctx.currentModule.BindSymbol(name, value, false, true)
-	}
-	return zerr.UnexpectedNilModule()
+
+	return ctx.currentModule.BindSymbol(name, value, false, true)
 }
 
 // BindSymbolDecl - bind value for declaration statement - that variables could be re-bind.
@@ -161,10 +159,8 @@ func (ctx *Context) BindSymbolDecl(name string, value Value, isConst bool) error
 	if _, inGlobals := ctx.globals[name]; inGlobals {
 		return zerr.NameRedeclared(name)
 	}
-	if ctx.currentModule != nil {
-		return ctx.currentModule.BindSymbol(name, value, isConst, false)
-	}
-	return zerr.UnexpectedNilModule()
+
+	return ctx.currentModule.BindSymbol(name, value, isConst, false)
 }
 
 // BindScopeSymbolDecl - bind value for declaration statement - that variables could be re-bind.
@@ -180,18 +176,14 @@ func (ctx *Context) BindScopeSymbolDecl(scope *Scope, name string, value Value) 
 
 // FindThisValue -
 func (ctx *Context) FindThisValue() (Value, error) {
-	if ctx.currentModule != nil {
-		m := ctx.currentModule
-		for cursor := len(m.scopeStack) - 1; cursor >= 0; cursor-- {
-			sp := m.scopeStack[cursor]
-			if sp.thisValue != nil {
-				return sp.thisValue, nil
-			}
+	m := ctx.currentModule
+	for cursor := len(m.scopeStack) - 1; cursor >= 0; cursor-- {
+		sp := m.scopeStack[cursor]
+		if sp.thisValue != nil {
+			return sp.thisValue, nil
 		}
-
-		return nil, zerr.PropertyNotFound("thisValue")
 	}
-	return nil, zerr.UnexpectedNilModule()
+	return nil, zerr.PropertyNotFound("thisValue")
 }
 
 // MarkHasPrinted - called by `显示` function only

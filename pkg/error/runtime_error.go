@@ -28,13 +28,15 @@ const (
 	ErrMismatchParamLengthError = 41
 	ErrMostParamsError          = 42
 	ErrExactParamsError         = 43
-	ErrModuleNotFound           = 50
+	// module error
+	ErrModuleNotFound      = 50
+	ErrMoreAnonymousModule = 51
+	ErrModuleHasDefined    = 52
 	// internal error
 	ErrUnexpectedCase           = 60
 	ErrUnexpectedEmptyExecLogic = 61
 	ErrUnexpectedAssign         = 62
 	ErrUnexpectedParamWildcard  = 63
-	ErrUnexpectedNilModule      = 64
 	// type error
 	ErrInvalidExprType            = 70
 	ErrInvalidFuncVariable        = 71
@@ -177,6 +179,24 @@ func ModuleNotFound(name string) *RuntimeError {
 	}
 }
 
+// MoreAnonymousModule -
+func MoreAnonymousModule() *RuntimeError {
+	return &RuntimeError{
+		Code:    ErrMoreAnonymousModule,
+		Message: "重复添加匿名模块",
+		Extra:   nil,
+	}
+}
+
+// ModuleHasDefined -
+func ModuleHasDefined(name string) *RuntimeError {
+	return &RuntimeError{
+		Code:    ErrModuleHasDefined,
+		Message: fmt.Sprintf("重复添加「%s」模块", name),
+		Extra:   name,
+	}
+}
+
 // Internal Error Class, for Zn Internal exception (rare to happen)
 // e.g. Unexpected switch-case
 
@@ -209,14 +229,6 @@ func UnexpectedParamWildcard() *RuntimeError {
 	return &RuntimeError{
 		Code:    ErrUnexpectedParamWildcard,
 		Message: "无效的参数通配符",
-		Extra:   nil,
-	}
-}
-
-func UnexpectedNilModule() *RuntimeError {
-	return &RuntimeError{
-		Code:    ErrUnexpectedNilModule,
-		Message: "当前运行时没有指定的执行模块",
 		Extra:   nil,
 	}
 }

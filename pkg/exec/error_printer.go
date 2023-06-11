@@ -145,13 +145,13 @@ func fmtErrorLocationHeadLine(module *r.Module, lineNum int) string {
 	if module.IsAnonymous() {
 		return fmt.Sprintf("在主模块中，位于第 %d 行发生异常：", lineNum)
 	}
-	return fmt.Sprintf("在「%s」模块中，位于第 %d 行发生异常：", module.GetName(), lineNum)
+	return fmt.Sprintf("在“%s”模块中，位于第 %d 行发生异常：", module.GetName(), lineNum)
 }
 
 // fmtErrorLocationBodyLine -
 // e.g. 来自「example2」模块，第 12 行：
 func fmtErrorLocationBodyLine(moduleName string, lineNum int) string {
-	return fmt.Sprintf("来自「%s」模块，第 %d 行：", moduleName, lineNum)
+	return fmt.Sprintf("来自“%s”模块，第 %d 行：", moduleName, lineNum)
 }
 
 // fmtErrorSourceTextLine -
