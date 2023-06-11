@@ -34,6 +34,7 @@ const (
 	ErrUnexpectedEmptyExecLogic = 61
 	ErrUnexpectedAssign         = 62
 	ErrUnexpectedParamWildcard  = 63
+	ErrUnexpectedNilModule      = 64
 	// type error
 	ErrInvalidExprType            = 70
 	ErrInvalidFuncVariable        = 71
@@ -208,6 +209,14 @@ func UnexpectedParamWildcard() *RuntimeError {
 	return &RuntimeError{
 		Code:    ErrUnexpectedParamWildcard,
 		Message: "无效的参数通配符",
+		Extra:   nil,
+	}
+}
+
+func UnexpectedNilModule() *RuntimeError {
+	return &RuntimeError{
+		Code:    ErrUnexpectedNilModule,
+		Message: "当前运行时没有指定的执行模块",
 		Extra:   nil,
 	}
 }

@@ -1,7 +1,5 @@
 package runtime
 
-import "github.com/DemoHn/Zn/pkg/syntax"
-
 // Scope represents a local namespace (aka. environment) of current execution
 // including local variables map and current "return" value.
 // NOTE: Scope is a doubly linked list
@@ -34,14 +32,6 @@ func NewScope() *Scope {
 	}
 }
 
-func (sp *Scope) FindParentScope() *Scope {
-	return sp.parent
-}
-
-func (sp *Scope) GetModule() *ModuleOLD {
-	return sp.module
-}
-
 // GetThisValue -
 func (sp *Scope) GetThisValue() Value {
 	return sp.thisValue
@@ -62,14 +52,23 @@ func (sp *Scope) SetReturnValue(v Value) {
 	sp.returnValue = v
 }
 
-func (sp *Scope) SetExecLineIdx(line int) {
-	sp.execCursor.CurrentLine = line
+func (sp *Scope) SetSymbolValue(name string, isConst bool, v Value) {
+	sp.symbolMap[name] = SymbolInfo{
+		isConst: isConst,
+		value:   v,
+	}
 }
 
-func (sp *Scope) SetLexer(l *syntax.Lexer) {
-	sp.execCursor.Lexer = l
+func (sp *Scope) GetSymbolValue(name string) (bool, Value) {
+	if info, ok := sp.symbolMap[name]; ok {
+		return true, info.value
+	}
+	return false, nil
 }
 
-func (sp *Scope) GetExecCursor() ExecCursor {
-	return sp.execCursor
+func (sp *Scope) GetSymbol(name string) (bool, SymbolInfo) {
+	if info, ok := sp.symbolMap[name]; ok {
+		return true, info
+	}
+	return false, SymbolInfo{}
 }

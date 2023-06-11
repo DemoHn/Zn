@@ -13,7 +13,7 @@ import (
 )
 
 var jsonModuleName = "JSON"
-var jsonModule = r.NewModuleOLD(jsonModuleName)
+var jsonModule = r.NewModule(jsonModuleName, nil)
 
 // parseJsonFunc - 解析JSON
 func parseJsonFunc(c *r.Context, values []r.Value) (r.Value, error) {

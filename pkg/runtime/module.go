@@ -1,6 +1,7 @@
 package runtime
 
 import (
+	zerr "github.com/DemoHn/Zn/pkg/error"
 	"github.com/DemoHn/Zn/pkg/syntax"
 )
 
@@ -44,6 +45,14 @@ func NewModule(name string, lexer *syntax.Lexer) *Module {
 	}
 }
 
+func (m *Module) SetExecLineIdx(line int) {
+	m.currentLine = line
+}
+
+func (m *Module) SetLexer(l *syntax.Lexer) {
+	m.lexer = l
+}
+
 //// scopeStack operation
 ////
 func (m *Module) GetCurrentScope() *Scope {
@@ -76,9 +85,69 @@ func (m *Module) PopScope() {
 	m.scopeStack = m.scopeStack[:stackLen-1]
 }
 
+func (m *Module) RegisterValue(name string, value Value) {
+	// find root scope
+	if len(m.scopeStack) == 0 {
+		panic("--empty scopeStack--")
+	}
+
+	rootScope := m.scopeStack[0]
+	rootScope.SetSymbolValue(name, true, value)
+}
+
 // SetCurrentLine - set lineIdx to current running scope of the module
 func (m *Module) SetCurrentLine(line int) {
 	if sp := m.GetCurrentScope(); sp != nil {
 		sp.SetExecLineIdx(line)
 	}
+}
+
+// FindScopeValue - find symbol in the context from the latest scope
+// up to its first one
+func (m *Module) FindScopeValue(name string) (Value, error) {
+	// iterate from last to very first
+	for cursor := len(m.scopeStack) - 1; cursor >= 0; cursor-- {
+		sp := m.scopeStack[cursor]
+		if ok, val := sp.GetSymbolValue(name); ok {
+			return val, nil
+		}
+	}
+
+	return nil, zerr.NameNotDefined(name)
+}
+
+// SetScopeValue - set value of an existing symbol (whatever in current scope or root scope la..)
+// there, the process includes 3 steps:
+// 1. find the symbol in scope stack
+// 2. set new value of the symbol
+// 3. if no symbol found, throw error directly
+func (m *Module) SetScopeValue(name string, value Value) error {
+	// iterate from last to very first
+	for cursor := len(m.scopeStack) - 1; cursor >= 0; cursor-- {
+		sp := m.scopeStack[cursor]
+		if ok, sym := sp.GetSymbol(name); ok {
+			if sym.isConst {
+				return zerr.AssignToConstant()
+			}
+			sp.SetSymbolValue(name, false, value)
+			return nil
+		}
+	}
+	return zerr.NameNotDefined(name)
+}
+
+// BindValue - bind a non-const value on current scope - however, if the same symbol has bound, then an error occurs.
+func (m *Module) BindSymbol(name string, sym SymbolInfo, rebindCheck bool) error {
+	if sp := m.GetCurrentScope(); sp != nil {
+		// bind value on current scope
+		if rebindCheck {
+			if ok, _ := sp.GetSymbol(name); ok {
+				return zerr.NameRedeclared(name)
+			}
+		}
+
+		// set value
+		sp.SetSymbolValue(name, sym.isConst, sym.value)
+	}
+	return nil
 }
