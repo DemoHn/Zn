@@ -81,6 +81,9 @@ func (fl *FileExecutor) initRootModule() error {
 	// #3. create module & init context
 	lexer := syntax.NewLexer(source)
 	fl.context = r.NewContext(GlobalValues, r.NewModule(fl.rootModule, lexer))
+	// set source code finder
+	fl.context.SetModuleCodeFinder(fl.buildModuleCodeFinder())
+
 	return nil
 }
 
@@ -96,4 +99,23 @@ func (fl *FileExecutor) getModulePath(name string) (string, error) {
 	}
 
 	return path, nil
+}
+
+//// define moduleCodeFinder for finding other modules
+func (fl *FileExecutor) buildModuleCodeFinder() r.ModuleCodeFinder {
+	return func(s string) ([]rune, error) {
+		// #1. find filepath of current module
+		moduleFile, err := fl.getModulePath(s)
+		if err != nil {
+			return []rune{}, err
+		}
+
+		// #2. read source code from file
+		in, err := io.NewFileStream(moduleFile)
+		if err != nil {
+			return []rune{}, err
+		}
+
+		return in.ReadAll()
+	}
 }

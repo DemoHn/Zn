@@ -29,9 +29,7 @@ const (
 	ErrMostParamsError          = 42
 	ErrExactParamsError         = 43
 	// module error
-	ErrModuleNotFound      = 50
-	ErrMoreAnonymousModule = 51
-	ErrModuleHasDefined    = 52
+	ErrModuleNotFound = 50
 	// internal error
 	ErrUnexpectedCase           = 60
 	ErrUnexpectedEmptyExecLogic = 61
@@ -175,24 +173,6 @@ func ModuleNotFound(name string) *RuntimeError {
 	return &RuntimeError{
 		Code:    ErrModuleNotFound,
 		Message: fmt.Sprintf("未找到「%s」模块", name),
-		Extra:   name,
-	}
-}
-
-// MoreAnonymousModule -
-func MoreAnonymousModule() *RuntimeError {
-	return &RuntimeError{
-		Code:    ErrMoreAnonymousModule,
-		Message: "重复添加匿名模块",
-		Extra:   nil,
-	}
-}
-
-// ModuleHasDefined -
-func ModuleHasDefined(name string) *RuntimeError {
-	return &RuntimeError{
-		Code:    ErrModuleHasDefined,
-		Message: fmt.Sprintf("重复添加「%s」模块", name),
 		Extra:   name,
 	}
 }

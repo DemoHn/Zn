@@ -10,8 +10,13 @@ type Module struct {
 	name string
 	// anonymous - when anonymous = true, the module has no name
 	// but one context only allow ONE anonymous module
-	anonymous   bool
-	lexer       *syntax.Lexer
+	anonymous bool
+
+	// lexer - the lexer of module's source code for mapping objects to source code.
+	// if the module is a standard library, lexer = nil
+	lexer *syntax.Lexer
+
+	// currentLine - current execution lineNum (index)
 	currentLine int
 	/* scopeStack - the call stack of execution scope
 	   the stack looks like the following diagram:
@@ -37,6 +42,7 @@ type Module struct {
 	*/
 	scopeStack []*Scope
 
+	importRefs map[string]*Module
 	// exportValues - all classes and functions are exported for external
 	// imports - so here we insert all exportable values to this map after first scan
 	// note: all export values are constants.
@@ -51,6 +57,7 @@ func NewModule(name string, lexer *syntax.Lexer) *Module {
 		currentLine: 0,
 		// init root scope to ensure scopeStack NOT empty
 		scopeStack:   []*Scope{NewScope()},
+		importRefs:   map[string]*Module{},
 		exportValues: map[string]Value{},
 	}
 }

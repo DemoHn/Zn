@@ -8,6 +8,7 @@ import (
 	zerr "github.com/DemoHn/Zn/pkg/error"
 	r "github.com/DemoHn/Zn/pkg/runtime"
 	"github.com/DemoHn/Zn/pkg/syntax"
+	"github.com/DemoHn/Zn/pkg/syntax/zh"
 	"github.com/DemoHn/Zn/pkg/value"
 )
 
@@ -301,19 +302,13 @@ func evalPreStmtBlock(c *r.Context, block *syntax.BlockStmt) (*syntax.BlockStmt,
 				}
 			case syntax.LibTypeCustom:
 				// execute custom module first (in order to get all importable elements)
-				extModule = c.FindModule(libName)
-				/*
-					if extModule == nil {
-						// not found in cache
-
-							if _, err := ExecuteModule(c, libName); err != nil {
-								return nil, err
-							}
-
+				if extModule = c.FindModuleCache(libName); extModule == nil {
+					newModule, err := execAnotherModule(c, libName)
+					if err != nil {
+						return nil, err
 					}
-					// digest module cache to import all valid elements to THIS MODULE's import symbol Map
-					extModule = c.FindModule(libName)
-				*/
+					extModule = newModule
+				}
 			}
 
 			if extModule != nil {
@@ -342,6 +337,38 @@ func evalPreStmtBlock(c *r.Context, block *syntax.BlockStmt) (*syntax.BlockStmt,
 		}
 	}
 	return otherStmts, nil
+}
+
+// execAnotherModule - load source code of the module, parse the coe, execute the program, and build depCache!
+func execAnotherModule(c *r.Context, name string) (*r.Module, error) {
+	if finder := c.GetModuleCodeFinder(); finder != nil {
+		source, err := finder(name)
+		if err != nil {
+			return nil, zerr.ModuleNotFound(name)
+		}
+		// #1.  create & enter module
+		lexer := syntax.NewLexer(source)
+		module := r.NewModule(name, lexer)
+		c.EnterModule(module)
+		defer c.ExitModule()
+
+		// #2. parse program
+		p := syntax.NewParser(lexer, zh.NewParserZH())
+
+		program, err := p.Parse()
+		if err != nil {
+			return nil, WrapSyntaxError(lexer, module, err)
+		}
+
+		// #3. eval program
+		if err := evalProgram(c, program); err != nil {
+			return nil, WrapRuntimeError(c, err)
+		}
+
+		return module, nil
+	}
+	// no finder defined, return nil directly (no throw error)
+	return nil, nil
 }
 
 // EvalStmtBlock -

@@ -15,10 +15,13 @@ type Context struct {
 	// modulegraph - store module dependency & all preloaded modules
 	moduleGraph *ModuleGraph
 
-	// current execution module. Must be NON-EMPTY at initialization
-	currentModule *Module
+	// moduleCodeFinder - given a module name, the finder function aims to find it's corresponding source code for further execution - whatever from filesystem, DB, network, etc.
+	// by default, the value is nil, that means the finder could not found any module code at all!
+	moduleCodeFinder ModuleCodeFinder
 	// callStack - get current call module & line for traceback
 	callStack []CallInfo
+	// current execution moduleStack. The last one represents for current execution module. Must be NON-EMPTY at initialization
+	moduleStack []*Module
 }
 
 type CallInfo struct {
@@ -26,36 +29,87 @@ type CallInfo struct {
 	LastLineIdx int
 }
 
+/* ModuleCodeFinder - input module name, output its source code or return error. The example finder shows how to find source code from module name, where each module corresponds to a "<moduleName>.zn" text file on disk.
+
+```go
+func finder (name string) ([]rune, error) {
+	path := fmt.Sprintf("./%s.zn", name)
+	if _, err := os.Stat(path); errors.Is(err, os.ErrNotExist) {
+		return "", fmt.Errorf("source code of module '%s' not found", name)
+	}
+
+	in, err := io.NewFileStream(path)
+	if err != nil {
+		return err
+	}
+
+	return in.ReadAll()
+}
+```
+*/
+type ModuleCodeFinder func(string) ([]rune, error)
+
 // NewContext - create new Zn Context. Notice through the life-cycle
 // of one code execution, there's only one running context to store all states.
 // NOTE: initModule DO NOT accept nil value at initialization!!
 func NewContext(globalsMap map[string]Value, initModule *Module) *Context {
 	// init module dep graph
 	graph := NewModuleGraph()
-	graph.AddModule(initModule)
+	graph.AddRequireCache(initModule)
 
 	return &Context{
-		globals:       globalsMap,
-		hasPrinted:    false,
-		moduleGraph:   graph,
-		currentModule: initModule,
-		callStack:     []CallInfo{},
+		globals:          globalsMap,
+		hasPrinted:       false,
+		moduleGraph:      graph,
+		moduleCodeFinder: nil,
+		callStack:        []CallInfo{},
+		moduleStack:      []*Module{initModule},
 	}
 }
 
-func (ctx *Context) GetCurrentScope() *Scope {
-	if ctx.currentModule != nil {
-		return ctx.currentModule.GetCurrentScope()
+//// getters
+
+func (ctx *Context) GetCurrentModule() *Module {
+	sLen := len(ctx.moduleStack)
+	if sLen > 0 {
+		return ctx.moduleStack[sLen-1]
 	}
 	return nil
 }
 
+func (ctx *Context) GetCallStack() []CallInfo {
+	return ctx.callStack
+}
+
+func (ctx *Context) GetCurrentScope() *Scope {
+	module := ctx.GetCurrentModule()
+	if module != nil {
+		return module.GetCurrentScope()
+	}
+	return nil
+}
+
+func (ctx *Context) GetHasPrinted() bool {
+	return ctx.hasPrinted
+}
+
+func (ctx *Context) GetModuleCodeFinder() ModuleCodeFinder {
+	return ctx.moduleCodeFinder
+}
+
+//// setters
+func (ctx *Context) SetModuleCodeFinder(finder ModuleCodeFinder) {
+	ctx.moduleCodeFinder = finder
+}
+
+//// scope operation
 func (ctx *Context) FindParentScope() *Scope {
-	if ctx.currentModule != nil {
-		sLen := len(ctx.currentModule.scopeStack)
+	module := ctx.GetCurrentModule()
+	if module != nil {
+		sLen := len(module.scopeStack)
 
 		if sLen > 1 {
-			return ctx.currentModule.scopeStack[sLen-2]
+			return module.scopeStack[sLen-2]
 		}
 	}
 	return nil
@@ -68,59 +122,34 @@ func (ctx *Context) PushScope() *Scope {
 		return nil
 	}
 
-	return ctx.currentModule.PushScope()
+	return ctx.GetCurrentModule().PushScope()
 }
 
 func (ctx *Context) PopScope() {
-	if ctx.currentModule != nil {
-		ctx.currentModule.PopScope()
-	}
+	ctx.GetCurrentModule().PopScope()
 }
 
 // SetCurrentLine - set lineIdx to current running scope
 func (ctx *Context) SetCurrentLine(line int) {
-	if ctx.currentModule != nil {
-		ctx.currentModule.SetCurrentLine(line)
-	}
+	ctx.GetCurrentModule().SetCurrentLine(line)
 }
 
 //// enter & exist modules
 func (ctx *Context) EnterModule(module *Module) {
-	m := ctx.currentModule
-	// push callstack
-	if m != nil {
-		ctx.callStack = append(ctx.callStack, CallInfo{
-			Module:      m,
-			LastLineIdx: m.currentLine,
-		})
-	}
-
-	// set current module
-	ctx.currentModule = module
+	// add require cache
+	ctx.moduleGraph.AddRequireCache(module)
+	ctx.moduleStack = append(ctx.moduleStack, module)
 }
 
 func (ctx *Context) ExitModule() {
-	sLen := len(ctx.callStack)
+	sLen := len(ctx.moduleStack)
 	if sLen > 0 {
-		// get last module in callstack
-		last := ctx.callStack[sLen-1]
-		// pop last one
-		ctx.callStack = ctx.callStack[:sLen-1]
-
-		ctx.currentModule = last.Module
+		ctx.moduleStack = ctx.moduleStack[:sLen-1]
 	}
 }
 
-func (ctx *Context) FindModule(name string) *Module {
-	return ctx.moduleGraph.FindModule(name)
-}
-
-func (ctx *Context) GetCurrentModule() *Module {
-	return ctx.currentModule
-}
-
-func (ctx *Context) GetCallStack() []CallInfo {
-	return ctx.callStack
+func (ctx *Context) FindModuleCache(name string) *Module {
+	return ctx.moduleGraph.FindRequireCache(name)
 }
 
 //// scope symbols getters / setters
@@ -133,7 +162,7 @@ func (ctx *Context) FindSymbol(name string) (Value, error) {
 		return symVal, nil
 	}
 
-	return ctx.currentModule.FindScopeValue(name)
+	return ctx.GetCurrentModule().FindScopeValue(name)
 }
 
 // SetSymbol -
@@ -142,7 +171,7 @@ func (ctx *Context) SetSymbol(name string, value Value) error {
 		return zerr.NameRedeclared(name)
 	}
 	// ...then in symbols
-	return ctx.currentModule.SetScopeValue(name, value)
+	return ctx.GetCurrentModule().SetScopeValue(name, value)
 }
 
 // BindSymbol - bind non-const value with re-declaration check on same scope
@@ -151,7 +180,7 @@ func (ctx *Context) BindSymbol(name string, value Value) error {
 		return zerr.NameRedeclared(name)
 	}
 
-	return ctx.currentModule.BindSymbol(name, value, false, true)
+	return ctx.GetCurrentModule().BindSymbol(name, value, false, true)
 }
 
 // BindSymbolDecl - bind value for declaration statement - that variables could be re-bind.
@@ -160,7 +189,7 @@ func (ctx *Context) BindSymbolDecl(name string, value Value, isConst bool) error
 		return zerr.NameRedeclared(name)
 	}
 
-	return ctx.currentModule.BindSymbol(name, value, isConst, false)
+	return ctx.GetCurrentModule().BindSymbol(name, value, isConst, false)
 }
 
 // BindScopeSymbolDecl - bind value for declaration statement - that variables could be re-bind.
@@ -176,7 +205,7 @@ func (ctx *Context) BindScopeSymbolDecl(scope *Scope, name string, value Value) 
 
 // FindThisValue -
 func (ctx *Context) FindThisValue() (Value, error) {
-	m := ctx.currentModule
+	m := ctx.GetCurrentModule()
 	for cursor := len(m.scopeStack) - 1; cursor >= 0; cursor-- {
 		sp := m.scopeStack[cursor]
 		if sp.thisValue != nil {
@@ -189,8 +218,4 @@ func (ctx *Context) FindThisValue() (Value, error) {
 // MarkHasPrinted - called by `显示` function only
 func (ctx *Context) MarkHasPrinted() {
 	ctx.hasPrinted = true
-}
-
-func (ctx *Context) GetHasPrinted() bool {
-	return ctx.hasPrinted
 }

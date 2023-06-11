@@ -1,40 +1,35 @@
 package runtime
 
-import (
-	zerr "github.com/DemoHn/Zn/pkg/error"
-)
-
 type ModuleGraph struct {
-	depGraph  map[string][]string
-	moduleMap map[string]*Module
+	depGraph     map[string][]string
+	requireCache map[string]*Module
 	// There's ONLY one anonymousModule (aka. main module in playground & REPL executor) allowed in one context
 	anonymousModule *Module
 }
 
 func NewModuleGraph() *ModuleGraph {
 	return &ModuleGraph{
-		depGraph:  map[string][]string{},
-		moduleMap: map[string]*Module{},
+		depGraph:     map[string][]string{},
+		requireCache: map[string]*Module{},
 	}
 }
 
-func (g *ModuleGraph) AddModule(module *Module) error {
+func (g *ModuleGraph) AddRequireCache(module *Module) {
+	// requireCaches are exclusive - that is, if one Module object has occupied one requireCache name,other object could not modify/replace the cache.
 	if module.IsAnonymous() {
-		if g.anonymousModule != nil {
-			return zerr.MoreAnonymousModule()
+		if g.anonymousModule == nil {
+			g.anonymousModule = module
 		}
-		g.anonymousModule = module
-		return nil
+	} else {
+		if _, ok := g.requireCache[module.name]; !ok {
+
+			g.requireCache[module.name] = module
+		}
 	}
-	if _, ok := g.moduleMap[module.name]; ok {
-		return zerr.ModuleHasDefined(module.name)
-	}
-	g.moduleMap[module.name] = module
-	return nil
 }
 
-func (g *ModuleGraph) FindModule(name string) *Module {
-	if m, ok := g.moduleMap[name]; ok {
+func (g *ModuleGraph) FindRequireCache(name string) *Module {
+	if m, ok := g.requireCache[name]; ok {
 		return m
 	}
 	return nil
