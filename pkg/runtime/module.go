@@ -119,6 +119,10 @@ func (m *Module) PushScope() *Scope {
 	return m.GetCurrentScope()
 }
 
+func (m *Module) AddScope(scope *Scope) {
+	m.scopeStack = append(m.scopeStack, scope)
+}
+
 func (m *Module) PopScope() {
 	stackLen := len(m.scopeStack)
 	if stackLen == 0 {

@@ -32,14 +32,13 @@ func evalProgram(c *r.Context, program *syntax.Program) error {
 	}
 	errBlock := evalStmtBlock(c, otherStmts)
 	if errBlock != nil {
-		if sig, ok := errBlock.(*zerr.Signal); ok {
-			if sig.SigType == zerr.SigTypeReturn {
-				if extra, ok2 := sig.Extra.(r.Value); ok2 {
-					c.GetCurrentScope().SetReturnValue(extra)
-					return nil
-				}
-			}
+		val, err := extractSignalValue(errBlock, zerr.SigTypeReturn)
+		if err != nil {
+			return err
 		}
+		// set return value
+		c.GetCurrentScope().SetReturnValue(val)
+		return nil
 	}
 	return errBlock
 }
@@ -79,7 +78,7 @@ func evalStatement(c *r.Context, stmt syntax.Statement) error {
 	case *syntax.EmptyStmt:
 		return nil
 	case *syntax.FunctionDeclareStmt:
-		fn := BuildFunctionFromNode(v)
+		fn := compileFunction(v.ParamList, v.ExecBlock)
 		return c.BindSymbol(v.FuncName.GetLiteral(), fn)
 	case *syntax.ClassDeclareStmt:
 		className := v.ClassName.GetLiteral()
@@ -267,13 +266,15 @@ func evalPreStmtBlock(c *r.Context, block *syntax.BlockStmt) (*syntax.BlockStmt,
 
 		switch v := stmtI.(type) {
 		case *syntax.FunctionDeclareStmt:
-			fn := BuildFunctionFromNode(v)
+			fn := compileFunction(v.ParamList, v.ExecBlock)
 			vtag := v.FuncName.GetLiteral()
+
+			// add symbol to current scope first
 			if err := c.BindSymbol(vtag, fn); err != nil {
 				return nil, err
 			}
 
-			// export symbol to module
+			// then add symbol to export value
 			if err := module.AddExportValue(vtag, fn); err != nil {
 				return nil, err
 			}
@@ -281,11 +282,12 @@ func evalPreStmtBlock(c *r.Context, block *syntax.BlockStmt) (*syntax.BlockStmt,
 			// bind classRef
 			className := v.ClassName.GetLiteral()
 			classRef := BuildClassFromNode(className, v)
+			// add symbol to current scope first
 			if err := c.BindSymbol(className, classRef); err != nil {
 				return nil, err
 			}
 
-			// export symbol to module
+			// then add symbol to export value
 			if err := module.AddExportValue(className, classRef); err != nil {
 				return nil, err
 			}
@@ -548,83 +550,7 @@ func evalExpression(c *r.Context, expr syntax.Expression) (r.Value, error) {
 	}
 }
 
-// （显示：A、B、C），得到D
-func evalFunctionCall(c *r.Context, expr *syntax.FuncCallExpr) (r.Value, error) {
-	var zf *value.ClosureRef
-	vtag := expr.FuncName.GetLiteral()
-
-	// for a function call, if thisValue NOT FOUND, that means the target closure is a FUNCTION
-	// instead of a METHOD (which is defined on class definition statement)
-	//
-	// If thisValue != nil, we will attempt to find closure from its method list;
-	// then look up from scope's values.
-	//
-	// If thisValue == nil, we will look up target closure from scope's values directly.
-	thisValue, _ := c.FindThisValue()
-
-	// exec params first
-	params, err := exprsToValues(c, expr.Params)
-	if err != nil {
-		return nil, err
-	}
-
-	// if thisValue exists, find ID from its method list
-	if thisValue != nil {
-		v, err := thisValue.ExecMethod(c, vtag, params)
-		if err == nil {
-			if expr.YieldResult != nil {
-				// add yield result
-				vtag := expr.YieldResult.GetLiteral()
-				// bind yield result
-				if err := c.BindScopeSymbolDecl(c.GetCurrentScope(), vtag, v); err != nil {
-					return nil, err
-				}
-			}
-			// return result
-			return v, nil
-		}
-
-		if errX, ok := err.(*zerr.RuntimeError); ok {
-			if errX.Code != zerr.ErrMethodNotFound {
-				return nil, err
-			}
-		} else {
-			return nil, err
-		}
-	}
-
-	// if function value not found from object scope, look up from local scope
-
-	// find function definition
-	v, err := c.FindSymbol(vtag)
-	if err != nil {
-		return nil, err
-	}
-	// assert value
-	zval, ok := v.(*value.Function)
-	if !ok {
-		return nil, zerr.InvalidFuncVariable(vtag)
-	}
-	zf = zval.GetValue()
-
-	// exec function call via its ClosureRef
-	v2, err := zf.Exec(c, thisValue, params)
-	if err != nil {
-		return nil, err
-	}
-
-	if expr.YieldResult != nil {
-		// add yield result
-		ytag := expr.YieldResult.GetLiteral()
-		// bind yield result
-		if err := c.BindScopeSymbolDecl(c.GetCurrentScope(), ytag, v2); err != nil {
-			return nil, err
-		}
-	}
-
-	// return result
-	return v2, nil
-}
+//// checkout eval_function.go for evalFunctionCall()
 
 // 以 A （执行：B、C、D）
 func evalMemberMethodExpr(c *r.Context, expr *syntax.MemberMethodExpr) (r.Value, error) {
@@ -955,64 +881,17 @@ func exprsToValues(c *r.Context, exprs []syntax.Expression) ([]r.Value, error) {
 	return params, nil
 }
 
-// BuildClosureFromNode - create a closure (with default param handler logic)
-// from Zn code (*syntax.BlockStmt). It's the constructor of 如何XX or (anoymous function in the future)
-func BuildClosureFromNode(paramTags []*syntax.ParamItem, stmtBlock *syntax.BlockStmt) *value.ClosureRef {
-	var executor = func(c *r.Context, params []r.Value) (r.Value, error) {
-		// iterate block round I - function hoisting
-		// NOTE: function hoisting means bind function definitions at the beginning
-		// of execution so that even if "function execution" statement is before
-		// "function definition" statement.
-		for _, stmtI := range stmtBlock.Children {
-			if v, ok := stmtI.(*syntax.FunctionDeclareStmt); ok {
-				fn := BuildFunctionFromNode(v)
-				if err := c.BindSymbol(v.FuncName.GetLiteral(), fn); err != nil {
-					return nil, err
-				}
+// extractSignalValue - signal is a special type of error, so we try to extract signal value from input error if it's really a signal - otherwise output the same error directly.
+func extractSignalValue(err error, sigType uint8) (r.Value, error) {
+	// if recv breaks
+	if sig, ok := err.(*zerr.Signal); ok {
+		if sig.SigType == sigType {
+			if extra, ok2 := sig.Extra.(r.Value); ok2 {
+				return extra, nil
 			}
 		}
-		// iterate block round II - execution of rest code blocks
-		for _, stmtII := range stmtBlock.Children {
-			if _, ok := stmtII.(*syntax.FunctionDeclareStmt); !ok {
-				if err := evalStatement(c, stmtII); err != nil {
-					// if recv breaks
-					if sig, ok := err.(*zerr.Signal); ok {
-						if sig.SigType == zerr.SigTypeReturn {
-							if extra, ok2 := sig.Extra.(r.Value); ok2 {
-								return extra, nil
-							}
-						}
-					}
-					return nil, err
-				}
-			}
-		}
-		return c.GetCurrentScope().GetReturnValue(), nil
 	}
-
-	var paramHandler = func(c *r.Context, params []r.Value) (r.Value, error) {
-		// check param length
-		if len(params) != len(paramTags) {
-			return nil, zerr.MismatchParamLengthError(len(paramTags), len(params))
-		}
-
-		// bind params (as variable) to function scope
-		for idx, paramVal := range params {
-			param := paramTags[idx]
-			// if param is NOT a reference type, then we need additionally
-			// copy its value
-			if !param.RefMark {
-				paramVal = value.DuplicateValue(paramVal)
-			}
-			paramName := param.ID.GetLiteral()
-			if err := c.BindSymbol(paramName, paramVal); err != nil {
-				return nil, err
-			}
-		}
-		return nil, nil
-	}
-
-	return value.NewClosure(paramHandler, executor)
+	return nil, err
 }
 
 // BuildClassFromNode -
@@ -1056,20 +935,14 @@ func BuildClassFromNode(name string, classNode *syntax.ClassDeclareStmt) *value.
 	// add getters
 	for _, gNode := range classNode.GetterList {
 		getterTag := gNode.GetterName.GetLiteral()
-		ref.CompPropList[getterTag] = BuildClosureFromNode([]*syntax.ParamItem{}, gNode.ExecBlock)
+		ref.CompPropList[getterTag] = compileFunction([]*syntax.ParamItem{}, gNode.ExecBlock)
 	}
 
 	// add methods
 	for _, mNode := range classNode.MethodList {
 		mTag := mNode.FuncName.GetLiteral()
-		ref.MethodList[mTag] = BuildClosureFromNode(mNode.ParamList, mNode.ExecBlock)
+		ref.MethodList[mTag] = compileFunction(mNode.ParamList, mNode.ExecBlock)
 	}
 
 	return ref
-}
-
-// BuildFunctionFromNode -
-func BuildFunctionFromNode(node *syntax.FunctionDeclareStmt) *value.Function {
-	closureRef := BuildClosureFromNode(node.ParamList, node.ExecBlock)
-	return value.NewFunctionFromClosure(closureRef)
 }

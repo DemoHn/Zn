@@ -23,7 +23,7 @@ func FindModule(name string) (*r.Module, error) {
 
 // RegisterFunction - add function into module
 func RegisterFunctionForModule(m *r.Module, name string, fn funcExecutor) {
-	m.AddExportValue(name, value.NewFunction(name, fn))
+	m.AddExportValue(name, value.NewFunction(fn))
 }
 
 // RegisterClass - add class info module

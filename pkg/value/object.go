@@ -19,15 +19,15 @@ type ClassRef struct {
 	Name string
 	// Constructor defines default logic (mostly for initialization) when a new instance
 	// is created by "x 成为 C：P，Q，R"
-	Constructor funcExecutor
+	Constructor FuncExecutor
 	// PropList defines all property name of a class, each item COULD NOT BE neither append nor removed
 	PropList []string
 	// CompPropList - CompProp stands for "Computed Property", which means the value is get or set
 	// from a pre-defined function. Computed property offers more extensions for manipulations
 	// of properties.
-	CompPropList map[string]*ClosureRef
+	CompPropList map[string]*Function
 	// MethodList - stores all available methods definition of class
-	MethodList map[string]*ClosureRef
+	MethodList map[string]*Function
 }
 
 // NewObject -
@@ -44,8 +44,8 @@ func NewClassRef(name string) *ClassRef {
 		Name:         name,
 		Constructor:  nil,
 		PropList:     []string{},
-		CompPropList: map[string]*ClosureRef{},
-		MethodList:   map[string]*ClosureRef{},
+		CompPropList: map[string]*Function{},
+		MethodList:   map[string]*Function{},
 	}
 }
 
