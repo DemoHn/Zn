@@ -78,7 +78,7 @@ func evalStatement(c *r.Context, stmt syntax.Statement) error {
 	case *syntax.EmptyStmt:
 		return nil
 	case *syntax.FunctionDeclareStmt:
-		fn := compileFunction(v.ParamList, v.ExecBlock)
+		fn := compileFunction(c, v.ParamList, v.ExecBlock)
 		return c.BindSymbol(v.FuncName.GetLiteral(), fn)
 	case *syntax.ClassDeclareStmt:
 		className := v.ClassName.GetLiteral()
@@ -86,7 +86,7 @@ func evalStatement(c *r.Context, stmt syntax.Statement) error {
 			return zerr.ClassNotOnRoot(className)
 		}
 		// bind classRef
-		classRef := BuildClassFromNode(className, v)
+		classRef := BuildClassFromNode(c, className, v)
 
 		return c.BindSymbol(className, classRef)
 	case *syntax.IterateStmt:
@@ -266,7 +266,7 @@ func evalPreStmtBlock(c *r.Context, block *syntax.BlockStmt) (*syntax.BlockStmt,
 
 		switch v := stmtI.(type) {
 		case *syntax.FunctionDeclareStmt:
-			fn := compileFunction(v.ParamList, v.ExecBlock)
+			fn := compileFunction(c, v.ParamList, v.ExecBlock)
 			vtag := v.FuncName.GetLiteral()
 
 			// add symbol to current scope first
@@ -281,7 +281,7 @@ func evalPreStmtBlock(c *r.Context, block *syntax.BlockStmt) (*syntax.BlockStmt,
 		case *syntax.ClassDeclareStmt:
 			// bind classRef
 			className := v.ClassName.GetLiteral()
-			classRef := BuildClassFromNode(className, v)
+			classRef := BuildClassFromNode(c, className, v)
 			// add symbol to current scope first
 			if err := c.BindSymbol(className, classRef); err != nil {
 				return nil, err
@@ -316,8 +316,8 @@ func evalPreStmtBlock(c *r.Context, block *syntax.BlockStmt) (*syntax.BlockStmt,
 			if extModule != nil {
 				// import all symbols to current module's importRefs
 				if len(v.ImportItems) == 0 {
-					for name := range extModule.GetAllExportValues() {
-						if err := module.SetImportRef(name, extModule); err != nil {
+					for name, val := range extModule.GetAllExportValues() {
+						if err := c.BindSymbol(name, val); err != nil {
 							return nil, err
 						}
 					}
@@ -325,8 +325,8 @@ func evalPreStmtBlock(c *r.Context, block *syntax.BlockStmt) (*syntax.BlockStmt,
 					// import selected symbols
 					for _, id := range v.ImportItems {
 						name := id.GetLiteral()
-						if _, err2 := extModule.GetExportValue(name); err2 == nil {
-							if err := module.SetImportRef(name, extModule); err != nil {
+						if val, err2 := extModule.GetExportValue(name); err2 == nil {
+							if err := c.BindSymbol(name, val); err != nil {
 								return nil, err
 							}
 						}
@@ -895,7 +895,7 @@ func extractSignalValue(err error, sigType uint8) (r.Value, error) {
 }
 
 // BuildClassFromNode -
-func BuildClassFromNode(name string, classNode *syntax.ClassDeclareStmt) *value.ClassRef {
+func BuildClassFromNode(upperCtx *r.Context, name string, classNode *syntax.ClassDeclareStmt) *value.ClassRef {
 	ref := value.NewClassRef(name)
 
 	// define default constructor
@@ -935,13 +935,13 @@ func BuildClassFromNode(name string, classNode *syntax.ClassDeclareStmt) *value.
 	// add getters
 	for _, gNode := range classNode.GetterList {
 		getterTag := gNode.GetterName.GetLiteral()
-		ref.CompPropList[getterTag] = compileFunction([]*syntax.ParamItem{}, gNode.ExecBlock)
+		ref.CompPropList[getterTag] = compileFunction(upperCtx, []*syntax.ParamItem{}, gNode.ExecBlock)
 	}
 
 	// add methods
 	for _, mNode := range classNode.MethodList {
 		mTag := mNode.FuncName.GetLiteral()
-		ref.MethodList[mTag] = compileFunction(mNode.ParamList, mNode.ExecBlock)
+		ref.MethodList[mTag] = compileFunction(upperCtx, mNode.ParamList, mNode.ExecBlock)
 	}
 
 	return ref

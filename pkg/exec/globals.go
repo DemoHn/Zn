@@ -39,6 +39,6 @@ func init() {
 
 	// append executor
 	for name, executor := range funcNameMap {
-		globalValues[name] = value.NewFunction(executor)
+		globalValues[name] = value.NewFunction(nil, executor)
 	}
 }

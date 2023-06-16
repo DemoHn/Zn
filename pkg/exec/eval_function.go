@@ -11,7 +11,7 @@ import (
 
 // compileFunction - create a function (with default param handler logic)
 // from Zn code (*syntax.BlockStmt). It's the constructor of 如何XX or (anoymous function in the future)
-func compileFunction(paramTags []*syntax.ParamItem, stmtBlock *syntax.BlockStmt) *value.Function {
+func compileFunction(upperContext *r.Context, paramTags []*syntax.ParamItem, stmtBlock *syntax.BlockStmt) *value.Function {
 	var executor = func(c *r.Context, params []r.Value) (r.Value, error) {
 		// iterate block round I - function hoisting
 		// NOTE: function hoisting means bind function definitions at the beginning
@@ -19,7 +19,7 @@ func compileFunction(paramTags []*syntax.ParamItem, stmtBlock *syntax.BlockStmt)
 		// "function definition" statement.
 		for _, stmtI := range stmtBlock.Children {
 			if v, ok := stmtI.(*syntax.FunctionDeclareStmt); ok {
-				fn := compileFunction(v.ParamList, v.ExecBlock)
+				fn := compileFunction(c, v.ParamList, v.ExecBlock)
 				if err := c.BindSymbol(v.FuncName.GetLiteral(), fn); err != nil {
 					return nil, err
 				}
@@ -58,7 +58,7 @@ func compileFunction(paramTags []*syntax.ParamItem, stmtBlock *syntax.BlockStmt)
 		return nil, nil
 	}
 
-	fn := value.NewFunction(executor)
+	fn := value.NewFunction(upperContext.GetCurrentScope(), executor)
 	fn.SetParamHandler(paramHandler)
 	return fn
 }

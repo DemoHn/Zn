@@ -17,14 +17,14 @@ type Function struct {
 	exceptionHandler FuncExecutor
 }
 
-func NewFunction(executor FuncExecutor) *Function {
+func NewFunction(closureScope *r.Scope, executor FuncExecutor) *Function {
 	logicHandlers := []FuncExecutor{}
 	if executor != nil {
 		logicHandlers = append(logicHandlers, executor)
 	}
 
 	return &Function{
-		closureScope:     r.NewScope(),
+		closureScope:     closureScope,
 		paramHandler:     nil,
 		logicHandlers:    logicHandlers,
 		exceptionHandler: nil,
@@ -46,11 +46,16 @@ func (fn *Function) AddLogicHandler(handler FuncExecutor) {
 // yields final result
 func (fn *Function) Exec(c *r.Context, thisValue r.Value, params []r.Value) (r.Value, error) {
 	// init scope
-	fnScope := fn.closureScope
 	module := c.GetCurrentModule()
 
 	// add the pre-defined closure scope to current module
-	module.AddScope(fnScope)
+	if fn.closureScope != nil {
+		module.AddScope(fn.closureScope)
+		defer c.PopScope()
+	}
+
+	// create new scope for the function ITSELF
+	fnScope := c.PushScope()
 	defer c.PopScope()
 
 	fnScope.SetThisValue(thisValue)
