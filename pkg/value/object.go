@@ -7,14 +7,14 @@ import (
 
 // Object - 对象型
 type Object struct {
-	propList map[string]r.Value
-	ref      *ClassRef
+	propList map[string]r.Element
+	model    *ClassModel
 }
 
-// ClassRef - aka. Class Definition Reference
+// ClassModel - aka. Class Definition Reference
 // It defines the structure of a class, including compPropList, methodList and propList.
 // All instances created from this class MUST inherits from those configurations.
-type ClassRef struct {
+type ClassModel struct {
 	// Name - class name
 	Name string
 	// Constructor defines default logic (mostly for initialization) when a new instance
@@ -31,16 +31,16 @@ type ClassRef struct {
 }
 
 // NewObject -
-func NewObject(ref *ClassRef) *Object {
+func NewObject(model *ClassModel) *Object {
 	return &Object{
-		propList: map[string]r.Value{},
-		ref:      ref,
+		propList: map[string]r.Element{},
+		model:    model,
 	}
 }
 
 // NewClassRef - create new empty r.ClassRef
-func NewClassRef(name string) *ClassRef {
-	return &ClassRef{
+func NewClassRef(name string) *ClassModel {
+	return &ClassModel{
 		Name:         name,
 		Constructor:  nil,
 		PropList:     []string{},
@@ -50,22 +50,22 @@ func NewClassRef(name string) *ClassRef {
 }
 
 // GetPropList -
-func (zo *Object) GetPropList() map[string]r.Value {
+func (zo *Object) GetPropList() map[string]r.Element {
 	return zo.propList
 }
 
 // SetPropList -
-func (zo *Object) SetPropList(propList map[string]r.Value) {
+func (zo *Object) SetPropList(propList map[string]r.Element) {
 	zo.propList = propList
 }
 
-// GetRef -
-func (zo *Object) GetRef() *ClassRef {
-	return zo.ref
+// GetModel -
+func (zo *Object) GetModel() *ClassModel {
+	return zo.model
 }
 
 // GetProperty -
-func (zo *Object) GetProperty(c *r.Context, name string) (r.Value, error) {
+func (zo *Object) GetProperty(c *r.Context, name string) (r.Element, error) {
 	// internal properties
 	switch name {
 	case "自身":
@@ -76,31 +76,31 @@ func (zo *Object) GetProperty(c *r.Context, name string) (r.Value, error) {
 		return prop, nil
 	}
 	// look up computed properties
-	cprop, ok2 := zo.ref.CompPropList[name]
+	cprop, ok2 := zo.model.CompPropList[name]
 	if !ok2 {
 		return nil, zerr.PropertyNotFound(name)
 	}
 	// execute computed props to get property result
-	return cprop.Exec(c, zo, []r.Value{})
+	return cprop.Exec(c, zo, []r.Element{})
 }
 
 // SetProperty -
-func (zo *Object) SetProperty(c *r.Context, name string, value r.Value) error {
+func (zo *Object) SetProperty(c *r.Context, name string, value r.Element) error {
 	if _, ok := zo.propList[name]; ok {
 		zo.propList[name] = value
 		return nil
 	}
 	// execute computed properties
-	if cprop, ok2 := zo.ref.CompPropList[name]; ok2 {
-		_, err := cprop.Exec(c, zo, []r.Value{})
+	if cprop, ok2 := zo.model.CompPropList[name]; ok2 {
+		_, err := cprop.Exec(c, zo, []r.Element{})
 		return err
 	}
 	return zerr.PropertyNotFound(name)
 }
 
 // ExecMethod -
-func (zo *Object) ExecMethod(c *r.Context, name string, values []r.Value) (r.Value, error) {
-	if method, ok := zo.ref.MethodList[name]; ok {
+func (zo *Object) ExecMethod(c *r.Context, name string, values []r.Element) (r.Element, error) {
+	if method, ok := zo.model.MethodList[name]; ok {
 		return method.Exec(c, zo, values)
 	}
 	return nil, zerr.MethodNotFound(name)
@@ -108,7 +108,7 @@ func (zo *Object) ExecMethod(c *r.Context, name string, values []r.Value) (r.Val
 
 //// NOTE: ClassRef is also a type of Value
 // Construct - yield new instance of this class
-func (cr *ClassRef) Construct(c *r.Context, params []r.Value) (r.Value, error) {
+func (cr *ClassModel) Construct(c *r.Context, params []r.Element) (r.Element, error) {
 	c.PushScope()
 	defer c.PopScope()
 
@@ -120,14 +120,14 @@ func (cr *ClassRef) Construct(c *r.Context, params []r.Value) (r.Value, error) {
 }
 
 // GetProperty - currently there's NO any property inside classRef Value
-func (cr *ClassRef) GetProperty(c *r.Context, name string) (r.Value, error) {
+func (cr *ClassModel) GetProperty(c *r.Context, name string) (r.Element, error) {
 	return nil, zerr.PropertyNotFound(name)
 }
 
-func (cr *ClassRef) SetProperty(c *r.Context, name string, value r.Value) error {
+func (cr *ClassModel) SetProperty(c *r.Context, name string, value r.Element) error {
 	return zerr.PropertyNotFound(name)
 }
 
-func (cr *ClassRef) ExecMethod(c *r.Context, name string, values []r.Value) (r.Value, error) {
+func (cr *ClassModel) ExecMethod(c *r.Context, name string, values []r.Element) (r.Element, error) {
 	return nil, zerr.MethodNotFound(name)
 }

@@ -12,7 +12,7 @@ import (
 // compileFunction - create a function (with default param handler logic)
 // from Zn code (*syntax.BlockStmt). It's the constructor of 如何XX or (anoymous function in the future)
 func compileFunction(upperContext *r.Context, paramTags []*syntax.ParamItem, stmtBlock *syntax.BlockStmt) *value.Function {
-	var executor = func(c *r.Context, params []r.Value) (r.Value, error) {
+	var executor = func(c *r.Context, params []r.Element) (r.Element, error) {
 		// iterate block round I - function hoisting
 		// NOTE: function hoisting means bind function definitions at the beginning
 		// of execution so that even if "function execution" statement is before
@@ -36,7 +36,7 @@ func compileFunction(upperContext *r.Context, paramTags []*syntax.ParamItem, stm
 		return c.GetCurrentScope().GetReturnValue(), nil
 	}
 
-	var paramHandler = func(c *r.Context, params []r.Value) (r.Value, error) {
+	var paramHandler = func(c *r.Context, params []r.Element) (r.Element, error) {
 		// check param length
 		if len(params) != len(paramTags) {
 			return nil, zerr.MismatchParamLengthError(len(paramTags), len(params))
@@ -64,7 +64,7 @@ func compileFunction(upperContext *r.Context, paramTags []*syntax.ParamItem, stm
 }
 
 // （显示：A、B、C），得到D
-func evalFunctionCall(c *r.Context, expr *syntax.FuncCallExpr) (r.Value, error) {
+func evalFunctionCall(c *r.Context, expr *syntax.FuncCallExpr) (r.Element, error) {
 	var zval *value.Function
 	vtag := expr.FuncName.GetLiteral()
 

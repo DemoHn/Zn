@@ -6,7 +6,7 @@ import (
 	"github.com/DemoHn/Zn/pkg/value"
 )
 
-type funcExecutor = func(*r.Context, []r.Value) (r.Value, error)
+type funcExecutor = func(*r.Context, []r.Element) (r.Element, error)
 
 var stdlibMap = map[string]*r.Module{}
 
@@ -27,6 +27,6 @@ func RegisterFunctionForModule(m *r.Module, name string, fn funcExecutor) {
 }
 
 // RegisterClass - add class info module
-func RegisterClassForModule(m *r.Module, name string, ref *value.ClassRef) {
+func RegisterClassForModule(m *r.Module, name string, ref *value.ClassModel) {
 	m.AddExportValue(name, ref)
 }

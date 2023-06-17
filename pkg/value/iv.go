@@ -26,7 +26,7 @@ type IV struct {
 	// reduceType - value type
 	reduceType uint8
 	// root Object
-	root r.Value
+	root r.Element
 	// member value
 	member string
 	// index is used ONLY when ivType = IVTypeArray,
@@ -35,7 +35,7 @@ type IV struct {
 }
 
 // NewMemberIV -
-func NewMemberIV(root r.Value, member string) *IV {
+func NewMemberIV(root r.Element, member string) *IV {
 	return &IV{
 		reduceType: IVTypeMember,
 		root:       root,
@@ -44,7 +44,7 @@ func NewMemberIV(root r.Value, member string) *IV {
 }
 
 // NewArrayIV -
-func NewArrayIV(root r.Value, index int) *IV {
+func NewArrayIV(root r.Element, index int) *IV {
 	return &IV{
 		reduceType: IVTypeArray,
 		root:       root,
@@ -53,7 +53,7 @@ func NewArrayIV(root r.Value, index int) *IV {
 }
 
 // NewHashMapIV -
-func NewHashMapIV(root r.Value, member string) *IV {
+func NewHashMapIV(root r.Element, member string) *IV {
 	return &IV{
 		reduceType: IVTypeHashMap,
 		root:       root,
@@ -63,7 +63,7 @@ func NewHashMapIV(root r.Value, member string) *IV {
 
 // ReduceLHS - Reduce IV to value when IV on left-hand side
 // usually for setters
-func (iv *IV) ReduceLHS(c *r.Context, input r.Value) error {
+func (iv *IV) ReduceLHS(c *r.Context, input r.Element) error {
 	switch iv.reduceType {
 	case IVTypeArray:
 		arr, ok := iv.root.(*Array)
@@ -93,7 +93,7 @@ func (iv *IV) ReduceLHS(c *r.Context, input r.Value) error {
 }
 
 // ReduceRHS -
-func (iv *IV) ReduceRHS(c *r.Context) (r.Value, error) {
+func (iv *IV) ReduceRHS(c *r.Context) (r.Element, error) {
 	switch iv.reduceType {
 	case IVTypeArray:
 		arr, ok := iv.root.(*Array)

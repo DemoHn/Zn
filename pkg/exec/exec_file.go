@@ -28,7 +28,7 @@ func NewFileExecutor(rootDir string, rootModule string) *FileExecutor {
 	}
 }
 
-func (fl *FileExecutor) RunModule() (r.Value, error) {
+func (fl *FileExecutor) RunModule() (r.Element, error) {
 	// #1. init rootModule & context first
 	if err := fl.initRootModule(); err != nil {
 		return nil, err

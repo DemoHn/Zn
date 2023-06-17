@@ -8,7 +8,7 @@ import (
 // states, global configurations
 type Context struct {
 	// globals - stores all global variables
-	globals map[string]Value
+	globals map[string]Element
 	// hasPrinted - if stdout has been used to output message before program end, set `hasPrinted` -> true; so that after message is done
 	hasPrinted bool
 
@@ -52,7 +52,7 @@ type ModuleCodeFinder func(string) ([]rune, error)
 // NewContext - create new Zn Context. Notice through the life-cycle
 // of one code execution, there's only one running context to store all states.
 // NOTE: initModule DO NOT accept nil value at initialization!!
-func NewContext(globalsMap map[string]Value, initModule *Module) *Context {
+func NewContext(globalsMap map[string]Element, initModule *Module) *Context {
 	// init module dep graph
 	graph := NewModuleGraph()
 	graph.AddRequireCache(initModule)
@@ -156,7 +156,7 @@ func (ctx *Context) FindModuleCache(name string) *Module {
 
 // FindSymbol - find symbol in the context from current scope
 // up to its root scope
-func (ctx *Context) FindSymbol(name string) (Value, error) {
+func (ctx *Context) FindSymbol(name string) (Element, error) {
 	// find on globals first
 	if symVal, inGlobals := ctx.globals[name]; inGlobals {
 		return symVal, nil
@@ -166,7 +166,7 @@ func (ctx *Context) FindSymbol(name string) (Value, error) {
 }
 
 // SetSymbol -
-func (ctx *Context) SetSymbol(name string, value Value) error {
+func (ctx *Context) SetSymbol(name string, value Element) error {
 	if _, inGlobals := ctx.globals[name]; inGlobals {
 		return zerr.NameRedeclared(name)
 	}
@@ -175,7 +175,7 @@ func (ctx *Context) SetSymbol(name string, value Value) error {
 }
 
 // BindSymbol - bind non-const value with re-declaration check on same scope
-func (ctx *Context) BindSymbol(name string, value Value) error {
+func (ctx *Context) BindSymbol(name string, value Element) error {
 	if _, inGlobals := ctx.globals[name]; inGlobals {
 		return zerr.NameRedeclared(name)
 	}
@@ -184,7 +184,7 @@ func (ctx *Context) BindSymbol(name string, value Value) error {
 }
 
 // BindSymbolDecl - bind value for declaration statement - that variables could be re-bind.
-func (ctx *Context) BindSymbolDecl(name string, value Value, isConst bool) error {
+func (ctx *Context) BindSymbolDecl(name string, value Element, isConst bool) error {
 	if _, inGlobals := ctx.globals[name]; inGlobals {
 		return zerr.NameRedeclared(name)
 	}
@@ -193,7 +193,7 @@ func (ctx *Context) BindSymbolDecl(name string, value Value, isConst bool) error
 }
 
 // BindScopeSymbolDecl - bind value for declaration statement - that variables could be re-bind.
-func (ctx *Context) BindScopeSymbolDecl(scope *Scope, name string, value Value) error {
+func (ctx *Context) BindScopeSymbolDecl(scope *Scope, name string, value Element) error {
 	if _, inGlobals := ctx.globals[name]; inGlobals {
 		return zerr.NameRedeclared(name)
 	}
@@ -204,7 +204,7 @@ func (ctx *Context) BindScopeSymbolDecl(scope *Scope, name string, value Value) 
 }
 
 // FindThisValue -
-func (ctx *Context) FindThisValue() (Value, error) {
+func (ctx *Context) FindThisValue() (Element, error) {
 	m := ctx.GetCurrentModule()
 	for cursor := len(m.scopeStack) - 1; cursor >= 0; cursor-- {
 		sp := m.scopeStack[cursor]

@@ -5,10 +5,10 @@ import (
 	"github.com/DemoHn/Zn/pkg/value"
 )
 
-type funcExecutor = func(*r.Context, []r.Value) (r.Value, error)
+type funcExecutor = func(*r.Context, []r.Element) (r.Element, error)
 
 // globalValues -
-var globalValues map[string]r.Value
+var globalValues map[string]r.Element
 
 // init function
 func init() {
@@ -18,7 +18,7 @@ func init() {
 
 	// construct 异常 class
 	expClassRef := value.NewClassRef("异常")
-	expClassRef.Constructor = func(c *r.Context, values []r.Value) (r.Value, error) {
+	expClassRef.Constructor = func(c *r.Context, values []r.Element) (r.Element, error) {
 		if err := value.ValidateExactParams(values, "string"); err != nil {
 			return nil, err
 		}
@@ -30,7 +30,7 @@ func init() {
 	//// predefined values - those variables (symbols) are defined before
 	//// any execution procedure.
 	//// NOTICE: those variables are all constants!
-	globalValues = map[string]r.Value{
+	globalValues = map[string]r.Element{
 		"真":  value.NewBool(true),
 		"假":  value.NewBool(false),
 		"空":  value.NewNull(),

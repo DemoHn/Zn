@@ -85,7 +85,7 @@ func ShowVersion() {
 }
 
 //// display helpers
-func prettyDisplayValue(v r.Value, w eio.Writer) {
+func prettyDisplayValue(v r.Element, w eio.Writer) {
 	var displayData = ""
 	var valStr = value.StringifyValue(v)
 	switch v.(type) {

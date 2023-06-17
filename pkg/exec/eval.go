@@ -47,14 +47,14 @@ func evalProgram(c *r.Context, program *syntax.Program) error {
 
 // EvalStatement - eval statement
 func evalStatement(c *r.Context, stmt syntax.Statement) error {
-	var returnValue r.Value
+	var returnValue r.Element
 	var sp = c.GetCurrentScope()
 	// set current line
 	c.SetCurrentLine(stmt.GetCurrentLine())
 
 	// set return value
 	defer func() {
-		var finalReturnValue r.Value = value.NewNull()
+		var finalReturnValue r.Element = value.NewNull()
 		// set current return value
 		if returnValue != nil {
 			finalReturnValue = returnValue
@@ -106,9 +106,9 @@ func evalStatement(c *r.Context, stmt syntax.Statement) error {
 			return err
 		}
 
-		if ref, ok := expClassRef.(*value.ClassRef); ok {
+		if ref, ok := expClassRef.(*value.ClassModel); ok {
 			// exec expressions
-			var exprs []r.Value
+			var exprs []r.Element
 			for _, param := range v.Params {
 				exprI, err := evalExpression(c, param)
 				if err != nil {
@@ -188,7 +188,7 @@ func evalNewObject(c *r.Context, node syntax.VDAssignPair) error {
 	if err != nil {
 		return err
 	}
-	classRef, ok := importVal.(*value.ClassRef)
+	classRef, ok := importVal.(*value.ClassModel)
 	if !ok {
 		return zerr.InvalidParamType("classRef")
 	}
@@ -441,7 +441,7 @@ func evalIterateStmt(c *r.Context, node *syntax.IterateStmt) error {
 
 	// execIterationBlock, including set "currentKey" and "currentValue" to scope,
 	// and preDefined indication variables
-	execIterationBlockFn := func(key r.Value, v r.Value) error {
+	execIterationBlockFn := func(key r.Element, v r.Element) error {
 		// set pre-defined value
 		if nameLen == 1 {
 			if err := c.SetSymbol(valueSlot, v); err != nil {
@@ -522,7 +522,7 @@ func evalIterateStmt(c *r.Context, node *syntax.IterateStmt) error {
 }
 
 //// execute expressions
-func evalExpression(c *r.Context, expr syntax.Expression) (r.Value, error) {
+func evalExpression(c *r.Context, expr syntax.Expression) (r.Element, error) {
 	switch e := expr.(type) {
 	case *syntax.VarAssignExpr:
 		return evalVarAssignExpr(c, e)
@@ -553,7 +553,7 @@ func evalExpression(c *r.Context, expr syntax.Expression) (r.Value, error) {
 //// checkout eval_function.go for evalFunctionCall()
 
 // 以 A （执行：B、C、D）
-func evalMemberMethodExpr(c *r.Context, expr *syntax.MemberMethodExpr) (r.Value, error) {
+func evalMemberMethodExpr(c *r.Context, expr *syntax.MemberMethodExpr) (r.Element, error) {
 	currentScope := c.GetCurrentScope()
 	newScope := c.PushScope()
 	defer c.PopScope()
@@ -564,7 +564,7 @@ func evalMemberMethodExpr(c *r.Context, expr *syntax.MemberMethodExpr) (r.Value,
 		return nil, err
 	}
 
-	var vlast r.Value = rootExpr
+	var vlast r.Element = rootExpr
 
 	for _, methodExpr := range expr.MethodChain {
 		// set this value
@@ -724,7 +724,7 @@ func evalArithExpr(c *r.Context, expr *syntax.ArithExpr) (*value.Number, error) 
 }
 
 // eval prime expr
-func evalPrimeExpr(c *r.Context, expr syntax.Expression) (r.Value, error) {
+func evalPrimeExpr(c *r.Context, expr syntax.Expression) (r.Element, error) {
 	switch e := expr.(type) {
 	case *syntax.Number:
 		return value.NewNumberFromString(e.GetLiteral())
@@ -734,7 +734,7 @@ func evalPrimeExpr(c *r.Context, expr syntax.Expression) (r.Value, error) {
 		vtag := e.GetLiteral()
 		return c.FindSymbol(vtag)
 	case *syntax.ArrayExpr:
-		var znObjs []r.Value
+		var znObjs []r.Element
 		for _, item := range e.Items {
 			expr, err := evalExpression(c, item)
 			if err != nil {
@@ -785,7 +785,7 @@ func evalPrimeExpr(c *r.Context, expr syntax.Expression) (r.Value, error) {
 }
 
 // eval variable assign
-func evalVarAssignExpr(c *r.Context, expr *syntax.VarAssignExpr) (r.Value, error) {
+func evalVarAssignExpr(c *r.Context, expr *syntax.VarAssignExpr) (r.Element, error) {
 	// Right Side
 	vr, err := evalExpression(c, expr.AssignExpr)
 	if err != nil {
@@ -869,8 +869,8 @@ func getMemberExprIV(c *r.Context, expr *syntax.MemberExpr) (*value.IV, error) {
 
 //// helpers
 // exprsToValues - []syntax.Expression -> []eval.r.Value
-func exprsToValues(c *r.Context, exprs []syntax.Expression) ([]r.Value, error) {
-	params := []r.Value{}
+func exprsToValues(c *r.Context, exprs []syntax.Expression) ([]r.Element, error) {
+	params := []r.Element{}
 	for _, paramExpr := range exprs {
 		pval, err := evalExpression(c, paramExpr)
 		if err != nil {
@@ -882,11 +882,11 @@ func exprsToValues(c *r.Context, exprs []syntax.Expression) ([]r.Value, error) {
 }
 
 // extractSignalValue - signal is a special type of error, so we try to extract signal value from input error if it's really a signal - otherwise output the same error directly.
-func extractSignalValue(err error, sigType uint8) (r.Value, error) {
+func extractSignalValue(err error, sigType uint8) (r.Element, error) {
 	// if recv breaks
 	if sig, ok := err.(*zerr.Signal); ok {
 		if sig.SigType == sigType {
-			if extra, ok2 := sig.Extra.(r.Value); ok2 {
+			if extra, ok2 := sig.Extra.(r.Element); ok2 {
 				return extra, nil
 			}
 		}
@@ -895,11 +895,11 @@ func extractSignalValue(err error, sigType uint8) (r.Value, error) {
 }
 
 // BuildClassFromNode -
-func BuildClassFromNode(upperCtx *r.Context, name string, classNode *syntax.ClassDeclareStmt) *value.ClassRef {
+func BuildClassFromNode(upperCtx *r.Context, name string, classNode *syntax.ClassDeclareStmt) *value.ClassModel {
 	ref := value.NewClassRef(name)
 
 	// define default constructor
-	var constructor = func(c *r.Context, params []r.Value) (r.Value, error) {
+	var constructor = func(c *r.Context, params []r.Element) (r.Element, error) {
 		obj := value.NewObject(ref)
 		propMap := obj.GetPropList()
 		// init prop list

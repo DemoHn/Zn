@@ -18,7 +18,7 @@ func NewREPLExecutor() *REPLExecutor {
 }
 
 // RunCode - run code as one input line
-func (pl *REPLExecutor) RunCode(text string) (r.Value, error) {
+func (pl *REPLExecutor) RunCode(text string) (r.Element, error) {
 	in := io.NewByteStream([]byte(text))
 
 	// #1. read source code
@@ -36,7 +36,7 @@ func (pl *REPLExecutor) RunCode(text string) (r.Value, error) {
 	return pl.execREPLCode(lexer)
 }
 
-func (pl *REPLExecutor) execREPLCode(lexer *syntax.Lexer) (r.Value, error) {
+func (pl *REPLExecutor) execREPLCode(lexer *syntax.Lexer) (r.Element, error) {
 	c := pl.context
 	// #1. construct parser
 	p := syntax.NewParser(lexer, zh.NewParserZH())

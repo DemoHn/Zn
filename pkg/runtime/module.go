@@ -44,7 +44,7 @@ type Module struct {
 	// exportValues - all classes and functions are exported for external
 	// imports - so here we insert all exportable values to this map after first scan
 	// note: all export values are constants.
-	exportValues map[string]Value
+	exportValues map[string]Element
 }
 
 func NewModule(name string, lexer *syntax.Lexer) *Module {
@@ -55,7 +55,7 @@ func NewModule(name string, lexer *syntax.Lexer) *Module {
 		currentLine: 0,
 		// init root scope to ensure scopeStack NOT empty
 		scopeStack:   []*Scope{NewScope()},
-		exportValues: map[string]Value{},
+		exportValues: map[string]Element{},
 	}
 }
 
@@ -67,7 +67,7 @@ func NewAnonymousModule(lexer *syntax.Lexer) *Module {
 		currentLine: 0,
 		// init root scope to ensure scopeStack NOT empty
 		scopeStack:   []*Scope{NewScope()},
-		exportValues: map[string]Value{},
+		exportValues: map[string]Element{},
 	}
 }
 
@@ -130,7 +130,7 @@ func (m *Module) PopScope() {
 
 // FindScopeValue - find symbol in the context from the latest scope
 // up to its first one
-func (m *Module) FindScopeValue(name string) (Value, error) {
+func (m *Module) FindScopeValue(name string) (Element, error) {
 	// iterate from last to very first
 	for cursor := len(m.scopeStack) - 1; cursor >= 0; cursor-- {
 		sp := m.scopeStack[cursor]
@@ -147,7 +147,7 @@ func (m *Module) FindScopeValue(name string) (Value, error) {
 // 1. find the symbol in scope stack
 // 2. set new value of the symbol
 // 3. if no symbol found, throw error directly
-func (m *Module) SetScopeValue(name string, value Value) error {
+func (m *Module) SetScopeValue(name string, value Element) error {
 	// iterate from last to very first
 	for cursor := len(m.scopeStack) - 1; cursor >= 0; cursor-- {
 		sp := m.scopeStack[cursor]
@@ -163,7 +163,7 @@ func (m *Module) SetScopeValue(name string, value Value) error {
 }
 
 // BindValue - bind a non-const value on current scope - however, if the same symbol has bound, then an error occurs.
-func (m *Module) BindSymbol(name string, value Value, isConst bool, rebindCheck bool) error {
+func (m *Module) BindSymbol(name string, value Element, isConst bool, rebindCheck bool) error {
 	if sp := m.GetCurrentScope(); sp != nil {
 		// bind value on current scope
 		if rebindCheck {
@@ -179,7 +179,7 @@ func (m *Module) BindSymbol(name string, value Value, isConst bool, rebindCheck 
 }
 
 //// imports & exports
-func (m *Module) AddExportValue(name string, value Value) error {
+func (m *Module) AddExportValue(name string, value Element) error {
 	if _, ok := m.exportValues[name]; ok {
 		return zerr.NameRedeclared(name)
 	}
@@ -188,11 +188,11 @@ func (m *Module) AddExportValue(name string, value Value) error {
 	return nil
 }
 
-func (m *Module) GetAllExportValues() map[string]Value {
+func (m *Module) GetAllExportValues() map[string]Element {
 	return m.exportValues
 }
 
-func (m *Module) GetExportValue(name string) (Value, error) {
+func (m *Module) GetExportValue(name string) (Element, error) {
 	if v, ok := m.exportValues[name]; ok {
 		return v, nil
 	}

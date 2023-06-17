@@ -5,7 +5,7 @@ import (
 	r "github.com/DemoHn/Zn/pkg/runtime"
 )
 
-type FuncExecutor = func(*r.Context, []r.Value) (r.Value, error)
+type FuncExecutor = func(*r.Context, []r.Element) (r.Element, error)
 
 type Function struct {
 	// closureScope - when compiling a function, we will create an exclusive scope for this function to store values created inside the function.
@@ -44,7 +44,7 @@ func (fn *Function) AddLogicHandler(handler FuncExecutor) {
 //// core function: Exec
 // Exec - execute a closure - accepts input params, execute from closure executor and
 // yields final result
-func (fn *Function) Exec(c *r.Context, thisValue r.Value, params []r.Value) (r.Value, error) {
+func (fn *Function) Exec(c *r.Context, thisValue r.Element, params []r.Element) (r.Element, error) {
 	// init scope
 	module := c.GetCurrentModule()
 
@@ -69,7 +69,7 @@ func (fn *Function) Exec(c *r.Context, thisValue r.Value, params []r.Value) (r.V
 		return nil, zerr.UnexpectedEmptyExecLogic()
 	}
 	// do execution
-	var lastValue r.Value
+	var lastValue r.Element
 	var execError error
 	for _, handler := range fn.logicHandlers {
 		lastValue, execError = handler(c, params)
@@ -82,16 +82,16 @@ func (fn *Function) Exec(c *r.Context, thisValue r.Value, params []r.Value) (r.V
 
 // impl Value interface
 // GetProperty -
-func (fn *Function) GetProperty(c *r.Context, name string) (r.Value, error) {
+func (fn *Function) GetProperty(c *r.Context, name string) (r.Element, error) {
 	return nil, zerr.PropertyNotFound(name)
 }
 
 // SetProperty -
-func (fn *Function) SetProperty(c *r.Context, name string, value r.Value) error {
+func (fn *Function) SetProperty(c *r.Context, name string, value r.Element) error {
 	return zerr.PropertyNotFound(name)
 }
 
 // ExecMethod -
-func (fn *Function) ExecMethod(c *r.Context, name string, values []r.Value) (r.Value, error) {
+func (fn *Function) ExecMethod(c *r.Context, name string, values []r.Element) (r.Element, error) {
 	return nil, zerr.MethodNotFound(name)
 }

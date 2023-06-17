@@ -13,7 +13,7 @@ import (
 var fileModuleName = "文件"
 var fileModule = r.NewModule(fileModuleName, nil)
 
-func readTextFromFileFunc(c *r.Context, values []r.Value) (r.Value, error) {
+func readTextFromFileFunc(c *r.Context, values []r.Element) (r.Element, error) {
 	// validate one param: string ONLY
 	if err := value.ValidateExactParams(values, "string"); err != nil {
 		return nil, err
@@ -32,7 +32,7 @@ func readTextFromFileFunc(c *r.Context, values []r.Value) (r.Value, error) {
 	return value.NewString(string(data)), nil
 }
 
-func writeTextFromFileFunc(c *r.Context, values []r.Value) (r.Value, error) {
+func writeTextFromFileFunc(c *r.Context, values []r.Element) (r.Element, error) {
 	// validate one param: string ONLY
 	if err := value.ValidateExactParams(values, "string", "string"); err != nil {
 		return nil, err
@@ -47,7 +47,7 @@ func writeTextFromFileFunc(c *r.Context, values []r.Value) (r.Value, error) {
 	return nil, nil
 }
 
-func readDirFunc(c *r.Context, values []r.Value) (r.Value, error) {
+func readDirFunc(c *r.Context, values []r.Element) (r.Element, error) {
 	// validate one param: string ONLY
 	if err := value.ValidateExactParams(values, "string"); err != nil {
 		return nil, err
@@ -58,7 +58,7 @@ func readDirFunc(c *r.Context, values []r.Value) (r.Value, error) {
 		return nil, zerr.NewRuntimeException("读取目录失败：" + err.Error())
 	}
 
-	info := value.NewArray([]r.Value{})
+	info := value.NewArray([]r.Element{})
 	for _, dir := range dirs {
 		info.AppendValue(value.NewString(dir.Name()))
 	}

@@ -20,7 +20,7 @@ func NewPlaygroundExecutor(code []byte) *PlaygroundExecutor {
 }
 
 // RunCode - ONE-TIME DEAL! run code text from fastCGI request's input body
-func (pl *PlaygroundExecutor) RunCode() (r.Value, error) {
+func (pl *PlaygroundExecutor) RunCode() (r.Element, error) {
 	in := io.NewByteStream(pl.source)
 
 	// #1. read source code

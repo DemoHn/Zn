@@ -34,7 +34,7 @@ func writeErrorData(w http.ResponseWriter, err error) {
 	w.Write([]byte(err.Error()))
 }
 
-func writeSuccessData(w http.ResponseWriter, rtnValue runtime.Value) {
+func writeSuccessData(w http.ResponseWriter, rtnValue runtime.Element) {
 	w.WriteHeader(200)
 	w.Header().Add("Content-Type", "text/plain; charset=\"utf-8\"")
 
