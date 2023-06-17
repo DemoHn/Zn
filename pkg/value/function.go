@@ -15,6 +15,7 @@ type Function struct {
 	// exceptionHandler - when an exception raise up, run this handler to catch the exception (like try...catch...)
 	// TODO -
 	exceptionHandler FuncExecutor
+	*r.ElementModel
 }
 
 func NewFunction(closureScope *r.Scope, executor FuncExecutor) *Function {
@@ -28,6 +29,7 @@ func NewFunction(closureScope *r.Scope, executor FuncExecutor) *Function {
 		paramHandler:     nil,
 		logicHandlers:    logicHandlers,
 		exceptionHandler: nil,
+		ElementModel:     r.NewElementModel(),
 	}
 }
 
@@ -78,20 +80,4 @@ func (fn *Function) Exec(c *r.Context, thisValue r.Element, params []r.Element) 
 		}
 	}
 	return lastValue, nil
-}
-
-// impl Value interface
-// GetProperty -
-func (fn *Function) GetProperty(c *r.Context, name string) (r.Element, error) {
-	return nil, zerr.PropertyNotFound(name)
-}
-
-// SetProperty -
-func (fn *Function) SetProperty(c *r.Context, name string, value r.Element) error {
-	return zerr.PropertyNotFound(name)
-}
-
-// ExecMethod -
-func (fn *Function) ExecMethod(c *r.Context, name string, values []r.Element) (r.Element, error) {
-	return nil, zerr.MethodNotFound(name)
 }

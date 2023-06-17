@@ -1,17 +1,14 @@
 package value
 
 import (
-	zerr "github.com/DemoHn/Zn/pkg/error"
 	r "github.com/DemoHn/Zn/pkg/runtime"
 )
-
-type hmGetterFunc func(*HashMap, *r.Context) (r.Element, error)
-type hmMethodFunc func(*HashMap, *r.Context, []r.Element) (r.Element, error)
 
 // HashMap - represents for 列表类
 type HashMap struct {
 	value    map[string]r.Element
 	keyOrder []string
+	*r.ElementModel
 }
 
 // KVPair - key-value pair, used for ZnHashMap
@@ -23,8 +20,9 @@ type KVPair struct {
 // NewHashMap -
 func NewHashMap(kvPairs []KVPair) *HashMap {
 	hm := &HashMap{
-		value:    map[string]r.Element{},
-		keyOrder: []string{},
+		value:        map[string]r.Element{},
+		keyOrder:     []string{},
+		ElementModel: r.NewElementModel(),
 	}
 
 	for _, kvPair := range kvPairs {
@@ -35,6 +33,15 @@ func NewHashMap(kvPairs []KVPair) *HashMap {
 		hm.value[kvPair.Key] = kvPair.Value
 	}
 
+	//// register getters & methods
+	hm.RegisterGetter("数目", hm.hmGetLength)
+	hm.RegisterGetter("长度", hm.hmGetLength)
+	hm.RegisterGetter("所有索引", hm.hmGetAllIndexes)
+	hm.RegisterGetter("所有值", hm.hmGetAllValues)
+
+	hm.RegisterMethod("读取", hm.hmExecGet)
+	hm.RegisterMethod("写入", hm.hmExecSet)
+	hm.RegisterMethod("移除", hm.hmExecDelete)
 	return hm
 }
 
@@ -62,46 +69,13 @@ func (hm *HashMap) AppendKVPair(pair KVPair) {
 	hm.keyOrder = append(hm.keyOrder, key)
 }
 
-// GetProperty -
-func (hm *HashMap) GetProperty(c *r.Context, name string) (r.Element, error) {
-	hmGetterMap := map[string]hmGetterFunc{
-		"数目":   hmGetLength,
-		"长度":   hmGetLength,
-		"所有索引": hmGetAllIndexes,
-		"所有值":  hmGetAllValues,
-	}
-	if fn, ok := hmGetterMap[name]; ok {
-		return fn(hm, c)
-	}
-	return nil, zerr.PropertyNotFound(name)
-}
-
-// SetProperty -
-func (hm *HashMap) SetProperty(c *r.Context, name string, value r.Element) error {
-	return zerr.PropertyNotFound(name)
-}
-
-// ExecMethod -
-func (hm *HashMap) ExecMethod(c *r.Context, name string, values []r.Element) (r.Element, error) {
-	hmMethodMap := map[string]hmMethodFunc{
-		"读取": hmExecGet,
-		"写入": hmExecSet,
-		"移除": hmExecDelete,
-	}
-	if fn, ok := hmMethodMap[name]; ok {
-		return fn(hm, c, values)
-	}
-	return nil, zerr.MethodNotFound(name)
-}
-
 //// getters, setters and methods
-
 // getters
-func hmGetLength(hm *HashMap, c *r.Context) (r.Element, error) {
+func (hm *HashMap) hmGetLength(c *r.Context) (r.Element, error) {
 	return NewNumber(float64(len(hm.value))), nil
 }
 
-func hmGetAllIndexes(hm *HashMap, c *r.Context) (r.Element, error) {
+func (hm *HashMap) hmGetAllIndexes(c *r.Context) (r.Element, error) {
 	var strs []r.Element
 	for _, keyName := range hm.keyOrder {
 		strs = append(strs, NewString(keyName))
@@ -109,7 +83,7 @@ func hmGetAllIndexes(hm *HashMap, c *r.Context) (r.Element, error) {
 	return NewArray(strs), nil
 }
 
-func hmGetAllValues(hm *HashMap, c *r.Context) (r.Element, error) {
+func (hm *HashMap) hmGetAllValues(c *r.Context) (r.Element, error) {
 	var vals []r.Element
 	for _, keyName := range hm.keyOrder {
 		vals = append(vals, hm.value[keyName])
@@ -118,7 +92,7 @@ func hmGetAllValues(hm *HashMap, c *r.Context) (r.Element, error) {
 }
 
 // methods
-func hmExecGet(hm *HashMap, c *r.Context, values []r.Element) (r.Element, error) {
+func (hm *HashMap) hmExecGet(c *r.Context, values []r.Element) (r.Element, error) {
 	if err := ValidateLeastParams(values, "string+"); err != nil {
 		return nil, err
 	}
@@ -139,7 +113,7 @@ func hmExecGet(hm *HashMap, c *r.Context, values []r.Element) (r.Element, error)
 	return result, nil
 }
 
-func hmExecSet(hm *HashMap, c *r.Context, values []r.Element) (r.Element, error) {
+func (hm *HashMap) hmExecSet(c *r.Context, values []r.Element) (r.Element, error) {
 	if err := ValidateExactParams(values, "string", "any"); err != nil {
 		return nil, err
 	}
@@ -149,7 +123,7 @@ func hmExecSet(hm *HashMap, c *r.Context, values []r.Element) (r.Element, error)
 	return values[1], nil
 }
 
-func hmExecDelete(hm *HashMap, c *r.Context, values []r.Element) (r.Element, error) {
+func (hm *HashMap) hmExecDelete(c *r.Context, values []r.Element) (r.Element, error) {
 	if err := ValidateExactParams(values, "string"); err != nil {
 		return nil, err
 	}

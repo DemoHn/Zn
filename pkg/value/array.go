@@ -15,11 +15,36 @@ type arrayMethodFunc func(*Array, *r.Context, []r.Element) (r.Element, error)
 // Array - represents for Zn's 数组型
 type Array struct {
 	value []r.Element
+	*r.ElementModel
 }
 
 // NewArray - new array r.Value Object
 func NewArray(value []r.Element) *Array {
-	return &Array{value}
+	arr := &Array{value, r.NewElementModel()}
+
+	//// init getters & setters & methods
+	arr.RegisterGetter("文本", arr.arrayGetText)
+	arr.RegisterGetter("首项", arr.arrayGetFirstItem)
+	arr.RegisterGetter("末项", arr.arrayGetLastItem)
+	arr.RegisterGetter("数目", arr.arrayGetLength)
+	arr.RegisterGetter("长度", arr.arrayGetLength)
+	arr.RegisterGetter("逆序", arr.arrayGetReverse)
+
+	arr.RegisterSetter("首项", arr.arraySetFirstItem)
+	arr.RegisterSetter("末项", arr.arraySetLastItem)
+
+	arr.RegisterMethod("新增", arr.arrayExecInsert)
+	arr.RegisterMethod("添加", arr.arrayExecInsert)
+	arr.RegisterMethod("前增", arr.arrayExecPrepend)
+	arr.RegisterMethod("后增", arr.arrayExecAppend)
+	arr.RegisterMethod("左移", arr.arrayExecShift)
+	arr.RegisterMethod("右移", arr.arrayExecPop)
+	arr.RegisterMethod("拼接", arr.arrayExecJoin)
+	arr.RegisterMethod("合并", arr.arrayExecMerge)
+	arr.RegisterMethod("包含", arr.arrayExecContains)
+	arr.RegisterMethod("寻找", arr.arrayExecFind)
+	arr.RegisterMethod("交换", arr.arrayExecSwap)
+	return arr
 }
 
 // GetValue -
@@ -32,91 +57,33 @@ func (ar *Array) AppendValue(value r.Element) {
 	ar.value = append(ar.value, value)
 }
 
-// GetProperty -
-func (ar *Array) GetProperty(c *r.Context, name string) (r.Element, error) {
-	arrayGetterMap := map[string]arrayGetterFunc{
-		/*
-			"和": arrayGetAddResult,
-			"差": arrayGetSubResult,
-			"积": arrayGetMulResult,
-			"商": arrayGetDivResult,
-		*/
-		"文本": arrayGetText,
-		"首项": arrayGetFirstItem,
-		"末项": arrayGetLastItem,
-		"数目": arrayGetLength,
-		"长度": arrayGetLength,
-		"逆序": arrayGetReverse,
-	}
-
-	if fn, ok := arrayGetterMap[name]; ok {
-		return fn(ar, c)
-	}
-	return nil, zerr.PropertyNotFound(name)
-}
-
-// SetProperty -
-func (ar *Array) SetProperty(c *r.Context, name string, value r.Element) error {
-	arraySetterMap := map[string]arraySetterFunc{
-		"首项": arraySetFirstItem,
-		"末项": arraySetLastItem,
-	}
-
-	if fn, ok := arraySetterMap[name]; ok {
-		return fn(ar, c, value)
-	}
-	return zerr.PropertyNotFound(name)
-}
-
-// ExecMethod -
-func (ar *Array) ExecMethod(c *r.Context, name string, values []r.Element) (r.Element, error) {
-	arrayMethodMap := map[string]arrayMethodFunc{
-		"新增": arrayExecInsert,
-		"添加": arrayExecInsert,
-		"前增": arrayExecPrepend,
-		"后增": arrayExecAppend,
-		"左移": arrayExecShift,
-		"右移": arrayExecPop,
-		"拼接": arrayExecJoin,
-		"合并": arrayExecMerge,
-		"包含": arrayExecContains,
-		"寻找": arrayExecFind,
-		"交换": arrayExecSwap,
-	}
-
-	if fn, ok := arrayMethodMap[name]; ok {
-		return fn(ar, c, values)
-	}
-	return nil, zerr.MethodNotFound(name)
-}
-
 //// getters, setters & methods
 
 // getters
-func arrayGetText(ar *Array, c *r.Context) (r.Element, error) {
+func (ar *Array) arrayGetText(c *r.Context) (r.Element, error) {
 	return NewString(StringifyValue(ar)), nil
 }
 
-func arrayGetFirstItem(ar *Array, c *r.Context) (r.Element, error) {
+func (ar *Array) arrayGetFirstItem(c *r.Context) (r.Element, error) {
 	if len(ar.value) == 0 {
 		return NewNull(), nil
 	}
 	return ar.value[0], nil
 }
 
-func arrayGetLastItem(ar *Array, c *r.Context) (r.Element, error) {
+func (ar *Array) arrayGetLastItem(c *r.Context) (r.Element, error) {
 	if len(ar.value) == 0 {
 		return NewNull(), nil
 	}
 	return ar.value[len(ar.value)-1], nil
 }
 
-func arrayGetLength(ar *Array, c *r.Context) (r.Element, error) {
+func (ar *Array) arrayGetLength(c *r.Context) (r.Element, error) {
 	l := len(ar.value)
 	return NewNumber(float64(l)), nil
 }
 
-func arrayGetReverse(ar *Array, c *r.Context) (r.Element, error) {
+func (ar *Array) arrayGetReverse(c *r.Context) (r.Element, error) {
 	var result []r.Element
 	l := len(ar.value)
 	for i := 0; i < l; i++ {
@@ -126,7 +93,7 @@ func arrayGetReverse(ar *Array, c *r.Context) (r.Element, error) {
 	return NewArray(result), nil
 }
 
-func arrayGetAddResult(ar *Array, c *r.Context) (r.Element, error) {
+func (ar *Array) arrayGetAddResult(c *r.Context) (r.Element, error) {
 	if err := ValidateLeastParams(ar.value, "number+"); err != nil {
 		return nil, err
 	}
@@ -141,7 +108,7 @@ func arrayGetAddResult(ar *Array, c *r.Context) (r.Element, error) {
 	return NewNumber(sum), nil
 }
 
-func arrayGetSubResult(ar *Array, c *r.Context) (r.Element, error) {
+func (ar *Array) arrayGetSubResult(c *r.Context) (r.Element, error) {
 	if err := ValidateLeastParams(ar.value, "number+"); err != nil {
 		return nil, err
 	}
@@ -161,7 +128,7 @@ func arrayGetSubResult(ar *Array, c *r.Context) (r.Element, error) {
 	return NewNumber(sum), nil
 }
 
-func arrayGetMulResult(ar *Array, c *r.Context) (r.Element, error) {
+func (ar *Array) arrayGetMulResult(c *r.Context) (r.Element, error) {
 	if err := ValidateLeastParams(ar.value, "number+"); err != nil {
 		return nil, err
 	}
@@ -181,7 +148,7 @@ func arrayGetMulResult(ar *Array, c *r.Context) (r.Element, error) {
 	return NewNumber(sum), nil
 }
 
-func arrayGetDivResult(ar *Array, c *r.Context) (r.Element, error) {
+func (ar *Array) arrayGetDivResult(c *r.Context) (r.Element, error) {
 	if err := ValidateLeastParams(ar.value, "number+"); err != nil {
 		return nil, err
 	}
@@ -205,7 +172,7 @@ func arrayGetDivResult(ar *Array, c *r.Context) (r.Element, error) {
 }
 
 // setters
-func arraySetFirstItem(ar *Array, c *r.Context, value r.Element) error {
+func (ar *Array) arraySetFirstItem(c *r.Context, value r.Element) error {
 	if len(ar.value) == 0 {
 		result := []r.Element{value}
 		ar.value = result
@@ -215,7 +182,7 @@ func arraySetFirstItem(ar *Array, c *r.Context, value r.Element) error {
 	return nil
 }
 
-func arraySetLastItem(ar *Array, c *r.Context, value r.Element) error {
+func (ar *Array) arraySetLastItem(c *r.Context, value r.Element) error {
 	if len(ar.value) == 0 {
 		result := []r.Element{value}
 		ar.value = result
@@ -226,7 +193,7 @@ func arraySetLastItem(ar *Array, c *r.Context, value r.Element) error {
 }
 
 // methods
-func arrayExecInsert(ar *Array, c *r.Context, values []r.Element) (r.Element, error) {
+func (ar *Array) arrayExecInsert(c *r.Context, values []r.Element) (r.Element, error) {
 	if err := ValidateExactParams(values, "any", "number"); err != nil {
 		return nil, err
 	}
@@ -236,7 +203,7 @@ func arrayExecInsert(ar *Array, c *r.Context, values []r.Element) (r.Element, er
 	return ar, nil
 }
 
-func arrayExecPrepend(ar *Array, c *r.Context, values []r.Element) (r.Element, error) {
+func (ar *Array) arrayExecPrepend(c *r.Context, values []r.Element) (r.Element, error) {
 	if err := ValidateExactParams(values, "any"); err != nil {
 		return nil, err
 	}
@@ -244,7 +211,7 @@ func arrayExecPrepend(ar *Array, c *r.Context, values []r.Element) (r.Element, e
 	return ar, nil
 }
 
-func arrayExecAppend(ar *Array, c *r.Context, values []r.Element) (r.Element, error) {
+func (ar *Array) arrayExecAppend(c *r.Context, values []r.Element) (r.Element, error) {
 	if err := ValidateExactParams(values, "any"); err != nil {
 		return nil, err
 	}
@@ -252,19 +219,19 @@ func arrayExecAppend(ar *Array, c *r.Context, values []r.Element) (r.Element, er
 	return ar, nil
 }
 
-func arrayExecShift(ar *Array, c *r.Context, values []r.Element) (r.Element, error) {
+func (ar *Array) arrayExecShift(c *r.Context, values []r.Element) (r.Element, error) {
 	v, newData := shiftArrayValue(ar.value, true)
 	ar.value = newData
 	return v, nil
 }
 
-func arrayExecPop(ar *Array, c *r.Context, values []r.Element) (r.Element, error) {
+func (ar *Array) arrayExecPop(c *r.Context, values []r.Element) (r.Element, error) {
 	v, newData := shiftArrayValue(ar.value, false)
 	ar.value = newData
 	return v, nil
 }
 
-func arrayExecJoin(ar *Array, c *r.Context, values []r.Element) (r.Element, error) {
+func (ar *Array) arrayExecJoin(c *r.Context, values []r.Element) (r.Element, error) {
 	// validate input array
 	if err := ValidateAllParams(ar.value, "string"); err != nil {
 		return nil, err
@@ -284,7 +251,7 @@ func arrayExecJoin(ar *Array, c *r.Context, values []r.Element) (r.Element, erro
 	return NewString(finalStr), nil
 }
 
-func arrayExecMerge(ar *Array, c *r.Context, values []r.Element) (r.Element, error) {
+func (ar *Array) arrayExecMerge(c *r.Context, values []r.Element) (r.Element, error) {
 	if err := ValidateAllParams(values, "array"); err != nil {
 		return nil, err
 	}
@@ -301,7 +268,7 @@ func arrayExecMerge(ar *Array, c *r.Context, values []r.Element) (r.Element, err
 	return NewArray(result), nil
 }
 
-func arrayExecContains(ar *Array, c *r.Context, values []r.Element) (r.Element, error) {
+func (ar *Array) arrayExecContains(c *r.Context, values []r.Element) (r.Element, error) {
 	result := false
 	if err := ValidateExactParams(values, "any"); err != nil {
 		return nil, err
@@ -317,7 +284,7 @@ func arrayExecContains(ar *Array, c *r.Context, values []r.Element) (r.Element, 
 	return NewBool(result), nil
 }
 
-func arrayExecFind(ar *Array, c *r.Context, values []r.Element) (r.Element, error) {
+func (ar *Array) arrayExecFind(c *r.Context, values []r.Element) (r.Element, error) {
 	idx := -1
 	if err := ValidateExactParams(values, "any"); err != nil {
 		return nil, err
@@ -333,7 +300,7 @@ func arrayExecFind(ar *Array, c *r.Context, values []r.Element) (r.Element, erro
 	return NewNumber(float64(idx)), nil
 }
 
-func arrayExecSwap(ar *Array, c *r.Context, values []r.Element) (r.Element, error) {
+func (ar *Array) arrayExecSwap(c *r.Context, values []r.Element) (r.Element, error) {
 	if err := ValidateExactParams(values, "number", "number"); err != nil {
 		return nil, err
 	}
