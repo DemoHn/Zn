@@ -10,16 +10,30 @@ import (
 	r "github.com/DemoHn/Zn/pkg/runtime"
 )
 
-type numGetterFunc func(*Number, *r.Context) (r.Element, error)
-type numMethodFunc func(*Number, *r.Context, []r.Element) (r.Element, error)
-
 type Number struct {
 	value float64
+	*r.ElementModel
 }
 
 // NewNumber - create new number object (plain float64)
 func NewNumber(value float64) *Number {
-	return &Number{value}
+	n := &Number{value, r.NewElementModel()}
+	// init getters & setters & methods
+	n.RegisterGetter("文本", n.numGetText)
+	n.RegisterGetter("平方", n.numGetSquare)
+	n.RegisterGetter("立方", n.numGetCube)
+	n.RegisterGetter("平方根", n.numGetSquareRoot)
+
+	n.RegisterMethod("加", n.numExecAdd)
+	n.RegisterMethod("减", n.numExecSub)
+	n.RegisterMethod("乘", n.numExecMul)
+	n.RegisterMethod("除", n.numExecDiv)
+	n.RegisterMethod("自增", n.numExecSelfAdd)
+	n.RegisterMethod("自减", n.numExecSelfSub)
+	n.RegisterMethod("向下取整", n.numExecFloor)
+	n.RegisterMethod("向上取整", n.numExecCeil)
+
+	return n
 }
 
 func NewNumberFromString(value string) (*Number, error) {
@@ -44,61 +58,24 @@ func (n *Number) GetValue() float64 {
 	return n.value
 }
 
-// GetProperty -
-func (n *Number) GetProperty(c *r.Context, name string) (r.Element, error) {
-	numGetterMap := map[string]numGetterFunc{
-		"文本":  numGetText,
-		"平方":  numGetSquare,
-		"立方":  numGetCube,
-		"平方根": numGetSquareRoot,
-	}
-	if fn, ok := numGetterMap[name]; ok {
-		return fn(n, c)
-	}
-	return nil, zerr.PropertyNotFound(name)
-}
-
-// SetProperty -
-func (n *Number) SetProperty(c *r.Context, name string, value r.Element) error {
-	return zerr.PropertyNotFound(name)
-}
-
-// ExecMethod -
-func (n *Number) ExecMethod(c *r.Context, name string, values []r.Element) (r.Element, error) {
-	numMethodMap := map[string]numMethodFunc{
-		"加":    numExecAdd,
-		"减":    numExecSub,
-		"乘":    numExecMul,
-		"除":    numExecDiv,
-		"自增":   numExecSelfAdd,
-		"自减":   numExecSelfSub,
-		"向下取整": numExecFloor,
-		"向上取整": numExecCeil,
-	}
-	if fn, ok := numMethodMap[name]; ok {
-		return fn(n, c, values)
-	}
-	return nil, zerr.MethodNotFound(name)
-}
-
 //// getters, setters and methods
 
 // getters
-func numGetText(n *Number, c *r.Context) (r.Element, error) {
+func (n *Number) numGetText(c *r.Context) (r.Element, error) {
 	return NewString(n.String()), nil
 }
 
-func numGetSquare(n *Number, c *r.Context) (r.Element, error) {
+func (n *Number) numGetSquare(c *r.Context) (r.Element, error) {
 	res := n.value * n.value
 	return NewNumber(res), nil
 }
 
-func numGetCube(n *Number, c *r.Context) (r.Element, error) {
+func (n *Number) numGetCube(c *r.Context) (r.Element, error) {
 	res := n.value * n.value * n.value
 	return NewNumber(res), nil
 }
 
-func numGetSquareRoot(n *Number, c *r.Context) (r.Element, error) {
+func (n *Number) numGetSquareRoot(c *r.Context) (r.Element, error) {
 	if n.value <= 0 {
 		return nil, zerr.ArithRootLessThanZero()
 	}
@@ -107,7 +84,7 @@ func numGetSquareRoot(n *Number, c *r.Context) (r.Element, error) {
 }
 
 // methods
-func numExecAdd(n *Number, c *r.Context, values []r.Element) (r.Element, error) {
+func (n *Number) numExecAdd(c *r.Context, values []r.Element) (r.Element, error) {
 	if err := ValidateAllParams(values, "number"); err != nil {
 		return nil, err
 	}
@@ -121,7 +98,7 @@ func numExecAdd(n *Number, c *r.Context, values []r.Element) (r.Element, error) 
 	return NewNumber(sum), nil
 }
 
-func numExecSub(n *Number, c *r.Context, values []r.Element) (r.Element, error) {
+func (n *Number) numExecSub(c *r.Context, values []r.Element) (r.Element, error) {
 	if err := ValidateAllParams(values, "number"); err != nil {
 		return nil, err
 	}
@@ -135,7 +112,7 @@ func numExecSub(n *Number, c *r.Context, values []r.Element) (r.Element, error) 
 	return NewNumber(sum), nil
 }
 
-func numExecMul(n *Number, c *r.Context, values []r.Element) (r.Element, error) {
+func (n *Number) numExecMul(c *r.Context, values []r.Element) (r.Element, error) {
 	if err := ValidateAllParams(values, "number"); err != nil {
 		return nil, err
 	}
@@ -149,7 +126,7 @@ func numExecMul(n *Number, c *r.Context, values []r.Element) (r.Element, error) 
 	return NewNumber(sum), nil
 }
 
-func numExecDiv(n *Number, c *r.Context, values []r.Element) (r.Element, error) {
+func (n *Number) numExecDiv(c *r.Context, values []r.Element) (r.Element, error) {
 	if err := ValidateAllParams(values, "number"); err != nil {
 		return nil, err
 	}
@@ -166,7 +143,7 @@ func numExecDiv(n *Number, c *r.Context, values []r.Element) (r.Element, error) 
 	return NewNumber(sum), nil
 }
 
-func numExecSelfAdd(n *Number, c *r.Context, values []r.Element) (r.Element, error) {
+func (n *Number) numExecSelfAdd(c *r.Context, values []r.Element) (r.Element, error) {
 	if err := ValidateExactParams(values, "number"); err != nil {
 		return nil, err
 	}
@@ -178,7 +155,7 @@ func numExecSelfAdd(n *Number, c *r.Context, values []r.Element) (r.Element, err
 	return n, nil
 }
 
-func numExecSelfSub(n *Number, c *r.Context, values []r.Element) (r.Element, error) {
+func (n *Number) numExecSelfSub(c *r.Context, values []r.Element) (r.Element, error) {
 	if err := ValidateExactParams(values, "number"); err != nil {
 		return nil, err
 	}
@@ -190,10 +167,10 @@ func numExecSelfSub(n *Number, c *r.Context, values []r.Element) (r.Element, err
 	return n, nil
 }
 
-func numExecFloor(n *Number, c *r.Context, values []r.Element) (r.Element, error) {
+func (n *Number) numExecFloor(c *r.Context, values []r.Element) (r.Element, error) {
 	return NewNumber(math.Floor(n.value)), nil
 }
 
-func numExecCeil(n *Number, c *r.Context, values []r.Element) (r.Element, error) {
+func (n *Number) numExecCeil(c *r.Context, values []r.Element) (r.Element, error) {
 	return NewNumber(math.Ceil(n.value)), nil
 }

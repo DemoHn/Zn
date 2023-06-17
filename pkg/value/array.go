@@ -8,10 +8,6 @@ import (
 	r "github.com/DemoHn/Zn/pkg/runtime"
 )
 
-type arrayGetterFunc func(*Array, *r.Context) (r.Element, error)
-type arraySetterFunc func(*Array, *r.Context, r.Element) error
-type arrayMethodFunc func(*Array, *r.Context, []r.Element) (r.Element, error)
-
 // Array - represents for Zn's 数组型
 type Array struct {
 	value []r.Element
