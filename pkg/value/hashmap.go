@@ -5,25 +5,25 @@ import (
 	r "github.com/DemoHn/Zn/pkg/runtime"
 )
 
-type hmGetterFunc func(*HashMap, *r.Context) (r.Value, error)
-type hmMethodFunc func(*HashMap, *r.Context, []r.Value) (r.Value, error)
+type hmGetterFunc func(*HashMap, *r.Context) (r.Element, error)
+type hmMethodFunc func(*HashMap, *r.Context, []r.Element) (r.Element, error)
 
 // HashMap - represents for 列表类
 type HashMap struct {
-	value    map[string]r.Value
+	value    map[string]r.Element
 	keyOrder []string
 }
 
 // KVPair - key-value pair, used for ZnHashMap
 type KVPair struct {
 	Key   string
-	Value r.Value
+	Value r.Element
 }
 
 // NewHashMap -
 func NewHashMap(kvPairs []KVPair) *HashMap {
 	hm := &HashMap{
-		value:    map[string]r.Value{},
+		value:    map[string]r.Element{},
 		keyOrder: []string{},
 	}
 
@@ -44,7 +44,7 @@ func (hm *HashMap) GetKeyOrder() []string {
 }
 
 // GetValue -
-func (hm *HashMap) GetValue() map[string]r.Value {
+func (hm *HashMap) GetValue() map[string]r.Element {
 	return hm.value
 }
 
@@ -63,12 +63,12 @@ func (hm *HashMap) AppendKVPair(pair KVPair) {
 }
 
 // GetProperty -
-func (hm *HashMap) GetProperty(c *r.Context, name string) (r.Value, error) {
+func (hm *HashMap) GetProperty(c *r.Context, name string) (r.Element, error) {
 	hmGetterMap := map[string]hmGetterFunc{
-		"数目": hmGetLength,
-		"长度": hmGetLength,
+		"数目":   hmGetLength,
+		"长度":   hmGetLength,
 		"所有索引": hmGetAllIndexes,
-		"所有值": hmGetAllValues,
+		"所有值":  hmGetAllValues,
 	}
 	if fn, ok := hmGetterMap[name]; ok {
 		return fn(hm, c)
@@ -77,12 +77,12 @@ func (hm *HashMap) GetProperty(c *r.Context, name string) (r.Value, error) {
 }
 
 // SetProperty -
-func (hm *HashMap) SetProperty(c *r.Context, name string, value r.Value) error {
+func (hm *HashMap) SetProperty(c *r.Context, name string, value r.Element) error {
 	return zerr.PropertyNotFound(name)
 }
 
 // ExecMethod -
-func (hm *HashMap) ExecMethod(c *r.Context, name string, values []r.Value) (r.Value, error) {
+func (hm *HashMap) ExecMethod(c *r.Context, name string, values []r.Element) (r.Element, error) {
 	hmMethodMap := map[string]hmMethodFunc{
 		"读取": hmExecGet,
 		"写入": hmExecSet,
@@ -97,20 +97,20 @@ func (hm *HashMap) ExecMethod(c *r.Context, name string, values []r.Value) (r.Va
 //// getters, setters and methods
 
 // getters
-func hmGetLength(hm *HashMap, c *r.Context) (r.Value, error) {
+func hmGetLength(hm *HashMap, c *r.Context) (r.Element, error) {
 	return NewNumber(float64(len(hm.value))), nil
 }
 
-func hmGetAllIndexes(hm *HashMap, c *r.Context) (r.Value, error) {
-	var strs []r.Value
+func hmGetAllIndexes(hm *HashMap, c *r.Context) (r.Element, error) {
+	var strs []r.Element
 	for _, keyName := range hm.keyOrder {
 		strs = append(strs, NewString(keyName))
 	}
 	return NewArray(strs), nil
 }
 
-func hmGetAllValues(hm *HashMap, c *r.Context) (r.Value, error) {
-	var vals []r.Value
+func hmGetAllValues(hm *HashMap, c *r.Context) (r.Element, error) {
+	var vals []r.Element
 	for _, keyName := range hm.keyOrder {
 		vals = append(vals, hm.value[keyName])
 	}
@@ -118,11 +118,11 @@ func hmGetAllValues(hm *HashMap, c *r.Context) (r.Value, error) {
 }
 
 // methods
-func hmExecGet(hm *HashMap, c *r.Context, values []r.Value) (r.Value, error) {
+func hmExecGet(hm *HashMap, c *r.Context, values []r.Element) (r.Element, error) {
 	if err := ValidateLeastParams(values, "string+"); err != nil {
 		return nil, err
 	}
-	var result r.Value = hm
+	var result r.Element = hm
 
 	for _, keyName := range values {
 		keyNameStr := keyName.(*String).value
@@ -139,7 +139,7 @@ func hmExecGet(hm *HashMap, c *r.Context, values []r.Value) (r.Value, error) {
 	return result, nil
 }
 
-func hmExecSet(hm *HashMap, c *r.Context, values []r.Value) (r.Value, error) {
+func hmExecSet(hm *HashMap, c *r.Context, values []r.Element) (r.Element, error) {
 	if err := ValidateExactParams(values, "string", "any"); err != nil {
 		return nil, err
 	}
@@ -149,7 +149,7 @@ func hmExecSet(hm *HashMap, c *r.Context, values []r.Value) (r.Value, error) {
 	return values[1], nil
 }
 
-func hmExecDelete(hm *HashMap, c *r.Context, values []r.Value) (r.Value, error) {
+func hmExecDelete(hm *HashMap, c *r.Context, values []r.Element) (r.Element, error) {
 	if err := ValidateExactParams(values, "string"); err != nil {
 		return nil, err
 	}

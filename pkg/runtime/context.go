@@ -2,190 +2,220 @@ package runtime
 
 import (
 	zerr "github.com/DemoHn/Zn/pkg/error"
-	"github.com/DemoHn/Zn/pkg/syntax"
 )
 
 // Context is a global variable that stores current execution
 // states, global configurations
 type Context struct {
 	// globals - stores all global variables
-	globals map[string]Value
+	globals map[string]Element
 	// hasPrinted - if stdout has been used to output message before program end, set `hasPrinted` -> true; so that after message is done
 	hasPrinted bool
-	*DependencyTree
-	// ScopeStack - trace scopes
-	ScopeStack []*Scope
+
+	// modulegraph - store module dependency & all preloaded modules
+	moduleGraph *ModuleGraph
+
+	// moduleCodeFinder - given a module name, the finder function aims to find it's corresponding source code for further execution - whatever from filesystem, DB, network, etc.
+	// by default, the value is nil, that means the finder could not found any module code at all!
+	moduleCodeFinder ModuleCodeFinder
+	// callStack - get current call module & line for traceback
+	callStack []CallInfo
+	// current execution moduleStack. The last one represents for current execution module. Must be NON-EMPTY at initialization
+	moduleStack []*Module
 }
+
+type CallInfo struct {
+	*Module
+	LastLineIdx int
+}
+
+/* ModuleCodeFinder - input module name, output its source code or return error. The example finder shows how to find source code from module name, where each module corresponds to a "<moduleName>.zn" text file on disk.
+
+```go
+func finder (name string) ([]rune, error) {
+	path := fmt.Sprintf("./%s.zn", name)
+	if _, err := os.Stat(path); errors.Is(err, os.ErrNotExist) {
+		return "", fmt.Errorf("source code of module '%s' not found", name)
+	}
+
+	in, err := io.NewFileStream(path)
+	if err != nil {
+		return err
+	}
+
+	return in.ReadAll()
+}
+```
+*/
+type ModuleCodeFinder func(string) ([]rune, error)
 
 // NewContext - create new Zn Context. Notice through the life-cycle
 // of one code execution, there's only one running context to store all states.
-func NewContext(globalsMap map[string]Value) *Context {
+// NOTE: initModule DO NOT accept nil value at initialization!!
+func NewContext(globalsMap map[string]Element, initModule *Module) *Context {
+	// init module dep graph
+	graph := NewModuleGraph()
+	graph.AddRequireCache(initModule)
+
 	return &Context{
-		globals:        globalsMap,
-		hasPrinted:     false,
-		DependencyTree: NewDependencyTree(),
-		ScopeStack:     []*Scope{},
+		globals:          globalsMap,
+		hasPrinted:       false,
+		moduleGraph:      graph,
+		moduleCodeFinder: nil,
+		callStack:        []CallInfo{},
+		moduleStack:      []*Module{initModule},
 	}
+}
+
+//// getters
+
+func (ctx *Context) GetCurrentModule() *Module {
+	sLen := len(ctx.moduleStack)
+	if sLen > 0 {
+		return ctx.moduleStack[sLen-1]
+	}
+	return nil
+}
+
+func (ctx *Context) GetCallStack() []CallInfo {
+	return ctx.callStack
 }
 
 func (ctx *Context) GetCurrentScope() *Scope {
-	stackLen := len(ctx.ScopeStack)
-	if stackLen == 0 {
-		return nil
+	module := ctx.GetCurrentModule()
+	if module != nil {
+		return module.GetCurrentScope()
 	}
-
-	return ctx.ScopeStack[stackLen-1]
+	return nil
 }
 
-func (ctx *Context) PushScope(module *Module, lexer *syntax.Lexer) *Scope {
-	scope := NewScope(module, lexer)
-	// push scope into ScopeStack
-	ctx.ScopeStack = append(ctx.ScopeStack, scope)
-
-	return ctx.GetCurrentScope()
+func (ctx *Context) GetHasPrinted() bool {
+	return ctx.hasPrinted
 }
 
-// PushChildScope - create new scope with same module from parent scope
-func (ctx *Context) PushChildScope() *Scope {
+func (ctx *Context) GetModuleCodeFinder() ModuleCodeFinder {
+	return ctx.moduleCodeFinder
+}
+
+//// setters
+func (ctx *Context) SetModuleCodeFinder(finder ModuleCodeFinder) {
+	ctx.moduleCodeFinder = finder
+}
+
+//// scope operation
+func (ctx *Context) FindParentScope() *Scope {
+	module := ctx.GetCurrentModule()
+	if module != nil {
+		sLen := len(module.scopeStack)
+
+		if sLen > 1 {
+			return module.scopeStack[sLen-2]
+		}
+	}
+	return nil
+}
+
+// PushScope - create new scope with same module from parent scope
+func (ctx *Context) PushScope() *Scope {
 	sp := ctx.GetCurrentScope()
 	if sp == nil {
 		return nil
 	}
-	childScope := NewChildScope(sp)
-	// push scope into ScopeStack
-	ctx.ScopeStack = append(ctx.ScopeStack, childScope)
 
-	return ctx.GetCurrentScope()
+	return ctx.GetCurrentModule().PushScope()
 }
 
 func (ctx *Context) PopScope() {
-	stackLen := len(ctx.ScopeStack)
-	if stackLen == 0 {
-		return
-	}
-
-	// pop last element
-	ctx.ScopeStack = ctx.ScopeStack[:stackLen-1]
+	ctx.GetCurrentModule().PopScope()
 }
 
 // SetCurrentLine - set lineIdx to current running scope
 func (ctx *Context) SetCurrentLine(line int) {
-	if sp := ctx.GetCurrentScope(); sp != nil {
-		sp.SetExecLineIdx(line)
+	ctx.GetCurrentModule().SetCurrentLine(line)
+}
+
+//// enter & exist modules
+func (ctx *Context) EnterModule(module *Module) {
+	// add require cache
+	ctx.moduleGraph.AddRequireCache(module)
+	ctx.moduleStack = append(ctx.moduleStack, module)
+}
+
+func (ctx *Context) ExitModule() {
+	sLen := len(ctx.moduleStack)
+	if sLen > 0 {
+		ctx.moduleStack = ctx.moduleStack[:sLen-1]
 	}
+}
+
+func (ctx *Context) FindModuleCache(name string) *Module {
+	return ctx.moduleGraph.FindRequireCache(name)
 }
 
 //// scope symbols getters / setters
 
 // FindSymbol - find symbol in the context from current scope
 // up to its root scope
-func (ctx *Context) FindSymbol(name string) (Value, error) {
+func (ctx *Context) FindSymbol(name string) (Element, error) {
 	// find on globals first
 	if symVal, inGlobals := ctx.globals[name]; inGlobals {
 		return symVal, nil
 	}
-	// ...then in symbols
-	sp := ctx.GetCurrentScope()
-	for sp != nil {
-		// 1. look up from current module's import map
-		if module := sp.GetModule(); module != nil {
-			if val, err := module.GetSymbol(name); err == nil {
-				return val, nil
-			}
-		}
-		// 2. look up from scope's symbol map
-		sym, ok := sp.symbolMap[name]
-		if ok {
-			return sym.value, nil
-		}
 
-		sp = sp.parent
-	}
-	return nil, zerr.NameNotDefined(name)
+	return ctx.GetCurrentModule().FindScopeValue(name)
 }
 
 // SetSymbol -
-func (ctx *Context) SetSymbol(name string, value Value) error {
+func (ctx *Context) SetSymbol(name string, value Element) error {
 	if _, inGlobals := ctx.globals[name]; inGlobals {
 		return zerr.NameRedeclared(name)
 	}
 	// ...then in symbols
-	sp := ctx.GetCurrentScope()
-	for sp != nil {
-		sym, ok := sp.symbolMap[name]
-		if ok {
-			if sym.isConst {
-				return zerr.AssignToConstant()
-			}
-			sp.symbolMap[name] = SymbolInfo{value, false}
-			return nil
-		}
-
-		sp = sp.parent
-	}
-	return zerr.NameNotDefined(name)
+	return ctx.GetCurrentModule().SetScopeValue(name, value)
 }
 
 // BindSymbol - bind non-const value with re-declaration check on same scope
-func (ctx *Context) BindSymbol(name string, value Value) error {
+func (ctx *Context) BindSymbol(name string, value Element) error {
 	if _, inGlobals := ctx.globals[name]; inGlobals {
 		return zerr.NameRedeclared(name)
 	}
-	// bind directly
-	sp := ctx.GetCurrentScope()
-	if sp != nil {
-		if _, ok := sp.symbolMap[name]; ok {
-			return zerr.NameRedeclared(name)
-		}
-		// set value
-		sp.symbolMap[name] = SymbolInfo{value, false}
-	}
-	return nil
+
+	return ctx.GetCurrentModule().BindSymbol(name, value, false, true)
 }
 
 // BindSymbolDecl - bind value for declaration statement - that variables could be re-bind.
-func (ctx *Context) BindSymbolDecl(name string, value Value, isConst bool) error {
+func (ctx *Context) BindSymbolDecl(name string, value Element, isConst bool) error {
 	if _, inGlobals := ctx.globals[name]; inGlobals {
 		return zerr.NameRedeclared(name)
 	}
-	sp := ctx.GetCurrentScope()
-	if sp != nil {
-		sp.symbolMap[name] = SymbolInfo{value, isConst}
-	}
-	return nil
+
+	return ctx.GetCurrentModule().BindSymbol(name, value, isConst, false)
 }
 
 // BindScopeSymbolDecl - bind value for declaration statement - that variables could be re-bind.
-func (ctx *Context) BindScopeSymbolDecl(scope *Scope, name string, value Value) error {
+func (ctx *Context) BindScopeSymbolDecl(scope *Scope, name string, value Element) error {
 	if _, inGlobals := ctx.globals[name]; inGlobals {
 		return zerr.NameRedeclared(name)
 	}
 	if scope != nil {
-		scope.symbolMap[name] = SymbolInfo{value, false}
+		scope.SetSymbolValue(name, value, false)
 	}
 	return nil
 }
 
 // FindThisValue -
-func (ctx *Context) FindThisValue() (Value, error) {
-	sp := ctx.GetCurrentScope()
-	for sp != nil {
-		thisValue := sp.thisValue
-		if thisValue != nil {
-			return thisValue, nil
+func (ctx *Context) FindThisValue() (Element, error) {
+	m := ctx.GetCurrentModule()
+	for cursor := len(m.scopeStack) - 1; cursor >= 0; cursor-- {
+		sp := m.scopeStack[cursor]
+		if sp.thisValue != nil {
+			return sp.thisValue, nil
 		}
-
-		sp = sp.parent
 	}
-
 	return nil, zerr.PropertyNotFound("thisValue")
 }
 
 // MarkHasPrinted - called by `显示` function only
 func (ctx *Context) MarkHasPrinted() {
 	ctx.hasPrinted = true
-}
-
-func (ctx *Context) GetHasPrinted() bool {
-	return ctx.hasPrinted
 }

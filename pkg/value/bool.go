@@ -5,7 +5,7 @@ import (
 	r "github.com/DemoHn/Zn/pkg/runtime"
 )
 
-type boolGetterFunc func(*Bool, *r.Context) (r.Value, error)
+type boolGetterFunc func(*Bool, *r.Context) (r.Element, error)
 
 type Bool struct {
 	value bool
@@ -31,7 +31,7 @@ func (b *Bool) GetValue() bool {
 }
 
 // GetProperty -
-func (b *Bool) GetProperty(c *r.Context, name string) (r.Value, error) {
+func (b *Bool) GetProperty(c *r.Context, name string) (r.Element, error) {
 	boolGetterMap := map[string]boolGetterFunc{
 		"文本": boolGetText,
 	}
@@ -42,18 +42,18 @@ func (b *Bool) GetProperty(c *r.Context, name string) (r.Value, error) {
 }
 
 // SetProperty -
-func (b *Bool) SetProperty(c *r.Context, name string, value r.Value) error {
+func (b *Bool) SetProperty(c *r.Context, name string, value r.Element) error {
 	return zerr.PropertyNotFound(name)
 }
 
 // ExecMethod -
-func (b *Bool) ExecMethod(c *r.Context, name string, values []r.Value) (r.Value, error) {
+func (b *Bool) ExecMethod(c *r.Context, name string, values []r.Element) (r.Element, error) {
 	return nil, zerr.MethodNotFound(name)
 }
 
 //// getters & setters & methods
 // getters
 // get text representation of current Bool value
-func boolGetText(b *Bool, c *r.Context) (r.Value, error) {
+func boolGetText(b *Bool, c *r.Context) (r.Element, error) {
 	return NewString(b.String()), nil
 }

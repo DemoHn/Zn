@@ -3,20 +3,20 @@ package stdlib
 import (
 	"encoding/json"
 	"fmt"
-	zerr "github.com/DemoHn/Zn/pkg/error"
-	r "github.com/DemoHn/Zn/pkg/runtime"
-	"github.com/DemoHn/Zn/pkg/value"
 	"math"
 	"strconv"
 	"strings"
+
+	zerr "github.com/DemoHn/Zn/pkg/error"
+	r "github.com/DemoHn/Zn/pkg/runtime"
+	"github.com/DemoHn/Zn/pkg/value"
 )
 
 var jsonModuleName = "JSON"
-var jsonModule = r.NewModule(jsonModuleName)
-
+var jsonModule = r.NewModule(jsonModuleName, nil)
 
 // parseJsonFunc - 解析JSON
-func parseJsonFunc(c *r.Context, values []r.Value) (r.Value, error) {
+func parseJsonFunc(c *r.Context, values []r.Element) (r.Element, error) {
 	// validate string ONLY
 	if err := value.ValidateExactParams(values, "string"); err != nil {
 		return nil, err
@@ -34,7 +34,7 @@ func parseJsonFunc(c *r.Context, values []r.Value) (r.Value, error) {
 }
 
 // generateJsonFunc - 生成JSON
-func generateJsonFunc(c *r.Context, values []r.Value) (r.Value, error) {
+func generateJsonFunc(c *r.Context, values []r.Element) (r.Element, error) {
 	if err := value.ValidateExactParams(values, "hashmap"); err != nil {
 		return nil, err
 	}
@@ -46,7 +46,7 @@ func generateJsonFunc(c *r.Context, values []r.Value) (r.Value, error) {
 }
 
 // buildHashMapItem -
-func buildHashMapItem(item interface{}) r.Value {
+func buildHashMapItem(item interface{}) r.Element {
 	if item == nil { // nil for json value "null"
 		return value.NewNull()
 	}
@@ -68,7 +68,7 @@ func buildHashMapItem(item interface{}) r.Value {
 		}
 		return target
 	case []interface{}:
-		varr := value.NewArray([]r.Value{})
+		varr := value.NewArray([]r.Element{})
 		for _, vitem := range vv {
 			varr.AppendValue(buildHashMapItem(vitem))
 		}
@@ -79,7 +79,7 @@ func buildHashMapItem(item interface{}) r.Value {
 }
 
 // buildPlainStrItem - from r.Value -> plain interface{} value
-func buildPlainStrItem(item r.Value) interface{} {
+func buildPlainStrItem(item r.Element) interface{} {
 	switch vv := item.(type) {
 	case *value.Null:
 		return nil

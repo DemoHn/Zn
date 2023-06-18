@@ -28,7 +28,8 @@ const (
 	ErrMismatchParamLengthError = 41
 	ErrMostParamsError          = 42
 	ErrExactParamsError         = 43
-	ErrModuleNotFound           = 50
+	// module error
+	ErrModuleNotFound = 50
 	// internal error
 	ErrUnexpectedCase           = 60
 	ErrUnexpectedEmptyExecLogic = 61

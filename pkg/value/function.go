@@ -5,76 +5,93 @@ import (
 	r "github.com/DemoHn/Zn/pkg/runtime"
 )
 
-type funcExecutor = func(*r.Context, []r.Value) (r.Value, error)
+type FuncExecutor = func(*r.Context, []r.Element) (r.Element, error)
 
-// Function - 方法类
 type Function struct {
-	value *ClosureRef
+	// closureScope - when compiling a function, we will create an exclusive scope for this function to store values created inside the function.
+	closureScope  *r.Scope
+	paramHandler  FuncExecutor
+	logicHandlers []FuncExecutor
+	// exceptionHandler - when an exception raise up, run this handler to catch the exception (like try...catch...)
+	// TODO -
+	exceptionHandler FuncExecutor
 }
 
-// ClosureRef - aka. Closure Execution Reference
-// It's the structure of a closure which wraps execution logic.
-// The executor could be either a bunch of code or some native code.
-type ClosureRef struct {
-	ParamHandler funcExecutor
-	Executor     funcExecutor // closure execution logic
-}
+func NewFunction(closureScope *r.Scope, executor FuncExecutor) *Function {
+	logicHandlers := []FuncExecutor{}
+	if executor != nil {
+		logicHandlers = append(logicHandlers, executor)
+	}
 
-// NewFunction - new Zn native function
-func NewFunction(name string, executor funcExecutor) *Function {
-	closureRef := NewClosure(nil, executor)
-	return &Function{closureRef}
-}
-
-// NewFunctionFromClosure -
-func NewFunctionFromClosure(closure *ClosureRef) *Function {
-	return &Function{closure}
-}
-
-// NewClosure - wraps a closure from native code (Golang code)
-func NewClosure(paramHandler funcExecutor, executor funcExecutor) *ClosureRef {
-	return &ClosureRef{
-		ParamHandler: paramHandler,
-		Executor:     executor,
+	return &Function{
+		closureScope:     closureScope,
+		paramHandler:     nil,
+		logicHandlers:    logicHandlers,
+		exceptionHandler: nil,
 	}
 }
 
+// setters
+func (fn *Function) SetParamHandler(handler FuncExecutor) {
+	fn.paramHandler = handler
+}
+
+// add logic handler
+func (fn *Function) AddLogicHandler(handler FuncExecutor) {
+	fn.logicHandlers = append(fn.logicHandlers, handler)
+}
+
+//// core function: Exec
 // Exec - execute a closure - accepts input params, execute from closure executor and
 // yields final result
-func (cs *ClosureRef) Exec(c *r.Context, thisValue r.Value, params []r.Value) (r.Value, error) {
+func (fn *Function) Exec(c *r.Context, thisValue r.Element, params []r.Element) (r.Element, error) {
 	// init scope
-	newScope := c.PushChildScope()
-	defer c.PopScope()
-	newScope.SetThisValue(thisValue)
+	module := c.GetCurrentModule()
 
-	if cs.ParamHandler != nil {
-		if _, err := cs.ParamHandler(c, params); err != nil {
+	// add the pre-defined closure scope to current module
+	if fn.closureScope != nil {
+		module.AddScope(fn.closureScope)
+		defer c.PopScope()
+	}
+
+	// create new scope for the function ITSELF
+	fnScope := c.PushScope()
+	defer c.PopScope()
+
+	fnScope.SetThisValue(thisValue)
+
+	if fn.paramHandler != nil {
+		if _, err := fn.paramHandler(c, params); err != nil {
 			return nil, err
 		}
 	}
-	if cs.Executor == nil {
+	if len(fn.logicHandlers) == 0 {
 		return nil, zerr.UnexpectedEmptyExecLogic()
 	}
 	// do execution
-	return cs.Executor(c, params)
+	var lastValue r.Element
+	var execError error
+	for _, handler := range fn.logicHandlers {
+		lastValue, execError = handler(c, params)
+		if execError != nil {
+			return nil, execError
+		}
+	}
+	return lastValue, nil
 }
 
-// GetValue -
-func (fn *Function) GetValue() *ClosureRef {
-	return fn.value
-}
-
+// impl Value interface
 // GetProperty -
-func (fn *Function) GetProperty(c *r.Context, name string) (r.Value, error) {
+func (fn *Function) GetProperty(c *r.Context, name string) (r.Element, error) {
 	return nil, zerr.PropertyNotFound(name)
 }
 
 // SetProperty -
-func (fn *Function) SetProperty(c *r.Context, name string, value r.Value) error {
+func (fn *Function) SetProperty(c *r.Context, name string, value r.Element) error {
 	return zerr.PropertyNotFound(name)
 }
 
 // ExecMethod -
-func (fn *Function) ExecMethod(c *r.Context, name string, values []r.Value) (r.Value, error) {
+func (fn *Function) ExecMethod(c *r.Context, name string, values []r.Element) (r.Element, error) {
 	return nil, zerr.MethodNotFound(name)
 }

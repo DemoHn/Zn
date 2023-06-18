@@ -18,16 +18,16 @@ func (e *Exception) GetMessage() string {
 }
 
 // GetProperty -
-func (e *Exception) GetProperty(c *r.Context, name string) (r.Value, error) {
+func (e *Exception) GetProperty(c *r.Context, name string) (r.Element, error) {
 	return nil, zerr.PropertyNotFound(name)
 }
 
 // SetProperty -
-func (e *Exception) SetProperty(c *r.Context, name string, value r.Value) error {
+func (e *Exception) SetProperty(c *r.Context, name string, value r.Element) error {
 	return zerr.PropertyNotFound(name)
 }
 
 // ExecMethod -
-func (e *Exception) ExecMethod(c *r.Context, name string, values []r.Value) (r.Value, error) {
+func (e *Exception) ExecMethod(c *r.Context, name string, values []r.Element) (r.Element, error) {
 	return nil, zerr.MethodNotFound(name)
 }

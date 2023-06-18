@@ -7,9 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/DemoHn/Zn/pkg/io"
 	r "github.com/DemoHn/Zn/pkg/runtime"
-	"github.com/DemoHn/Zn/pkg/syntax"
 	"github.com/DemoHn/Zn/pkg/value"
 
 	"github.com/DemoHn/Zn/pkg/exec"
@@ -22,53 +20,32 @@ const version = "rev06"
 func EnterREPL() {
 	linerR := liner.NewLiner()
 	linerR.SetCtrlCAborts(true)
-	c := r.NewContext(exec.GlobalValues)
 
-	// init global module and scope
-	module := r.NewModule("REPL")
-	c.PushScope(module, nil)
-
+	replExecutor := exec.NewREPLExecutor()
 	// REPL loop
 	for {
 		text, err := linerR.Prompt("Zn> ")
 		if err != nil {
 			if err == liner.ErrPromptAborted {
-				os.Exit(0)
+				break
 			} else if err.Error() == "EOF" {
-				os.Exit(0)
+				break
 			} else {
 				fmt.Printf("未知错误：%s\n", err.Error())
-				os.Exit(0)
+				break
 			}
 		}
 		// append history
 		linerR.AppendHistory(text)
 		// add special command
-		if text == ".exit" {
+		if text == "退出" {
 			break
 		}
 
-		// execute program
-		in := io.NewByteStream([]byte(text))
-
-		// #1. read source code
-		source, err := in.ReadAll()
+		result, err := replExecutor.RunCode(text)
 		if err != nil {
-			prettyPrintError(c, os.Stdout, err)
-			return
-		}
-
-		lexer := syntax.NewLexer(source)
-		c.GetCurrentScope().SetLexer(lexer)
-
-		// execute code
-		result, err2 := exec.ExecuteREPLCode(c, lexer)
-		if err2 != nil {
-			prettyPrintError(c, os.Stdout, err2)
-			return
-		}
-
-		if result != nil {
+			prettyPrintError(os.Stdout, err)
+		} else if result != nil {
 			prettyDisplayValue(result, os.Stdout)
 		}
 	}
@@ -76,18 +53,16 @@ func EnterREPL() {
 
 // ExecProgram - exec program from file directly
 func ExecProgram(file string) {
-	c := r.NewContext(exec.GlobalValues)
-
 	rootDir := filepath.Dir(file)
 	// get module name
 	_, fileName := filepath.Split(file)
 	rootModule := strings.TrimSuffix(fileName, filepath.Ext(fileName))
 
-	c.SetRootDir(rootDir)
+	fileExecutor := exec.NewFileExecutor(rootDir, rootModule)
 	// when exec program, unlike REPL, it's not necessary to print last executed value
-	rtnValue, err := exec.ExecuteModule(c, rootModule)
+	rtnValue, err := fileExecutor.RunModule()
 	if err != nil {
-		prettyPrintError(c, os.Stdout, err)
+		prettyPrintError(os.Stdout, err)
 		return
 	}
 
@@ -96,7 +71,7 @@ func ExecProgram(file string) {
 	case *value.Null:
 		return
 	default:
-		if c.GetHasPrinted() {
+		if fileExecutor.HasPrinted() {
 			os.Stdout.Write([]byte{'\n'})
 		}
 		os.Stdout.Write([]byte(value.StringifyValue(rtnValue)))
@@ -110,7 +85,7 @@ func ShowVersion() {
 }
 
 //// display helpers
-func prettyDisplayValue(v r.Value, w eio.Writer) {
+func prettyDisplayValue(v r.Element, w eio.Writer) {
 	var displayData = ""
 	var valStr = value.StringifyValue(v)
 	switch v.(type) {
@@ -132,6 +107,6 @@ func prettyDisplayValue(v r.Value, w eio.Writer) {
 	_, _ = w.Write([]byte(displayData))
 }
 
-func prettyPrintError(c *r.Context, w eio.Writer, err error) {
+func prettyPrintError(w eio.Writer, err error) {
 	_, _ = w.Write([]byte(exec.DisplayError(err)))
 }

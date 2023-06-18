@@ -33,7 +33,7 @@ const (
 //
 // Gt - for two decimals ONLY. If leftValue > rightValue.
 //
-func CompareValues(left r.Value, right r.Value, verb uint8) (bool, error) {
+func CompareValues(left r.Element, right r.Element, verb uint8) (bool, error) {
 	switch vl := left.(type) {
 	case *Null:
 		if _, ok := right.(*Null); ok {
@@ -138,7 +138,7 @@ func CompareValues(left r.Value, right r.Value, verb uint8) (bool, error) {
 // DuplicateValue - deepcopy values' structure, including bool, string, decimal, array, hashmap
 // for function or object or null, pass the original reference instead.
 // This is due to the 'copycat by default' policy
-func DuplicateValue(in r.Value) r.Value {
+func DuplicateValue(in r.Element) r.Element {
 	switch v := in.(type) {
 	case *Bool:
 		return NewBool(v.value)
@@ -149,7 +149,7 @@ func DuplicateValue(in r.Value) r.Value {
 	case *Null:
 		return in // no need to copy since all "NULL" values are same
 	case *Array:
-		newArr := []r.Value{}
+		newArr := []r.Element{}
 		for _, val := range v.value {
 			newArr = append(newArr, DuplicateValue(val))
 		}
@@ -170,7 +170,7 @@ func DuplicateValue(in r.Value) r.Value {
 }
 
 // StringifyValue - yield a string from r.Value
-func StringifyValue(value r.Value) string {
+func StringifyValue(value r.Element) string {
 	switch v := value.(type) {
 	case *String:
 		return fmt.Sprintf("「%s」", v.value)
@@ -219,7 +219,7 @@ func StringifyValue(value r.Value) string {
 // 6. object   --> *Object
 // 7. function --> *Function
 // 8. any      --> any value type
-func ValidateExactParams(values []r.Value, typeStr ...string) error {
+func ValidateExactParams(values []r.Element, typeStr ...string) error {
 	if len(values) != len(typeStr) {
 		return zerr.ExactParamsError(len(typeStr))
 	}
@@ -244,7 +244,7 @@ func ValidateExactParams(values []r.Value, typeStr ...string) error {
 //
 // ["number", "bool", "string*"] means the FIRST param is a decimal, the SECOND param is a bool, and the FOLLOWING params
 // are all strings (allow 0 string params)
-func ValidateLeastParams(values []r.Value, typeStr ...string) error {
+func ValidateLeastParams(values []r.Element, typeStr ...string) error {
 Loop:
 	for idx, t := range typeStr {
 		// find if there's wildcard
@@ -275,7 +275,7 @@ Loop:
 // ValidateAllParams doesn't limit the length of input values; instead, it requires all the parameters
 // to have same value type denoted by `typeStr`
 // e.g. ValidateAllParams([]Value{“1”, “2”, “3”}, "string")
-func ValidateAllParams(values []r.Value, typeStr string) error {
+func ValidateAllParams(values []r.Element, typeStr string) error {
 	for _, v := range values {
 		if err := validateOneParam(v, typeStr); err != nil {
 			return err
@@ -284,7 +284,7 @@ func ValidateAllParams(values []r.Value, typeStr string) error {
 	return nil
 }
 
-func validateOneParam(v r.Value, typeStr string) error {
+func validateOneParam(v r.Element, typeStr string) error {
 	valid := true
 	switch typeStr {
 	case "number":
@@ -327,7 +327,7 @@ func validateOneParam(v r.Value, typeStr string) error {
 //// Program Executors
 
 // （显示） 方法的执行逻辑
-var DisplayExecutor = func(c *r.Context, params []r.Value) (r.Value, error) {
+var DisplayExecutor = func(c *r.Context, params []r.Element) (r.Element, error) {
 	// display format string
 	var items = []string{}
 
