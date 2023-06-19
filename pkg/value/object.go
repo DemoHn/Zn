@@ -38,8 +38,8 @@ func NewObject(model *ClassModel) *Object {
 	}
 }
 
-// NewClassRef - create new empty r.ClassRef
-func NewClassRef(name string) *ClassModel {
+// NewClassModel - create new empty r.ClassRef
+func NewClassModel(name string) *ClassModel {
 	return &ClassModel{
 		Name:         name,
 		Constructor:  nil,

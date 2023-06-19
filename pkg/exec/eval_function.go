@@ -65,9 +65,17 @@ func compileFunction(upperContext *r.Context, paramTags []*syntax.ParamItem, stm
 
 // （显示：A、B、C），得到D
 func evalFunctionCall(c *r.Context, expr *syntax.FuncCallExpr) (r.Element, error) {
-	var zval *value.Function
-	vtag := expr.FuncName.GetLiteral()
+	var resultVal r.Element
+	var err error
 
+	// eval method
+	funcName := expr.FuncName.GetLiteral()
+
+	// exec params
+	params, err := exprsToValues(c, expr.Params)
+	if err != nil {
+		return nil, err
+	}
 	// for a function call, if thisValue NOT FOUND, that means the target closure is a FUNCTION
 	// instead of a METHOD (which is defined on class definition statement)
 	//
@@ -77,65 +85,76 @@ func evalFunctionCall(c *r.Context, expr *syntax.FuncCallExpr) (r.Element, error
 	// If thisValue == nil, we will look up target closure from scope's values directly.
 	thisValue, _ := c.FindThisValue()
 
-	// exec params first
-	params, err := exprsToValues(c, expr.Params)
-	if err != nil {
-		return nil, err
-	}
-
 	// if thisValue exists, find ID from its method list
+	/* example:
+	如何外部方法？
+		输出「这是外部方法」
+
+	定义示例类：
+		如何内部类方法？
+			输出「内部类方法」
+
+		如何方法B？
+			（内部类方法）  //  等价于 `以 [某示例类对象]（内部类方法）`
+			（外部方法）   //  1. 先示例类中寻找「外部方法」，如同调用 `以 [某示例类对象]（内部类方法）` 2. 寻找无果（抛出 zerr.ErrMethodNotFound 错误）后再去全局作用域寻找「外部方法」的方法对象并调用其逻辑
+	*/
 	if thisValue != nil {
-		v, err := thisValue.ExecMethod(c, vtag, params)
-		if err == nil {
-			if expr.YieldResult != nil {
-				// add yield result
-				vtag := expr.YieldResult.GetLiteral()
-				// bind yield result
-				if err := c.BindScopeSymbolDecl(c.GetCurrentScope(), vtag, v); err != nil {
-					return nil, err
+		resultVal, err = execMethodFunction(c, thisValue, funcName, params)
+		if err != nil {
+			if errX, ok := err.(*zerr.RuntimeError); ok {
+				if errX.Code == zerr.ErrMethodNotFound {
+					// fallback to execute direct function
+					resultVal, err = execDirectFunction(c, funcName, params)
 				}
 			}
-			// return result
-			return v, nil
 		}
-
-		if errX, ok := err.(*zerr.RuntimeError); ok {
-			if errX.Code != zerr.ErrMethodNotFound {
-				return nil, err
-			}
-		} else {
-			return nil, err
-		}
+	} else {
+		// no parent object denoted, execute function directly
+		resultVal, err = execDirectFunction(c, funcName, params)
 	}
 
-	// if function value not found from object scope, look up from local scope
-
-	// find function definition
-	v, err := c.FindSymbol(vtag)
-	if err != nil {
-		return nil, err
-	}
-	// assert value
-	zval, ok := v.(*value.Function)
-	if !ok {
-		return nil, zerr.InvalidFuncVariable(vtag)
-	}
-
-	// exec function call via its ClosureRef
-	v2, err := zval.Exec(c, thisValue, params)
 	if err != nil {
 		return nil, err
 	}
 
+	// if exec function call succeed, then the non-nil `resultVal` will be exported.
+	// However, if `得到 [someVar]` semi statement is defined, we will bind the `resultVal` to `someVar` first before ending the procedure.
 	if expr.YieldResult != nil {
 		// add yield result
 		ytag := expr.YieldResult.GetLiteral()
 		// bind yield result
-		if err := c.BindScopeSymbolDecl(c.GetCurrentScope(), ytag, v2); err != nil {
+		if err := c.BindScopeSymbolDecl(c.GetCurrentScope(), ytag, resultVal); err != nil {
 			return nil, err
 		}
 	}
 
 	// return result
-	return v2, nil
+	return resultVal, nil
+}
+
+func execMethodFunction(c *r.Context, root r.Element, funcName string, params []r.Element) (r.Element, error) {
+	sp := c.GetCurrentScope()
+	oldThisValue := sp.GetThisValue()
+
+	sp.SetThisValue(root)
+	defer sp.SetThisValue(oldThisValue)
+
+	// exec method
+	return root.ExecMethod(c, funcName, params)
+}
+
+// direct function: defined as standalone function instead of the method of
+// a model
+func execDirectFunction(c *r.Context, funcName string, params []r.Element) (r.Element, error) {
+	v, err := c.FindSymbol(funcName)
+	if err != nil {
+		return nil, err
+	}
+	// assert value is function type
+	funcVal, ok := v.(*value.Function)
+	if !ok {
+		return nil, zerr.InvalidFuncVariable(funcName)
+	}
+
+	return funcVal.Exec(c, nil, params)
 }

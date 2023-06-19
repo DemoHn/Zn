@@ -340,38 +340,6 @@ func evalPreStmtBlock(c *r.Context, block *syntax.BlockStmt) (*syntax.BlockStmt,
 	return otherStmts, nil
 }
 
-// execAnotherModule - load source code of the module, parse the coe, execute the program, and build depCache!
-func execAnotherModule(c *r.Context, name string) (*r.Module, error) {
-	if finder := c.GetModuleCodeFinder(); finder != nil {
-		source, err := finder(name)
-		if err != nil {
-			return nil, zerr.ModuleNotFound(name)
-		}
-		// #1.  create & enter module
-		lexer := syntax.NewLexer(source)
-		module := r.NewModule(name, lexer)
-		c.EnterModule(module)
-		defer c.ExitModule()
-
-		// #2. parse program
-		p := syntax.NewParser(lexer, zh.NewParserZH())
-
-		program, err := p.Parse()
-		if err != nil {
-			return nil, WrapSyntaxError(lexer, module, err)
-		}
-
-		// #3. eval program
-		if err := evalProgram(c, program); err != nil {
-			return nil, WrapRuntimeError(c, err)
-		}
-
-		return module, nil
-	}
-	// no finder defined, return nil directly (no throw error)
-	return nil, nil
-}
-
 // EvalStmtBlock -
 func evalStmtBlock(c *r.Context, block *syntax.BlockStmt) error {
 	for _, stmt := range block.Children {
@@ -554,10 +522,6 @@ func evalExpression(c *r.Context, expr syntax.Expression) (r.Element, error) {
 
 // 以 A （执行：B、C、D）
 func evalMemberMethodExpr(c *r.Context, expr *syntax.MemberMethodExpr) (r.Element, error) {
-	currentScope := c.GetCurrentScope()
-	newScope := c.PushScope()
-	defer c.PopScope()
-
 	// 1. parse root expr
 	rootExpr, err := evalExpression(c, expr.Root)
 	if err != nil {
@@ -567,9 +531,16 @@ func evalMemberMethodExpr(c *r.Context, expr *syntax.MemberMethodExpr) (r.Elemen
 	var vlast r.Element = rootExpr
 
 	for _, methodExpr := range expr.MethodChain {
-		// set this value
-		newScope.SetThisValue(vlast)
-		v, err := evalFunctionCall(c, methodExpr)
+		// eval method
+		funcName := methodExpr.FuncName.GetLiteral()
+
+		// exec params
+		params, err := exprsToValues(c, methodExpr.Params)
+		if err != nil {
+			return nil, err
+		}
+
+		v, err := execMethodFunction(c, vlast, funcName, params)
 		if err != nil {
 			return nil, err
 		}
@@ -580,7 +551,7 @@ func evalMemberMethodExpr(c *r.Context, expr *syntax.MemberMethodExpr) (r.Elemen
 	if expr.YieldResult != nil {
 		vtag := expr.YieldResult.GetLiteral()
 		// bind yield result
-		if err := c.BindScopeSymbolDecl(currentScope, vtag, vlast); err != nil {
+		if err := c.BindSymbolDecl(vtag, vlast, false); err != nil {
 			return nil, err
 		}
 	}
@@ -817,6 +788,38 @@ func evalVarAssignExpr(c *r.Context, expr *syntax.VarAssignExpr) (r.Element, err
 	}
 }
 
+// execAnotherModule - load source code of the module, parse the coe, execute the program, and build depCache!
+func execAnotherModule(c *r.Context, name string) (*r.Module, error) {
+	if finder := c.GetModuleCodeFinder(); finder != nil {
+		source, err := finder(name)
+		if err != nil {
+			return nil, zerr.ModuleNotFound(name)
+		}
+		// #1.  create & enter module
+		lexer := syntax.NewLexer(source)
+		module := r.NewModule(name, lexer)
+		c.EnterModule(module)
+		defer c.ExitModule()
+
+		// #2. parse program
+		p := syntax.NewParser(lexer, zh.NewParserZH())
+
+		program, err := p.Parse()
+		if err != nil {
+			return nil, WrapSyntaxError(lexer, module, err)
+		}
+
+		// #3. eval program
+		if err := evalProgram(c, program); err != nil {
+			return nil, WrapRuntimeError(c, err)
+		}
+
+		return module, nil
+	}
+	// no finder defined, return nil directly (no throw error)
+	return nil, nil
+}
+
 func getMemberExprIV(c *r.Context, expr *syntax.MemberExpr) (*value.IV, error) {
 	switch expr.RootType {
 	case syntax.RootTypeProp: // 其 XX
@@ -896,7 +899,7 @@ func extractSignalValue(err error, sigType uint8) (r.Element, error) {
 
 // BuildClassFromNode -
 func BuildClassFromNode(upperCtx *r.Context, name string, classNode *syntax.ClassDeclareStmt) *value.ClassModel {
-	ref := value.NewClassRef(name)
+	ref := value.NewClassModel(name)
 
 	// define default constructor
 	var constructor = func(c *r.Context, params []r.Element) (r.Element, error) {

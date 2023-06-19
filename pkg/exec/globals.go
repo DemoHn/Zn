@@ -17,7 +17,7 @@ func init() {
 	}
 
 	// construct 异常 class
-	expClassRef := value.NewClassRef("异常")
+	expClassRef := value.NewClassModel("异常")
 	expClassRef.Constructor = func(c *r.Context, values []r.Element) (r.Element, error) {
 		if err := value.ValidateExactParams(values, "string"); err != nil {
 			return nil, err
