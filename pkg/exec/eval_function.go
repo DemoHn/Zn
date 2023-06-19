@@ -83,7 +83,7 @@ func evalFunctionCall(c *r.Context, expr *syntax.FuncCallExpr) (r.Element, error
 	// then look up from scope's values.
 	//
 	// If thisValue == nil, we will look up target closure from scope's values directly.
-	thisValue, _ := c.FindThisValue()
+	thisValue := c.GetThisValue()
 
 	// if thisValue exists, find ID from its method list
 	/* example:
@@ -136,6 +136,7 @@ func execMethodFunction(c *r.Context, root r.Element, funcName string, params []
 	sp := c.GetCurrentScope()
 	oldThisValue := sp.GetThisValue()
 
+	// set thisValue of current scope instead of creating new scope
 	sp.SetThisValue(root)
 	defer sp.SetThisValue(oldThisValue)
 

@@ -203,16 +203,10 @@ func (ctx *Context) BindScopeSymbolDecl(scope *Scope, name string, value Element
 	return nil
 }
 
-// FindThisValue -
-func (ctx *Context) FindThisValue() (Element, error) {
+// GetThisValue -
+func (ctx *Context) GetThisValue() Element {
 	m := ctx.GetCurrentModule()
-	for cursor := len(m.scopeStack) - 1; cursor >= 0; cursor-- {
-		sp := m.scopeStack[cursor]
-		if sp.thisValue != nil {
-			return sp.thisValue, nil
-		}
-	}
-	return nil, zerr.PropertyNotFound("thisValue")
+	return m.GetCurrentScope().thisValue
 }
 
 // MarkHasPrinted - called by `显示` function only

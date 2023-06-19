@@ -823,9 +823,9 @@ func execAnotherModule(c *r.Context, name string) (*r.Module, error) {
 func getMemberExprIV(c *r.Context, expr *syntax.MemberExpr) (*value.IV, error) {
 	switch expr.RootType {
 	case syntax.RootTypeProp: // 其 XX
-		thisValue, err := c.FindThisValue()
-		if err != nil {
-			return nil, err
+		thisValue := c.GetThisValue()
+		if thisValue == nil {
+			return nil, zerr.ThisValueNotFound()
 		}
 		return value.NewMemberIV(thisValue, expr.MemberID.GetLiteral()), nil
 	case syntax.RootTypeExpr: // A 之 B

@@ -24,6 +24,7 @@ const (
 	ErrPropertyNotFound         = 35
 	ErrMethodNotFound           = 36
 	ErrClassNotOnRoot           = 37
+	ErrThisValueNotFound        = 38
 	ErrLeastParamsError         = 40
 	ErrMismatchParamLengthError = 41
 	ErrMostParamsError          = 42
@@ -129,6 +130,15 @@ func ClassNotOnRoot(name string) *RuntimeError {
 		Code:    ErrClassNotOnRoot,
 		Message: fmt.Sprintf("只能在模块主层级定义「%s」类", name),
 		Extra:   name,
+	}
+}
+
+// ThisValueNotFound -
+func ThisValueNotFound() *RuntimeError {
+	return &RuntimeError{
+		Code:    ErrThisValueNotFound,
+		Message: "未找到此方法/属性对应的主对象 (thisValue)",
+		Extra:   nil,
 	}
 }
 

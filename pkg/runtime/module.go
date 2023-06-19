@@ -54,7 +54,7 @@ func NewModule(name string, lexer *syntax.Lexer) *Module {
 		lexer:       lexer,
 		currentLine: 0,
 		// init root scope to ensure scopeStack NOT empty
-		scopeStack:   []*Scope{NewScope()},
+		scopeStack:   []*Scope{NewScope(nil)},
 		exportValues: map[string]Element{},
 	}
 }
@@ -66,7 +66,7 @@ func NewAnonymousModule(lexer *syntax.Lexer) *Module {
 		lexer:       lexer,
 		currentLine: 0,
 		// init root scope to ensure scopeStack NOT empty
-		scopeStack:   []*Scope{NewScope()},
+		scopeStack:   []*Scope{NewScope(nil)},
 		exportValues: map[string]Element{},
 	}
 }
@@ -104,10 +104,12 @@ func (m *Module) GetCurrentScope() *Scope {
 }
 
 func (m *Module) PushScope() *Scope {
-	if sp := m.GetCurrentScope(); sp == nil {
+	sp := m.GetCurrentScope()
+	if sp == nil {
 		return nil
 	}
-	childScope := NewScope()
+
+	childScope := NewScope(sp.thisValue)
 	// push scope into ScopeStack
 	m.scopeStack = append(m.scopeStack, childScope)
 

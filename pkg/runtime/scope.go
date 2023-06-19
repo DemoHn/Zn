@@ -28,10 +28,10 @@ func MakeSymbolInfo(value Element, isConst bool) SymbolInfo {
 	return SymbolInfo{value, isConst}
 }
 
-func NewScope() *Scope {
+func NewScope(thisValue Element) *Scope {
 	return &Scope{
 		symbolMap:   map[string]SymbolInfo{},
-		thisValue:   nil,
+		thisValue:   thisValue,
 		returnValue: nil,
 	}
 }
