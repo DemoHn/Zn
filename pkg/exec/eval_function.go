@@ -133,13 +133,11 @@ func evalFunctionCall(c *r.Context, expr *syntax.FuncCallExpr) (r.Element, error
 }
 
 func execMethodFunction(c *r.Context, root r.Element, funcName string, params []r.Element) (r.Element, error) {
-	sp := c.GetCurrentScope()
-	oldThisValue := sp.GetThisValue()
+	// create a new scope to denote a new 'thisValue'
+	newScope := c.PushScope()
+	defer c.PopScope()
 
-	// set thisValue of current scope instead of creating new scope
-	sp.SetThisValue(root)
-	defer sp.SetThisValue(oldThisValue)
-
+	newScope.SetThisValue(root)
 	// exec method
 	return root.ExecMethod(c, funcName, params)
 }
