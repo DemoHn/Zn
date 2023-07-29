@@ -8,6 +8,7 @@ import (
 	"net/http/fcgi"
 	"net/url"
 	"os"
+	"os/exec"
 	"os/signal"
 	"syscall"
 )
@@ -18,6 +19,8 @@ const (
 	EnvZincAdapter     = "ZINC_ADAPTER"
 	ZincAP_Playground  = "playground"
 	ZincAP_HTTPHandler = "http_handler"
+	EnvPreforkChildKey = "ZINC_PREFORK_CHILD"
+	EnvPreforkChildVal = "OK"
 )
 
 type ZnServer struct {
@@ -26,7 +29,14 @@ type ZnServer struct {
 	Address string
 }
 
-type FCGIHandler struct{}
+type child struct {
+	pid int
+	err error
+}
+
+type FCGIHandler struct {
+	childs map[int]*exec.Cmd
+}
 
 // e.g.: unix:///home/demohn/test.sock
 func NewFromURL(connUrl string) (*ZnServer, error) {
@@ -75,7 +85,9 @@ func (zns *ZnServer) Listen() error {
 	}(sigc)
 
 	log.Print("开始监听服务...")
-	return fcgi.Serve(l, &FCGIHandler{})
+	return fcgi.Serve(l, &FCGIHandler{
+		childs: map[int]*exec.Cmd{},
+	})
 }
 
 func (f *FCGIHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -98,4 +110,27 @@ func (f *FCGIHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(403)
 	w.Header().Add("Content-Type", "text/html")
 	w.Write([]byte("Invalid ZINC_ADAPTER"))
+}
+
+func (f *FCGIHandler) LaunchProcess() error {
+	cmd := exec.Command(os.Args[0], "--child-worker")
+
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	// add prefork child flag into child proc env
+	cmd.Env = append(os.Environ(),
+		fmt.Sprintf("%s=%s", EnvPreforkChildKey, EnvPreforkChildVal),
+	)
+
+	// start child command
+	if err := cmd.Start(); err != nil {
+		return fmt.Errorf("启动子进程失败，错误信息: %w", err)
+	}
+
+	// store child process
+	pid := cmd.Process.Pid
+	f.childs[pid] = cmd
+
+	return nil
 }
