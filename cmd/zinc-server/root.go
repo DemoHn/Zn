@@ -22,7 +22,10 @@ var (
 			///// run child worker if  --child-worker = true & preForkChild env is "OK"
 			if childWorkerFlag && os.Getenv(server.EnvPreforkChildKey) == server.EnvPreforkChildVal {
 				// start child worker to handle requests
-				server.StartWorker()
+				if err := server.StartWorker(); err != nil {
+					fmt.Printf("启动子进程时发生错误：%v\n", err)
+					return
+				}
 			} else {
 				//// otherwise, just listen to the server
 				zns, err := server.NewFromURL(connUrl)
