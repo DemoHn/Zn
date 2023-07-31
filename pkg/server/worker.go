@@ -2,9 +2,11 @@ package server
 
 import (
 	"fmt"
+	"log"
 	"net"
 	"net/http"
 	"os"
+	"time"
 )
 
 type FCGIHandler struct{}
@@ -42,12 +44,27 @@ func StartWorker() error {
 		return err
 	}
 
+	// kill child process when parent process exits
+	go watchMaster()
+
 	for {
 		conn, err := lc.Accept()
 		if err != nil {
 			return fmt.Errorf("accept error: %v", err)
 		}
+		log.Printf("当前处理请求PID = %d", pid)
 
 		AcceptFCGIRequest(conn, &FCGIHandler{})
+	}
+}
+
+func watchMaster() {
+	// if it is equal to 1 (init process ID),
+	// it indicates that the master process has exited
+	const watchInterval = 500 * time.Millisecond
+	for range time.NewTicker(watchInterval).C {
+		if os.Getppid() == 1 {
+			os.Exit(1) //nolint:revive // Calling os.Exit is fine here in the prefork
+		}
 	}
 }

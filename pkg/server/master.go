@@ -101,6 +101,8 @@ func prefork(l *net.TCPListener, n int) error {
 		)
 
 		// pass connection FD to child process as ExtraFile
+		cmd.Stderr = os.Stderr
+		cmd.Stdout = os.Stdout
 		cmd.ExtraFiles = []*os.File{lf}
 
 		if err := cmd.Start(); err != nil {
