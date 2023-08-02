@@ -34,7 +34,10 @@ var (
 					return
 				}
 
-				zns.Listen()
+				if err := zns.StartMaster(); err != nil {
+					fmt.Println("启动主进程时发生错误：%v\n", err)
+					return
+				}
 			}
 		},
 	}
