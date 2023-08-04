@@ -1,6 +1,7 @@
 package server
 
 import (
+	"encoding/binary"
 	"errors"
 	"fmt"
 	"log"
@@ -72,7 +73,7 @@ func (zns *ZnServer) StartMaster(cfg ZnServerConfig) error {
 	}
 
 	log.Print("即将打开父-子进程通信通道")
-	pipeReader, pipeWriter, err := createNamedPipe()
+	namedPipe, err := createNamedPipe()
 	if err != nil {
 		return err
 	}
@@ -91,6 +92,13 @@ func (zns *ZnServer) StartMaster(cfg ZnServerConfig) error {
 		}
 	}()
 
+	//// read named pipe data to recv msg from child process
+	go readNamedPipe(namedPipe)
+
+	pipeWriter, err := os.OpenFile(namedPipe, os.O_WRONLY, 0777)
+	if err != nil {
+		return err
+	}
 	// Since ZnServer only accepts tcp and unix, the net.Listener MUST
 	// be TCPListener
 	for i := 0; i < cfg.InitProcs; i++ {
@@ -101,6 +109,7 @@ func (zns *ZnServer) StartMaster(cfg ZnServerConfig) error {
 		pid := cmd.Process.Pid
 		childs[pid] = cmd
 	}
+
 	// register signal handler
 	// Unix sockets must be unlink()ed before being reused again.
 
@@ -115,29 +124,16 @@ func (zns *ZnServer) StartMaster(cfg ZnServerConfig) error {
 	return l.Close()
 }
 
-func createNamedPipe() (*os.File, *os.File, error) {
+func createNamedPipe() (string, error) {
 	// generate random named pipe name
 	pipeFile := fmt.Sprintf("pipe%d", rand.Intn(100000))
 
 	// make name pipe
 	if err := syscall.Mkfifo(pipeFile, 0666); err != nil {
-		return nil, nil, err
+		return "", err
 	}
 
-	// open file for read
-	fileR, err := os.OpenFile(pipeFile, os.O_RDONLY, 0600)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	fileW, err := os.OpenFile(pipeFile, os.O_WRONLY, 0600)
-	if err != nil {
-		return nil, nil, err
-	}
-	// remove the file entry (will not cut off the named pipe)
-	os.Remove(pipeFile)
-
-	return fileR, fileW, nil
+	return pipeFile, nil
 }
 
 //// fork child processes
@@ -175,4 +171,20 @@ func prefork(l *net.TCPListener, waitMsg chan worker, pipeWriter *os.File) (*exe
 	}()
 
 	return cmd, nil
+}
+
+func readNamedPipe(pipeFile string) {
+	pipeReader, err := os.OpenFile(pipeFile, os.O_RDONLY, os.ModeNamedPipe)
+	if err != nil {
+		log.Fatal("Open named pipe file error:", err)
+		return
+	}
+	os.Remove(pipeFile)
+
+	var pid int32
+	for {
+		// read packet
+		binary.Read(pipeReader, binary.BigEndian, &pid)
+		fmt.Println("read info", pid)
+	}
 }

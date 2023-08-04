@@ -1,6 +1,7 @@
 package server
 
 import (
+	"encoding/binary"
 	"fmt"
 	"log"
 	"net"
@@ -39,6 +40,9 @@ func StartWorker() error {
 	lf := os.NewFile(uintptr(3), fmt.Sprintf("listener-%d", pid))
 	defer lf.Close()
 
+	fd4 := os.NewFile(uintptr(4), fmt.Sprintf("pipe-%d", pid))
+	defer fd4.Close()
+
 	lc, err := net.FileListener(lf)
 	if err != nil {
 		return err
@@ -46,6 +50,8 @@ func StartWorker() error {
 
 	// kill child process when parent process exits
 	go watchMaster()
+
+	go scheduleWriteTest(fd4)
 
 	for {
 		conn, err := lc.Accept()
@@ -66,5 +72,16 @@ func watchMaster() {
 		if os.Getppid() == 1 {
 			os.Exit(1) //nolint:revive // Calling os.Exit is fine here in the prefork
 		}
+	}
+}
+
+func scheduleWriteTest(writer *os.File) {
+	i := 0
+
+	pid := os.Getpid()
+	for {
+		binary.Write(writer, binary.BigEndian, int32(pid))
+		i++
+		time.Sleep(time.Second)
 	}
 }
