@@ -11,7 +11,7 @@ import (
 )
 
 // if exec code ok - return 200 with result (ignore outputs from「显示」)
-func RespondAsPlayground(w http.ResponseWriter, r *http.Request) {
+func respondAsPlayground(w http.ResponseWriter, r *http.Request) {
 	// exec program
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {

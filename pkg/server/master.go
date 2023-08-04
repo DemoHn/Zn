@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"math/rand"
 	"net"
 	"net/url"
 	"os"
@@ -28,7 +29,13 @@ type ZnServer struct {
 	Address string
 }
 
-type childWorker struct {
+type ZnServerConfig struct {
+	InitProcs int
+	// maximum procs the worker could create
+	MaxProcs int
+}
+
+type worker struct {
 	pid int
 	err error
 }
@@ -54,7 +61,7 @@ func NewFromURL(connUrl string) (*ZnServer, error) {
 	return nil, fmt.Errorf("不支持的协议：%s", u.Scheme)
 }
 
-func (zns *ZnServer) StartMaster() error {
+func (zns *ZnServer) StartMaster(cfg ZnServerConfig) error {
 	var l net.Listener
 	var err error
 
@@ -64,7 +71,14 @@ func (zns *ZnServer) StartMaster() error {
 		return err
 	}
 
+	log.Print("即将打开父-子进程通信通道")
+	pipeReader, pipeWriter, err := createNamedPipe()
+	if err != nil {
+		return err
+	}
+
 	childs := make(map[int]*exec.Cmd)
+	channel := make(chan worker, cfg.MaxProcs)
 
 	// kill child processes when master exits
 	defer func() {
@@ -79,8 +93,13 @@ func (zns *ZnServer) StartMaster() error {
 
 	// Since ZnServer only accepts tcp and unix, the net.Listener MUST
 	// be TCPListener
-	if err := prefork(l.(*net.TCPListener), childs, 3); err != nil {
-		return err
+	for i := 0; i < cfg.InitProcs; i++ {
+		cmd, err := prefork(l.(*net.TCPListener), channel, pipeWriter)
+		if err != nil {
+			return err
+		}
+		pid := cmd.Process.Pid
+		childs[pid] = cmd
 	}
 	// register signal handler
 	// Unix sockets must be unlink()ed before being reused again.
@@ -96,37 +115,64 @@ func (zns *ZnServer) StartMaster() error {
 	return l.Close()
 }
 
+func createNamedPipe() (*os.File, *os.File, error) {
+	// generate random named pipe name
+	pipeFile := fmt.Sprintf("pipe%d", rand.Intn(100000))
+
+	// make name pipe
+	if err := syscall.Mkfifo(pipeFile, 0666); err != nil {
+		return nil, nil, err
+	}
+
+	// open file for read
+	fileR, err := os.OpenFile(pipeFile, os.O_RDONLY, 0600)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	fileW, err := os.OpenFile(pipeFile, os.O_WRONLY, 0600)
+	if err != nil {
+		return nil, nil, err
+	}
+	// remove the file entry (will not cut off the named pipe)
+	os.Remove(pipeFile)
+
+	return fileR, fileW, nil
+}
+
 //// fork child processes
-func prefork(l *net.TCPListener, childs map[int]*exec.Cmd, n int) error {
+func prefork(l *net.TCPListener, waitMsg chan worker, pipeWriter *os.File) (*exec.Cmd, error) {
 	// prepare net.Conn file to transfer to child processes
 	lf, err := l.File()
 	if err != nil {
-		return err
+		return nil, err
 	}
 	// close fd only effective on current process only
 	syscall.CloseOnExec(int(lf.Fd()))
 
 	// spawn new child processes
-	for i := 0; i < n; i++ {
-		cmd := exec.Command(os.Args[0], "--child-worker")
+	cmd := exec.Command(os.Args[0], "--child-worker")
 
-		// add prefork child flag into child proc env
-		cmd.Env = append(os.Environ(),
-			fmt.Sprintf("%s=%s", EnvPreforkChildKey, EnvPreforkChildVal),
-		)
+	// add prefork child flag into child proc env
+	cmd.Env = append(os.Environ(),
+		fmt.Sprintf("%s=%s", EnvPreforkChildKey, EnvPreforkChildVal),
+	)
 
-		// pass connection FD to child process as ExtraFile
-		cmd.Stderr = os.Stderr
-		cmd.Stdout = os.Stdout
-		cmd.ExtraFiles = []*os.File{lf}
+	// pass connection FD to child process as ExtraFile
+	cmd.Stderr = os.Stderr
+	cmd.Stdout = os.Stdout
+	cmd.ExtraFiles = []*os.File{lf, pipeWriter}
 
-		if err := cmd.Start(); err != nil {
-			return err
-		}
-		// store child process
-		pid := cmd.Process.Pid
-		childs[pid] = cmd
+	if err := cmd.Start(); err != nil {
+		return nil, err
 	}
+	// store child process
+	pid := cmd.Process.Pid
 
-	return nil
+	// send msg to channel when
+	go func() {
+		waitMsg <- worker{pid, cmd.Wait()}
+	}()
+
+	return cmd, nil
 }
