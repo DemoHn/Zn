@@ -1,6 +1,7 @@
 package server
 
 import (
+	"encoding/binary"
 	"errors"
 	"fmt"
 	"log"
@@ -94,7 +95,7 @@ func (zns *ZnServer) StartMaster(cfg ZnServerConfig) error {
 			proc := procState.cmd
 			if err := proc.Process.Kill(); err != nil {
 				if !errors.Is(err, os.ErrProcessDone) {
-					fmt.Printf("spawnProcs: failed to kill child: %v", err)
+					log.Fatalf("spawnProcs: failed to kill child: %v", err)
 				}
 			}
 		}
@@ -111,7 +112,7 @@ func (zns *ZnServer) StartMaster(cfg ZnServerConfig) error {
 	// Since ZnServer only accepts tcp and unix, the net.Listener MUST
 	// be TCPListener
 	for i := 0; i < cfg.InitProcs; i++ {
-		cmd, err := spawnProcess(l.(*net.TCPListener), channel, pipeWriter)
+		cmd, err := spawnProcess(l.(*net.TCPListener), channel, pipeWriter, cfg.Timeout)
 		if err != nil {
 			return err
 		}
@@ -147,7 +148,7 @@ func createNamedPipe() error {
 }
 
 //// fork child processes
-func spawnProcess(l *net.TCPListener, waitMsg chan worker, pipeWriter *os.File) (*exec.Cmd, error) {
+func spawnProcess(l *net.TCPListener, waitMsg chan worker, pipeWriter *os.File, timeout int) (*exec.Cmd, error) {
 	// prepare net.Conn file to transfer to child processes
 	lf, err := l.File()
 	if err != nil {
@@ -162,6 +163,7 @@ func spawnProcess(l *net.TCPListener, waitMsg chan worker, pipeWriter *os.File) 
 	// add prefork child flag into child proc env
 	cmd.Env = append(os.Environ(),
 		fmt.Sprintf("%s=%s", EnvPreforkChildKey, EnvPreforkChildVal),
+		fmt.Sprintf("%s=%d", EnvExecTimeout, timeout),
 	)
 
 	// pass connection FD to child process as ExtraFile
@@ -191,17 +193,21 @@ func readNamedPipe(pipeFile string) {
 	}
 	os.Remove(pipeFile)
 
-	var buf = make([]byte, 4)
+	var buf = make([]byte, 5)
 	for {
 		var state uint8
 		var pid int
 		// read packet
-		pipeReader.Read(buf)
+		_, err := pipeReader.Read(buf)
+		if err != nil {
+			log.Fatal("[PARENT] read buffer failed")
+			continue
+		}
 
 		// digest state & pid
-		state = buf[3]
-		pid = int(buf[0])
-		pid = pid<<16 + int(buf[1])
-		pid = pid<<8 + int(buf[2])
+		pid = int(binary.BigEndian.Uint32(buf))
+		state = buf[4]
+
+		fmt.Println(pid, state)
 	}
 }
