@@ -1,13 +1,19 @@
 package server
 
 import (
-	"encoding/binary"
 	"fmt"
-	"log"
 	"net"
 	"net/http"
 	"os"
 	"time"
+)
+
+const (
+	WORKER_STATE_INIT    uint8 = 1 << 0
+	WORKER_STATE_IDLE    uint8 = 1 << 1
+	WORKER_STATE_BUSY    uint8 = 1 << 2
+	WORKER_STATE_STOPPED uint8 = 1 << 3
+	WORKER_STATE_TIMEOUT uint8 = 1 << 4
 )
 
 type FCGIHandler struct{}
@@ -40,8 +46,8 @@ func StartWorker() error {
 	lf := os.NewFile(uintptr(3), fmt.Sprintf("listener-%d", pid))
 	defer lf.Close()
 
-	fd4 := os.NewFile(uintptr(4), fmt.Sprintf("pipe-%d", pid))
-	defer fd4.Close()
+	pipeWriter := os.NewFile(uintptr(4), fmt.Sprintf("pipe-%d", pid))
+	defer pipeWriter.Close()
 
 	lc, err := net.FileListener(lf)
 	if err != nil {
@@ -51,15 +57,12 @@ func StartWorker() error {
 	// kill child process when parent process exits
 	go watchMaster()
 
-	go scheduleWriteTest(fd4)
-
+	writeProcState(pipeWriter, WORKER_STATE_IDLE)
 	for {
 		conn, err := lc.Accept()
 		if err != nil {
 			return fmt.Errorf("accept error: %v", err)
 		}
-		log.Printf("当前处理请求PID = %d", pid)
-
 		AcceptFCGIRequest(conn, &FCGIHandler{})
 	}
 }
@@ -75,13 +78,19 @@ func watchMaster() {
 	}
 }
 
-func scheduleWriteTest(writer *os.File) {
-	i := 0
-
+func writeProcState(writer *os.File, state uint8) {
 	pid := os.Getpid()
-	for {
-		binary.Write(writer, binary.BigEndian, int32(pid))
-		i++
-		time.Sleep(time.Second)
-	}
+	buf := make([]byte, 4)
+	// write state msg:
+	// +----------------------------------+
+	// | pid[2] | pid[1] | pid[0] | state |
+	// +----------------------------------+
+
+	buf[0] = uint8(0xff & (pid >> 16))
+	buf[1] = uint8(0xff & (pid >> 8))
+	buf[2] = uint8(0xff & pid)
+	buf[3] = state
+
+	// write state msg to notify parent process
+	writer.Write(buf)
 }

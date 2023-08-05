@@ -1,11 +1,9 @@
 package server
 
 import (
-	"encoding/binary"
 	"errors"
 	"fmt"
 	"log"
-	"math/rand"
 	"net"
 	"net/url"
 	"os"
@@ -21,7 +19,10 @@ const (
 	ZincAP_Playground  = "playground"
 	ZincAP_HTTPHandler = "http_handler"
 	EnvPreforkChildKey = "ZINC_PREFORK_CHILD"
+	EnvExecTimeout     = "ZINC_EXEC_TIMEOUT"
 	EnvPreforkChildVal = "OK"
+
+	namedPipe = "named-pipe"
 )
 
 type ZnServer struct {
@@ -34,11 +35,18 @@ type ZnServerConfig struct {
 	InitProcs int
 	// maximum procs the worker could create
 	MaxProcs int
+	Timeout  int
 }
 
 type worker struct {
 	pid int
 	err error
+}
+
+type workerState struct {
+	pid   int
+	state uint8
+	cmd   *exec.Cmd
 }
 
 // e.g.: unix:///home/demohn/test.sock
@@ -73,20 +81,20 @@ func (zns *ZnServer) StartMaster(cfg ZnServerConfig) error {
 	}
 
 	log.Print("即将打开父-子进程通信通道")
-	namedPipe, err := createNamedPipe()
-	if err != nil {
+	if err := createNamedPipe(); err != nil {
 		return err
 	}
 
-	childs := make(map[int]*exec.Cmd)
+	childs := make(map[int]workerState)
 	channel := make(chan worker, cfg.MaxProcs)
 
 	// kill child processes when master exits
 	defer func() {
-		for _, proc := range childs {
+		for _, procState := range childs {
+			proc := procState.cmd
 			if err := proc.Process.Kill(); err != nil {
 				if !errors.Is(err, os.ErrProcessDone) {
-					fmt.Printf("prefork: failed to kill child: %v", err)
+					fmt.Printf("spawnProcs: failed to kill child: %v", err)
 				}
 			}
 		}
@@ -95,6 +103,7 @@ func (zns *ZnServer) StartMaster(cfg ZnServerConfig) error {
 	//// read named pipe data to recv msg from child process
 	go readNamedPipe(namedPipe)
 
+	// open named pipe write to child process
 	pipeWriter, err := os.OpenFile(namedPipe, os.O_WRONLY, 0777)
 	if err != nil {
 		return err
@@ -102,12 +111,16 @@ func (zns *ZnServer) StartMaster(cfg ZnServerConfig) error {
 	// Since ZnServer only accepts tcp and unix, the net.Listener MUST
 	// be TCPListener
 	for i := 0; i < cfg.InitProcs; i++ {
-		cmd, err := prefork(l.(*net.TCPListener), channel, pipeWriter)
+		cmd, err := spawnProcess(l.(*net.TCPListener), channel, pipeWriter)
 		if err != nil {
 			return err
 		}
 		pid := cmd.Process.Pid
-		childs[pid] = cmd
+		childs[pid] = workerState{
+			pid:   pid,
+			state: WORKER_STATE_INIT,
+			cmd:   cmd,
+		}
 	}
 
 	// register signal handler
@@ -124,20 +137,17 @@ func (zns *ZnServer) StartMaster(cfg ZnServerConfig) error {
 	return l.Close()
 }
 
-func createNamedPipe() (string, error) {
-	// generate random named pipe name
-	pipeFile := fmt.Sprintf("pipe%d", rand.Intn(100000))
-
+func createNamedPipe() error {
 	// make name pipe
-	if err := syscall.Mkfifo(pipeFile, 0666); err != nil {
-		return "", err
+	if err := syscall.Mkfifo(namedPipe, 0666); err != nil {
+		return err
 	}
 
-	return pipeFile, nil
+	return nil
 }
 
 //// fork child processes
-func prefork(l *net.TCPListener, waitMsg chan worker, pipeWriter *os.File) (*exec.Cmd, error) {
+func spawnProcess(l *net.TCPListener, waitMsg chan worker, pipeWriter *os.File) (*exec.Cmd, error) {
 	// prepare net.Conn file to transfer to child processes
 	lf, err := l.File()
 	if err != nil {
@@ -176,15 +186,22 @@ func prefork(l *net.TCPListener, waitMsg chan worker, pipeWriter *os.File) (*exe
 func readNamedPipe(pipeFile string) {
 	pipeReader, err := os.OpenFile(pipeFile, os.O_RDONLY, os.ModeNamedPipe)
 	if err != nil {
-		log.Fatal("Open named pipe file error:", err)
+		log.Fatal("[PARENT] Open named pipe file error:", err)
 		return
 	}
 	os.Remove(pipeFile)
 
-	var pid int32
+	var buf = make([]byte, 4)
 	for {
+		var state uint8
+		var pid int
 		// read packet
-		binary.Read(pipeReader, binary.BigEndian, &pid)
-		fmt.Println("read info", pid)
+		pipeReader.Read(buf)
+
+		// digest state & pid
+		state = buf[3]
+		pid = int(buf[0])
+		pid = pid<<16 + int(buf[1])
+		pid = pid<<8 + int(buf[2])
 	}
 }

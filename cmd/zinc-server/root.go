@@ -15,6 +15,7 @@ var (
 	childWorkerFlag bool
 	maxProcs        int
 	initProcs       int
+	timeout         int
 
 	rootCmd = &cobra.Command{
 		Use:   "zinc-server",
@@ -39,6 +40,7 @@ var (
 				cfg := server.ZnServerConfig{
 					InitProcs: initProcs,
 					MaxProcs:  maxProcs,
+					Timeout:   timeout,
 				}
 				if err := zns.StartMaster(cfg); err != nil {
 					fmt.Printf("启动主进程时发生错误：%v\n", err)
@@ -55,5 +57,7 @@ func main() {
 
 	rootCmd.Flags().IntVar(&maxProcs, "max-procs", 100, "限制最大可创建进程数量")
 	rootCmd.Flags().IntVar(&initProcs, "init-procs", 20, "初始创建子进程数量")
+
+	rootCmd.Flags().IntVar(&timeout, "timeout", 60, "执行超时时间，单位为秒")
 	rootCmd.Execute()
 }
