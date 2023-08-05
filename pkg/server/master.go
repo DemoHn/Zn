@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
+	"sync"
 	"syscall"
 )
 
@@ -23,13 +24,20 @@ const (
 	EnvExecTimeout     = "ZINC_EXEC_TIMEOUT"
 	EnvPreforkChildVal = "OK"
 
-	namedPipe = "named-pipe"
+	NamedPipe = "named-pipe"
 )
 
 type ZnServer struct {
 	Network string
 	// used fo network = "tcp" or "unix"
 	Address string
+
+	//// internal properites for child proc management
+	childs map[int]workerState
+
+	addChan    chan workerState
+	updateChan chan workerState
+	delChan    chan int
 }
 
 type ZnServerConfig struct {
@@ -39,15 +47,10 @@ type ZnServerConfig struct {
 	Timeout  int
 }
 
-type worker struct {
-	pid int
-	err error
-}
-
 type workerState struct {
 	pid   int
-	state uint8
 	cmd   *exec.Cmd
+	state uint8
 }
 
 // e.g.: unix:///home/demohn/test.sock
@@ -58,17 +61,22 @@ func NewFromURL(connUrl string) (*ZnServer, error) {
 	}
 	switch u.Scheme {
 	case TypeUnixSocket:
-		return &ZnServer{
-			Network: TypeUnixSocket,
-			Address: u.Path,
-		}, nil
+		return newZnServer(TypeUnixSocket, u.Path), nil
 	case TypeTcp:
-		return &ZnServer{
-			Network: TypeTcp,
-			Address: u.Host,
-		}, nil
+		return newZnServer(TypeTcp, u.Host), nil
 	}
 	return nil, fmt.Errorf("不支持的协议：%s", u.Scheme)
+}
+
+func newZnServer(network string, address string) *ZnServer {
+	return &ZnServer{
+		Network:    network,
+		Address:    address,
+		childs:     make(map[int]workerState),
+		addChan:    make(chan workerState),
+		updateChan: make(chan workerState),
+		delChan:    make(chan int),
+	}
 }
 
 func (zns *ZnServer) StartMaster(cfg ZnServerConfig) error {
@@ -82,16 +90,15 @@ func (zns *ZnServer) StartMaster(cfg ZnServerConfig) error {
 	}
 
 	log.Print("即将打开父-子进程通信通道")
-	if err := createNamedPipe(); err != nil {
+	if err := syscall.Mkfifo(NamedPipe, 0666); err != nil {
 		return err
 	}
 
-	childs := make(map[int]workerState)
-	channel := make(chan worker, cfg.MaxProcs)
-
 	// kill child processes when master exits
 	defer func() {
-		for _, procState := range childs {
+		var s sync.RWMutex
+		s.Lock()
+		for _, procState := range zns.childs {
 			proc := procState.cmd
 			if err := proc.Process.Kill(); err != nil {
 				if !errors.Is(err, os.ErrProcessDone) {
@@ -99,28 +106,24 @@ func (zns *ZnServer) StartMaster(cfg ZnServerConfig) error {
 				}
 			}
 		}
+		s.Unlock()
 	}()
 
+	//// maintain child state (DO NOT UPDATE child data directly!)
+	go zns.maintainChildState()
 	//// read named pipe data to recv msg from child process
-	go readNamedPipe(namedPipe)
+	go zns.readNamedPipe(NamedPipe)
 
 	// open named pipe write to child process
-	pipeWriter, err := os.OpenFile(namedPipe, os.O_WRONLY, 0777)
+	pipeWriter, err := os.OpenFile(NamedPipe, os.O_WRONLY, 0777)
 	if err != nil {
 		return err
 	}
 	// Since ZnServer only accepts tcp and unix, the net.Listener MUST
 	// be TCPListener
 	for i := 0; i < cfg.InitProcs; i++ {
-		cmd, err := spawnProcess(l.(*net.TCPListener), channel, pipeWriter, cfg.Timeout)
-		if err != nil {
+		if err := zns.spawnProcess(l.(*net.TCPListener), pipeWriter, cfg.Timeout); err != nil {
 			return err
-		}
-		pid := cmd.Process.Pid
-		childs[pid] = workerState{
-			pid:   pid,
-			state: WORKER_STATE_INIT,
-			cmd:   cmd,
 		}
 	}
 
@@ -138,21 +141,12 @@ func (zns *ZnServer) StartMaster(cfg ZnServerConfig) error {
 	return l.Close()
 }
 
-func createNamedPipe() error {
-	// make name pipe
-	if err := syscall.Mkfifo(namedPipe, 0666); err != nil {
-		return err
-	}
-
-	return nil
-}
-
 //// fork child processes
-func spawnProcess(l *net.TCPListener, waitMsg chan worker, pipeWriter *os.File, timeout int) (*exec.Cmd, error) {
+func (zns *ZnServer) spawnProcess(l *net.TCPListener, pipeWriter *os.File, timeout int) error {
 	// prepare net.Conn file to transfer to child processes
 	lf, err := l.File()
 	if err != nil {
-		return nil, err
+		return err
 	}
 	// close fd only effective on current process only
 	syscall.CloseOnExec(int(lf.Fd()))
@@ -172,20 +166,28 @@ func spawnProcess(l *net.TCPListener, waitMsg chan worker, pipeWriter *os.File, 
 	cmd.ExtraFiles = []*os.File{lf, pipeWriter}
 
 	if err := cmd.Start(); err != nil {
-		return nil, err
+		return err
 	}
 	// store child process
 	pid := cmd.Process.Pid
 
-	// send msg to channel when
+	// register new child process to workerState
+	zns.addChan <- workerState{
+		pid:   pid,
+		state: WORKER_STATE_INIT,
+		cmd:   cmd,
+	}
+	// send msg to channel when cmd ends running
 	go func() {
-		waitMsg <- worker{pid, cmd.Wait()}
+		cmd.Wait()
+		// after cmd is done, send pid to del channel
+		zns.delChan <- pid
 	}()
 
-	return cmd, nil
+	return nil
 }
 
-func readNamedPipe(pipeFile string) {
+func (zns *ZnServer) readNamedPipe(pipeFile string) {
 	pipeReader, err := os.OpenFile(pipeFile, os.O_RDONLY, os.ModeNamedPipe)
 	if err != nil {
 		log.Fatal("[PARENT] Open named pipe file error:", err)
@@ -208,6 +210,24 @@ func readNamedPipe(pipeFile string) {
 		pid = int(binary.BigEndian.Uint32(buf))
 		state = buf[4]
 
-		fmt.Println(pid, state)
+		zns.updateChan <- workerState{
+			pid:   pid,
+			state: state,
+			cmd:   nil,
+		}
+	}
+}
+
+// summon all writing actions into one goroutine to ensure thread-safe on writing.
+func (zns *ZnServer) maintainChildState() {
+	for {
+		select {
+		case aw := <-zns.addChan:
+			fmt.Println("add pid:", aw.pid)
+		case uw := <-zns.updateChan:
+			fmt.Println("update pid:", uw.pid)
+		case pid := <-zns.delChan:
+			fmt.Println("del pid:", pid)
+		}
 	}
 }
