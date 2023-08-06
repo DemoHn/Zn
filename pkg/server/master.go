@@ -32,16 +32,9 @@ type ZnServer struct {
 	Network string
 	// used fo network = "tcp" or "unix"
 	Address string
+	Config  ZnServerConfig
 
-	Config ZnServerConfig
-
-	//// internal properites for child proc management
-	childs map[int]workerState
-
-	refCount   int
-	addChan    chan workerState
-	updateChan chan workerState
-	delChan    chan int
+	ChildProcManager
 }
 
 type ZnServerConfig struct {
@@ -49,6 +42,16 @@ type ZnServerConfig struct {
 	// maximum procs the worker could create
 	MaxProcs int
 	Timeout  int
+}
+
+type ChildProcManager struct {
+	//// internal properites for child proc management
+	childs map[int]workerState
+
+	refCount   int
+	addChan    chan workerState
+	updateChan chan workerState
+	delChan    chan int
 }
 
 type workerState struct {
@@ -74,14 +77,16 @@ func NewFromURL(connUrl string, config ZnServerConfig) (*ZnServer, error) {
 
 func newZnServer(network string, address string, config ZnServerConfig) *ZnServer {
 	return &ZnServer{
-		Network:    network,
-		Address:    address,
-		Config:     config,
-		childs:     make(map[int]workerState),
-		addChan:    make(chan workerState),
-		updateChan: make(chan workerState),
-		delChan:    make(chan int),
-		refCount:   0,
+		Network: network,
+		Address: address,
+		Config:  config,
+		ChildProcManager: ChildProcManager{
+			childs:     make(map[int]workerState),
+			addChan:    make(chan workerState),
+			updateChan: make(chan workerState),
+			delChan:    make(chan int),
+			refCount:   0,
+		},
 	}
 }
 
@@ -266,7 +271,6 @@ func (zns *ZnServer) maintainChildState(ln *net.TCPListener, pipeWriter *os.File
 				addNum := finalProcNum - currentNum
 				zns.refCount = finalProcNum
 				go func() {
-					fmt.Println("update spawn: ", addNum)
 					for i := 0; i < addNum; i++ {
 						if err := zns.spawnProcess(ln, pipeWriter); err != nil {
 							log.Fatalf("启动子进程失败：%v", err)
@@ -284,8 +288,6 @@ func (zns *ZnServer) maintainChildState(ln *net.TCPListener, pipeWriter *os.File
 				zns.refCount += numsToSpawn
 				// spawn more processes to ensure minimum proc number
 				go func() {
-					fmt.Println("delete spawn: ", numsToSpawn)
-
 					for i := 0; i < numsToSpawn; i++ {
 						// add time delay to avoid non-stop reboot too quick
 						time.Sleep(100 * time.Millisecond)
