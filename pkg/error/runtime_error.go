@@ -30,7 +30,8 @@ const (
 	ErrMostParamsError          = 42
 	ErrExactParamsError         = 43
 	// module error
-	ErrModuleNotFound = 50
+	ErrModuleNotFound    = 50
+	ErrInvalidSameModule = 51
 	// internal error
 	ErrUnexpectedCase           = 60
 	ErrUnexpectedEmptyExecLogic = 61
@@ -183,6 +184,15 @@ func ModuleNotFound(name string) *RuntimeError {
 	return &RuntimeError{
 		Code:    ErrModuleNotFound,
 		Message: fmt.Sprintf("未找到「%s」模块", name),
+		Extra:   name,
+	}
+}
+
+// ModuleNotFound -
+func InvalidSameModule(name string) *RuntimeError {
+	return &RuntimeError{
+		Code:    ErrInvalidSameModule,
+		Message: "导入模块与当前模块相同",
 		Extra:   name,
 	}
 }

@@ -293,6 +293,10 @@ func evalPreStmtBlock(c *r.Context, block *syntax.BlockStmt) (*syntax.BlockStmt,
 			}
 		case *syntax.ImportStmt:
 			libName := v.ImportName.GetLiteral()
+			// throw exception when libName equals to current module!
+			if libName == c.GetCurrentModule().GetName() {
+				return nil, zerr.InvalidSameModule(libName)
+			}
 
 			var extModule *r.Module
 			switch v.ImportLibType {
@@ -311,6 +315,9 @@ func evalPreStmtBlock(c *r.Context, block *syntax.BlockStmt) (*syntax.BlockStmt,
 					}
 					extModule = newModule
 				}
+
+				// add dep record
+				c.AddModuleDepedency(c.GetCurrentModule().GetName(), libName)
 			}
 
 			if extModule != nil {

@@ -152,6 +152,10 @@ func (ctx *Context) FindModuleCache(name string) *Module {
 	return ctx.moduleGraph.FindRequireCache(name)
 }
 
+func (ctx *Context) AddModuleDepedency(source string, depModule string) {
+	ctx.moduleGraph.AddModuleDepRecord(source, depModule)
+}
+
 //// scope symbols getters / setters
 
 // FindSymbol - find symbol in the context from current scope

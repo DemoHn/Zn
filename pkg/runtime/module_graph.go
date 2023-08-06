@@ -34,3 +34,11 @@ func (g *ModuleGraph) FindRequireCache(name string) *Module {
 	}
 	return nil
 }
+
+func (g *ModuleGraph) AddModuleDepRecord(source string, depModule string) {
+	depList, ok := g.depGraph[source]
+	if !ok {
+		g.depGraph[source] = []string{}
+	}
+	g.depGraph[source] = append(depList, depModule)
+}
