@@ -1,0 +1,91 @@
+# zinc-server 使用指南
+
+`zinc-server` 是和 `zinc` 配套的服务端程序，它可以接收客户端发起的HTTP请求，执行对应的 `zinc` 程序，并返回对应的结果。我们可以借助 `zinc-server` 开发后端接口，就像 PHP 一样编写 Web 应用。
+
+`zinc-server` 采用 FastCGI 协议，亦即当客户端向服务端发起一个 HTTP 请求时，我们需要在前面用 nginx 之类的反向代理将其转换成 FastCGI 协议，再把请求转发到 `zinc-server` 处理；每接收到一个请求即创建/分配一个子进程，这个子进程将全权处理上面的请求；处理完成再将结果以HTTP响应的形式返回到客户端。
+
+`zinc-server` 本身有自我保护机制：当某个请求处理时间过长时，对应的子进程将会被直接结束掉，防止计算资源被耗尽。
+
+> 注意：`zinc-server` 目前只支持 POSIX 系统，如 Linux, MacOS 等；Windows **暂不支持** ！
+
+## 启动服务器
+
+在终端执行以下命令：
+
+```bash
+./zinc-server -l tcp://127.0.0.1:3862
+```
+
+即可启动服务器，并监听 `127.0.0.1` 地址下的 `3862` 端口。
+
+默认情况下，`zinc-server` 进程是在前台启动的，如需将其放到后台启动，在命令后面加上一个 `&` 即可。
+
+此命令支持的参数如下：
+
+  - `-l (--listen)` ：指定服务器监听的URL，目前支持网络TCP 和 Unix Domain Socket 两种通信模式。如果采用 TCP 模式，URL 格式为 `tcp://[IP地址]:[端口号]`；如果采用 Unix Domain Socket 模式，其 URL 格式为 `unix://[socket 文件路径]`。 **其默认值为 `tcp://127.0.0.1:3862`**
+
+  - `--timeout`：每次请求能够执行的最长时间，以秒为单位；当某次请求对应的执行时间超过时，其对应的进程将会自动退出，并返回 `502 Bad Gateway`。**其默认值为 `60`**
+
+  - `--init-procs`：初始创建子进程的数量。当有请求进来时，服务端会自动将请求分配到某个子进程中，一个子进程同时只负责处理一个请求；因此当初始创建20个子进程时，服务器可以并发处理20个请求。子进程的数量并不是一成不变的，当发现现有子进程数量低于这个值时，服务端会自动创建新的子进程；而当所有的子进程都处于「忙碌」状态时，服务端会自动开启新的子进程用以承接更多的请求（只要上限不超过 `--max-procs` 指定的数量）。**其默认值为 `20`**
+
+  - `--max-procs`：服务端允许创建的最大子进程数量。为防止服务端无限创建子进程，此处设置了创建子进程的上限，也就是无论什么情况下，服务端现存的子进程数量都不会超过这个数。**其默认值为 `100`**
+
+## 配置处理模式
+
+`zinc-server` 支持两种处理模式：`playground` 模式和 `http_handler` 模式。根据所传的 `ZINC_ADAPTER` FastCGI 参数不同，`zinc-server` 在每一次接收请求时会自动切换到对应的模式进行处理。
+
+1. playground 模式
+    
+    如何启用：设置 `ZINC_ADAPTER = playground`
+
+    playground 模式用于从请求内容中读取待执行的程序，执行并将结果以文本形式作为HTTP响应内容。这个模式因其直接执行输入的程序，常用于「在线运行程序」页面中（也就是所谓的「playground」了）
+
+    在配置好相应的模式后，只要发送一个POST请求，并在请求的 body 中填写要执行的程序内空，即可得到结果，如下面的 curl 命令所示：
+
+    ```sh
+    curl -v --request POST \
+        --url http://localhost:9090/ \
+        --header 'Content-Type: text/plain' \
+        --data "输出「千里之行，始于足下」"
+    ```
+
+    发送请求后，得到的响应为
+
+    ```
+    HTTP/1.1 200 OK
+    Server: nginx/1.21.1
+    Content-Type: text/plain; charset="utf-8"
+    Transfer-Encoding: chunked
+    Connection: keep-alive
+    Date: Sun, 06 Aug 2023 15:03:06 GMT
+
+    「千里之行，始于足下」
+    ```
+
+2. http_handler 模式
+
+    如何启用：设置 `ZINC_ADAPTER = http_handler`
+
+    http_handler 模式和正常的 HTTP 服务器别无二致，都是接收 HTTP 请求（GET/POST/PUT etc.），将请求参数放到指定的程序文件里面执行，最后输出结果。_这个流程实际上就是 `php-fpm` 目前所采用的处理 Web 请求的方式。_
+
+    
+> 注意：如果 `ZINC_ADAPTER` 参数不是上述两个值或者根本就没给，直接返回 403。
+
+### nginx 配置
+
+```
+server {
+    listen 9090;
+    server_name localhost;
+
+    location / {
+        include fastcgi_params;
+
+        fastcgi_pass 127.0.0.1:3862;         
+        fastcgi_read_timeout 60s;
+        fastcgi_param ZINC_ADAPTER playground;
+    }
+}
+```
+
+## 注意事项

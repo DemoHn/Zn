@@ -1,4 +1,5 @@
 * [简介](/)
 * [快速开始](/zh-cn/快速开始.md)
 * [用户手册](/zh-cn/manual/README.md)
+* [zinc-server 使用指南](/zh-cn/manual/zinc-server-使用指南.md)
 * [语法设计草案](/zh-cn/proposals/README.md)
