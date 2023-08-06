@@ -30,19 +30,19 @@ var (
 					return
 				}
 			} else {
-				//// otherwise, just listen to the server
-				zns, err := server.NewFromURL(connUrl)
-				if err != nil {
-					fmt.Printf("启动服务器时发生错误：%v\n", err)
-					return
-				}
-
 				cfg := server.ZnServerConfig{
 					InitProcs: initProcs,
 					MaxProcs:  maxProcs,
 					Timeout:   timeout,
 				}
-				if err := zns.StartMaster(cfg); err != nil {
+				//// otherwise, just listen to the server
+				zns, err := server.NewFromURL(connUrl, cfg)
+				if err != nil {
+					fmt.Printf("启动服务器时发生错误：%v\n", err)
+					return
+				}
+
+				if err := zns.StartMaster(); err != nil {
 					fmt.Printf("启动主进程时发生错误：%v\n", err)
 					return
 				}

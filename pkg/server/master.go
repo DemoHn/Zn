@@ -12,6 +12,7 @@ import (
 	"os/signal"
 	"sync"
 	"syscall"
+	"time"
 )
 
 const (
@@ -32,9 +33,12 @@ type ZnServer struct {
 	// used fo network = "tcp" or "unix"
 	Address string
 
+	Config ZnServerConfig
+
 	//// internal properites for child proc management
 	childs map[int]workerState
 
+	refCount   int
 	addChan    chan workerState
 	updateChan chan workerState
 	delChan    chan int
@@ -54,40 +58,45 @@ type workerState struct {
 }
 
 // e.g.: unix:///home/demohn/test.sock
-func NewFromURL(connUrl string) (*ZnServer, error) {
+func NewFromURL(connUrl string, config ZnServerConfig) (*ZnServer, error) {
 	u, err := url.Parse(connUrl)
 	if err != nil {
 		return nil, err
 	}
 	switch u.Scheme {
 	case TypeUnixSocket:
-		return newZnServer(TypeUnixSocket, u.Path), nil
+		return newZnServer(TypeUnixSocket, u.Path, config), nil
 	case TypeTcp:
-		return newZnServer(TypeTcp, u.Host), nil
+		return newZnServer(TypeTcp, u.Host, config), nil
 	}
 	return nil, fmt.Errorf("不支持的协议：%s", u.Scheme)
 }
 
-func newZnServer(network string, address string) *ZnServer {
+func newZnServer(network string, address string, config ZnServerConfig) *ZnServer {
 	return &ZnServer{
 		Network:    network,
 		Address:    address,
+		Config:     config,
 		childs:     make(map[int]workerState),
 		addChan:    make(chan workerState),
 		updateChan: make(chan workerState),
 		delChan:    make(chan int),
+		refCount:   0,
 	}
 }
 
-func (zns *ZnServer) StartMaster(cfg ZnServerConfig) error {
-	var l net.Listener
-	var err error
+func (zns *ZnServer) StartMaster() error {
+	cfg := zns.Config
 
 	log.Print("即将监听URL：", zns.Address)
-	l, err = net.Listen(zns.Network, zns.Address)
+	l, err := net.Listen(zns.Network, zns.Address)
 	if err != nil {
 		return err
 	}
+
+	// since ZnServer only accepts tcp and unix, the net.Listener MUST
+	// be TCPListener
+	ln := l.(*net.TCPListener)
 
 	log.Print("即将打开父-子进程通信通道")
 	if err := syscall.Mkfifo(NamedPipe, 0666); err != nil {
@@ -109,8 +118,6 @@ func (zns *ZnServer) StartMaster(cfg ZnServerConfig) error {
 		s.Unlock()
 	}()
 
-	//// maintain child state (DO NOT UPDATE child data directly!)
-	go zns.maintainChildState()
 	//// read named pipe data to recv msg from child process
 	go zns.readNamedPipe(NamedPipe)
 
@@ -119,10 +126,12 @@ func (zns *ZnServer) StartMaster(cfg ZnServerConfig) error {
 	if err != nil {
 		return err
 	}
-	// Since ZnServer only accepts tcp and unix, the net.Listener MUST
-	// be TCPListener
+
+	//// maintain child state (DO NOT UPDATE child data directly!)
+	go zns.maintainChildState(ln, pipeWriter)
+
 	for i := 0; i < cfg.InitProcs; i++ {
-		if err := zns.spawnProcess(l.(*net.TCPListener), pipeWriter, cfg.Timeout); err != nil {
+		if err := zns.spawnProcess(ln, pipeWriter); err != nil {
 			return err
 		}
 	}
@@ -142,7 +151,7 @@ func (zns *ZnServer) StartMaster(cfg ZnServerConfig) error {
 }
 
 //// fork child processes
-func (zns *ZnServer) spawnProcess(l *net.TCPListener, pipeWriter *os.File, timeout int) error {
+func (zns *ZnServer) spawnProcess(l *net.TCPListener, pipeWriter *os.File) error {
 	// prepare net.Conn file to transfer to child processes
 	lf, err := l.File()
 	if err != nil {
@@ -157,7 +166,7 @@ func (zns *ZnServer) spawnProcess(l *net.TCPListener, pipeWriter *os.File, timeo
 	// add prefork child flag into child proc env
 	cmd.Env = append(os.Environ(),
 		fmt.Sprintf("%s=%s", EnvPreforkChildKey, EnvPreforkChildVal),
-		fmt.Sprintf("%s=%d", EnvExecTimeout, timeout),
+		fmt.Sprintf("%s=%d", EnvExecTimeout, zns.Config.Timeout),
 	)
 
 	// pass connection FD to child process as ExtraFile
@@ -174,7 +183,7 @@ func (zns *ZnServer) spawnProcess(l *net.TCPListener, pipeWriter *os.File, timeo
 	// register new child process to workerState
 	zns.addChan <- workerState{
 		pid:   pid,
-		state: WORKER_STATE_INIT,
+		state: WORKER_STATE_IDLE,
 		cmd:   cmd,
 	}
 	// send msg to channel when cmd ends running
@@ -219,15 +228,74 @@ func (zns *ZnServer) readNamedPipe(pipeFile string) {
 }
 
 // summon all writing actions into one goroutine to ensure thread-safe on writing.
-func (zns *ZnServer) maintainChildState() {
+func (zns *ZnServer) maintainChildState(ln *net.TCPListener, pipeWriter *os.File) {
+	cfg := zns.Config
 	for {
 		select {
 		case aw := <-zns.addChan:
-			fmt.Println("add pid:", aw.pid)
+			zns.childs[aw.pid] = aw
+			zns.refCount = len(zns.childs)
 		case uw := <-zns.updateChan:
-			fmt.Println("update pid:", uw.pid)
+			if oldState, ok := zns.childs[uw.pid]; ok {
+				zns.childs[uw.pid] = workerState{
+					pid:   uw.pid,
+					state: uw.state,
+					cmd:   oldState.cmd,
+				}
+			}
+			// spawn more process (total procs not exceed the number of `maxProcs`)
+			// when there's no idle process
+			// count the number of idle processes
+			hasIdleProcs := false
+			for _, w := range zns.childs {
+				if w.state == WORKER_STATE_IDLE {
+					hasIdleProcs = true
+					break
+				}
+			}
+
+			// all procs are busy (or stopped), spawn process first
+			if !hasIdleProcs {
+				currentNum := zns.refCount
+				finalProcNum := currentNum + 10
+
+				if finalProcNum > zns.Config.MaxProcs {
+					finalProcNum = zns.Config.MaxProcs
+				}
+
+				addNum := finalProcNum - currentNum
+				zns.refCount = finalProcNum
+				go func() {
+					fmt.Println("update spawn: ", addNum)
+					for i := 0; i < addNum; i++ {
+						if err := zns.spawnProcess(ln, pipeWriter); err != nil {
+							log.Fatalf("启动子进程失败：%v", err)
+							break
+						}
+					}
+				}()
+			}
 		case pid := <-zns.delChan:
-			fmt.Println("del pid:", pid)
+			delete(zns.childs, pid)
+			zns.refCount -= 1
+			// check if the number of current existing procs is lower than `initProcs`
+			if zns.refCount < cfg.InitProcs {
+				numsToSpawn := cfg.InitProcs - zns.refCount
+				zns.refCount += numsToSpawn
+				// spawn more processes to ensure minimum proc number
+				go func() {
+					fmt.Println("delete spawn: ", numsToSpawn)
+
+					for i := 0; i < numsToSpawn; i++ {
+						// add time delay to avoid non-stop reboot too quick
+						time.Sleep(100 * time.Millisecond)
+						if err := zns.spawnProcess(ln, pipeWriter); err != nil {
+							log.Fatalf("启动子进程失败：%v", err)
+							break
+						}
+					}
+				}()
+			}
 		}
 	}
 }

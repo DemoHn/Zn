@@ -11,37 +11,58 @@ import (
 )
 
 const (
-	WORKER_STATE_INIT    uint8 = 1 << 0
-	WORKER_STATE_IDLE    uint8 = 1 << 1
-	WORKER_STATE_BUSY    uint8 = 1 << 2
-	WORKER_STATE_STOPPED uint8 = 1 << 3
-	WORKER_STATE_TIMEOUT uint8 = 1 << 4
+	WORKER_STATE_IDLE    uint8 = 1 << 0
+	WORKER_STATE_BUSY    uint8 = 1 << 1
+	WORKER_STATE_STOPPED uint8 = 1 << 2
 
 	defaultTimeout = 60 // default is 60s
 )
 
-type FCGIHandler struct{}
+type FCGIHandler struct {
+	pipeWriter *os.File
+	timeout    int
+}
 
 func (f *FCGIHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	waitSig := make(chan int)
+
+	go handleRequest(w, r, waitSig)
+
+	select {
+	case <-waitSig:
+		writeProcState(f.pipeWriter, WORKER_STATE_IDLE)
+	case <-time.After(time.Duration(f.timeout) * time.Second):
+		writeProcState(f.pipeWriter, WORKER_STATE_STOPPED)
+		// wait for a while before exiting the process
+		time.Sleep(100 * time.Millisecond)
+		// exit the process directly
+		os.Exit(1)
+	}
+}
+
+func handleRequest(w http.ResponseWriter, r *http.Request, waitSig chan int) {
 	cgiEnvs := ProcessFCGIEnv(r)
 	// read ZINC_ADAPTER
 	if adapter, ok := cgiEnvs[EnvZincAdapter]; ok {
 		switch adapter {
 		case ZincAP_Playground:
 			respondAsPlayground(w, r)
-			return
 		case ZincAP_HTTPHandler:
 			w.WriteHeader(200)
 			w.Header().Add("Content-Type", "text/html")
 			w.Write([]byte("TBD - http_handler"))
-			return
 		}
+
+		waitSig <- 1
+		return
 	}
 	//// otherwise - return 403 directly
 
 	w.WriteHeader(403)
 	w.Header().Add("Content-Type", "text/html")
 	w.Write([]byte("Invalid ZINC_ADAPTER"))
+
+	waitSig <- 1
 }
 
 //// start child process
@@ -65,7 +86,6 @@ func StartWorker() error {
 
 	// kill child process when parent process exits
 	go watchMaster()
-	writeProcState(pipeWriter, WORKER_STATE_IDLE)
 
 	for {
 		conn, err := lc.Accept()
@@ -73,31 +93,13 @@ func StartWorker() error {
 			return fmt.Errorf("accept error: %v", err)
 		}
 
-		acceptRequest(conn, pipeWriter, timeout)
-	}
-}
-
-func acceptRequest(conn net.Conn, pipeWriter *os.File, timeout int) {
-	waitSig := make(chan int)
-
-	// set busy state
-	writeProcState(pipeWriter, WORKER_STATE_BUSY)
-
-	// do actual request
-	go func() {
-		AcceptFCGIRequest(conn, &FCGIHandler{})
-		waitSig <- 1
-	}()
-
-	select {
-	case <-waitSig:
-		writeProcState(pipeWriter, WORKER_STATE_IDLE)
-	case <-time.After(time.Duration(timeout) * time.Second):
-		writeProcState(pipeWriter, WORKER_STATE_TIMEOUT)
-		// wait for a while before exiting the process
-		time.Sleep(100 * time.Millisecond)
-		// when the work timeout, kill the worker process directly
-		os.Exit(1)
+		// set busy state
+		writeProcState(pipeWriter, WORKER_STATE_BUSY)
+		// do actual request
+		AcceptFCGIRequest(conn, &FCGIHandler{
+			timeout:    timeout,
+			pipeWriter: pipeWriter,
+		})
 	}
 }
 
