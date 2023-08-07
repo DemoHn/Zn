@@ -293,20 +293,19 @@ func evalPreStmtBlock(c *r.Context, block *syntax.BlockStmt) (*syntax.BlockStmt,
 			}
 		case *syntax.ImportStmt:
 			libName := v.ImportName.GetLiteral()
-			// throw exception when libName equals to current module!
-			if libName == c.GetCurrentModule().GetName() {
-				return nil, zerr.InvalidSameModule(libName)
-			}
 
 			var extModule *r.Module
-			switch v.ImportLibType {
-			case syntax.LibTypeStd:
+			if v.ImportLibType == syntax.LibTypeStd {
 				var err error
 				extModule, err = stdlib.FindModule(libName)
 				if err != nil {
 					return nil, err
 				}
-			case syntax.LibTypeCustom:
+			} else if v.ImportLibType == syntax.LibTypeCustom {
+				// check if the dependency is valid (i.e. not import itself/no duplicate import/no circular dependency)
+				if err := c.CheckDepedency(libName); err != nil {
+					return nil, err
+				}
 				// execute custom module first (in order to get all importable elements)
 				if extModule = c.FindModuleCache(libName); extModule == nil {
 					newModule, err := execAnotherModule(c, libName)
@@ -315,9 +314,6 @@ func evalPreStmtBlock(c *r.Context, block *syntax.BlockStmt) (*syntax.BlockStmt,
 					}
 					extModule = newModule
 				}
-
-				// add dep record
-				c.AddModuleDepedency(c.GetCurrentModule().GetName(), libName)
 			}
 
 			if extModule != nil {

@@ -152,8 +152,27 @@ func (ctx *Context) FindModuleCache(name string) *Module {
 	return ctx.moduleGraph.FindRequireCache(name)
 }
 
-func (ctx *Context) AddModuleDepedency(source string, depModule string) {
-	ctx.moduleGraph.AddModuleDepRecord(source, depModule)
+func (ctx *Context) CheckDepedency(depModule string) error {
+	sourceModule := ctx.GetCurrentModule().GetName()
+	// if target = source module
+	if depModule == sourceModule {
+		return zerr.ImportSameModule(depModule)
+	}
+	// if same module import twice
+	if deps, ok := ctx.moduleGraph.depGraph[sourceModule]; ok {
+		for _, dep := range deps {
+			if dep == depModule {
+				return zerr.DuplicateModule(depModule)
+			}
+		}
+	}
+
+	// add dep graph
+
+	if ctx.moduleGraph.CheckCircularDepedency(sourceModule) {
+
+	}
+	return nil
 }
 
 //// scope symbols getters / setters

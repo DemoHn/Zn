@@ -30,8 +30,9 @@ const (
 	ErrMostParamsError          = 42
 	ErrExactParamsError         = 43
 	// module error
-	ErrModuleNotFound    = 50
-	ErrInvalidSameModule = 51
+	ErrModuleNotFound   = 50
+	ErrImportSameModule = 51
+	ErrDuplicateModule  = 52
 	// internal error
 	ErrUnexpectedCase           = 60
 	ErrUnexpectedEmptyExecLogic = 61
@@ -188,11 +189,20 @@ func ModuleNotFound(name string) *RuntimeError {
 	}
 }
 
-// ModuleNotFound -
-func InvalidSameModule(name string) *RuntimeError {
+// ImportSameModule -
+func ImportSameModule(name string) *RuntimeError {
 	return &RuntimeError{
-		Code:    ErrInvalidSameModule,
+		Code:    ErrImportSameModule,
 		Message: "导入模块与当前模块相同",
+		Extra:   name,
+	}
+}
+
+// DuplicateModule -
+func DuplicateModule(name string) *RuntimeError {
+	return &RuntimeError{
+		Code:    ErrDuplicateModule,
+		Message: fmt.Sprintf("重复导入「%s」模块", name),
 		Extra:   name,
 	}
 }
