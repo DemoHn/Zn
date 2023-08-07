@@ -169,8 +169,8 @@ func (ctx *Context) CheckDepedency(depModule string) error {
 
 	// add dep graph
 
-	if ctx.moduleGraph.CheckCircularDepedency(sourceModule) {
-
+	if ctx.moduleGraph.CheckCircularDepedency(sourceModule, depModule) {
+		return zerr.ModuleCircularDependency()
 	}
 	return nil
 }

@@ -7,13 +7,6 @@ type ModuleGraph struct {
 	anonymousModule *Module
 }
 
-type depNode struct {
-	Name         string
-	Dependencies []*depNode
-	Visited      bool
-	InStack      bool
-}
-
 func NewModuleGraph() *ModuleGraph {
 	return &ModuleGraph{
 		depGraph:     map[string][]string{},
@@ -46,6 +39,23 @@ func (g *ModuleGraph) CheckCircularDepedency(source string, depModule string) bo
 	// add dep record first
 	g.addDepRecord(source, depModule)
 
+	return g.checkCircularDepedencyBFS()
+}
+
+func (g *ModuleGraph) addDepRecord(srcModule string, depModule string) {
+	depList, ok := g.depGraph[srcModule]
+	// add `source` key to depGraph
+	if !ok {
+		g.depGraph[srcModule] = []string{}
+	}
+	// add `depModule` key to depGraph
+	if _, ok := g.depGraph[depModule]; !ok {
+		g.depGraph[depModule] = []string{}
+	}
+	g.depGraph[srcModule] = append(depList, depModule)
+}
+
+func (g *ModuleGraph) checkCircularDepedencyBFS() bool {
 	// detectCircularDependencyBFS
 	// same as "find the loop in a directed graph"
 	// ref: Kahn's algorithm in https://en.wikipedia.org/wiki/Topological_sorting
@@ -53,7 +63,10 @@ func (g *ModuleGraph) CheckCircularDepedency(source string, depModule string) bo
 	// init inDegreeMap - stat how many incoming nodes in one module
 	inDegreeMap := map[string]int{}
 	for src, sDeps := range g.depGraph {
-		inDegreeMap[src] = 0
+		if _, ok := inDegreeMap[src]; !ok {
+			inDegreeMap[src] = 0
+		}
+
 		for _, dep := range sDeps {
 			if _, ok := inDegreeMap[dep]; !ok {
 				inDegreeMap[dep] = 0
@@ -72,6 +85,7 @@ func (g *ModuleGraph) CheckCircularDepedency(source string, depModule string) bo
 
 	// Initialize count of visited vertices
 	cnt := 1
+	nodesNum := len(g.depGraph)
 
 	// One by one dequeue vertices from queue and enqueue
 	// adjacents if indegree of adjacent becomes 0
@@ -91,18 +105,5 @@ func (g *ModuleGraph) CheckCircularDepedency(source string, depModule string) bo
 		}
 	}
 
-	return cnt != len(g.depGraph)
-}
-
-func (g *ModuleGraph) addDepRecord(source string, depModule string) {
-	depList, ok := g.depGraph[source]
-	// add `source` key to depGraph
-	if !ok {
-		g.depGraph[source] = []string{}
-	}
-	// add `depModule` key to depGraph
-	if _, ok := g.depGraph[depModule]; !ok {
-		g.depGraph[depModule] = []string{}
-	}
-	g.depGraph[source] = append(depList, depModule)
+	return cnt != nodesNum
 }

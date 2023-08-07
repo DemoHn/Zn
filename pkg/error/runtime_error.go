@@ -30,9 +30,10 @@ const (
 	ErrMostParamsError          = 42
 	ErrExactParamsError         = 43
 	// module error
-	ErrModuleNotFound   = 50
-	ErrImportSameModule = 51
-	ErrDuplicateModule  = 52
+	ErrModuleNotFound           = 50
+	ErrImportSameModule         = 51
+	ErrDuplicateModule          = 52
+	ErrModuleCircularDependency = 53
 	// internal error
 	ErrUnexpectedCase           = 60
 	ErrUnexpectedEmptyExecLogic = 61
@@ -204,6 +205,15 @@ func DuplicateModule(name string) *RuntimeError {
 		Code:    ErrDuplicateModule,
 		Message: fmt.Sprintf("重复导入「%s」模块", name),
 		Extra:   name,
+	}
+}
+
+// DuplicateModule -
+func ModuleCircularDependency() *RuntimeError {
+	return &RuntimeError{
+		Code:    ErrModuleCircularDependency,
+		Message: "导入模块时出现循环依赖，无法进行下一步操作",
+		Extra:   nil,
 	}
 }
 
