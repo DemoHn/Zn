@@ -40,6 +40,38 @@ func TestCircularDependency_CoreBFS(t *testing.T) {
 			},
 			result: false,
 		},
+		{
+			name: "A -> B & B -> A",
+			g: map[string][]string{
+				"A1": {"B1", "B2", "B3"},
+				"B1": {"C1", "A1"},
+				"C1": {"B1"},
+			},
+			result: true,
+		},
+		{
+			name: "valid dep tree#1",
+			g: map[string][]string{
+				"A1": {"B1", "B2", "B3"},
+				"B1": {"C1", "B2"},
+				"B2": {"C1"},
+				"B3": {"B2"},
+				"C1": {},
+			},
+			result: false,
+		},
+		{
+			name: "a large circular loop (A->D->E->F->A)",
+			g: map[string][]string{
+				"A": {"B", "C", "D"},
+				"B": {"C"},
+				"C": {},
+				"D": {"E", "C"},
+				"E": {"C", "F", "B"},
+				"F": {"A"},
+			},
+			result: true,
+		},
 	}
 
 	for _, tt := range cases {
