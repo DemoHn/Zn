@@ -1,22 +1,22 @@
 package io
 
 import (
-	zerr "github.com/DemoHn/Zn/pkg/error"
 	"io"
 	"os"
+
+	zerr "github.com/DemoHn/Zn/pkg/error"
 )
 
 type FileStream struct {
-	reader io.Reader
+	reader    io.Reader
 	encBuffer []byte
-	path string
-	hasRead bool
+	path      string
+	hasRead   bool
 }
-
 
 const (
 	defaultReadBlock = 4096
-	BOM = 0xFEFF
+	BOM              = 0xFEFF
 )
 
 // NewFileStream - create file stream
@@ -50,9 +50,9 @@ func (f *FileStream) ReadAll() ([]rune, error) {
 			break
 		}
 		result = append(result, res...)
- 	}
+	}
 
- 	return result, nil
+	return result, nil
 }
 
 // Read - read some chars
@@ -75,7 +75,7 @@ func (f *FileStream) read(n int) ([]rune, error) {
 	if !f.hasRead {
 		f.hasRead = true
 		// detect BOM, if BOM on the first char, then remove it directly.
-		if data[0] == BOM {
+		if len(data) > 0 && data[0] == BOM {
 			data = data[1:]
 		}
 	}

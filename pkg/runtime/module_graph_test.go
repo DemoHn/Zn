@@ -67,7 +67,7 @@ func TestCircularDependency_CoreBFS(t *testing.T) {
 				"B": {"C"},
 				"C": {},
 				"D": {"E", "C"},
-				"E": {"C", "F", "B"},
+				"E": {"C", "B"},
 				"F": {"A"},
 			},
 			result: true,
