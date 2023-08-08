@@ -53,3 +53,91 @@ func TestLexer_ParseLine(t *testing.T) {
 		})
 	}
 }
+
+func TestLexer_FindLineIdx(t *testing.T) {
+	cases := []struct {
+		name         string
+		cursor       int
+		startLoopIdx int
+		lines        []LineInfo
+		expectedIdx  int
+	}{
+		{
+			name:         "normal lines (final line)",
+			cursor:       10,
+			startLoopIdx: 0,
+			lines: []LineInfo{
+				{
+					StartIdx: 0,
+				},
+				{
+					StartIdx: 4,
+				},
+				{
+					StartIdx: 7,
+				},
+			},
+			expectedIdx: 2,
+		},
+		{
+			name:         "normal lines (first line)",
+			cursor:       3,
+			startLoopIdx: 0,
+			lines: []LineInfo{
+				{
+					StartIdx: 0,
+				},
+				{
+					StartIdx: 4,
+				},
+				{
+					StartIdx: 7,
+				},
+			},
+			expectedIdx: 0,
+		},
+		{
+			name:         "normal lines with same startIdx (rare case)",
+			cursor:       9,
+			startLoopIdx: 0,
+			lines: []LineInfo{
+				{
+					StartIdx: 0,
+				},
+				{
+					StartIdx: 4,
+				},
+				{
+					StartIdx: 4,
+				},
+				{
+					StartIdx: 7,
+				},
+				{
+					StartIdx: 11,
+				},
+			},
+			expectedIdx: 3,
+		},
+		{
+			name:         "empty lines",
+			cursor:       0,
+			startLoopIdx: 0,
+			lines:        []LineInfo{},
+			expectedIdx:  0,
+		},
+	}
+
+	for _, tt := range cases {
+		t.Run(tt.name, func(t *testing.T) {
+			lex := &Lexer{
+				Lines: tt.lines,
+			}
+
+			got := lex.FindLineIdx(tt.cursor, tt.startLoopIdx)
+			if got != tt.expectedIdx {
+				t.Errorf("expect %d, got %d", tt.expectedIdx, got)
+			}
+		})
+	}
+}

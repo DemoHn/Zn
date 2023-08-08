@@ -111,13 +111,13 @@ func (l *Lexer) SetCursor(cursor int) {
 // find which line the given `cursor` is located
 func (l *Lexer) FindLineIdx(cursor int, startLoopIdx int) int {
 	i := startLoopIdx
-	for i < len(l.Lines) {
-		if cursor < l.Lines[i].StartIdx {
-			return i - 1
+	for i+1 < len(l.Lines) {
+		if cursor < l.Lines[i+1].StartIdx {
+			return i
 		}
 		i += 1
 	}
-	return i - 1
+	return i
 }
 
 func (l *Lexer) GetLineInfo(idx int) *LineInfo {
