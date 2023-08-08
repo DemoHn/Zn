@@ -26,10 +26,16 @@ type SyntaxErrorWrapper struct {
 }
 
 func WrapSyntaxError(lexer *syntax.Lexer, module *r.Module, err error) *SyntaxErrorWrapper {
+	targetErr := err
+	// get the original raw error (instead of 'wrapped' error)
+	// to avoid nested error wrapping
+	if serr, ok := err.(*SyntaxErrorWrapper); ok {
+		targetErr = serr.err
+	}
 	return &SyntaxErrorWrapper{
 		lexer:  lexer,
 		module: module,
-		err:    err,
+		err:    targetErr,
 	}
 }
 
@@ -62,9 +68,13 @@ type RuntimeErrorWrapper struct {
 }
 
 func WrapRuntimeError(c *r.Context, err error) *RuntimeErrorWrapper {
+	targetErr := err
+	if serr, ok := err.(*RuntimeErrorWrapper); ok {
+		targetErr = serr.err
+	}
 	return &RuntimeErrorWrapper{
 		traceback: c.GetCallStack(),
-		err:       err,
+		err:       targetErr,
 	}
 }
 
