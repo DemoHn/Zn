@@ -133,18 +133,29 @@ func evalFunctionCall(c *r.Context, expr *syntax.FuncCallExpr) (r.Element, error
 }
 
 func execMethodFunction(c *r.Context, root r.Element, funcName string, params []r.Element) (r.Element, error) {
+	// append callInfo
+	c.PushCallStack()
+
 	// create a new scope to denote a new 'thisValue'
 	newScope := c.PushScope()
 	defer c.PopScope()
 
 	newScope.SetThisValue(root)
 	// exec method
-	return root.ExecMethod(c, funcName, params)
+	elem, err := root.ExecMethod(c, funcName, params)
+	// pop log only function execution succeed
+	if err == nil {
+		c.PopCallStack()
+	}
+	return elem, err
 }
 
 // direct function: defined as standalone function instead of the method of
 // a model
 func execDirectFunction(c *r.Context, funcName string, params []r.Element) (r.Element, error) {
+	// append callInfo
+	c.PushCallStack()
+
 	v, err := c.FindSymbol(funcName)
 	if err != nil {
 		return nil, err
@@ -155,5 +166,9 @@ func execDirectFunction(c *r.Context, funcName string, params []r.Element) (r.El
 		return nil, zerr.InvalidFuncVariable(funcName)
 	}
 
-	return funcVal.Exec(c, nil, params)
+	elem, err := funcVal.Exec(c, nil, params)
+	if err == nil {
+		c.PopCallStack()
+	}
+	return elem, err
 }

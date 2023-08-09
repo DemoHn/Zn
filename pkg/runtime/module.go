@@ -76,6 +76,10 @@ func (m *Module) SetCurrentLine(line int) {
 	m.currentLine = line
 }
 
+func (m *Module) GetCurrentLine() int {
+	return m.currentLine
+}
+
 func (m *Module) SetLexer(l *syntax.Lexer) {
 	m.lexer = l
 }

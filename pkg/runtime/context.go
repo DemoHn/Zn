@@ -134,6 +134,21 @@ func (ctx *Context) SetCurrentLine(line int) {
 	ctx.GetCurrentModule().SetCurrentLine(line)
 }
 
+func (ctx *Context) PushCallStack() {
+	ctx.callStack = append(ctx.callStack, CallInfo{
+		Module:      ctx.GetCurrentModule(),
+		LastLineIdx: ctx.GetCurrentModule().GetCurrentLine(),
+	})
+}
+
+func (ctx *Context) PopCallStack() {
+	stackLen := len(ctx.callStack)
+	if stackLen == 0 {
+		return
+	}
+	ctx.callStack = ctx.callStack[:stackLen-1]
+}
+
 //// enter & exist modules
 func (ctx *Context) EnterModule(module *Module) {
 	// add require cache
