@@ -26,6 +26,10 @@ func (s SymbolInfo) GetValue() Element {
 	return s.value
 }
 
+func (s SymbolInfo) GetModule() *Module {
+	return s.module
+}
+
 func NewScope(thisValue Element) *Scope {
 	return &Scope{
 		symbolMap:   map[string]SymbolInfo{},

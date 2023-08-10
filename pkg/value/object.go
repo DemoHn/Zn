@@ -28,6 +28,9 @@ type ClassModel struct {
 	CompPropList map[string]*Function
 	// MethodList - stores all available methods definition of class
 	MethodList map[string]*Function
+
+	// refModule: record current module
+	refModule *r.Module
 }
 
 // NewObject -
@@ -39,13 +42,14 @@ func NewObject(model *ClassModel) *Object {
 }
 
 // NewClassModel - create new empty r.ClassRef
-func NewClassModel(name string) *ClassModel {
+func NewClassModel(name string, refModule *r.Module) *ClassModel {
 	return &ClassModel{
 		Name:         name,
 		Constructor:  nil,
 		PropList:     []string{},
 		CompPropList: map[string]*Function{},
 		MethodList:   map[string]*Function{},
+		refModule:    refModule,
 	}
 }
 
@@ -62,6 +66,10 @@ func (zo *Object) SetPropList(propList map[string]r.Element) {
 // GetModel -
 func (zo *Object) GetModel() *ClassModel {
 	return zo.model
+}
+
+func (zo *Object) GetRefModule() *r.Module {
+	return zo.model.refModule
 }
 
 // GetProperty -

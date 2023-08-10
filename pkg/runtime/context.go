@@ -12,6 +12,10 @@ type Context struct {
 	// hasPrinted - if stdout has been used to output message before program end, set `hasPrinted` -> true; so that after message is done
 	hasPrinted bool
 
+	// currentLine - current execution lineNum (index, start from 0)
+	currentLine      int
+	currentRefModule *Module
+
 	// modulegraph - store module dependency & all preloaded modules
 	moduleGraph *ModuleGraph
 
@@ -131,13 +135,25 @@ func (ctx *Context) PopScope() {
 
 // SetCurrentLine - set lineIdx to current running scope
 func (ctx *Context) SetCurrentLine(line int) {
-	ctx.GetCurrentModule().SetCurrentLine(line)
+	ctx.currentLine = line
+}
+
+func (ctx *Context) GetCurrentLine() int {
+	return ctx.currentLine
+}
+
+func (ctx *Context) SetCurrentRefModule(refModule *Module) {
+	ctx.currentRefModule = refModule
+}
+
+func (ctx *Context) GetCurrentRefModule() *Module {
+	return ctx.currentRefModule
 }
 
 func (ctx *Context) PushCallStack() {
 	ctx.callStack = append(ctx.callStack, CallInfo{
-		Module:      ctx.GetCurrentModule(),
-		LastLineIdx: ctx.GetCurrentModule().GetCurrentLine(),
+		Module:      ctx.currentRefModule,
+		LastLineIdx: ctx.currentLine,
 	})
 }
 
@@ -154,12 +170,15 @@ func (ctx *Context) EnterModule(module *Module) {
 	// add require cache
 	ctx.moduleGraph.AddRequireCache(module)
 	ctx.moduleStack = append(ctx.moduleStack, module)
+	ctx.currentRefModule = module
 }
 
 func (ctx *Context) ExitModule() {
 	sLen := len(ctx.moduleStack)
 	if sLen > 0 {
 		ctx.moduleStack = ctx.moduleStack[:sLen-1]
+		// get last one as refModule
+		ctx.currentRefModule = ctx.moduleStack[len(ctx.moduleStack)-1]
 	}
 }
 
@@ -192,15 +211,28 @@ func (ctx *Context) CheckDepedency(depModule string) error {
 
 //// scope symbols getters / setters
 
-// FindSymbol - find symbol in the context from current scope
+// FindElement - find symbol value in the context from current scope
 // up to its root scope
-func (ctx *Context) FindSymbol(name string) (Element, error) {
+func (ctx *Context) FindElement(name string) (Element, error) {
 	// find on globals first
 	if symVal, inGlobals := ctx.globals[name]; inGlobals {
 		return symVal, nil
 	}
 
 	return ctx.GetCurrentModule().FindScopeValue(name)
+}
+
+func (ctx *Context) FindSymbol(name string) (SymbolInfo, error) {
+	// find on globals first
+	if symVal, inGlobals := ctx.globals[name]; inGlobals {
+		return SymbolInfo{
+			value:   symVal,
+			isConst: true,
+			module:  nil,
+		}, nil
+	}
+
+	return ctx.GetCurrentModule().FindScopeSymbol(name)
 }
 
 // SetSymbol -

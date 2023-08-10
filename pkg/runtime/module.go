@@ -16,8 +16,6 @@ type Module struct {
 	// if the module is a standard library, lexer = nil
 	lexer *syntax.Lexer
 
-	// currentLine - current execution lineNum (index)
-	currentLine int
 	/* scopeStack - the call stack of execution scope
 	   the stack looks like the following diagram:
 
@@ -49,10 +47,9 @@ type Module struct {
 
 func NewModule(name string, lexer *syntax.Lexer) *Module {
 	return &Module{
-		name:        name,
-		anonymous:   false,
-		lexer:       lexer,
-		currentLine: 0,
+		name:      name,
+		anonymous: false,
+		lexer:     lexer,
 		// init root scope to ensure scopeStack NOT empty
 		scopeStack:   []*Scope{NewScope(nil)},
 		exportValues: map[string]Element{},
@@ -61,23 +58,13 @@ func NewModule(name string, lexer *syntax.Lexer) *Module {
 
 func NewAnonymousModule(lexer *syntax.Lexer) *Module {
 	return &Module{
-		name:        "",
-		anonymous:   true,
-		lexer:       lexer,
-		currentLine: 0,
+		name:      "",
+		anonymous: true,
+		lexer:     lexer,
 		// init root scope to ensure scopeStack NOT empty
 		scopeStack:   []*Scope{NewScope(nil)},
 		exportValues: map[string]Element{},
 	}
-}
-
-// SetCurrentLine - set lineIdx to current running scope of the module
-func (m *Module) SetCurrentLine(line int) {
-	m.currentLine = line
-}
-
-func (m *Module) GetCurrentLine() int {
-	return m.currentLine
 }
 
 func (m *Module) SetLexer(l *syntax.Lexer) {
@@ -146,6 +133,20 @@ func (m *Module) FindScopeValue(name string) (Element, error) {
 	}
 
 	return nil, zerr.NameNotDefined(name)
+}
+
+// FindScopeValue - find symbol in the context from the latest scope
+// up to its first one
+func (m *Module) FindScopeSymbol(name string) (SymbolInfo, error) {
+	// iterate from last to very first
+	for cursor := len(m.scopeStack) - 1; cursor >= 0; cursor-- {
+		sp := m.scopeStack[cursor]
+		if ok, sym := sp.GetSymbol(name); ok {
+			return sym, nil
+		}
+	}
+
+	return SymbolInfo{}, zerr.NameNotDefined(name)
 }
 
 // SetScopeValue - set value of an existing symbol (whatever in current scope or root scope la..)

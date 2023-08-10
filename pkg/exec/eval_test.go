@@ -63,7 +63,7 @@ func TestEvalWhileLoopStmt_OKCases(t *testing.T) {
 				"B": value.NewNumber(10),
 			},
 			expectLogic: func(ctx *runtime.Context, t *testing.T) {
-				sym, _ := ctx.FindSymbol("B")
+				sym, _ := ctx.FindElement("B")
 				assertB := 50
 				if sym.(*value.Number).GetValue() != float64(assertB) {
 					t.Errorf("expect B (in root scope) = %f, got %f", sym.(*value.Number).GetValue(), float64(assertB))
@@ -78,7 +78,7 @@ func TestEvalWhileLoopStmt_OKCases(t *testing.T) {
 				"计数": value.NewNumber(0),
 			},
 			expectLogic: func(ctx *runtime.Context, t *testing.T) {
-				sym, _ := ctx.FindSymbol("计数")
+				sym, _ := ctx.FindElement("计数")
 				assertB := 3
 				if sym.(*value.Number).GetValue() != float64(assertB) {
 					t.Errorf("expect B (in root scope) = %f, got %f", float64(assertB), sym.(*value.Number).GetValue())

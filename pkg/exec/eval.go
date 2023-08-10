@@ -101,7 +101,7 @@ func evalStatement(c *r.Context, stmt syntax.Statement) error {
 	case *syntax.ThrowExceptionStmt:
 		// profoundly return an ERROR to terminate the process
 		name := v.ExceptionClass.GetLiteral()
-		expClassRef, err := c.FindSymbol(name)
+		expClassRef, err := c.FindElement(name)
 		if err != nil {
 			return err
 		}
@@ -184,7 +184,7 @@ func evalVarDeclareStmt(c *r.Context, node *syntax.VarDeclareStmt) error {
 func evalNewObject(c *r.Context, node syntax.VDAssignPair) error {
 	vtag := node.ObjClass.GetLiteral()
 	// get class definition
-	importVal, err := c.FindSymbol(vtag)
+	importVal, err := c.FindElement(vtag)
 	if err != nil {
 		return err
 	}
@@ -706,7 +706,7 @@ func evalPrimeExpr(c *r.Context, expr syntax.Expression) (r.Element, error) {
 		return value.NewString(e.GetLiteral()), nil
 	case *syntax.ID:
 		vtag := e.GetLiteral()
-		return c.FindSymbol(vtag)
+		return c.FindElement(vtag)
 	case *syntax.ArrayExpr:
 		var znObjs []r.Element
 		for _, item := range e.Items {
@@ -902,7 +902,7 @@ func extractSignalValue(err error, sigType uint8) (r.Element, error) {
 
 // BuildClassFromNode -
 func BuildClassFromNode(upperCtx *r.Context, name string, classNode *syntax.ClassDeclareStmt) *value.ClassModel {
-	ref := value.NewClassModel(name)
+	ref := value.NewClassModel(name, upperCtx.GetCurrentModule())
 
 	// define default constructor
 	var constructor = func(c *r.Context, params []r.Element) (r.Element, error) {

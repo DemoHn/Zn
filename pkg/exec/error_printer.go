@@ -25,16 +25,17 @@ type SyntaxErrorWrapper struct {
 	err    error
 }
 
-func WrapSyntaxError(lexer *syntax.Lexer, module *r.Module, err error) *SyntaxErrorWrapper {
-	// get the original raw error (instead of 'wrapped' error)
-	// to avoid nested error wrapping
-	if serr, ok := err.(*SyntaxErrorWrapper); ok {
+func WrapSyntaxError(lexer *syntax.Lexer, module *r.Module, err error) error {
+	switch serr := err.(type) {
+	// DO NOT wrap a wrapped error
+	case *SyntaxErrorWrapper, *RuntimeErrorWrapper:
 		return serr
-	}
-	return &SyntaxErrorWrapper{
-		lexer:  lexer,
-		module: module,
-		err:    err,
+	default:
+		return &SyntaxErrorWrapper{
+			lexer:  lexer,
+			module: module,
+			err:    err,
+		}
 	}
 }
 
@@ -66,29 +67,32 @@ type RuntimeErrorWrapper struct {
 	err       error
 }
 
-func WrapRuntimeError(c *r.Context, err error) *RuntimeErrorWrapper {
-	if serr, ok := err.(*RuntimeErrorWrapper); ok {
+func WrapRuntimeError(c *r.Context, err error) error {
+	switch serr := err.(type) {
+	case *RuntimeErrorWrapper, *SyntaxErrorWrapper:
 		return serr
-	}
-	traceback := c.GetCallStack()
+	default:
 
-	addCurrentInfo := true
-	if len(traceback) > 0 {
-		lastItem := traceback[len(traceback)-1]
-		currentModule := c.GetCurrentModule()
+		traceback := c.GetCallStack()
 
-		if lastItem.Module == currentModule && lastItem.LastLineIdx == currentModule.GetCurrentLine() {
-			addCurrentInfo = false
+		addCurrentInfo := true
+		if len(traceback) > 0 {
+			lastItem := traceback[len(traceback)-1]
+			currentModule := c.GetCurrentModule()
+
+			if lastItem.Module == currentModule && lastItem.LastLineIdx == c.GetCurrentLine() {
+				addCurrentInfo = false
+			}
 		}
-	}
-	// add current module & lineIdx to traceback as direct error locations
-	if addCurrentInfo {
-		c.PushCallStack()
-	}
+		// add current module & lineIdx to traceback as direct error locations
+		if addCurrentInfo {
+			c.PushCallStack()
+		}
 
-	return &RuntimeErrorWrapper{
-		traceback: c.GetCallStack(),
-		err:       err,
+		return &RuntimeErrorWrapper{
+			traceback: c.GetCallStack(),
+			err:       err,
+		}
 	}
 }
 
@@ -117,12 +121,14 @@ func (rw *RuntimeErrorWrapper) Error() string {
 
 		// append body
 		for _, tr := range rw.traceback[1:] {
-			errLines = append(errLines, fmtErrorLocationBodyLine(tr.Module.GetName(), tr.LastLineIdx+1))
-			// get line text
-			l := tr.Module.GetLexer()
-			if lineInfo := l.GetLineInfo(tr.LastLineIdx); lineInfo != nil {
-				startIdx := lineInfo.StartIdx
-				errLines = append(errLines, fmtErrorSourceTextLine(l, startIdx, false))
+			if tr.Module != nil {
+				errLines = append(errLines, fmtErrorLocationBodyLine(tr.Module.GetName(), tr.LastLineIdx+1))
+				// get line text
+				l := tr.Module.GetLexer()
+				if lineInfo := l.GetLineInfo(tr.LastLineIdx); lineInfo != nil {
+					startIdx := lineInfo.StartIdx
+					errLines = append(errLines, fmtErrorSourceTextLine(l, startIdx, false))
+				}
 			}
 		}
 	}
@@ -152,7 +158,7 @@ func DisplayError(err error) string {
 // print error lines - display detailed error info to user
 // general format:
 //
-// 在 [FILE] 模块中，位于第 [LINE] 行：
+// 在模块[FILE]中，位于第[LINE]行：
 //     [ LINE TEXT WITHOUT INDENTS AND CRLF ]
 // [[ERRCODE]] [ERRCLASS]：[ERRTEXT]
 //
@@ -169,7 +175,7 @@ func fmtErrorLocationHeadLine(module *r.Module, lineNum int) string {
 	if module.IsAnonymous() {
 		return fmt.Sprintf("在主模块中，位于第 %d 行发生异常：", lineNum)
 	}
-	return fmt.Sprintf("在“%s”模块中，位于第 %d 行发生异常：", module.GetName(), lineNum)
+	return fmt.Sprintf("在模块“%s”中，位于第 %d 行发生异常：", module.GetName(), lineNum)
 }
 
 // fmtErrorLocationBodyLine -

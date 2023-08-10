@@ -133,8 +133,16 @@ func evalFunctionCall(c *r.Context, expr *syntax.FuncCallExpr) (r.Element, error
 }
 
 func execMethodFunction(c *r.Context, root r.Element, funcName string, params []r.Element) (r.Element, error) {
-	// append callInfo
-	c.PushCallStack()
+	pushCallstack := false
+
+	if robj, ok := root.(*value.Object); ok {
+		pushCallstack = true
+		refModule := robj.GetRefModule()
+
+		// append callInfo
+		c.PushCallStack()
+		c.SetCurrentRefModule(refModule)
+	}
 
 	// create a new scope to denote a new 'thisValue'
 	newScope := c.PushScope()
@@ -143,8 +151,8 @@ func execMethodFunction(c *r.Context, root r.Element, funcName string, params []
 	newScope.SetThisValue(root)
 	// exec method
 	elem, err := root.ExecMethod(c, funcName, params)
-	// pop log only function execution succeed
-	if err == nil {
+	// pop callInfo only when function execution succeed
+	if err == nil && pushCallstack {
 		c.PopCallStack()
 	}
 	return elem, err
@@ -153,15 +161,16 @@ func execMethodFunction(c *r.Context, root r.Element, funcName string, params []
 // direct function: defined as standalone function instead of the method of
 // a model
 func execDirectFunction(c *r.Context, funcName string, params []r.Element) (r.Element, error) {
-	// append callInfo
-	c.PushCallStack()
-
-	v, err := c.FindSymbol(funcName)
+	sym, err := c.FindSymbol(funcName)
 	if err != nil {
 		return nil, err
 	}
+	// push callInfo
+	c.PushCallStack()
+	c.SetCurrentRefModule(sym.GetModule())
+
 	// assert value is function type
-	funcVal, ok := v.(*value.Function)
+	funcVal, ok := sym.GetValue().(*value.Function)
 	if !ok {
 		return nil, zerr.InvalidFuncVariable(funcName)
 	}
