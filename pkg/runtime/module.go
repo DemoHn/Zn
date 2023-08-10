@@ -161,14 +161,14 @@ func (m *Module) SetScopeValue(name string, value Element) error {
 			if sym.isConst {
 				return zerr.AssignToConstant()
 			}
-			sp.SetSymbolValue(name, value, false)
+			sp.SetSymbolValue(name, value, false, sym.module)
 			return nil
 		}
 	}
 	return zerr.NameNotDefined(name)
 }
 
-// BindValue - bind a non-const value on current scope - however, if the same symbol has bound, then an error occurs.
+// BindSymbol - bind a non-const value on current scope - however, if the same symbol has bound, then an error occurs.
 func (m *Module) BindSymbol(name string, value Element, isConst bool, rebindCheck bool) error {
 	if sp := m.GetCurrentScope(); sp != nil {
 		// bind value on current scope
@@ -179,7 +179,21 @@ func (m *Module) BindSymbol(name string, value Element, isConst bool, rebindChec
 		}
 
 		// set value
-		sp.SetSymbolValue(name, value, isConst)
+		sp.SetSymbolValue(name, value, isConst, m)
+	}
+	return nil
+}
+
+// BindImportSymbol - bind a non-const value on current scope from another module. by default, if the same symbol has bound, then an error occurs.
+func (m *Module) BindImportSymbol(name string, value Element, refModule *Module) error {
+	if sp := m.GetCurrentScope(); sp != nil {
+		// flushing is NOT allowed
+		if ok, _ := sp.GetSymbol(name); ok {
+			return zerr.NameRedeclared(name)
+		}
+
+		// set value
+		sp.SetSymbolValue(name, value, true, refModule)
 	}
 	return nil
 }

@@ -320,7 +320,7 @@ func evalPreStmtBlock(c *r.Context, block *syntax.BlockStmt) (*syntax.BlockStmt,
 				// import all symbols to current module's importRefs
 				if len(v.ImportItems) == 0 {
 					for name, val := range extModule.GetAllExportValues() {
-						if err := c.BindSymbol(name, val); err != nil {
+						if err := c.BindImportSymbol(name, val, extModule); err != nil {
 							return nil, err
 						}
 					}
@@ -329,7 +329,7 @@ func evalPreStmtBlock(c *r.Context, block *syntax.BlockStmt) (*syntax.BlockStmt,
 					for _, id := range v.ImportItems {
 						name := id.GetLiteral()
 						if val, err2 := extModule.GetExportValue(name); err2 == nil {
-							if err := c.BindSymbol(name, val); err != nil {
+							if err := c.BindImportSymbol(name, val, extModule); err != nil {
 								return nil, err
 							}
 						}

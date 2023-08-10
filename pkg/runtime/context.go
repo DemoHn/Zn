@@ -236,9 +236,18 @@ func (ctx *Context) BindScopeSymbolDecl(scope *Scope, name string, value Element
 		return zerr.NameRedeclared(name)
 	}
 	if scope != nil {
-		scope.SetSymbolValue(name, value, false)
+		scope.SetSymbolValue(name, value, false, ctx.GetCurrentModule())
 	}
 	return nil
+}
+
+// BindSymbolDecl - bind value for declaration statement - that variables could be re-bind.
+func (ctx *Context) BindImportSymbol(name string, value Element, refModule *Module) error {
+	if _, inGlobals := ctx.globals[name]; inGlobals {
+		return zerr.NameRedeclared(name)
+	}
+
+	return ctx.GetCurrentModule().BindImportSymbol(name, value, refModule)
 }
 
 // GetThisValue -

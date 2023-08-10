@@ -18,14 +18,12 @@ type SymbolInfo struct {
 	value Element
 	// isConst - if an symbol is const
 	isConst bool
+	// module - get original module (for reference)
+	module *Module
 }
 
 func (s SymbolInfo) GetValue() Element {
 	return s.value
-}
-
-func MakeSymbolInfo(value Element, isConst bool) SymbolInfo {
-	return SymbolInfo{value, isConst}
 }
 
 func NewScope(thisValue Element) *Scope {
@@ -56,10 +54,11 @@ func (sp *Scope) SetReturnValue(v Element) {
 	sp.returnValue = v
 }
 
-func (sp *Scope) SetSymbolValue(name string, v Element, isConst bool) {
+func (sp *Scope) SetSymbolValue(name string, v Element, isConst bool, module *Module) {
 	sp.symbolMap[name] = SymbolInfo{
 		isConst: isConst,
 		value:   v,
+		module:  module,
 	}
 }
 
