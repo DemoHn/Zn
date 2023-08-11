@@ -11,6 +11,8 @@ type Module struct {
 	// anonymous - when anonymous = true, the module has no name
 	// but one context only allow ONE anonymous module
 	anonymous bool
+	// internal = true for internal modules (e.g. standard library, plugins)  these are imported via 《 》mark instead of “ ” mark. usually there's no source code in zinc (logics are written in Golang la...) so `module.lexer` = nil
+	internal bool
 
 	// lexer - the lexer of module's source code for mapping objects to source code.
 	// if the module is a standard library, lexer = nil
@@ -49,6 +51,7 @@ func NewModule(name string, lexer *syntax.Lexer) *Module {
 	return &Module{
 		name:      name,
 		anonymous: false,
+		internal:  false,
 		lexer:     lexer,
 		// init root scope to ensure scopeStack NOT empty
 		scopeStack:   []*Scope{NewScope(nil)},
@@ -61,6 +64,19 @@ func NewAnonymousModule(lexer *syntax.Lexer) *Module {
 		name:      "",
 		anonymous: true,
 		lexer:     lexer,
+		// init root scope to ensure scopeStack NOT empty
+		scopeStack:   []*Scope{NewScope(nil)},
+		exportValues: map[string]Element{},
+	}
+}
+
+// called
+func NewInternalModule(name string) *Module {
+	return &Module{
+		name:      name,
+		anonymous: false,
+		internal:  true,
+		lexer:     nil,
 		// init root scope to ensure scopeStack NOT empty
 		scopeStack:   []*Scope{NewScope(nil)},
 		exportValues: map[string]Element{},

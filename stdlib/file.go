@@ -11,7 +11,7 @@ import (
 )
 
 var fileModuleName = "文件"
-var fileModule = r.NewModule(fileModuleName, nil)
+var fileModule = r.NewInternalModule(fileModuleName)
 
 func readTextFromFileFunc(c *r.Context, values []r.Element) (r.Element, error) {
 	// validate one param: string ONLY

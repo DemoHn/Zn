@@ -48,7 +48,6 @@ func injectValuesToRootScope(c *runtime.Context, nameMap map[string]runtime.Elem
 }
 
 func TestEvalWhileLoopStmt_OKCases(t *testing.T) {
-
 	cases := []struct {
 		name        string
 		code        string
@@ -80,6 +79,68 @@ func TestEvalWhileLoopStmt_OKCases(t *testing.T) {
 			expectLogic: func(ctx *runtime.Context, t *testing.T) {
 				sym, _ := ctx.FindElement("计数")
 				assertB := 3
+				if sym.(*value.Number).GetValue() != float64(assertB) {
+					t.Errorf("expect B (in root scope) = %f, got %f", float64(assertB), sym.(*value.Number).GetValue())
+				}
+			},
+		},
+		{
+			name: "break the loop via '结束循环' in inner ifs",
+			code: `
+每当A小于5：
+    A = A + 1
+    计数 = 计数 + 1
+    如果A >= 3：
+        如果A == 4：
+            如果A > 0：
+                结束循环`,
+			initValue: map[string]runtime.Element{
+				"A":  value.NewNumber(1),
+				"计数": value.NewNumber(0),
+			},
+			expectLogic: func(ctx *runtime.Context, t *testing.T) {
+				sym, _ := ctx.FindElement("计数")
+				assertB := 3
+				if sym.(*value.Number).GetValue() != float64(assertB) {
+					t.Errorf("expect B (in root scope) = %f, got %f", float64(assertB), sym.(*value.Number).GetValue())
+				}
+			},
+		},
+		{
+			name: "continue the loop via '继续循环'",
+			code: "每当A小于5：\n    A = A + 1；\n    如果A >= 4：\n        继续循环\n    计数 = 计数 + 1",
+			initValue: map[string]runtime.Element{
+				"A":  value.NewNumber(1),
+				"计数": value.NewNumber(0),
+			},
+			expectLogic: func(ctx *runtime.Context, t *testing.T) {
+				sym, _ := ctx.FindElement("计数")
+				assertB := 2
+				if sym.(*value.Number).GetValue() != float64(assertB) {
+					t.Errorf("expect B (in root scope) = %f, got %f", float64(assertB), sym.(*value.Number).GetValue())
+				}
+			},
+		},
+		{
+			name: "'结束循环' only jumps out inner loop, not jump outer loop",
+			code: `
+每当A 小于 5：
+	A = A + 1
+	B = 0
+	每当真：
+		B = B + 1
+		S = S + 1
+
+		如果 B > 3：
+			结束循环`,
+			initValue: map[string]runtime.Element{
+				"A": value.NewNumber(0),
+				"B": value.NewNumber(0),
+				"S": value.NewNumber(0),
+			},
+			expectLogic: func(ctx *runtime.Context, t *testing.T) {
+				sym, _ := ctx.FindElement("S")
+				assertB := 20 /* loop for 4 * 5 = 20 times*/
 				if sym.(*value.Number).GetValue() != float64(assertB) {
 					t.Errorf("expect B (in root scope) = %f, got %f", float64(assertB), sym.(*value.Number).GetValue())
 				}

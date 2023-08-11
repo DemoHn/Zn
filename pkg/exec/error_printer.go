@@ -158,16 +158,16 @@ func DisplayError(err error) string {
 // print error lines - display detailed error info to user
 // general format:
 //
-// 在模块[FILE]中，位于第[LINE]行：
+// 在模块[FILE]中，位于第 [LINE] 行：
 //     [ LINE TEXT WITHOUT INDENTS AND CRLF ]
-// [[ERRCODE]] [ERRCLASS]：[ERRTEXT]
+// [ERRCLASS][[ERRCODE]]：[ERRTEXT]
 //
 // example error:
 //
-// 在 draft/example.zn 中，位于第 12 行：
+// 在模块draft/example.zn 中，位于第 12 行：
 //     如果代码不为空：
 //    ^
-// [2021] 语法错误：此行现行缩进类型为「TAB」，与前设缩进类型「空格」不符！
+// 语法错误[20]：此行现行缩进类型为「TAB」，与前设缩进类型「空格」不符！
 
 // fmtErrorLocationHeadLine -
 // e.g. 在「example」模块中，位于第 12 行发生异常：

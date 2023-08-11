@@ -297,13 +297,17 @@ func evalPreStmtBlock(c *r.Context, block *syntax.BlockStmt) (*syntax.BlockStmt,
 			var extModule *r.Module
 			if v.ImportLibType == syntax.LibTypeStd {
 				var err error
+				// check if the dependency is valid (i.e. not import itself/no duplicate import)
+				if err := c.CheckDepedency(libName, true); err != nil {
+					return nil, err
+				}
 				extModule, err = stdlib.FindModule(libName)
 				if err != nil {
 					return nil, err
 				}
 			} else if v.ImportLibType == syntax.LibTypeCustom {
 				// check if the dependency is valid (i.e. not import itself/no duplicate import/no circular dependency)
-				if err := c.CheckDepedency(libName); err != nil {
+				if err := c.CheckDepedency(libName, false); err != nil {
 					return nil, err
 				}
 				// execute custom module first (in order to get all importable elements)

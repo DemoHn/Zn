@@ -186,14 +186,19 @@ func (ctx *Context) FindModuleCache(name string) *Module {
 	return ctx.moduleGraph.FindRequireCache(name)
 }
 
-func (ctx *Context) CheckDepedency(depModule string) error {
+func (ctx *Context) CheckDepedency(depModule string, internal bool) error {
 	sourceModule := ctx.GetCurrentModule().GetName()
-	// if target = source module
-	if depModule == sourceModule {
+	// if target = source module (external)
+	// NOTICE:external modules have SAME name with internal modules is allowed
+	if depModule == sourceModule && !internal {
 		return zerr.ImportSameModule(depModule)
 	}
-	// if same module import twice
-	if deps, ok := ctx.moduleGraph.depGraph[sourceModule]; ok {
+	// if same module import twice ()
+	depList := ctx.moduleGraph.externalDepGraph
+	if internal {
+		depList = ctx.moduleGraph.internalDepGraph
+	}
+	if deps, ok := depList[sourceModule]; ok {
 		for _, dep := range deps {
 			if dep == depModule {
 				return zerr.DuplicateModule(depModule)
@@ -202,8 +207,7 @@ func (ctx *Context) CheckDepedency(depModule string) error {
 	}
 
 	// add dep graph
-
-	if ctx.moduleGraph.CheckCircularDepedency(sourceModule, depModule) {
+	if ctx.moduleGraph.CheckCircularDepedency(sourceModule, depModule, internal) {
 		return zerr.ModuleCircularDependency()
 	}
 	return nil
