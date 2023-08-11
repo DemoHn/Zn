@@ -77,7 +77,7 @@ func TestCircularDependency_CoreBFS(t *testing.T) {
 	for _, tt := range cases {
 		t.Run(tt.name, func(t *testing.T) {
 			moduleGraph := ModuleGraph{
-				depGraph: tt.g,
+				externalDepGraph: tt.g,
 			}
 			res := moduleGraph.checkCircularDepedencyBFS()
 			if tt.result != res {

@@ -14,7 +14,7 @@ import (
 	"github.com/peterh/liner"
 )
 
-const version = "rev06"
+const version = "rev07"
 
 // EnterREPL - enter REPL to handle data
 func EnterREPL() {

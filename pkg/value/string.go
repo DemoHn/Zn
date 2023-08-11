@@ -83,6 +83,7 @@ func (s *String) ExecMethod(c *r.Context, name string, values []r.Element) (r.El
 		"匹配结尾": strExecMatchEnd,
 		"拼接":   strExecJoin,
 		"格式化":  strExecFormat,
+		"转换数值": strExecAtoi,
 	}
 	if fn, ok := strMethodMap[name]; ok {
 		return fn(s, c, values)
@@ -202,4 +203,13 @@ func strExecFormat(s *String, c *r.Context, values []r.Element) (r.Element, erro
 	result := r.Replace(s.value)
 
 	return NewString(result), nil
+}
+
+func strExecAtoi(s *String, c *r.Context, values []r.Element) (r.Element, error) {
+	num, err := strconv.ParseFloat(s.value, 64)
+	if err != nil {
+		return nil, zerr.NewRuntimeException("转成数值失败，文本可能并不符合合适的数值格式")
+	}
+
+	return NewNumber(num), nil
 }
