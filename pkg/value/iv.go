@@ -84,7 +84,8 @@ func (iv *IV) ReduceLHS(c *r.Context, input r.Element) error {
 		if !ok {
 			return zerr.InvalidExprType("hashmap")
 		}
-		hm.value[iv.member] = input
+		// use AppendKVPair instead of `hm.value[iv.member] = input` directly
+		hm.AppendKVPair(KVPair{iv.member, input})
 		return nil
 	case IVTypeMember:
 		return iv.root.SetProperty(c, iv.member, input)

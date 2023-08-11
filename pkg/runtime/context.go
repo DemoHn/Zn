@@ -68,6 +68,7 @@ func NewContext(globalsMap map[string]Element, initModule *Module) *Context {
 		moduleCodeFinder: nil,
 		callStack:        []CallInfo{},
 		moduleStack:      []*Module{initModule},
+		currentRefModule: initModule,
 	}
 }
 
