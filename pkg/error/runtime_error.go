@@ -104,7 +104,7 @@ func NameRedeclared(name string) *RuntimeError {
 func AssignToConstant() *RuntimeError {
 	return &RuntimeError{
 		Code:    ErrAssignToConstant,
-		Message: "不允许赋值给常量",
+		Message: "此变量的值不允许更改",
 		Extra:   nil,
 	}
 }
