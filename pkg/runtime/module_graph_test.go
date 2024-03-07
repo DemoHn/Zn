@@ -72,6 +72,18 @@ func TestCircularDependency_CoreBFS(t *testing.T) {
 			},
 			result: true,
 		},
+		{
+			name: "more than 1 circular loops (A->D->E->F->A, C->B->C)",
+			g: map[string][]string{
+				"A": {"B", "C", "D"},
+				"B": {"C"},
+				"C": {"B"},
+				"D": {"E", "C", "F"},
+				"E": {"C", "B"},
+				"F": {"A"},
+			},
+			result: true,
+		},
 	}
 
 	for _, tt := range cases {

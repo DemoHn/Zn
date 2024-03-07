@@ -20,8 +20,8 @@ type ClassModel struct {
 	// Constructor defines default logic (mostly for initialization) when a new instance
 	// is created by "x 成为 C：P，Q，R"
 	Constructor FuncExecutor
-	// PropList defines all property name of a class, each item COULD NOT BE neither append nor removed
-	PropList []string
+	// PropList defines all property name & default value of the class, each property CANNOT be appended or removed
+	PropList map[string]r.Element
 	// CompPropList - CompProp stands for "Computed Property", which means the value is get or set
 	// from a pre-defined function. Computed property offers more extensions for manipulations
 	// of properties.
@@ -35,8 +35,14 @@ type ClassModel struct {
 
 // NewObject -
 func NewObject(model *ClassModel) *Object {
+	objPropList := make(map[string]r.Element)
+	for prop, elem := range model.PropList {
+		// duplicate default prop values
+		objPropList[prop] = DuplicateValue(elem)
+	}
+
 	return &Object{
-		propList: map[string]r.Element{},
+		propList: objPropList,
 		model:    model,
 	}
 }
@@ -46,7 +52,7 @@ func NewClassModel(name string, refModule *r.Module) *ClassModel {
 	return &ClassModel{
 		Name:         name,
 		Constructor:  nil,
-		PropList:     []string{},
+		PropList:     map[string]r.Element{},
 		CompPropList: map[string]*Function{},
 		MethodList:   map[string]*Function{},
 		refModule:    refModule,

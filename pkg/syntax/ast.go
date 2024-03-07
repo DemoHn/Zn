@@ -61,7 +61,7 @@ type Assignable interface {
 
 // UnionMapList - HashMap or ArrayList, since they shares similar grammer.
 // e.g.  ArrayList  => 【1，2，3，4，5】
-//       HashMap    => 【A == 1，B == 2】
+//       HashMap    => 【A = 1，B = 2】
 type UnionMapList interface {
 	Expression
 	mapList()
@@ -181,6 +181,15 @@ type FunctionDeclareStmt struct {
 	FuncName  *ID
 	ParamList []*ParamItem
 	ExecBlock *BlockStmt
+}
+
+// ConstructorDeclareStmt - (如何成为) constructor is a special function
+// to help create a new Object with some pre-defined logic
+type ConstructorDeclareStmt struct {
+	StmtBase
+	DelcareClassName *ID
+	ParamList        []*ParamItem
+	ExecBlock        *BlockStmt
 }
 
 // GetterDeclareStmt - getter declaration (何为)

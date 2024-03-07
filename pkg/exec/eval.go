@@ -86,7 +86,10 @@ func evalStatement(c *r.Context, stmt syntax.Statement) error {
 			return zerr.ClassNotOnRoot(className)
 		}
 		// bind classRef
-		classRef := BuildClassFromNode(c, className, v)
+		classRef, err := compileClass(c, className, v)
+		if err != nil {
+			return err
+		}
 
 		return c.BindSymbol(className, classRef)
 	case *syntax.IterateStmt:
@@ -265,32 +268,7 @@ func evalPreStmtBlock(c *r.Context, block *syntax.BlockStmt) (*syntax.BlockStmt,
 		c.SetCurrentLine(stmtI.GetCurrentLine())
 
 		switch v := stmtI.(type) {
-		case *syntax.FunctionDeclareStmt:
-			fn := compileFunction(c, v.ParamList, v.ExecBlock)
-			vtag := v.FuncName.GetLiteral()
 
-			// add symbol to current scope first
-			if err := c.BindSymbol(vtag, fn); err != nil {
-				return nil, err
-			}
-
-			// then add symbol to export value
-			if err := module.AddExportValue(vtag, fn); err != nil {
-				return nil, err
-			}
-		case *syntax.ClassDeclareStmt:
-			// bind classRef
-			className := v.ClassName.GetLiteral()
-			classRef := BuildClassFromNode(c, className, v)
-			// add symbol to current scope first
-			if err := c.BindSymbol(className, classRef); err != nil {
-				return nil, err
-			}
-
-			// then add symbol to export value
-			if err := module.AddExportValue(className, classRef); err != nil {
-				return nil, err
-			}
 		case *syntax.ImportStmt:
 			libName := v.ImportName.GetLiteral()
 
@@ -339,6 +317,49 @@ func evalPreStmtBlock(c *r.Context, block *syntax.BlockStmt) (*syntax.BlockStmt,
 						}
 					}
 				}
+			}
+		case *syntax.ClassDeclareStmt:
+			// bind classRef
+			className := v.ClassName.GetLiteral()
+			classRef, err := compileClass(c, className, v)
+			if err != nil {
+				return nil, err
+			}
+			// add symbol to current scope first
+			if err := c.BindSymbol(className, classRef); err != nil {
+				return nil, err
+			}
+
+			// then add symbol to export value
+			if err := module.AddExportValue(className, classRef); err != nil {
+				return nil, err
+			}
+		// case "FunctionDeclare" MUST BE AFTER case "classDeclare"!
+		case *syntax.FunctionDeclareStmt:
+			fn := compileFunction(c, v.ParamList, v.ExecBlock)
+			vtag := v.FuncName.GetLiteral()
+
+			// add symbol to current scope first
+			if err := c.BindSymbol(vtag, fn); err != nil {
+				return nil, err
+			}
+
+			// then add symbol to export value
+			if err := module.AddExportValue(vtag, fn); err != nil {
+				return nil, err
+			}
+		case *syntax.ConstructorDeclareStmt:
+			// check if class type is valid
+			className := v.DelcareClassName.GetLiteral()
+			classModel, err := c.FindElement(className)
+			if err != nil {
+				return nil, err
+			}
+			if cmodel, ok := classModel.(*value.ClassModel); ok {
+				fn := compileFunction(c, v.ParamList, v.ExecBlock)
+				bindClassConstructor(cmodel, fn)
+			} else {
+				return nil, zerr.InvalidClassType(className)
 			}
 		default:
 			otherStmts.Children = append(otherStmts.Children, stmtI)
@@ -891,7 +912,7 @@ func exprsToValues(c *r.Context, exprs []syntax.Expression) ([]r.Element, error)
 	return params, nil
 }
 
-// extractSignalValue - signal is a special type of error, so we try to extract signal value from input error if it's really a signal - otherwise output the same error directly.
+// extractSignalValue - signal is a special type of error, so we try to extract signal value from input error if it's really a signal - otherwise output the REAL error directly.
 func extractSignalValue(err error, sigType uint8) (r.Element, error) {
 	// if recv breaks
 	if sig, ok := err.(*zerr.Signal); ok {
@@ -902,57 +923,4 @@ func extractSignalValue(err error, sigType uint8) (r.Element, error) {
 		}
 	}
 	return nil, err
-}
-
-// BuildClassFromNode -
-func BuildClassFromNode(upperCtx *r.Context, name string, classNode *syntax.ClassDeclareStmt) *value.ClassModel {
-	ref := value.NewClassModel(name, upperCtx.GetCurrentModule())
-
-	// define default constructor
-	var constructor = func(c *r.Context, params []r.Element) (r.Element, error) {
-		obj := value.NewObject(ref)
-		propMap := obj.GetPropList()
-		// init prop list
-		for _, propPair := range classNode.PropertyList {
-			propID := propPair.PropertyID.GetLiteral()
-			expr, err := evalExpression(c, propPair.InitValue)
-			if err != nil {
-				return nil, err
-			}
-
-			propMap[propID] = expr
-			ref.PropList = append(ref.PropList, propID)
-		}
-		// constructor: set some properties' value
-		if len(params) != len(classNode.ConstructorIDList) {
-			return nil, zerr.MismatchParamLengthError(len(params), len(classNode.ConstructorIDList))
-		}
-		for idx, objParamVal := range params {
-			param := classNode.ConstructorIDList[idx]
-			// if param is NOT a reference, then we need to copy its value
-			if !param.RefMark {
-				objParamVal = value.DuplicateValue(objParamVal)
-			}
-			paramName := param.ID.GetLiteral()
-			propMap[paramName] = objParamVal
-		}
-
-		return obj, nil
-	}
-	// set constructor
-	ref.Constructor = constructor
-
-	// add getters
-	for _, gNode := range classNode.GetterList {
-		getterTag := gNode.GetterName.GetLiteral()
-		ref.CompPropList[getterTag] = compileFunction(upperCtx, []*syntax.ParamItem{}, gNode.ExecBlock)
-	}
-
-	// add methods
-	for _, mNode := range classNode.MethodList {
-		mTag := mNode.FuncName.GetLiteral()
-		ref.MethodList[mTag] = compileFunction(upperCtx, mNode.ParamList, mNode.ExecBlock)
-	}
-
-	return ref
 }

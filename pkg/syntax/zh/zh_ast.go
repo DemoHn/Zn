@@ -59,7 +59,14 @@ func ParseStatement(p *ParserZH) syntax.Statement {
 			mainIndent := p.getPeekIndent()
 			s = ParseBranchStmt(p, mainIndent)
 		case TypeFuncW:
-			s = ParseFunctionDeclareStmt(p)
+			// constructor function: 如何成为XX？
+			matchC, _ := p.tryConsume(TypeObjNewW)
+			if matchC {
+				s = ParseConstructorDeclareStmt(p)
+			} else {
+				// normal function: 如何xxx？
+				s = ParseFunctionDeclareStmt(p)
+			}
 		case TypeReturnW:
 			s = ParseFunctionReturnStmt(p)
 		case TypeWhileLoopW:
@@ -979,9 +986,27 @@ func ParseBranchStmt(p *ParserZH, mainIndent int) *syntax.BranchStmt {
 //       ...     ....
 //
 func ParseFunctionDeclareStmt(p *ParserZH) *syntax.FunctionDeclareStmt {
-	var fdStmt = &syntax.FunctionDeclareStmt{
-		ParamList: []*syntax.ParamItem{},
+	xID, xParamList, xExecBlock := parseFunctionBlock(p)
+
+	return &syntax.FunctionDeclareStmt{
+		FuncName:  xID,
+		ParamList: xParamList,
+		ExecBlock: xExecBlock,
 	}
+}
+
+// ParseFunctionDeclareStmt - similiar to ParseFunctionDeclareStmt, but it yields `如何成为XX？`
+func ParseConstructorDeclareStmt(p *ParserZH) *syntax.ConstructorDeclareStmt {
+	xID, xParamList, xExecBlock := parseFunctionBlock(p)
+
+	return &syntax.ConstructorDeclareStmt{
+		DelcareClassName: xID,
+		ParamList:        xParamList,
+		ExecBlock:        xExecBlock,
+	}
+}
+
+func parseFunctionBlock(p *ParserZH) (*syntax.ID, []*syntax.ParamItem, *syntax.BlockStmt) {
 	// by definition, when 已知 syntax.Statement exists, it should be at first line
 	// of function block
 	const (
@@ -990,9 +1015,13 @@ func ParseFunctionDeclareStmt(p *ParserZH) *syntax.FunctionDeclareStmt {
 	)
 	var hState = stateParamList
 
+	var xID *syntax.ID
+	var xParamList []*syntax.ParamItem = make([]*syntax.ParamItem, 0)
+	var xExecBlock *syntax.BlockStmt
+
 	// #1. try to parse ID
-	fdStmt.FuncName = parseFuncID(p)
-	// #2. try to parse question mark
+	xID = parseFuncID(p)
+	// #2. parse question mark
 	p.consume(TypeFuncDeclare)
 
 	// #3. parse block manually
@@ -1007,12 +1036,10 @@ func ParseFunctionDeclareStmt(p *ParserZH) *syntax.FunctionDeclareStmt {
 			// parse 已知 expr
 			if match, _ := p.tryConsume(TypeParamAssignW); match {
 				parsePauseCommaList(p, func() {
-					refMark := false
-					if ok, _ := p.tryConsume(TypeObjRef); ok {
-						refMark = true
-					}
+					refMark, _ := p.tryConsume(TypeObjRef)
+
 					idItem := parseID(p)
-					fdStmt.ParamList = append(fdStmt.ParamList, &syntax.ParamItem{
+					xParamList = append(xParamList, &syntax.ParamItem{
 						RefMark: refMark,
 						ID:      idItem,
 					})
@@ -1024,11 +1051,11 @@ func ParseFunctionDeclareStmt(p *ParserZH) *syntax.FunctionDeclareStmt {
 				hState = stateFuncBlock
 			}
 		case stateFuncBlock:
-			fdStmt.ExecBlock = ParseBlockStmt(p, blockIndent)
+			xExecBlock = ParseBlockStmt(p, blockIndent)
 		}
 	})
 
-	return fdStmt
+	return xID, xParamList, xExecBlock
 }
 
 // ParseGetterDeclareStmt - yield GetterDeclareStmt node

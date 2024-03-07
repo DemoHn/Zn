@@ -14,7 +14,7 @@ import (
 func compileFunction(upperContext *r.Context, paramTags []*syntax.ParamItem, stmtBlock *syntax.BlockStmt) *value.Function {
 	var executor = func(c *r.Context, params []r.Element) (r.Element, error) {
 		// iterate block round I - function hoisting
-		// NOTE: function hoisting means bind function definitions at the beginning
+		// NOTE: function hoisting means bind function definitions at the begining
 		// of execution so that even if "function execution" statement is before
 		// "function definition" statement.
 		for _, stmtI := range stmtBlock.Children {

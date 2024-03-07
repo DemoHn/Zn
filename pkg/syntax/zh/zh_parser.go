@@ -209,7 +209,7 @@ func (p *ParserZH) setStmtCompleteFlag() {
 }
 
 // trying to consume one token. if the token is valid in the given range of tokenTypes,
-// will return its tokenType; if not, then nothing will happen.
+// it will consume ONE token and return its REAL tokenType; if not, then nothing will happen.
 //
 // returns (matched, tokenType)
 func (p *ParserZH) tryConsume(validTypes ...uint8) (bool, *syntax.Token) {

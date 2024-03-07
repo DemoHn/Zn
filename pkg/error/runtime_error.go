@@ -47,6 +47,7 @@ const (
 	ErrInvalidCompareRType        = 74
 	ErrInvalidExceptionType       = 75
 	ErrInvalidExceptionObjectType = 76
+	ErrInvalidClassType           = 77
 	// arith error
 	ErrArithDivZero          = 80
 	ErrArithRootLessThanZero = 81
@@ -346,6 +347,15 @@ func InvalidExceptionObjectType(name string) *RuntimeError {
 		Code:    ErrInvalidExceptionObjectType,
 		Message: fmt.Sprintf("「%s」构造出来的对象须是一个异常类型的值！", name),
 		Extra:   nil,
+	}
+}
+
+// InvalidClassType -
+func InvalidClassType(tag string) *RuntimeError {
+	return &RuntimeError{
+		Code:    ErrInvalidClassType,
+		Message: fmt.Sprintf("「%s」须为一个定义类型", tag),
+		Extra:   tag,
 	}
 }
 
