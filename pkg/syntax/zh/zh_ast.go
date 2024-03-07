@@ -1274,8 +1274,6 @@ func ParseImportStmt(p *ParserZH) *syntax.ImportStmt {
 //    其 <Prop1> 为 <Value1>     <-- PropertyDeclare (for listing all properties with initial value)
 //    其 <Prop2> 为 <Value2>
 //
-//    是为 <Prop1>，<Prop2>，...   <-- Constructor
-//
 //    如何 <Method1> ？    <-- MethodDeclare
 //        <Blocks> ...
 //        <Blocks> ...

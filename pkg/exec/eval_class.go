@@ -11,7 +11,6 @@ func compileClass(upperCtx *r.Context, name string, classNode *syntax.ClassDecla
 	ref := value.NewClassModel(name, upperCtx.GetCurrentModule())
 
 	// default constructor
-	// TODO: remove 是为 constructor logic
 	var constructor = func(c *r.Context, params []r.Element) (r.Element, error) {
 		// create new object when exec ONLY
 		obj := value.NewObject(ref)

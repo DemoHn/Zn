@@ -928,8 +928,7 @@ $PG($BK(
 		properties=(
 			$PD(id=($ID(名)) expr=($STR(小黄)))
 			$PD(id=($ID(品种)) expr=($STR(拉布拉多)))
-		)
-		constructor=()
+		)		
 		methods=()
 		getters=()
 	)
@@ -948,33 +947,7 @@ $PG($BK(
 		properties=(
 			$PD(id=($ID(名)) expr=($STR(小黄)))
 			$PD(id=($ID(品种)) expr=($STR(拉布拉多)))
-		)
-		constructor=()
-		methods=()
-		getters=()
-	)
-))
-
-========
-2. class definition with constructor
---------
-定义狗：
-	其名为“小黄”
-	其年龄为0
-
-	是为名、年龄
---------
-$PG($BK(
-	$CLS(
-		name=($ID(狗))
-		properties=(
-			$PD(id=($ID(名)) expr=($STR(小黄)))
-			$PD(id=($ID(年龄)) expr=($NUM(0)))
-		)
-		constructor=(
-			$PM(id=($ID(名)) ref=(false))
-			$PM(id=($ID(年龄)) ref=(false))			
-		)
+		)		
 		methods=()
 		getters=()
 	)
@@ -986,8 +959,6 @@ $PG($BK(
 定义狗：
 	其名为“小黄”
 	其年龄为0
-
-	是为名、年龄
 
 	如何狂吠？
 		输出“汪汪汪”
@@ -1004,10 +975,6 @@ $PG($BK(
 		properties=(
 			$PD(id=($ID(名)) expr=($STR(小黄)))
 			$PD(id=($ID(年龄)) expr=($NUM(0)))
-		)
-		constructor=(
-			$PM(id=($ID(名)) ref=(false))
-			$PM(id=($ID(年龄)) ref=(false))			
 		)
 		methods=(
 			$FN(
@@ -1043,10 +1010,7 @@ $PG($BK(
 	其名为“小黄”
 	其年龄为0
 
-	注2：constructor
-	是为名、年龄
-
-	注3：方法列表
+	注2：方法列表
 	如何狂吠？
 		注：在方法里面添加注释
 		输出“汪汪汪”
@@ -1054,7 +1018,7 @@ $PG($BK(
 	如何添加年龄？
 		输出20
 
-	注4：getter列表
+	注3：getter列表
 	何为总和？
 		输出20
 --------
@@ -1064,10 +1028,6 @@ $PG($BK(
 		properties=(
 			$PD(id=($ID(名)) expr=($STR(小黄)))
 			$PD(id=($ID(年龄)) expr=($NUM(0)))
-		)
-		constructor=(
-			$PM(id=($ID(名)) ref=(false))
-			$PM(id=($ID(年龄)) ref=(false))			
 		)
 		methods=(
 			$FN(
@@ -1093,30 +1053,6 @@ $PG($BK(
 				))
 			)
 		)
-	)
-))
-========
-2. class definition with reference
---------
-定义狗：
-	其名为“小黄”
-	其年龄为0
-
-	是为&名、年龄
---------
-$PG($BK(
-	$CLS(
-		name=($ID(狗))
-		properties=(
-			$PD(id=($ID(名)) expr=($STR(小黄)))
-			$PD(id=($ID(年龄)) expr=($NUM(0)))
-		)
-		constructor=(
-			$PM(id=($ID(名)) ref=(true))
-			$PM(id=($ID(年龄)) ref=(false))			
-		)
-		methods=()
-		getters=()
 	)
 ))
 `
