@@ -12,7 +12,7 @@ const (
 	GlyphBU rune = 0x4E0D
 	// GlyphQIE - 且 - 且
 	GlyphQIE rune = 0x4E14
-	// GlyphWEI - 为 - 是为，成为，恒为，何为，为
+	// GlyphWEI - 为 - 成为，恒为，何为，为
 	GlyphWEI rune = 0x4E3A
 	// GlyphYIy - 义 - 定义
 	GlyphYIy rune = 0x4E49
@@ -72,7 +72,7 @@ const (
 	GlyphHUO rune = 0x6216
 	// GlyphPAO - 抛 - 抛出
 	GlyphPAO rune = 0x629B
-	// GlyphSHI - 是 - 是为，是
+	// GlyphSHI - 是 - 是
 	GlyphSHI rune = 0x662F
 	// GlyphSHUy - 束 - 结束循环
 	GlyphSHUy rune = 0x675F
@@ -104,39 +104,38 @@ const (
 
 // Keyword token types
 const (
-	TypeDeclareW      uint8 = 40 // 令
-	TypeLogicYesW     uint8 = 41 // 为
-	TypeAssignConstW  uint8 = 42 // 恒为
-	TypeCondOtherW    uint8 = 43 // 再如
-	TypeCondW         uint8 = 44 // 如果
-	TypeFuncW         uint8 = 45 // 如何
-	TypeGetterW       uint8 = 46 // 何为
-	TypeParamAssignW  uint8 = 47 // 已知
-	TypeReturnW       uint8 = 48 // 输出
-	TypeLogicYesIIW   uint8 = 49 // 是
-	TypeLogicNotEqW   uint8 = 51 // 不等于
-	TypeLogicLteW     uint8 = 52 // 不大于
-	TypeLogicGteW     uint8 = 53 // 不小于
-	TypeLogicLtW      uint8 = 54 // 小于
-	TypeLogicGtW      uint8 = 55 // 大于
-	TypeVarOneW       uint8 = 56 // 以
-	TypeCondElseW     uint8 = 59 // 否则
-	TypeWhileLoopW    uint8 = 60 // 每当
-	TypeObjNewW       uint8 = 61 // 成为
-	TypeObjDefineW    uint8 = 63 // 定义
-	TypeObjThisW      uint8 = 65 // 其
-	TypeLogicOrW      uint8 = 69 // 或
-	TypeLogicAndW     uint8 = 70 // 且
-	TypeObjDotW       uint8 = 71 // 之
-	TypeObjDotIIW     uint8 = 72 // 的
-	TypeObjConstructW uint8 = 73 // 是为
-	TypeLogicEqualW   uint8 = 74 // 等于
-	TypeIteratorW     uint8 = 76 // 遍历
-	TypeImportW       uint8 = 77 // 导入
-	TypeGetResultW    uint8 = 78 // 得到
-	TypeThrowErrorW   uint8 = 79 // 抛出
-	TypeContinueW     uint8 = 80 // 继续循环
-	TypeBreakW        uint8 = 81 // 结束循环
+	TypeDeclareW     uint8 = 40 // 令
+	TypeLogicYesW    uint8 = 41 // 为
+	TypeAssignConstW uint8 = 42 // 恒为
+	TypeCondOtherW   uint8 = 43 // 再如
+	TypeCondW        uint8 = 44 // 如果
+	TypeFuncW        uint8 = 45 // 如何
+	TypeGetterW      uint8 = 46 // 何为
+	TypeParamAssignW uint8 = 47 // 已知
+	TypeReturnW      uint8 = 48 // 输出
+	TypeLogicYesIIW  uint8 = 49 // 是
+	TypeLogicNotEqW  uint8 = 51 // 不等于
+	TypeLogicLteW    uint8 = 52 // 不大于
+	TypeLogicGteW    uint8 = 53 // 不小于
+	TypeLogicLtW     uint8 = 54 // 小于
+	TypeLogicGtW     uint8 = 55 // 大于
+	TypeVarOneW      uint8 = 56 // 以
+	TypeCondElseW    uint8 = 59 // 否则
+	TypeWhileLoopW   uint8 = 60 // 每当
+	TypeObjNewW      uint8 = 61 // 成为
+	TypeObjDefineW   uint8 = 63 // 定义
+	TypeObjThisW     uint8 = 65 // 其
+	TypeLogicOrW     uint8 = 69 // 或
+	TypeLogicAndW    uint8 = 70 // 且
+	TypeObjDotW      uint8 = 71 // 之
+	TypeObjDotIIW    uint8 = 72 // 的
+	TypeLogicEqualW  uint8 = 74 // 等于
+	TypeIteratorW    uint8 = 76 // 遍历
+	TypeImportW      uint8 = 77 // 导入
+	TypeGetResultW   uint8 = 78 // 得到
+	TypeThrowErrorW  uint8 = 79 // 抛出
+	TypeContinueW    uint8 = 80 // 继续循环
+	TypeBreakW       uint8 = 81 // 结束循环
 )
 
 // parseKeyword -
@@ -278,12 +277,7 @@ func parseKeyword(l *syntax.Lexer, moveForward bool) (bool, syntax.Token, error)
 			return false, syntax.Token{}, nil
 		}
 	case GlyphSHI:
-		if l.Peek() == GlyphWEI {
-			wordLen = 2
-			tk.Type = TypeObjConstructW
-		} else {
-			tk.Type = TypeLogicYesIIW
-		}
+		tk.Type = TypeLogicYesIIW
 	case GlyphMEI:
 		if l.Peek() == GlyphDANG {
 			wordLen = 2

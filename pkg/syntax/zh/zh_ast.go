@@ -1315,7 +1315,6 @@ func ParseClassDeclareStmt(p *ParserZH) *syntax.ClassDeclareStmt {
 			TypeGetterW,
 			TypeObjThisW,
 			TypeComment,
-			TypeObjConstructW,
 		}
 		p.unsetStmtCompleteFlag()
 
@@ -1333,8 +1332,6 @@ func ParseClassDeclareStmt(p *ParserZH) *syntax.ClassDeclareStmt {
 		case TypeObjThisW:
 			stmt := parsePropertyDeclareStmt(p)
 			cdStmt.PropertyList = append(cdStmt.PropertyList, stmt)
-		case TypeObjConstructW:
-			cdStmt.ConstructorIDList = parseConstructor(p)
 		}
 	})
 

@@ -245,14 +245,9 @@ func StringifyAST(node Node) string {
 			strings.Join(paramsStr, " "),
 			StringifyAST(v.IterateBlock))
 	case *ClassDeclareStmt:
-		constructorStr := []string{}
 		propertyStr := []string{}
 		methodStr := []string{}
 		getterStr := []string{}
-
-		for _, c := range v.ConstructorIDList {
-			constructorStr = append(constructorStr, StringifyAST(c))
-		}
 		for _, p := range v.PropertyList {
 			propertyStr = append(propertyStr, StringifyAST(p))
 		}
@@ -264,10 +259,9 @@ func StringifyAST(node Node) string {
 		}
 
 		return fmt.Sprintf(
-			"$CLS(name=(%s) properties=(%s) constructor=(%s) methods=(%s) getters=(%s))",
+			"$CLS(name=(%s) properties=(%s) methods=(%s) getters=(%s))",
 			StringifyAST(v.ClassName),
 			strings.Join(propertyStr, " "),
-			strings.Join(constructorStr, " "),
 			strings.Join(methodStr, " "),
 			strings.Join(getterStr, " "),
 		)

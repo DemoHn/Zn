@@ -211,8 +211,6 @@ type ClassDeclareStmt struct {
 	ClassName *ID
 	// 其XX为XX
 	PropertyList []*PropertyDeclareStmt
-	// 是为XX，YY，ZZ
-	ConstructorIDList []*ParamItem
 	// 如何XXX？
 	MethodList []*FunctionDeclareStmt
 	// 何为XXX？

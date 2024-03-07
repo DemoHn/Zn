@@ -84,7 +84,6 @@ LogicOrW        69      或
 LogicAndW       70      且
 ObjDotW         71      之
 ObjDotIIW       72      的
-ObjConstructW   73      是为
 LogicEqualW     74      等于
 IteratorW       76      遍历
 ImportW         77      导入
