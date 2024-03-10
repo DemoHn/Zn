@@ -1312,7 +1312,6 @@ func ParseClassDeclareStmt(p *ParserZH) *syntax.ClassDeclareStmt {
 			TypeFuncW,
 			TypeGetterW,
 			TypeObjThisW,
-			TypeComment,
 		}
 		p.unsetStmtCompleteFlag()
 
@@ -1320,6 +1319,7 @@ func ParseClassDeclareStmt(p *ParserZH) *syntax.ClassDeclareStmt {
 		if !match {
 			panic(p.getInvalidSyntaxCurr())
 		}
+
 		switch tk.Type {
 		case TypeFuncW:
 			stmt := ParseFunctionDeclareStmt(p)
@@ -1334,27 +1334,6 @@ func ParseClassDeclareStmt(p *ParserZH) *syntax.ClassDeclareStmt {
 	})
 
 	return cdStmt
-}
-
-// parseConstructor -
-// CFG:
-// Constructor  -> 是为 ID1、ID2 ...
-func parseConstructor(p *ParserZH) []*syntax.ParamItem {
-	var paramList []*syntax.ParamItem
-	parsePauseCommaList(p, func() {
-		refMark := false
-		if match, _ := p.tryConsume(TypeObjRef); match {
-			refMark = true
-		}
-
-		idItem := parseID(p)
-		paramList = append(paramList, &syntax.ParamItem{
-			ID:      idItem,
-			RefMark: refMark,
-		})
-	})
-
-	return paramList
 }
 
 // parsePropertyDeclareStmt -

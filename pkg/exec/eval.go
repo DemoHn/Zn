@@ -23,21 +23,63 @@ import (
 //
 // NOTICE:
 // `evalXXXXStmt` will change the value of its corresponding scope; However, `evalXXXXExpr` will export
-// a r.Value object and mostly won't change scopes (but search a variable from scope is frequently used)
+// a r.Value object and mostly won't change scope values (but searching a variable from scope is frequently used)
 
+// evalProgram - eval the statements of the program with the following order:
+//
+// 1. INPUTVAR statement [TODO] - `输入长、宽、高`
+// 2. IMPORT statement(s) - `导入《文件》`
+// 3. CLASSDEF statement(s) - `定义货件`
+// 4. FUNCDEF statement(s) - `如何执行？`
+// 5. other statements
+//
+// If the program doesn't follow the order (e.g. the func declare block at the end of program),
+// it doesn't matter - we will order the statements in the program automatically before execution.
+// (This will not affect line numbers)
 func evalProgram(c *r.Context, program *syntax.Program) error {
-	otherStmts, err := evalPreStmtBlock(c, program.Content)
-	if err != nil {
-		return err
+	//
+	// TODO: use inputVarStmt when introduce INPUTVAR (输入) keyword
+	// inputVarStmts := make([]syntax.Statement, 0)
+	importStmts := make([]syntax.Statement, 0)
+	classDefStmts := make([]syntax.Statement, 0)
+	funcDefStmts := make([]syntax.Statement, 0)
+	otherStmts := make([]syntax.Statement, 0)
+
+	allStmts := make([]syntax.Statement, 0)
+
+	for _, stmtX := range program.Content.Children {
+		switch v := stmtX.(type) {
+
+		case *syntax.ImportStmt:
+			importStmts = append(importStmts, v)
+		case *syntax.ClassDeclareStmt:
+			classDefStmts = append(classDefStmts, v)
+		case *syntax.FunctionDeclareStmt:
+			funcDefStmts = append(funcDefStmts, v)
+		case *syntax.ConstructorDeclareStmt:
+			funcDefStmts = append(funcDefStmts, v)
+		default:
+			otherStmts = append(otherStmts, v)
+		}
 	}
-	errBlock := evalStmtBlock(c, otherStmts)
+
+	// reorder the statements
+	allStmts = append(allStmts, importStmts...)
+	allStmts = append(allStmts, classDefStmts...)
+	allStmts = append(allStmts, funcDefStmts...)
+	allStmts = append(allStmts, otherStmts...)
+
+	// exec all statements
+	errBlock := evalStmtBlock(c, &syntax.BlockStmt{
+		Children: allStmts,
+	})
 	if errBlock != nil {
-		val, err := extractSignalValue(errBlock, zerr.SigTypeReturn)
+		rtnValue, err := extractSignalValue(errBlock, zerr.SigTypeReturn)
 		if err != nil {
 			return err
 		}
 		// set return value
-		c.GetCurrentScope().SetReturnValue(val)
+		c.GetCurrentScope().SetReturnValue(rtnValue)
 		return nil
 	}
 	return errBlock
@@ -49,6 +91,8 @@ func evalProgram(c *r.Context, program *syntax.Program) error {
 func evalStatement(c *r.Context, stmt syntax.Statement) error {
 	var returnValue r.Element
 	var sp = c.GetCurrentScope()
+
+	module := c.GetCurrentModule()
 	// set current line
 	c.SetCurrentLine(stmt.GetCurrentLine())
 
@@ -79,7 +123,68 @@ func evalStatement(c *r.Context, stmt syntax.Statement) error {
 		return nil
 	case *syntax.FunctionDeclareStmt:
 		fn := compileFunction(c, v.ParamList, v.ExecBlock)
-		return c.BindSymbol(v.FuncName.GetLiteral(), fn)
+		vtag := v.FuncName.GetLiteral()
+
+		// add symbol to current scope first
+		if err := c.BindSymbol(vtag, fn); err != nil {
+			return err
+		}
+
+		// then add symbol to export value
+		if err := module.AddExportValue(vtag, fn); err != nil {
+			return err
+		}
+		return nil
+	case *syntax.ImportStmt:
+		libName := v.ImportName.GetLiteral()
+
+		var extModule *r.Module
+		if v.ImportLibType == syntax.LibTypeStd {
+			var err error
+			// check if the dependency is valid (i.e. not import itself/no duplicate import)
+			if err := c.CheckDepedency(libName, true); err != nil {
+				return err
+			}
+			extModule, err = stdlib.FindModule(libName)
+			if err != nil {
+				return err
+			}
+		} else if v.ImportLibType == syntax.LibTypeCustom {
+			// check if the dependency is valid (i.e. not import itself/no duplicate import/no circular dependency)
+			if err := c.CheckDepedency(libName, false); err != nil {
+				return err
+			}
+			// execute custom module first (in order to get all importable elements)
+			if extModule = c.FindModuleCache(libName); extModule == nil {
+				newModule, err := execAnotherModule(c, libName)
+				if err != nil {
+					return err
+				}
+				extModule = newModule
+			}
+		}
+
+		if extModule != nil {
+			// import all symbols to current module's importRefs
+			if len(v.ImportItems) == 0 {
+				for name, val := range extModule.GetAllExportValues() {
+					if err := c.BindImportSymbol(name, val, extModule); err != nil {
+						return err
+					}
+				}
+			} else {
+				// import selected symbols
+				for _, id := range v.ImportItems {
+					name := id.GetLiteral()
+					if val, err2 := extModule.GetExportValue(name); err2 == nil {
+						if err := c.BindImportSymbol(name, val, extModule); err != nil {
+							return err
+						}
+					}
+				}
+			}
+		}
+		return nil
 	case *syntax.ClassDeclareStmt:
 		className := v.ClassName.GetLiteral()
 		if c.FindParentScope() != nil {
@@ -91,7 +196,31 @@ func evalStatement(c *r.Context, stmt syntax.Statement) error {
 			return err
 		}
 
-		return c.BindSymbol(className, classRef)
+		// add symbol to current scope first
+		if err := c.BindSymbol(className, classRef); err != nil {
+			return err
+		}
+
+		// then add symbol to export value
+		if err := module.AddExportValue(className, classRef); err != nil {
+			return err
+		}
+		return nil
+
+	case *syntax.ConstructorDeclareStmt:
+		// check if class type is valid
+		className := v.DelcareClassName.GetLiteral()
+		classModel, err := c.FindElement(className)
+		if err != nil {
+			return err
+		}
+		if cmodel, ok := classModel.(*value.ClassModel); ok {
+			fn := compileFunction(c, v.ParamList, v.ExecBlock)
+			bindClassConstructor(cmodel, fn)
+		} else {
+			return zerr.InvalidClassType(className)
+		}
+		return nil
 	case *syntax.IterateStmt:
 		return evalIterateStmt(c, v)
 	case *syntax.FunctionReturnStmt:
@@ -253,119 +382,6 @@ func evalWhileLoopStmt(c *r.Context, node *syntax.WhileLoopStmt) error {
 			return err
 		}
 	}
-}
-
-// evalPreStmtBlock - execute classRef, functionDeclare, imports first, then other statements inside the block
-func evalPreStmtBlock(c *r.Context, block *syntax.BlockStmt) (*syntax.BlockStmt, error) {
-	// current module MUST exists
-	module := c.GetCurrentModule()
-	otherStmts := &syntax.BlockStmt{
-		Children: []syntax.Statement{},
-	}
-
-	for _, stmtI := range block.Children {
-		// set current execLine
-		c.SetCurrentLine(stmtI.GetCurrentLine())
-
-		switch v := stmtI.(type) {
-
-		case *syntax.ImportStmt:
-			libName := v.ImportName.GetLiteral()
-
-			var extModule *r.Module
-			if v.ImportLibType == syntax.LibTypeStd {
-				var err error
-				// check if the dependency is valid (i.e. not import itself/no duplicate import)
-				if err := c.CheckDepedency(libName, true); err != nil {
-					return nil, err
-				}
-				extModule, err = stdlib.FindModule(libName)
-				if err != nil {
-					return nil, err
-				}
-			} else if v.ImportLibType == syntax.LibTypeCustom {
-				// check if the dependency is valid (i.e. not import itself/no duplicate import/no circular dependency)
-				if err := c.CheckDepedency(libName, false); err != nil {
-					return nil, err
-				}
-				// execute custom module first (in order to get all importable elements)
-				if extModule = c.FindModuleCache(libName); extModule == nil {
-					newModule, err := execAnotherModule(c, libName)
-					if err != nil {
-						return nil, err
-					}
-					extModule = newModule
-				}
-			}
-
-			if extModule != nil {
-				// import all symbols to current module's importRefs
-				if len(v.ImportItems) == 0 {
-					for name, val := range extModule.GetAllExportValues() {
-						if err := c.BindImportSymbol(name, val, extModule); err != nil {
-							return nil, err
-						}
-					}
-				} else {
-					// import selected symbols
-					for _, id := range v.ImportItems {
-						name := id.GetLiteral()
-						if val, err2 := extModule.GetExportValue(name); err2 == nil {
-							if err := c.BindImportSymbol(name, val, extModule); err != nil {
-								return nil, err
-							}
-						}
-					}
-				}
-			}
-		case *syntax.ClassDeclareStmt:
-			// bind classRef
-			className := v.ClassName.GetLiteral()
-			classRef, err := compileClass(c, className, v)
-			if err != nil {
-				return nil, err
-			}
-			// add symbol to current scope first
-			if err := c.BindSymbol(className, classRef); err != nil {
-				return nil, err
-			}
-
-			// then add symbol to export value
-			if err := module.AddExportValue(className, classRef); err != nil {
-				return nil, err
-			}
-		// case "FunctionDeclare" MUST BE AFTER case "classDeclare"!
-		case *syntax.FunctionDeclareStmt:
-			fn := compileFunction(c, v.ParamList, v.ExecBlock)
-			vtag := v.FuncName.GetLiteral()
-
-			// add symbol to current scope first
-			if err := c.BindSymbol(vtag, fn); err != nil {
-				return nil, err
-			}
-
-			// then add symbol to export value
-			if err := module.AddExportValue(vtag, fn); err != nil {
-				return nil, err
-			}
-		case *syntax.ConstructorDeclareStmt:
-			// check if class type is valid
-			className := v.DelcareClassName.GetLiteral()
-			classModel, err := c.FindElement(className)
-			if err != nil {
-				return nil, err
-			}
-			if cmodel, ok := classModel.(*value.ClassModel); ok {
-				fn := compileFunction(c, v.ParamList, v.ExecBlock)
-				bindClassConstructor(cmodel, fn)
-			} else {
-				return nil, zerr.InvalidClassType(className)
-			}
-		default:
-			otherStmts.Children = append(otherStmts.Children, stmtI)
-		}
-	}
-	return otherStmts, nil
 }
 
 // EvalStmtBlock -

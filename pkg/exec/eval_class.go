@@ -10,15 +10,13 @@ import (
 func compileClass(upperCtx *r.Context, name string, classNode *syntax.ClassDeclareStmt) (*value.ClassModel, error) {
 	ref := value.NewClassModel(name, upperCtx.GetCurrentModule())
 
-	// default constructor
-	var constructor = func(c *r.Context, params []r.Element) (r.Element, error) {
+	// set default constructor
+	ref.Constructor = func(c *r.Context, params []r.Element) (r.Element, error) {
 		// create new object when exec ONLY
 		obj := value.NewObject(ref)
 
 		return obj, nil
 	}
-	// set constructor
-	ref.Constructor = constructor
 
 	// init prop list and its default value
 	for _, propPair := range classNode.PropertyList {
