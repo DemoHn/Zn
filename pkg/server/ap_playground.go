@@ -6,43 +6,28 @@ import (
 	"net/http"
 
 	"github.com/DemoHn/Zn/pkg/exec"
-	"github.com/DemoHn/Zn/pkg/runtime"
 	"github.com/DemoHn/Zn/pkg/value"
 )
 
 // if exec code ok - return 200 with result (ignore outputs from「显示」)
-func respondAsPlayground(w http.ResponseWriter, r *http.Request) {
+func RespondAsPlayground(r *http.Request, w *RespWriter) error {
 	// exec program
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		writeErrorData(w, fmt.Errorf("读取程序内容出现异常：%s", err.Error()))
-		return
+		return w.WriteErrorData(fmt.Errorf("读取程序内容出现异常：%s", err.Error()))
 	}
 
 	pExecutor := exec.NewPlaygroundExecutor(body)
 	rtnValue, err := pExecutor.RunCode()
 	if err != nil {
-		writeErrorData(w, err)
-		return
+		return w.WriteErrorData(err)
 	}
-	writeSuccessData(w, rtnValue)
-}
 
-func writeErrorData(w http.ResponseWriter, err error) {
-	w.WriteHeader(500)
-	w.Header().Add("Content-Type", "text/plain; charset=\"utf-8\"")
-	w.Write([]byte(err.Error()))
-}
-
-func writeSuccessData(w http.ResponseWriter, rtnValue runtime.Element) {
-	w.WriteHeader(200)
-	w.Header().Add("Content-Type", "text/plain; charset=\"utf-8\"")
-
-	// print return value
+	// write return value as resp body
 	switch rtnValue.(type) {
 	case *value.Null:
-		return
+		return w.WriteSuccessData("")
 	default:
-		w.Write([]byte(value.StringifyValue(rtnValue)))
+		return w.WriteSuccessData(value.StringifyValue(rtnValue))
 	}
 }

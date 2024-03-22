@@ -19,31 +19,27 @@ var (
 
 	rootCmd = &cobra.Command{
 		Use:   "zinc-playground",
-		Short: "Zinc Playground",
-		Long:  "Zinc Playground - 一个公开使用的 zinc 运行时 - 在启动服务器之后，用户发送HTTP请求并提交代码后即可执行，并返回对应的结果",
+		Short: "zinc playground",
+		Long:  "zinc playground - 在启动服务器之后，用户发送HTTP请求并提交代码后即可执行，并返回对应的结果；这样用户可以线上编写并运行代码",
 		Run: func(c *cobra.Command, args []string) {
+
+			pmServer := server.NewZnPMServer(server.RespondAsPlayground)
 			///// run child worker if  --child-worker = true & preForkChild env is "OK"
 			if childWorkerFlag && os.Getenv(server.EnvPreforkChildKey) == server.EnvPreforkChildVal {
 				// start child worker to handle requests
-				if err := server.StartWorker(); err != nil {
+				if err := pmServer.StartWorker(); err != nil {
 					fmt.Printf("启动子进程时发生错误：%v\n", err)
 					return
 				}
 			} else {
-				cfg := server.ZnServerConfig{
+				cfg := server.ZnPMServerConfig{
 					InitProcs: initProcs,
 					MaxProcs:  maxProcs,
 					Timeout:   timeout,
 				}
 				//// otherwise, just listen to the server
-				zns, err := server.NewFromURL(connUrl, cfg)
-				if err != nil {
-					fmt.Printf("启动服务器时发生错误：%v\n", err)
-					return
-				}
-
-				if err := zns.StartMaster(); err != nil {
-					fmt.Printf("启动主进程时发生错误：%v\n", err)
+				if err := pmServer.StartMaster(connUrl, cfg); err != nil {
+					fmt.Printf("启动服务器主进程时发生错误：%v\n", err)
 					return
 				}
 			}
