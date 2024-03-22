@@ -14,3 +14,6 @@ go build -o zinc-devtool ./cmd/zinc-devtool
 
 echo '=== build [Zn-server] ==='
 go build -o zinc-server ./cmd/zinc-server
+
+echo '=== build [Zn-playground] ==='
+go build -o zinc-playground ./cmd/zinc-playground

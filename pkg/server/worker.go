@@ -1,6 +1,7 @@
 package server
 
 import (
+	"bufio"
 	"encoding/binary"
 	"fmt"
 	"net"
@@ -18,49 +19,40 @@ const (
 	defaultTimeout = 60 // default is 60s
 )
 
-type FCGIHandler struct {
-	pipeWriter *os.File
-	timeout    int
+type CustomResponseWriter struct {
+	writer *bufio.Writer
+	header http.Header
 }
 
-func (f *FCGIHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	waitSig := make(chan int)
-
-	go handleRequest(w, r, waitSig)
-
-	select {
-	case <-waitSig:
-		writeProcState(f.pipeWriter, WORKER_STATE_IDLE)
-	case <-time.After(time.Duration(f.timeout) * time.Second):
-		writeProcState(f.pipeWriter, WORKER_STATE_STOPPED)
-		// wait for a while before exiting the process
-		time.Sleep(100 * time.Millisecond)
-		// exit the process directly
-		os.Exit(1)
+func NewCustomResponseWriter(conn net.Conn) *CustomResponseWriter {
+	return &CustomResponseWriter{
+		writer: bufio.NewWriter(conn),
+		header: http.Header{},
 	}
 }
 
-func handleRequest(w http.ResponseWriter, r *http.Request, waitSig chan int) {
-	cgiEnvs := ProcessFCGIEnv(r)
-	// read ZINC_ADAPTER
-	if adapter, ok := cgiEnvs[EnvZincAdapter]; ok {
-		switch adapter {
-		case ZincAP_Playground:
-			respondAsPlayground(w, r)
-		case ZincAP_HTTPHandler:
-			w.WriteHeader(200)
-			w.Header().Add("Content-Type", "text/html")
-			w.Write([]byte("TBD - http_handler"))
-		}
+func (w *CustomResponseWriter) Header() http.Header {
+	return w.header
+}
 
-		waitSig <- 1
-		return
+func (w *CustomResponseWriter) Write(b []byte) (int, error) {
+	nn, err := w.writer.Write(b)
+	if err != nil {
+		return 0, err
 	}
-	//// otherwise - return 403 directly
+	w.writer.Flush()
+	return nn, nil
+}
+func (w *CustomResponseWriter) WriteHeader(statusCode int) {
+	w.writer.WriteString(fmt.Sprintf("HTTP/1.1 %d %s\r\n", statusCode, http.StatusText(statusCode)))
+	w.header.Write(w.writer)
+	w.writer.WriteString("\r\n")
+	w.writer.Flush()
+}
 
-	w.WriteHeader(403)
-	w.Header().Add("Content-Type", "text/html")
-	w.Write([]byte("Invalid ZINC_ADAPTER"))
+func handleRequest(r *http.Request, conn net.Conn, waitSig chan int) {
+	w := NewCustomResponseWriter(conn)
+	respondAsPlayground(w, r)
 
 	waitSig <- 1
 }
@@ -95,11 +87,29 @@ func StartWorker() error {
 
 		// set busy state
 		writeProcState(pipeWriter, WORKER_STATE_BUSY)
-		// do actual request
-		AcceptFCGIRequest(conn, &FCGIHandler{
-			timeout:    timeout,
-			pipeWriter: pipeWriter,
-		})
+
+		// Wrap the connection in a bufio.Reader to read the HTTP request
+		bufReader := bufio.NewReader(conn)
+		req, err := http.ReadRequest(bufReader)
+		if err != nil {
+			return fmt.Errorf("read HTTP request error: %v", err)
+		}
+
+		waitSig := make(chan int)
+		go handleRequest(req, conn, waitSig)
+
+		select {
+		case <-waitSig:
+			writeProcState(pipeWriter, WORKER_STATE_IDLE)
+		case <-time.After(time.Duration(timeout) * time.Second):
+			writeProcState(pipeWriter, WORKER_STATE_STOPPED)
+			// wait for a while before exiting the process
+			time.Sleep(100 * time.Millisecond)
+			// exit the process directly
+			os.Exit(1)
+		}
+
+		conn.Close()
 	}
 }
 
