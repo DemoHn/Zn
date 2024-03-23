@@ -6,11 +6,13 @@ import (
 	"net/http"
 )
 
-type ZnHTTPServer struct {
+// NOTE: although we name it 'thread' server, we actually use goroutine
+// as low level thread model instead of traditional "threads"
+type ZnThreadServer struct {
 	reqHandler http.HandlerFunc
 }
 
-func (zns *ZnHTTPServer) Start(connUrl string) error {
+func (zns *ZnThreadServer) Start(connUrl string) error {
 	network, address, err := parseConnUrl(connUrl)
 	if err != nil {
 		return err
@@ -25,8 +27,8 @@ func (zns *ZnHTTPServer) Start(connUrl string) error {
 	return http.Serve(ln, zns.reqHandler)
 }
 
-func NewZnHTTPServer(reqHandler http.HandlerFunc) *ZnHTTPServer {
-	return &ZnHTTPServer{
+func NewZnThreadServer(reqHandler http.HandlerFunc) *ZnThreadServer {
+	return &ZnThreadServer{
 		reqHandler: reqHandler,
 	}
 }

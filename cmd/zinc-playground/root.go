@@ -23,7 +23,7 @@ var (
 		Long:  "zinc playground - 在启动服务器之后，用户发送HTTP请求并提交代码后即可执行，并返回对应的结果；这样用户可以线上编写并运行代码",
 		Run: func(c *cobra.Command, args []string) {
 
-			pmServer := server.NewZnPMServer(server.RespondAsPlayground)
+			pmServer := server.NewZnPMServer(server.PlaygroundHandler)
 			///// run child worker if  --child-worker = true & preForkChild env is "OK"
 			if childWorkerFlag && os.Getenv(server.EnvPreforkChildKey) == server.EnvPreforkChildVal {
 				// start child worker to handle requests
