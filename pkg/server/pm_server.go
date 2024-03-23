@@ -8,7 +8,6 @@ import (
 	"log"
 	"net"
 	"net/http"
-	"net/url"
 	"os"
 	"os/exec"
 	"os/signal"
@@ -35,13 +34,11 @@ const (
 	defaultTimeout = 60 // default is 60s
 )
 
-type Handler = func(r *http.Request, w *RespWriter) error
-
 // ZnPMServer - use "1 request, 1 process" mode like what PHP-FPM is doing
 // To start a ZnPMServer, we must call StartMaster() first to create network connection, then spawn another process to call StartWorker() to run actual `reqHandler` logic.
 type ZnPMServer struct {
 	childProcManager
-	reqHandler Handler
+	reqHandler http.HandlerFunc
 }
 
 type childProcManager struct {
@@ -67,7 +64,7 @@ type ZnPMServerConfig struct {
 	Timeout  int
 }
 
-func NewZnPMServer(reqHandler Handler) *ZnPMServer {
+func NewZnPMServer(reqHandler http.HandlerFunc) *ZnPMServer {
 	return &ZnPMServer{
 		childProcManager: childProcManager{
 			childs:     make(map[int]workerState),
@@ -84,21 +81,9 @@ func NewZnPMServer(reqHandler Handler) *ZnPMServer {
 /////// MASTER logic ///////
 ////////////////////////////
 func (zns *ZnPMServer) StartMaster(connUrl string, cfg ZnPMServerConfig) error {
-	var network, address string
-
-	u, err := url.Parse(connUrl)
+	network, address, err := parseConnUrl(connUrl)
 	if err != nil {
 		return err
-	}
-	switch u.Scheme {
-	case TypeUnixSocket:
-		network = TypeUnixSocket
-		address = u.Path
-	case TypeTcp:
-		network = TypeTcp
-		address = u.Host
-	default:
-		return fmt.Errorf("不支持的协议：%s", u.Scheme)
 	}
 
 	log.Print("即将监听URL：", address)
@@ -365,8 +350,7 @@ func (zns *ZnPMServer) StartWorker() error {
 		// handle request
 		go func() {
 			w := NewRespWriter(conn)
-			handler := zns.reqHandler
-			handler(req, w)
+			zns.reqHandler(w, req)
 
 			waitSig <- 1
 		}()
