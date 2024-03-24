@@ -26,7 +26,7 @@ const (
 	GlyphYIi rune = 0x4EE5
 	// GlyphHE - 何 - 如何，何为
 	GlyphHE rune = 0x4F55
-	// GlyphRUy - 入 - 导入
+	// GlyphRUy - 入 - 输入，导入
 	GlyphRUy rune = 0x5165
 	// GlyphQI - 其 - 其
 	GlyphQI rune = 0x5176
@@ -96,7 +96,7 @@ const (
 	GlyphJI rune = 0x7EE7
 	// GlyphXU - 续 - 继续循环
 	GlyphXU rune = 0x7EED
-	// GlyphSHU - 输 - 输出
+	// GlyphSHU - 输 - 输出，输入
 	GlyphSHU rune = 0x8F93
 	// GlyphBIAN - 遍 - 遍历
 	GlyphBIAN rune = 0x904D
@@ -130,6 +130,7 @@ const (
 	TypeObjDotW      uint8 = 71 // 之
 	TypeObjDotIIW    uint8 = 72 // 的
 	TypeLogicEqualW  uint8 = 74 // 等于
+	TypeInputW       uint8 = 75 // 输入
 	TypeIteratorW    uint8 = 76 // 遍历
 	TypeImportW      uint8 = 77 // 导入
 	TypeGetResultW   uint8 = 78 // 得到
@@ -312,6 +313,9 @@ func parseKeyword(l *syntax.Lexer, moveForward bool) (bool, syntax.Token, error)
 		if l.Peek() == GlyphCHU {
 			wordLen = 2
 			tk.Type = TypeReturnW
+		} else if l.Peek() == GlyphRUy {
+			wordLen = 2
+			tk.Type = TypeInputW
 		} else {
 			return false, syntax.Token{}, nil
 		}

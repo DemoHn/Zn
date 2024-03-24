@@ -215,6 +215,13 @@ func StringifyAST(node Node) string {
 		return fmt.Sprintf("$IM(name=(%s) items=(%s))", StringifyAST(v.ImportName), strings.Join(itemsStr, " "))
 	case *FunctionReturnStmt:
 		return fmt.Sprintf("$RT(%s)", StringifyAST(v.ReturnExpr))
+	case *VarInputStmt:
+		var idList = make([]string, 0)
+		for _, id := range v.IDList {
+			idList = append(idList, StringifyAST(id))
+		}
+
+		return fmt.Sprintf("$IN(%s)", strings.Join(idList, " "))
 	case *FunctionDeclareStmt:
 		paramsStr := []string{}
 		for _, p := range v.ParamList {

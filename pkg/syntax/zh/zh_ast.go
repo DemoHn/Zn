@@ -20,6 +20,7 @@ type consumerFunc func()
 //           -> IterateStmt
 //           -> FunctionDeclareStmt
 //           -> FunctionReturnStmt
+//           -> VarInputStmt
 //           -> VOStmt
 //           -> ImportStmt
 //           -> ClassStmt
@@ -33,6 +34,7 @@ func ParseStatement(p *ParserZH) syntax.Statement {
 		TypeCondW,
 		TypeFuncW,
 		TypeReturnW,
+		TypeInputW,
 		TypeWhileLoopW,
 		TypeVarOneW,
 		TypeIteratorW,
@@ -69,6 +71,8 @@ func ParseStatement(p *ParserZH) syntax.Statement {
 			}
 		case TypeReturnW:
 			s = ParseFunctionReturnStmt(p)
+		case TypeInputW:
+			s = ParseVarInputStmt(p)
 		case TypeWhileLoopW:
 			s = ParseWhileLoopStmt(p)
 		case TypeVarOneW:
@@ -1194,6 +1198,18 @@ func ParseFunctionReturnStmt(p *ParserZH) *syntax.FunctionReturnStmt {
 	expr := ParseExpression(p)
 	return &syntax.FunctionReturnStmt{
 		ReturnExpr: expr,
+	}
+}
+
+func ParseVarInputStmt(p *ParserZH) *syntax.VarInputStmt {
+	var idList []*syntax.ID
+	parsePauseCommaList(p, func() {
+		id := parseID(p)
+		idList = append(idList, id)
+	})
+
+	return &syntax.VarInputStmt{
+		IDList: idList,
 	}
 }
 

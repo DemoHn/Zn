@@ -9,6 +9,11 @@ import (
 type Context struct {
 	// globals - stores all global variables
 	globals map[string]Element
+
+	// varInputs - predefine input values before executing the program
+	// used for input stmt: `输入XX、YY、ZZ`
+	varInputs map[string]Element
+
 	// hasPrinted - if stdout has been used to output message before program end, set `hasPrinted` -> true; so that after message is done
 	hasPrinted bool
 
@@ -102,9 +107,17 @@ func (ctx *Context) GetModuleCodeFinder() ModuleCodeFinder {
 	return ctx.moduleCodeFinder
 }
 
+func (ctx *Context) GetVarInputs() map[string]Element {
+	return ctx.varInputs
+}
+
 //// setters
 func (ctx *Context) SetModuleCodeFinder(finder ModuleCodeFinder) {
 	ctx.moduleCodeFinder = finder
+}
+
+func (ctx *Context) SetVarInputs(varInputs map[string]Element) {
+	ctx.varInputs = varInputs
 }
 
 //// scope operation

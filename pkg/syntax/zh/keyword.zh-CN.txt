@@ -85,6 +85,7 @@ LogicAndW       70      且
 ObjDotW         71      之
 ObjDotIIW       72      的
 LogicEqualW     74      等于
+InputW          75      输入
 IteratorW       76      遍历
 ImportW         77      导入
 GetResultW      78      得到

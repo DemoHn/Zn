@@ -92,5 +92,3 @@ const result = zincReaction("./宠物医院.zn", 医院=store0, 宠物=pet0)
 如同 PHP-FPM 的处理方式一样，从 WebServer 中接收HTTP请求，将请求参数灌到输入里面，再输出具体的值作为 http body 返回来。
 
 如果 ZINC_ADAPTER 不是上述两个值或者根本就没给，直接返回 403
-
-

@@ -7,21 +7,41 @@ import (
 	"net/http"
 
 	"github.com/DemoHn/Zn/pkg/exec"
+	rt "github.com/DemoHn/Zn/pkg/runtime"
 	"github.com/DemoHn/Zn/pkg/value"
 )
+
+type playgroundReq struct {
+	varInput   []string
+	sourceCode string
+}
 
 // if exec code ok - return 200 with result (ignore outputs from「显示」)
 func PlaygroundHandler(w http.ResponseWriter, r *http.Request) {
 	// exec program
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		respondError(w, fmt.Errorf("读取程序内容出现异常：%s", err.Error()))
+		respondError(w, fmt.Errorf("读取请求内容出现异常：%s", err.Error()))
+		return
 	}
 
+	/*
+		var reqInfo playgroundReq
+		if err := json.Unmarshal(body, &reqInfo); err != nil {
+			respondError(w, fmt.Errorf("解析请求格式不符合要求！"))
+			return
+		}
+	*/
+
 	pExecutor := exec.NewPlaygroundExecutor(body)
-	rtnValue, err := pExecutor.RunCode()
+	// TODO: get 'varInputs' from http.Request
+	varInputs := make(map[string]rt.Element, 0)
+
+	varInputs["测试"] = value.NewNumber(233)
+	rtnValue, err := pExecutor.RunCode(varInputs)
 	if err != nil {
 		respondError(w, err)
+		return
 	}
 
 	// write return value as resp body

@@ -27,7 +27,7 @@ import (
 
 // evalProgram - eval the statements of the program with the following order:
 //
-// 1. INPUTVAR statement [TODO] - `输入长、宽、高`
+// 1. INPUTVAR statement - `输入长、宽、高`
 // 2. IMPORT statement(s) - `导入《文件》`
 // 3. CLASSDEF statement(s) - `定义货件`
 // 4. FUNCDEF statement(s) - `如何执行？`
@@ -37,9 +37,7 @@ import (
 // it doesn't matter - we will order the statements in the program automatically before execution.
 // (This will not affect line numbers)
 func evalProgram(c *r.Context, program *syntax.Program) error {
-	//
-	// TODO: use inputVarStmt when introduce INPUTVAR (输入) keyword
-	// inputVarStmts := make([]syntax.Statement, 0)
+	inputVarStmts := make([]syntax.Statement, 0)
 	importStmts := make([]syntax.Statement, 0)
 	classDefStmts := make([]syntax.Statement, 0)
 	funcDefStmts := make([]syntax.Statement, 0)
@@ -49,7 +47,8 @@ func evalProgram(c *r.Context, program *syntax.Program) error {
 
 	for _, stmtX := range program.Content.Children {
 		switch v := stmtX.(type) {
-
+		case *syntax.VarInputStmt:
+			inputVarStmts = append(inputVarStmts, v)
 		case *syntax.ImportStmt:
 			importStmts = append(importStmts, v)
 		case *syntax.ClassDeclareStmt:
@@ -64,6 +63,7 @@ func evalProgram(c *r.Context, program *syntax.Program) error {
 	}
 
 	// reorder the statements
+	allStmts = append(allStmts, inputVarStmts...)
 	allStmts = append(allStmts, importStmts...)
 	allStmts = append(allStmts, classDefStmts...)
 	allStmts = append(allStmts, funcDefStmts...)
@@ -136,55 +136,7 @@ func evalStatement(c *r.Context, stmt syntax.Statement) error {
 		}
 		return nil
 	case *syntax.ImportStmt:
-		libName := v.ImportName.GetLiteral()
-
-		var extModule *r.Module
-		if v.ImportLibType == syntax.LibTypeStd {
-			var err error
-			// check if the dependency is valid (i.e. not import itself/no duplicate import)
-			if err := c.CheckDepedency(libName, true); err != nil {
-				return err
-			}
-			extModule, err = stdlib.FindModule(libName)
-			if err != nil {
-				return err
-			}
-		} else if v.ImportLibType == syntax.LibTypeCustom {
-			// check if the dependency is valid (i.e. not import itself/no duplicate import/no circular dependency)
-			if err := c.CheckDepedency(libName, false); err != nil {
-				return err
-			}
-			// execute custom module first (in order to get all importable elements)
-			if extModule = c.FindModuleCache(libName); extModule == nil {
-				newModule, err := execAnotherModule(c, libName)
-				if err != nil {
-					return err
-				}
-				extModule = newModule
-			}
-		}
-
-		if extModule != nil {
-			// import all symbols to current module's importRefs
-			if len(v.ImportItems) == 0 {
-				for name, val := range extModule.GetAllExportValues() {
-					if err := c.BindImportSymbol(name, val, extModule); err != nil {
-						return err
-					}
-				}
-			} else {
-				// import selected symbols
-				for _, id := range v.ImportItems {
-					name := id.GetLiteral()
-					if val, err2 := extModule.GetExportValue(name); err2 == nil {
-						if err := c.BindImportSymbol(name, val, extModule); err != nil {
-							return err
-						}
-					}
-				}
-			}
-		}
-		return nil
+		return evalImportStmt(c, v)
 	case *syntax.ClassDeclareStmt:
 		className := v.ClassName.GetLiteral()
 		if c.FindParentScope() != nil {
@@ -230,8 +182,24 @@ func evalStatement(c *r.Context, stmt syntax.Statement) error {
 		}
 		// send RETURN break
 		return zerr.NewReturnSignal(val)
+	case *syntax.VarInputStmt:
+		// load values from context.varInputs -> current scope
+		varInputs := c.GetVarInputs()
+		for _, id := range v.IDList {
+			idStr := id.GetLiteral()
+			inputValue, ok := varInputs[idStr]
+			if !ok {
+				return zerr.InputValueNotFound(idStr)
+			}
+
+			// set inputValue to current scope
+			if err := c.BindSymbol(idStr, inputValue); err != nil {
+				return err
+			}
+		}
+		return nil
 	case *syntax.ThrowExceptionStmt:
-		// profoundly return an ERROR to terminate the process
+		// profoundly return an ERROR to terminate the execution flow
 		name := v.ExceptionClass.GetLiteral()
 		expClassRef, err := c.FindElement(name)
 		if err != nil {
@@ -341,6 +309,59 @@ func evalNewObject(c *r.Context, node syntax.VDAssignPair) error {
 
 		if err := c.BindSymbol(vtag, finalObj); err != nil {
 			return err
+		}
+	}
+	return nil
+}
+
+// eval 导入《模块A》
+func evalImportStmt(c *r.Context, node *syntax.ImportStmt) error {
+	libName := node.ImportName.GetLiteral()
+
+	var extModule *r.Module
+	if node.ImportLibType == syntax.LibTypeStd {
+		var err error
+		// check if the dependency is valid (i.e. not import itself/no duplicate import)
+		if err := c.CheckDepedency(libName, true); err != nil {
+			return err
+		}
+		extModule, err = stdlib.FindModule(libName)
+		if err != nil {
+			return err
+		}
+	} else if node.ImportLibType == syntax.LibTypeCustom {
+		// check if the dependency is valid (i.e. not import itself/no duplicate import/no circular dependency)
+		if err := c.CheckDepedency(libName, false); err != nil {
+			return err
+		}
+		// execute custom module first (in order to get all importable elements)
+		if extModule = c.FindModuleCache(libName); extModule == nil {
+			newModule, err := execAnotherModule(c, libName)
+			if err != nil {
+				return err
+			}
+			extModule = newModule
+		}
+	}
+
+	if extModule != nil {
+		// import all symbols to current module's importRefs
+		if len(node.ImportItems) == 0 {
+			for name, val := range extModule.GetAllExportValues() {
+				if err := c.BindImportSymbol(name, val, extModule); err != nil {
+					return err
+				}
+			}
+		} else {
+			// import selected symbols
+			for _, id := range node.ImportItems {
+				name := id.GetLiteral()
+				if val, err2 := extModule.GetExportValue(name); err2 == nil {
+					if err := c.BindImportSymbol(name, val, extModule); err != nil {
+						return err
+					}
+				}
+			}
 		}
 	}
 	return nil

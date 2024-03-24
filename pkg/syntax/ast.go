@@ -205,6 +205,12 @@ type FunctionReturnStmt struct {
 	ReturnExpr Expression
 }
 
+// 输入XX、XX、XX...
+type VarInputStmt struct {
+	StmtBase
+	IDList []*ID
+}
+
 // ClassDeclareStmt - class definition (定义XX：)
 type ClassDeclareStmt struct {
 	StmtBase

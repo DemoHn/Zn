@@ -19,8 +19,8 @@ func NewPlaygroundExecutor(code []byte) *PlaygroundExecutor {
 	}
 }
 
-// RunCode - ONE-TIME DEAL! run code text from fastCGI request's input body
-func (pl *PlaygroundExecutor) RunCode() (r.Element, error) {
+// RunCode - ONE-TIME DEAL! run code text from request's input body
+func (pl *PlaygroundExecutor) RunCode(varInputs map[string]r.Element) (r.Element, error) {
 	in := io.NewByteStream(pl.source)
 
 	// #1. read source code
@@ -42,6 +42,9 @@ func (pl *PlaygroundExecutor) RunCode() (r.Element, error) {
 	}
 
 	// #4. eval code
+	// #4.1 first set init input value
+	pl.context.SetVarInputs(varInputs)
+	// #4.2 then eval the program
 	if err := evalProgram(pl.context, program); err != nil {
 		return nil, WrapRuntimeError(pl.context, err)
 	}

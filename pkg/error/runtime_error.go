@@ -51,6 +51,8 @@ const (
 	// arith error
 	ErrArithDivZero          = 80
 	ErrArithRootLessThanZero = 81
+	// input error
+	ErrInputValueNotFound = 85
 )
 
 var typeNameMap = map[string]string{
@@ -372,6 +374,14 @@ func ArithRootLessThanZero() *RuntimeError {
 		Code:    ErrArithRootLessThanZero,
 		Message: "计算平方根时，底数须大于0",
 		Extra:   nil,
+	}
+}
+
+func InputValueNotFound(tag string) *RuntimeError {
+	return &RuntimeError{
+		Code:    ErrInputValueNotFound,
+		Message: fmt.Sprintf("没有设置输入变量「%s」的值", tag),
+		Extra:   tag,
 	}
 }
 

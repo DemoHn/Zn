@@ -60,6 +60,7 @@ func (fl *FileExecutor) HasPrinted() bool {
 	return false
 }
 
+// initRootModule - and setup the context where rootModule = $this one
 func (fl *FileExecutor) initRootModule() error {
 	// #1. find filepath of current module
 	moduleFile, err := fl.getModulePath(fl.rootModule)
