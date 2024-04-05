@@ -1,4 +1,4 @@
-package zinc
+package main
 
 import (
 	"github.com/spf13/cobra"
@@ -28,12 +28,7 @@ var (
 	}
 )
 
-// Execute - execute `zn` command
-func Execute() error {
-	return rootCmd.Execute()
-}
-
-func init() {
-	//rootCmd.AddCommand(cmd.ToolCommand)
+func main() {
 	rootCmd.Flags().BoolVarP(&versionFlag, "version", "v", false, "显示Zn语言版本")
+	rootCmd.Execute()
 }

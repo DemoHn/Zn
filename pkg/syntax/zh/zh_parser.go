@@ -55,6 +55,18 @@ func (p *ParserZH) ParseAST(l *syntax.Lexer) (pg *syntax.Program, err error) {
 	return
 }
 
+// ParseVarInputs - the parser is confined to parse
+func (p *ParserZH) ParseVarInputs(l *syntax.Lexer) (*syntax.VarDeclareStmt, error) {
+	// set lexer
+	p.Lexer = l
+	// advance tokens ONCE
+	p.next()
+
+	// when an error occured, it will directly panic! instead of return an error
+	stmt := ParseVarDeclareStmt(p)
+	return stmt, nil
+}
+
 func (p *ParserZH) next() *syntax.Token {
 	var tk syntax.Token // default tk.Type = 0 (TypeEOF)
 	var err error

@@ -1,19 +1,19 @@
 package server
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
 
 	"github.com/DemoHn/Zn/pkg/exec"
-	rt "github.com/DemoHn/Zn/pkg/runtime"
 	"github.com/DemoHn/Zn/pkg/value"
 )
 
 type playgroundReq struct {
-	varInput   []string
-	sourceCode string
+	VarInput   string
+	SourceCode string
 }
 
 // if exec code ok - return 200 with result (ignore outputs from「显示」)
@@ -25,19 +25,20 @@ func PlaygroundHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	/*
-		var reqInfo playgroundReq
-		if err := json.Unmarshal(body, &reqInfo); err != nil {
-			respondError(w, fmt.Errorf("解析请求格式不符合要求！"))
-			return
-		}
-	*/
+	var reqInfo playgroundReq
+	if err := json.Unmarshal(body, &reqInfo); err != nil {
+		respondError(w, fmt.Errorf("解析请求格式不符合要求！"))
+		return
+	}
 
-	pExecutor := exec.NewPlaygroundExecutor(body)
-	// TODO: get 'varInputs' from http.Request
-	varInputs := make(map[string]rt.Element, 0)
+	pExecutor := exec.NewPlaygroundExecutor([]byte(reqInfo.SourceCode))
+	// exec varInputs
+	varInputs, err := exec.ExecVarInputs(reqInfo.VarInput)
+	if err != nil {
+		respondError(w, err)
+		return
+	}
 
-	varInputs["测试"] = value.NewNumber(233)
 	rtnValue, err := pExecutor.RunCode(varInputs)
 	if err != nil {
 		respondError(w, err)
@@ -54,6 +55,7 @@ func PlaygroundHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func HTTPHandler(w http.ResponseWriter, r *http.Request) {
+	// TODO: impl LOGIC HERE!
 	w.WriteHeader(200)
 	io.WriteString(w, "Hello World")
 }

@@ -15,6 +15,7 @@ type Parser struct {
 // Currently, only Chinese ASTBuilder is supported
 type ASTBuilder interface {
 	ParseAST(lexer *Lexer) (*Program, error)
+	ParseVarInputs(lexer *Lexer) (*VarDeclareStmt, error)
 }
 
 // NewParser - create a new parser from source
@@ -40,6 +41,22 @@ func (p *Parser) Parse() (ast *Program, err error) {
 	}()
 
 	ast, err = p.ParseAST(p.Lexer)
+	return
+}
+
+func (p *Parser) ParseVarInputs() (vdStmt *VarDeclareStmt, err error) {
+	// handle panics
+	defer func() {
+		var ok bool
+		if r := recover(); r != nil {
+			err, ok = r.(error)
+			if !ok {
+				panic(r)
+			}
+		}
+	}()
+
+	vdStmt, err = p.ASTBuilder.ParseVarInputs(p.Lexer)
 	return
 }
 

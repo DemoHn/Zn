@@ -193,7 +193,7 @@ func evalStatement(c *r.Context, stmt syntax.Statement) error {
 			}
 
 			// set inputValue to current scope
-			if err := c.BindSymbol(idStr, inputValue); err != nil {
+			if err := c.BindSymbolConst(idStr, inputValue); err != nil {
 				return err
 			}
 		}

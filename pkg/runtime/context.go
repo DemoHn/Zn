@@ -271,6 +271,15 @@ func (ctx *Context) BindSymbol(name string, value Element) error {
 	return ctx.GetCurrentModule().BindSymbol(name, value, false, true)
 }
 
+// BindSymbolConst - bind const value with re-declaration check on same scope
+func (ctx *Context) BindSymbolConst(name string, value Element) error {
+	if _, inGlobals := ctx.globals[name]; inGlobals {
+		return zerr.NameRedeclared(name)
+	}
+
+	return ctx.GetCurrentModule().BindSymbol(name, value, true, true)
+}
+
 // BindSymbolDecl - bind value for declaration statement - that variables could be re-bind.
 func (ctx *Context) BindSymbolDecl(name string, value Element, isConst bool) error {
 	if _, inGlobals := ctx.globals[name]; inGlobals {

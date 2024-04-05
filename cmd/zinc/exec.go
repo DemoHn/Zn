@@ -1,4 +1,4 @@
-package zinc
+package main
 
 import (
 	"fmt"
