@@ -72,7 +72,7 @@ const (
 	GlyphHUO rune = 0x6216
 	// GlyphPAO - 抛 - 抛出
 	GlyphPAO rune = 0x629B
-	// GlyphSHI - 是 - 是
+	// GlyphSHI - 是 -
 	GlyphSHI rune = 0x662F
 	// GlyphSHUy - 束 - 结束循环
 	GlyphSHUy rune = 0x675F
@@ -113,7 +113,6 @@ const (
 	TypeGetterW      uint8 = 46 // 何为
 	TypeParamAssignW uint8 = 47 // 已知
 	TypeReturnW      uint8 = 48 // 输出
-	TypeLogicYesIIW  uint8 = 49 // 是
 	TypeLogicNotEqW  uint8 = 51 // 不等于
 	TypeLogicLteW    uint8 = 52 // 不大于
 	TypeLogicGteW    uint8 = 53 // 不小于
@@ -277,8 +276,6 @@ func parseKeyword(l *syntax.Lexer, moveForward bool) (bool, syntax.Token, error)
 		} else {
 			return false, syntax.Token{}, nil
 		}
-	case GlyphSHI:
-		tk.Type = TypeLogicYesIIW
 	case GlyphMEI:
 		if l.Peek() == GlyphDANG {
 			wordLen = 2

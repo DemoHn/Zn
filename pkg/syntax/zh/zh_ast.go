@@ -764,7 +764,6 @@ func parseVDAssignPair(p *ParserZH) syntax.VDAssignPair {
 	// parse keyword
 	validKeywords := []uint8{
 		TypeLogicYesW,
-		TypeLogicYesIIW,
 		TypeAssignMark,
 		TypeAssignConstW,
 		TypeObjNewW,
@@ -775,7 +774,7 @@ func parseVDAssignPair(p *ParserZH) syntax.VDAssignPair {
 	}
 
 	switch tk.Type {
-	case TypeLogicYesW, TypeLogicYesIIW, TypeAssignMark:
+	case TypeLogicYesW, TypeAssignMark:
 		refMark := false
 		if match, _ := p.tryConsume(TypeObjRef); match {
 			refMark = true

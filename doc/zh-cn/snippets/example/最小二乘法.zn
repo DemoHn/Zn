@@ -3,8 +3,7 @@
     已知数据源
     令Sx、Sy、Sxx、Sxy、Syy = 0
     令N、Xi、Yi = 0
-    注：最后得到的线性方程的斜率β、截距α、残差R²
-    令α、β、R² = 0    
+    注：最后得到的线性方程的斜率β、截距α、残差R²    
     以数据点遍历数据源：
         Xi = 数据点#1；Yi = 数据点#2
 
@@ -15,9 +14,9 @@
         Syy = Syy + Yi * Yi
         N = N + 1
 
-    β = {N * Sxy - Sx * Sy} / {N * Sxx - Sx * Sx}
-    α = {Sy - β * Sx} / N
-    R² = {N * Sxy - Sx * Sy} * {N * Sxy - Sx * Sy} / {{N * Sxx - Sx * Sx} * {N * Syy - Sy * Sy}}
+    令β = {N * Sxy - Sx * Sy} / {N * Sxx - Sx * Sx}
+    令α = {Sy - β * Sx} / N
+    令R² = {N * Sxy - Sx * Sy} * {N * Sxy - Sx * Sy} / {{N * Sxx - Sx * Sx} * {N * Syy - Sy * Sy}}
 
     输出【α、β、R²】
 
