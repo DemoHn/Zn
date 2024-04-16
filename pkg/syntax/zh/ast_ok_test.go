@@ -935,25 +935,6 @@ $PG($BK(
 ))
 
 ========
-1a. simplist class definition using 是
---------
-定义狗：
-	其名是“小黄”
-	其品种是“拉布拉多”
---------
-$PG($BK(
-	$CLS(
-		name=($ID(狗))
-		properties=(
-			$PD(id=($ID(名)) expr=($STR(小黄)))
-			$PD(id=($ID(品种)) expr=($STR(拉布拉多)))
-		)		
-		methods=()
-		getters=()
-	)
-))
-
-========
 3. full class definition
 --------
 定义狗：

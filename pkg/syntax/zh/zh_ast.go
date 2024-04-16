@@ -1357,8 +1357,8 @@ func ParseClassDeclareStmt(p *ParserZH) *syntax.ClassDeclareStmt {
 func parsePropertyDeclareStmt(p *ParserZH) *syntax.PropertyDeclareStmt {
 	// #1. parse ID
 	idItem := parseFuncID(p)
-	// consume 为 or 是 or =
-	p.consume(TypeLogicYesW, TypeLogicYesIIW, TypeAssignMark)
+	// consume 为 or =
+	p.consume(TypeLogicYesW, TypeAssignMark)
 
 	// #2. parse expr
 	initExpr := ParseExpression(p)
