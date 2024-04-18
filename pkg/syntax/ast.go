@@ -376,9 +376,8 @@ type ArithExpr struct {
 
 // EqMarkConfig - configure the representation of equal mark
 type EqMarkConfig struct {
-	AsMapSign   bool // '=' represents for '为', e.g. 【A = 1】
+	AsMapSign   bool // '=' represents for '对应', e.g. 【A = 1】
 	AsVarAssign bool // '=' represents for '设为'
-	AsEqual     bool // '=' represents for '等于'
 }
 
 // implement expression interface

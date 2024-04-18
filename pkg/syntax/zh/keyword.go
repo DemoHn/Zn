@@ -8,11 +8,11 @@ import (
 // keywords are all ideographs that its length varies from its definitions.
 // so here we define all possible chars that may be an element of one keyword.
 const (
-	// GlyphBU - 不 - 不等于，不小于，不大于
+	// GlyphBU - 不 - 不等于，不小于，不大于，不为
 	GlyphBU rune = 0x4E0D
 	// GlyphQIE - 且 - 且
 	GlyphQIE rune = 0x4E14
-	// GlyphWEI - 为 - 成为，恒为，何为，为
+	// GlyphWEI - 为 - 设为，成为，恒为，何为，为，不为
 	GlyphWEI rune = 0x4E3A
 	// GlyphYIy - 义 - 定义
 	GlyphYIy rune = 0x4E49
@@ -96,6 +96,8 @@ const (
 	GlyphJI rune = 0x7EE7
 	// GlyphXU - 续 - 继续循环
 	GlyphXU rune = 0x7EED
+	// GlyphSHE - 设 - 设为
+	GlyphSHE rune = 0x8BBE
 	// GlyphSHU - 输 - 输出，输入
 	GlyphSHU rune = 0x8F93
 	// GlyphBIAN - 遍 - 遍历
@@ -113,6 +115,8 @@ const (
 	TypeGetterW      uint8 = 46 // 何为
 	TypeParamAssignW uint8 = 47 // 已知
 	TypeReturnW      uint8 = 48 // 输出
+	TypeAssignW      uint8 = 49 // 设为
+	TypeLogicNoW     uint8 = 50 // 不为
 	TypeLogicNotEqW  uint8 = 51 // 不等于
 	TypeLogicLteW    uint8 = 52 // 不大于
 	TypeLogicGteW    uint8 = 53 // 不小于
@@ -156,7 +160,10 @@ func parseKeyword(l *syntax.Lexer, moveForward bool) (bool, syntax.Token, error)
 	// manual matching one or consecutive keywords
 	switch ch {
 	case GlyphBU:
-		if l.Peek() == GlyphDA && l.Peek2() == GlyphYU {
+		if l.Peek() == GlyphWEI {
+			wordLen = 2
+			tk.Type = TypeLogicNoW
+		} else if l.Peek() == GlyphDA && l.Peek2() == GlyphYU {
 			wordLen = 3
 			tk.Type = TypeLogicLteW
 		} else if l.Peek() == GlyphDENG && l.Peek2() == GlyphYU {
@@ -303,6 +310,13 @@ func parseKeyword(l *syntax.Lexer, moveForward bool) (bool, syntax.Token, error)
 		if l.Peek() == GlyphXU && l.Peek2() == GlyphXUN && l.Peek3() == GlyphHUAN {
 			wordLen = 4
 			tk.Type = TypeContinueW
+		} else {
+			return false, syntax.Token{}, nil
+		}
+	case GlyphSHE:
+		if l.Peek() == GlyphWEI {
+			wordLen = 2
+			tk.Type = TypeAssignW
 		} else {
 			return false, syntax.Token{}, nil
 		}

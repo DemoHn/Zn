@@ -139,14 +139,6 @@ func ParseExpression(p *ParserZH) syntax.Expression {
 	return parseExpressionLv1(p, cfg)
 }
 
-// ParseExpressionEQ - similar to ParseExpression, but '=' represents for '等于'
-func ParseExpressionEQ(p *ParserZH) syntax.Expression {
-	cfg := syntax.EqMarkConfig{
-		AsEqual: true,
-	}
-	return parseExpressionLv1(p, cfg)
-}
-
 func ParseExpressionMAP(p *ParserZH) syntax.Expression {
 	cfg := syntax.EqMarkConfig{
 		AsMapSign: true,
@@ -203,12 +195,13 @@ func parseExpressionLv2(p *ParserZH, cfg syntax.EqMarkConfig) syntax.Expression 
 // NOTE: by default '=' means nothing!
 func parseExpressionLv3(p *ParserZH, cfg syntax.EqMarkConfig) syntax.Expression {
 	validTypes := []uint8{
-		TypeLogicEqualW,
+		TypeLogicEqualW, TypeEqualMark,
 		TypeLogicNotEqW, TypeNEMark,
 		TypeLogicGtW, TypeGTMark,
 		TypeLogicGteW, TypeGTEMark,
 		TypeLogicLtW, TypeLTMark,
 		TypeLogicLteW, TypeLTEMark,
+		TypeLogicYesW, TypeLogicNoW,
 	}
 
 	logicTypeMap := map[uint8]uint8{
@@ -224,11 +217,9 @@ func parseExpressionLv3(p *ParserZH, cfg syntax.EqMarkConfig) syntax.Expression 
 		TypeLogicLteW:   syntax.LogicLTE,
 		TypeLTEMark:     syntax.LogicLTE,
 		TypeEqualMark:   syntax.LogicEQ,
-	}
-
-	// '==' represents for 等于
-	if cfg.AsEqual {
-		validTypes = append(validTypes, TypeEqualMark)
+		// TODO: use more detailed logic to handle 为 & 不为
+		TypeLogicYesW: syntax.LogicEQ,
+		TypeLogicNoW:  syntax.LogicNEQ,
 	}
 
 	exprL := parseExpressionLv4(p, cfg)
@@ -246,12 +237,13 @@ func parseExpressionLv3(p *ParserZH, cfg syntax.EqMarkConfig) syntax.Expression 
 	return exprL
 }
 
-// parseExpressionLv4 - X 为 Y
+// parseExpressionLv4 - X 设为 Y
 // NOTE: by default '=' means nothing!
 func parseExpressionLv4(p *ParserZH, cfg syntax.EqMarkConfig) syntax.Expression {
 	validTypes := []uint8{
-		TypeLogicYesW,
+		TypeAssignW,
 	}
+
 	if cfg.AsVarAssign {
 		validTypes = append(validTypes, TypeAssignMark)
 	}
@@ -763,7 +755,7 @@ func parseVDAssignPair(p *ParserZH) syntax.VDAssignPair {
 
 	// parse keyword
 	validKeywords := []uint8{
-		TypeLogicYesW,
+		TypeAssignW,
 		TypeAssignMark,
 		TypeAssignConstW,
 		TypeObjNewW,
@@ -774,7 +766,7 @@ func parseVDAssignPair(p *ParserZH) syntax.VDAssignPair {
 	}
 
 	switch tk.Type {
-	case TypeLogicYesW, TypeAssignMark:
+	case TypeAssignW, TypeAssignMark:
 		refMark := false
 		if match, _ := p.tryConsume(TypeObjRef); match {
 			refMark = true
@@ -838,7 +830,7 @@ func parseVDAssignPair(p *ParserZH) syntax.VDAssignPair {
 func ParseWhileLoopStmt(p *ParserZH) *syntax.WhileLoopStmt {
 	// #1. consume expr
 	// 为  as logicYES here
-	trueExpr := ParseExpressionEQ(p)
+	trueExpr := ParseExpression(p)
 
 	// #2. parse colon
 	p.consume(TypeFuncCall)
@@ -946,7 +938,7 @@ func ParseBranchStmt(p *ParserZH, mainIndent int) *syntax.BranchStmt {
 
 		// #1. parse condition expr
 		if hState != stateElseBranch {
-			condExpr = ParseExpressionEQ(p)
+			condExpr = ParseExpression(p)
 		}
 
 		// #2. parse colon
@@ -1358,7 +1350,7 @@ func parsePropertyDeclareStmt(p *ParserZH) *syntax.PropertyDeclareStmt {
 	// #1. parse ID
 	idItem := parseFuncID(p)
 	// consume 为 or =
-	p.consume(TypeLogicYesW, TypeAssignMark)
+	p.consume(TypeAssignW, TypeAssignMark)
 
 	// #2. parse expr
 	initExpr := ParseExpression(p)

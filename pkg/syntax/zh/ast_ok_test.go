@@ -28,7 +28,7 @@ const logicExprCasesOK = `
 ========
 1. low -> high precedence
 --------
-{A且B或C且D等于E且F为100}等于0
+{A且B或C且D等于E且F设为100}等于0
 --------
 $PG($BK(
 	$EQ(
@@ -74,7 +74,7 @@ const whileLoopCasesOK = `
 1. one line block
 --------
 每当1：
-	令A为B
+	令A设为B
 --------
 $PG($BK(
 	$WL(
@@ -90,16 +90,16 @@ $PG($BK(
 2. nested while loop statement
 --------
 每当1：
-	A为B
+	A设为B
 	每当2：
-		C为D
-		E为F
+		C设为D
+		E设为F
 	每当3：
 		100
-	G为H
-	K为L
+	G设为H
+	K设为L
 
-M为N
+M设为N
 --------
 $PG($BK(
 	$WL(
@@ -130,7 +130,7 @@ const varDeclCasesOK = `
 ========
 1. inline one var
 --------
-令某变量为100
+令某变量设为100
 --------
 $PG($BK(
 	$VD($VP(
@@ -139,7 +139,7 @@ $PG($BK(
 	))
 ))
 ========
-1a. inline one var: 是
+1a. inline one var: =
 --------
 令某变量 = 100
 --------
@@ -153,7 +153,7 @@ $PG($BK(
 ========
 2. two variables
 --------
-令变量1、变量2为100
+令变量1、变量2设为100
 --------
 $PG($BK(
 	$VD($VP(
@@ -165,7 +165,7 @@ $PG($BK(
 ========
 3. paired variables inline (one pair only)
 --------
-令小A、小B、小C为100
+令小A、小B、小C设为100
 --------
 $PG($BK(
 	$VD($VP(
@@ -177,7 +177,7 @@ $PG($BK(
 ========
 4. with varquotes
 --------
-令小A、·先令·为200
+令小A、·先令·设为200
 --------
 $PG($BK(
 	$VD($VP(
@@ -189,7 +189,7 @@ $PG($BK(
 ========
 5. A -> B -> C
 --------
-令A为B为C
+令A设为B=C
 --------
 $PG($BK(
 	$VD($VP(
@@ -207,12 +207,12 @@ $PG($BK(
 6. block var declare
 --------
 令：
-	A为1
-	B为2
-	C、D为3
-	E、F为4
+	A设为1
+	B设为2
+	C、D设为3
+	E、F设为4
 
-令G为5
+令G设为5
 --------
 $PG($BK(
 	$VD(
@@ -254,7 +254,7 @@ $PG($BK(
 --------
 令：
 	高脚杯、小盅成为（SKU：「玻璃制品」、10、20、30）
-	A、B、C为「Amazon」
+	A、B、C设为「Amazon」
 	D、E、F恒为空
 	G恒为空
 --------
@@ -391,7 +391,7 @@ $PG($BK(
 再如A等于200：
     （X-Y：20、30）
 再如A等于300：
-    B为10；
+    B设为10；
 注：「‘这是一个多行注释’」
 如果C /= 真：
     （ASDF）
@@ -606,7 +606,7 @@ const stmtLineBreakCasesOK = `
 ========
 1. a statement in oneline
 --------
-令香港记者为记者名为「张宝华」
+令香港记者设为记者名设为「张宝华」
 --------
 $PG($BK($VD($VP(vars[]=($ID(香港记者)) expr[]=($VA(target=($ID(记者名)) assign=($STR(张宝华))))))))
 
@@ -615,7 +615,7 @@ $PG($BK($VD($VP(vars[]=($ID(香港记者)) expr[]=($VA(target=($ID(记者名)) a
 --------
 令树叶、鲜花、
     雪花、
-                墨水为「黑」
+                墨水设为「黑」
 --------
 $PG($BK($VD($VP(vars[]=($ID(树叶) $ID(鲜花) $ID(雪花) $ID(墨水)) expr[]=($STR(黑))))))
 
@@ -631,7 +631,7 @@ $PG($BK($FN(name=($ID(显示)) params=($STR(1) $FN(name=($ID(调用参数)) para
 ========
 4. multi-line hashmap
 --------
-令对象表为【
+令对象表设为【
 		1 = 「象」，
 		2 = 「士」，
 		3 = 「车」

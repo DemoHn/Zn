@@ -9,6 +9,7 @@
 
 LING    令
 WEI     为
+SHE     设
 SHI     是
 RU      如
 HE      何
@@ -68,6 +69,8 @@ FuncW           45      如何
 GetterW         46      何为
 ParamAssignW    47      已知
 ReturnW         48      输出
+AssignW         49      设为
+LogicNoW        50      不为
 LogicNotEqW     51      不等于
 LogicLteW       52      不大于
 LogicGteW       53      不小于
