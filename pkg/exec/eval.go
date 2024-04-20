@@ -727,21 +727,21 @@ func compareLogicXEQ(left r.Element, right r.Element) (bool, error) {
 		if vr, ok := right.(*value.Number); ok {
 			return vl.GetValue() == vr.GetValue(), nil
 		}
-		return false, zerr.InvalidCompareRType("number")
+		return false, nil
 	case *value.String:
 		// compare right value - string only
 		if vr, ok := right.(*value.String); ok {
 			cmpResult := strings.Compare(vl.GetValue(), vr.GetValue()) == 0
 			return cmpResult, nil
 		}
-		return false, zerr.InvalidCompareRType("string")
+		return false, nil
 	case *value.Bool:
 		// compare right value - bool only
 		if vr, ok := right.(*value.Bool); ok {
 			cmpResult := vl.GetValue() == vr.GetValue()
 			return cmpResult, nil
 		}
-		return false, zerr.InvalidCompareRType("bool")
+		return false, nil
 	case *value.Array:
 		if vr, ok := right.(*value.Array); ok {
 			vla := vl.GetValue()
@@ -762,7 +762,7 @@ func compareLogicXEQ(left r.Element, right r.Element) (bool, error) {
 			}
 			return true, nil
 		}
-		return false, zerr.InvalidCompareRType("array")
+		return false, nil
 	case *value.HashMap:
 		if vr, ok := right.(*value.HashMap); ok {
 			vla := vl.GetValue()
@@ -786,7 +786,7 @@ func compareLogicXEQ(left r.Element, right r.Element) (bool, error) {
 			}
 			return true, nil
 		}
-		return false, zerr.InvalidCompareRType("array")
+		return false, nil
 	}
 	return false, zerr.InvalidCompareLType("number", "string", "bool", "array", "hashmap")
 }
