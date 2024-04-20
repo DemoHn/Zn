@@ -37,6 +37,10 @@ func (s *String) String() string {
 	return s.value
 }
 
+func (s *String) GetValue() string {
+	return s.value
+}
+
 // replaceSpecialChars: A{/CR}B -> A\nB
 func replaceSpecialChars(s string) string {
 	re := regexp.MustCompile("`(CR|LF|CRLF|TAB|BK|U\\+[0-9A-Fa-f]{1,8})`")

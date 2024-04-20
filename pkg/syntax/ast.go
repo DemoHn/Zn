@@ -344,18 +344,23 @@ const (
 const (
 	LogicOR  uint8 = 1 // 或
 	LogicAND uint8 = 2 // 且
+	// LogicEQ ~ LogicLTE only valid when both left & right values are Number
 	LogicEQ  uint8 = 4 // 等于
 	LogicNEQ uint8 = 5 // 不等于
 	LogicGT  uint8 = 6 // 大于
 	LogicGTE uint8 = 7 // 不小于
 	LogicLT  uint8 = 8 // 小于
 	LogicLTE uint8 = 9 // 不大于
+	// LogicXEQ & LogicXNEQ are similar to LogicEQ, but has wider usage
+	// Number, String, Array, HashMap... even Objects are valid!
+	LogicXEQ  uint8 = 10 // 为
+	LogicXNEQ uint8 = 11 // 不为
 
 	// arith types
-	ArithAdd uint8 = 10 // +
-	ArithSub uint8 = 11 // -
-	ArithMul uint8 = 12 // *
-	ArithDiv uint8 = 13 // /
+	ArithAdd uint8 = 12 // +
+	ArithSub uint8 = 13 // -
+	ArithMul uint8 = 14 // *
+	ArithDiv uint8 = 15 // /
 )
 
 // LogicExpr - logical expression return TRUE (真) or FALSE (假) only

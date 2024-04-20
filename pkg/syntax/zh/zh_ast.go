@@ -217,9 +217,8 @@ func parseExpressionLv3(p *ParserZH, cfg syntax.EqMarkConfig) syntax.Expression 
 		TypeLogicLteW:   syntax.LogicLTE,
 		TypeLTEMark:     syntax.LogicLTE,
 		TypeEqualMark:   syntax.LogicEQ,
-		// TODO: use more detailed logic to handle 为 & 不为
-		TypeLogicYesW: syntax.LogicEQ,
-		TypeLogicNoW:  syntax.LogicNEQ,
+		TypeLogicYesW:   syntax.LogicXEQ,
+		TypeLogicNoW:    syntax.LogicXNEQ,
 	}
 
 	exprL := parseExpressionLv4(p, cfg)

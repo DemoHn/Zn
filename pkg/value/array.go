@@ -35,12 +35,6 @@ func (ar *Array) AppendValue(value r.Element) {
 // GetProperty -
 func (ar *Array) GetProperty(c *r.Context, name string) (r.Element, error) {
 	arrayGetterMap := map[string]arrayGetterFunc{
-		/*
-			"和": arrayGetAddResult,
-			"差": arrayGetSubResult,
-			"积": arrayGetMulResult,
-			"商": arrayGetDivResult,
-		*/
 		"文本": arrayGetText,
 		"首项": arrayGetFirstItem,
 		"末项": arrayGetLastItem,
@@ -124,84 +118,6 @@ func arrayGetReverse(ar *Array, c *r.Context) (r.Element, error) {
 	}
 
 	return NewArray(result), nil
-}
-
-func arrayGetAddResult(ar *Array, c *r.Context) (r.Element, error) {
-	if err := ValidateLeastParams(ar.value, "number+"); err != nil {
-		return nil, err
-	}
-
-	var sum float64 = 0
-	// validate types
-	for _, param := range ar.value {
-		vparam := param.(*Number)
-		sum = sum + vparam.value
-	}
-
-	return NewNumber(sum), nil
-}
-
-func arrayGetSubResult(ar *Array, c *r.Context) (r.Element, error) {
-	if err := ValidateLeastParams(ar.value, "number+"); err != nil {
-		return nil, err
-	}
-
-	var sum float64 = 0
-
-	// validate types
-	for idx, param := range ar.value {
-		vparam := param.(*Number)
-		if idx == 0 {
-			sum = vparam.value
-		} else {
-			sum = sum - vparam.value
-		}
-	}
-
-	return NewNumber(sum), nil
-}
-
-func arrayGetMulResult(ar *Array, c *r.Context) (r.Element, error) {
-	if err := ValidateLeastParams(ar.value, "number+"); err != nil {
-		return nil, err
-	}
-
-	var sum float64 = 0
-
-	// validate types
-	for idx, param := range ar.value {
-		vparam := param.(*Number)
-		if idx == 0 {
-			sum = vparam.value
-		} else {
-			sum = sum * vparam.value
-		}
-	}
-
-	return NewNumber(sum), nil
-}
-
-func arrayGetDivResult(ar *Array, c *r.Context) (r.Element, error) {
-	if err := ValidateLeastParams(ar.value, "number+"); err != nil {
-		return nil, err
-	}
-
-	var sum float64 = 0
-
-	// validate types
-	for idx, param := range ar.value {
-		vparam := param.(*Number)
-		if idx == 0 {
-			sum = vparam.value
-		} else {
-			if vparam.value == 0 {
-				return nil, zerr.ArithDivZero()
-			}
-			sum = sum / vparam.value
-		}
-	}
-
-	return NewNumber(sum), nil
 }
 
 // setters

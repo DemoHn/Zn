@@ -27,7 +27,7 @@ const (
 // Eq - compare if two values are "equal". Usually there are two rules:
 // 1. types of left and right value are same. A number MUST BE equals to a number, that means
 // (string) “2” won't be equals to (number) 2;
-// 2. each items SHOULD BE identical, even for composited types (i.e. array, hashmap)
+// 2. each item SHOULD BE identical, even for composited types (i.e. array, hashmap)
 //
 // Lt - for two decimals ONLY. If leftValue < rightValue.
 //
@@ -52,7 +52,7 @@ func CompareValues(left r.Element, right r.Element, verb uint8) (bool, error) {
 			case CmpGt:
 				cmpResult = vl.value > vr.value
 			default:
-				return false, zerr.UnexpectedCase("比较原语", strconv.Itoa(int(verb)))
+				return false, zerr.UnexpectedCase("比较类型", strconv.Itoa(int(verb)))
 			}
 			return cmpResult, nil
 		}

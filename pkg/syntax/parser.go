@@ -86,14 +86,16 @@ func StringifyAST(node Node) string {
 		return fmt.Sprintf("$ID(%s)", v.Literal)
 	case *LogicExpr:
 		var typeStrMap = map[uint8]string{
-			LogicEQ:  "$EQ",
-			LogicNEQ: "$NEQ",
-			LogicAND: "$AND",
-			LogicOR:  "$OR",
-			LogicGT:  "$GT",
-			LogicGTE: "$GTE",
-			LogicLT:  "$LT",
-			LogicLTE: "$LTE",
+			LogicEQ:   "$EQ",
+			LogicNEQ:  "$NEQ",
+			LogicAND:  "$AND",
+			LogicOR:   "$OR",
+			LogicGT:   "$GT",
+			LogicGTE:  "$GTE",
+			LogicLT:   "$LT",
+			LogicLTE:  "$LTE",
+			LogicXEQ:  "$XEQ",
+			LogicXNEQ: "$XNEQ",
 		}
 
 		lstr := StringifyAST(v.LeftExpr)

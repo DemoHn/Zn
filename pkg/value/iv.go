@@ -20,8 +20,8 @@ const (
 //   2. Member - a string / int that represents for the "key" of root object
 //
 // IV could be reduced, either yields a result or the member value be chaned.
-// When IV on Left-Hand Side (LHS), e.g. A之B 为 1, it could be reduced by ReduceLHS(), where memeber is updated;
-// WHen IV on Right-Hand Side (RHS), e.g. 令C 为 A之B, it could be reduced by ReduceRHS(), and transfer result value to left-hand side.
+// When IV on Left-Hand Side (LHS), e.g. A之B = 1, it could be reduced by ReduceLHS(), where memeber is updated;
+// WHen IV on Right-Hand Side (RHS), e.g. 令C = A之B, it could be reduced by ReduceRHS(), and transfer result value to left-hand side.
 type IV struct {
 	// reduceType - value type
 	reduceType uint8

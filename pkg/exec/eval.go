@@ -2,6 +2,7 @@ package exec
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/DemoHn/Zn/stdlib"
 
@@ -639,7 +640,7 @@ func evalLogicCombiner(c *r.Context, expr *syntax.LogicExpr) (*value.Bool, error
 	if !ok {
 		return nil, zerr.InvalidExprType("bool")
 	}
-	// #3. check if the result could be retrieved earlier
+	// #3. check if the result could be retrieved earlier (short-circuit)
 	//
 	// 1) for Y = A and B, if A = false, then Y must be false
 	// 2) for Y = A or  B, if A = true, then Y must be true
@@ -670,7 +671,7 @@ func evalLogicCombiner(c *r.Context, expr *syntax.LogicExpr) (*value.Bool, error
 }
 
 // evaluate logic comparator
-// ensure both expressions are comparable (i.e. subtype of ZnComparable)
+// ensure both expressions are comparable
 func evalLogicComparator(c *r.Context, expr *syntax.LogicExpr) (*value.Bool, error) {
 	logicType := expr.Type
 	// #1. eval left
@@ -688,36 +689,161 @@ func evalLogicComparator(c *r.Context, expr *syntax.LogicExpr) (*value.Bool, err
 	var cmpErr error
 	// #3. do comparison
 	switch logicType {
-	case syntax.LogicEQ:
-		cmpRes, cmpErr = value.CompareValues(left, right, value.CmpEq)
+	case syntax.LogicXEQ:
+		cmpRes, cmpErr = compareLogicXEQ(left, right)
+	case syntax.LogicXNEQ:
+		cmpRes, cmpErr = compareLogicXEQ(left, right)
+		cmpRes = !cmpRes // reverse result
+	case syntax.LogicEQ: // logicEQ, only used in Number
+		cmpRes, cmpErr = compareLogicEQ(left, right)
 	case syntax.LogicNEQ:
-		cmpRes, cmpErr = value.CompareValues(left, right, value.CmpEq)
+		cmpRes, cmpErr = compareLogicEQ(left, right)
 		cmpRes = !cmpRes // reverse result
 	case syntax.LogicGT:
-		cmpRes, cmpErr = value.CompareValues(left, right, value.CmpGt)
+		cmpRes, cmpErr = compareLogicGT(left, right)
 	case syntax.LogicGTE:
-		var cmp1, cmp2 bool
-		cmp1, cmpErr = value.CompareValues(left, right, value.CmpGt)
-		if cmpErr != nil {
-			return nil, cmpErr
-		}
-		cmp2, cmpErr = value.CompareValues(left, right, value.CmpEq)
-		cmpRes = cmp1 || cmp2
+		cmpRes, cmpErr = compareLogicGTE(left, right)
 	case syntax.LogicLT:
-		cmpRes, cmpErr = value.CompareValues(left, right, value.CmpLt)
+		cmpRes, cmpErr = compareLogicLT(left, right)
 	case syntax.LogicLTE:
-		var cmp1, cmp2 bool
-		cmp1, cmpErr = value.CompareValues(left, right, value.CmpLt)
-		if cmpErr != nil {
-			return nil, cmpErr
-		}
-		cmp2, cmpErr = value.CompareValues(left, right, value.CmpEq)
-		cmpRes = cmp1 || cmp2
+		cmpRes, cmpErr = compareLogicLTE(left, right)
 	default:
 		return nil, zerr.UnexpectedCase("比较类型", fmt.Sprintf("%d", logicType))
 	}
 
 	return value.NewBool(cmpRes), cmpErr
+}
+
+// [elem] 为 [elem] -> [bool]
+func compareLogicXEQ(left r.Element, right r.Element) (bool, error) {
+	switch vl := left.(type) {
+	case *value.Null:
+		if _, ok := right.(*value.Null); ok {
+			return true, nil
+		}
+		return false, nil
+	case *value.Number:
+		// compare right value - number only
+		if vr, ok := right.(*value.Number); ok {
+			return vl.GetValue() == vr.GetValue(), nil
+		}
+		return false, zerr.InvalidCompareRType("number")
+	case *value.String:
+		// compare right value - string only
+		if vr, ok := right.(*value.String); ok {
+			cmpResult := strings.Compare(vl.GetValue(), vr.GetValue()) == 0
+			return cmpResult, nil
+		}
+		return false, zerr.InvalidCompareRType("string")
+	case *value.Bool:
+		// compare right value - bool only
+		if vr, ok := right.(*value.Bool); ok {
+			cmpResult := vl.GetValue() == vr.GetValue()
+			return cmpResult, nil
+		}
+		return false, zerr.InvalidCompareRType("bool")
+	case *value.Array:
+		if vr, ok := right.(*value.Array); ok {
+			vla := vl.GetValue()
+			vra := vr.GetValue()
+			if len(vla) != len(vra) {
+				return false, nil
+			}
+			// compare each item
+			for idx := range vla {
+				cmpVal, err := compareLogicXEQ(vla[idx], vra[idx])
+				if err != nil {
+					return false, err
+				}
+				// break the loop only when cmpVal = false
+				if !cmpVal {
+					return false, nil
+				}
+			}
+			return true, nil
+		}
+		return false, zerr.InvalidCompareRType("array")
+	case *value.HashMap:
+		if vr, ok := right.(*value.HashMap); ok {
+			vla := vl.GetValue()
+			vra := vr.GetValue()
+
+			if len(vla) != len(vra) {
+				return false, nil
+			}
+			// cmp each item
+			for idx := range vla {
+				// ensure the key exists on vr
+				vrr, ok := vra[idx]
+				if !ok {
+					return false, nil
+				}
+				cmpVal, err := compareLogicXEQ(vla[idx], vrr)
+				if err != nil {
+					return false, err
+				}
+				return cmpVal, nil
+			}
+			return true, nil
+		}
+		return false, zerr.InvalidCompareRType("array")
+	}
+	return false, zerr.InvalidCompareLType("number", "string", "bool", "array", "hashmap")
+}
+
+// [number] == [number] -> [bool]
+func compareLogicEQ(left r.Element, right r.Element) (bool, error) {
+	if vl, ok := left.(*value.Number); ok {
+		if vr, ok2 := right.(*value.Number); ok2 {
+			return vl.GetValue() == vr.GetValue(), nil
+		}
+		return false, zerr.InvalidCompareRType("number")
+	}
+	return false, zerr.InvalidCompareLType("number")
+}
+
+// [number] < [number] -> [bool]
+func compareLogicLT(left r.Element, right r.Element) (bool, error) {
+	if vl, ok := left.(*value.Number); ok {
+		if vr, ok2 := right.(*value.Number); ok2 {
+			return vl.GetValue() < vr.GetValue(), nil
+		}
+		return false, zerr.InvalidCompareRType("number")
+	}
+	return false, zerr.InvalidCompareLType("number")
+}
+
+// [number] <= [number] -> [bool]
+func compareLogicLTE(left r.Element, right r.Element) (bool, error) {
+	if vl, ok := left.(*value.Number); ok {
+		if vr, ok2 := right.(*value.Number); ok2 {
+			return vl.GetValue() <= vr.GetValue(), nil
+		}
+		return false, zerr.InvalidCompareRType("number")
+	}
+	return false, zerr.InvalidCompareLType("number")
+}
+
+// [number] > [number] -> [bool]
+func compareLogicGT(left r.Element, right r.Element) (bool, error) {
+	if vl, ok := left.(*value.Number); ok {
+		if vr, ok2 := right.(*value.Number); ok2 {
+			return vl.GetValue() > vr.GetValue(), nil
+		}
+		return false, zerr.InvalidCompareRType("number")
+	}
+	return false, zerr.InvalidCompareLType("number")
+}
+
+// [number] >= [number] -> [bool]
+func compareLogicGTE(left r.Element, right r.Element) (bool, error) {
+	if vl, ok := left.(*value.Number); ok {
+		if vr, ok2 := right.(*value.Number); ok2 {
+			return vl.GetValue() >= vr.GetValue(), nil
+		}
+		return false, zerr.InvalidCompareRType("number")
+	}
+	return false, zerr.InvalidCompareLType("number")
 }
 
 func evalArithExpr(c *r.Context, expr *syntax.ArithExpr) (*value.Number, error) {
