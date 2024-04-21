@@ -133,6 +133,19 @@ var markPunctuations = []rune{
 	RightCurlyBracket,
 }
 
+var markOperators = []rune{
+	RefOp,
+	AnnotationOp,
+	HashOp,
+	EqualOp,
+	LessThanOp,
+	GreaterThanOp,
+	PlusOp,
+	MinusOp,
+	MultiplyOp,
+	SlashOp,
+}
+
 var markQuotes = []rune{
 	LeftLibQuoteI,
 	RightLibQuoteI,
@@ -157,58 +170,8 @@ func NextToken(l *syntax.Lexer) (syntax.Token, error) {
 	switch ch {
 	case syntax.RuneEOF:
 		return syntax.Token{Type: TypeEOF, StartIdx: l.GetCursor(), EndIdx: l.GetCursor()}, nil
-	// handle 'A + B' case
-	// for numbers like '+1234', this will be handled by parseNumber()
-	case PlusOp, MinusOp, MultiplyOp:
-		startIdx := l.GetCursor()
-		chn := l.Peek()
-
-		t := TypePlus
-		if ch == MinusOp {
-			t = TypeMinus
-		} else if ch == MultiplyOp {
-			t = TypeMultiply
-		}
-		// NOTE: the next char must be space/punctuations/quotes to ensure it's not a part of
-		// identifier
-		if syntax.IsWhiteSpace(chn) || syntax.ContainsRune(chn, markPunctuations) || syntax.ContainsRune(chn, markQuotes) {
-			l.Next()
-			return syntax.Token{Type: t, StartIdx: startIdx, EndIdx: l.GetCursor()}, nil
-		}
-	case SlashOp:
-		startIdx := l.GetCursor()
-		chn := l.Peek()
-
-		// parse /=, example usage: '如果 X /= 10'
-		if chn == EqualOp {
-			l.Next()
-			l.Next()
-			return syntax.Token{
-				Type:     TypeNEMark,
-				StartIdx: startIdx,
-				EndIdx:   l.GetCursor(),
-			}, nil
-		}
-
-		// parse / (as div) only, example usage: '25 / 8'
-		if syntax.IsWhiteSpace(chn) {
-			l.Next()
-			return syntax.Token{
-				Type:     TypeDivision,
-				StartIdx: startIdx,
-				EndIdx:   l.GetCursor(),
-			}, nil
-		}
-
-		// maybe / would be the start of comment block (e.g. // This is a comment)
-		isComment, tk, err := parseComment(l)
-		if err != nil {
-			return syntax.Token{}, err
-		}
-		if isComment {
-			return tk, nil
-		}
-	case CharZHU:
+	case CharZHU, SlashOp:
+		// try to parse 注 or / as comment, if not, try to parse as other types (e.g. identifier)
 		isComment, tk, err := parseComment(l)
 		if err != nil {
 			return syntax.Token{}, err
@@ -223,11 +186,23 @@ func NextToken(l *syntax.Lexer) (syntax.Token, error) {
 	}
 
 	// other token types
+	if syntax.ContainsRune(ch, markPunctuations) {
+		return parsePunctuations(l)
+	}
+	// NOTICE: if err == nil && isOperator == false, The logic will PASS THROUGH
+	// instead of return TOKEN or return error!
+	if syntax.ContainsRune(ch, markOperators) {
+		isOperator, tk, err := parseOperators(l)
+		if err != nil {
+			return syntax.Token{}, err
+		}
+		if isOperator {
+			return tk, nil
+		}
+	}
+
 	if isNumber(ch) {
 		return parseNumber(l)
-	}
-	if syntax.ContainsRune(ch, MarkLeads) {
-		return parseMarkers(l)
 	}
 
 	// suppose it's a keyword
@@ -372,54 +347,61 @@ end:
 	return syntax.Token{}, zerr.InvalidChar(ch, l.GetCursor())
 }
 
-func parseMarkers(l *syntax.Lexer) (syntax.Token, error) {
+func parsePunctuations(l *syntax.Lexer) (syntax.Token, error) {
+	startIdx := l.GetCursor()
+	ch := l.GetCurrentChar()
+
+	punctuationTypeMap := map[rune]uint8{
+		Comma:             TypeCommaSep,
+		PauseComma:        TypePauseCommaSep,
+		Colon:             TypeFuncCall,
+		Semicolon:         TypeStmtSep,
+		QuestionMark:      TypeFuncDeclare,
+		BangMark:          TypeExceptionT,
+		LeftBracket:       TypeArrayQuoteL,
+		RightBracket:      TypeArrayQuoteR,
+		LeftParen:         TypeFuncQuoteL,
+		RightParen:        TypeFuncQuoteR,
+		LeftCurlyBracket:  TypeStmtQuoteL,
+		RightCurlyBracket: TypeStmtQuoteR,
+	}
+
+	if pType, ok := punctuationTypeMap[ch]; ok {
+		l.Next()
+		return syntax.Token{
+			Type:     pType,
+			StartIdx: startIdx,
+			EndIdx:   l.GetCursor(),
+		}, nil
+	}
+
+	return syntax.Token{}, zerr.InvalidChar(ch, l.GetCursor())
+}
+
+func parseOperators(l *syntax.Lexer) (bool, syntax.Token, error) {
 	startIdx := l.GetCursor()
 	ch := l.GetCurrentChar()
 	var tokenType uint8
 
 	switch ch {
-	case Comma:
-		tokenType = TypeCommaSep
-	case PauseComma:
-		tokenType = TypePauseCommaSep
-	case Colon:
-		tokenType = TypeFuncCall
-	case Semicolon:
-		tokenType = TypeStmtSep
-	case QuestionMark:
-		tokenType = TypeFuncDeclare
 	case RefOp:
 		tokenType = TypeObjRef
-	case BangMark:
-		tokenType = TypeExceptionT
 	case AnnotationOp:
 		tokenType = TypeAnnotationT
 	case HashOp:
 		tokenType = TypeMapHash
-	case LeftBracket:
-		tokenType = TypeArrayQuoteL
-	case RightBracket:
-		tokenType = TypeArrayQuoteR
-	case LeftParen:
-		tokenType = TypeFuncQuoteL
-	case RightParen:
-		tokenType = TypeFuncQuoteR
-	case LeftCurlyBracket:
-		tokenType = TypeStmtQuoteL
-	case RightCurlyBracket:
-		tokenType = TypeStmtQuoteR
 	case EqualOp:
-		if l.Peek() == EqualOp {
+		if l.Peek() == EqualOp { // op: ==
 			l.Next()
 			tokenType = TypeEqualMark
-		} else {
+		} else { // op: =
 			tokenType = TypeAssignMark
 		}
 	case LessThanOp:
-		if l.Peek() == EqualOp {
+		if l.Peek() == EqualOp { // op: <=
 			l.Next()
 			tokenType = TypeLTEMark
-		} else {
+		} else { // op: <
 			tokenType = TypeLTMark
 		}
 	case GreaterThanOp:
@@ -429,13 +411,46 @@ func parseMarkers(l *syntax.Lexer) (syntax.Token, error) {
 		} else {
 			tokenType = TypeGTMark
 		}
-	default:
-		return syntax.Token{}, zerr.InvalidChar(ch, l.GetCursor())
-	}
-	// include all necessary chars
-	l.Next()
+	case PlusOp, MinusOp, MultiplyOp, SlashOp: // op: + - * /
+		chn := l.Peek()
 
-	return syntax.Token{
+		t := TypePlus
+		switch ch {
+		case PlusOp:
+			t = TypePlus
+		case MinusOp:
+			t = TypeMinus
+		case MultiplyOp:
+			t = TypeMultiply
+		case SlashOp:
+			// parse /=, example usage: '如果 X /= 10'
+			if chn == EqualOp {
+				l.Next()
+				l.Next()
+				return true, syntax.Token{
+					Type:     TypeNEMark,
+					StartIdx: startIdx,
+					EndIdx:   l.GetCursor(),
+				}, nil
+			} else {
+				t = TypeDivision
+			}
+		}
+		// NOTE: the next char must be space/punctuations/quotes to ensure it's not a part of
+		// identifier
+		if syntax.IsWhiteSpace(chn) || syntax.ContainsRune(chn, markPunctuations) || syntax.ContainsRune(chn, markQuotes) {
+			l.Next()
+			return true, syntax.Token{Type: t, StartIdx: startIdx, EndIdx: l.GetCursor()}, nil
+		} else {
+			return false, syntax.Token{}, nil
+		}
+
+	default:
+		return false, syntax.Token{}, zerr.InvalidChar(ch, l.GetCursor())
+	}
+
+	l.Next()
+	return true, syntax.Token{
 		Type:     tokenType,
 		StartIdx: startIdx,
 		EndIdx:   l.GetCursor(),

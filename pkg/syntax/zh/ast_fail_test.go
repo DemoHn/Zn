@@ -40,11 +40,11 @@ code=20 cursor=10
 ========
 4. invalid token (lexError)
 --------
-令锅为「锅」
-令#'x为100
+令锅设为「锅」
+令#'x设为100
     
 --------
-code=20 cursor=7
+code=20 cursor=8
 ========
 5. block indent unexpected
 --------
@@ -111,9 +111,9 @@ code=20 cursor=2
 6. block statement fail
 --------
 每当变量为真：
-    令数组为【【233】
+    令数组设为【【233】
 --------
-code=20 cursor=22
+code=20 cursor=23
 `
 
 const funcCallCasesFAIL = `
