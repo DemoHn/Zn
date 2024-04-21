@@ -5,32 +5,20 @@ import (
 	"github.com/DemoHn/Zn/pkg/syntax"
 )
 
-//// 1. markers
-// declare marks
+//// 1. punctuations
 const (
 	Comma             rune = 0xFF0C // ，
 	PauseComma        rune = 0x3001 // 、
 	Colon             rune = 0xFF1A // ：
 	Semicolon         rune = 0xFF1B // ；
 	QuestionMark      rune = 0xFF1F // ？
-	RefMark           rune = 0x0026 // &
 	BangMark          rune = 0xFF01 // ！
-	AnnotationMark    rune = 0x0040 // @
-	HashMark          rune = 0x0023 // #
 	LeftBracket       rune = 0x3010 // 【
 	RightBracket      rune = 0x3011 // 】
 	LeftParen         rune = 0xFF08 // （
 	RightParen        rune = 0xFF09 // ）
-	Equal             rune = 0x003D // =
 	LeftCurlyBracket  rune = 0x007B // {
 	RightCurlyBracket rune = 0x007D // }
-	LessThanMark      rune = 0x003C // <
-	GreaterThanMark   rune = 0x003E // >
-	PlusMark          rune = '+'    // +
-	MinusMark         rune = '-'    // -
-	MultiplyMark      rune = '*'    // *
-	Slash             rune = 0x002F // /
-	CharZHU           rune = 0x6CE8 // 注
 )
 
 //// 2. quotes
@@ -48,18 +36,29 @@ const (
 	RightSingleQuoteII rune = 0x2019 // ‘
 )
 
-//// 3. commentType
+//// 3. operators
 const (
-	commentTypeSingle  = 1 // single line
-	commentTypeSlash   = 2 // multiple line, starts with '/*'
-	commentTypeQuoteI  = 3 // multiple line, starts with '注：「'
-	commentTypeQuoteII = 4 // multiple line, starts with '注：“'
+	RefOp         rune = 0x0026 // &
+	AnnotationOp  rune = 0x0040 // @
+	HashOp        rune = 0x0023 // #
+	EqualOp       rune = 0x003D // =
+	LessThanOp    rune = 0x003C // <
+	GreaterThanOp rune = 0x003E // >
+	PlusOp        rune = '+'    // +
+	MinusOp       rune = '-'    // -
+	MultiplyOp    rune = '*'    // *
+	SlashOp       rune = 0x002F // /
 )
 
 //// 4. var quote
 const (
 	MiddleDot rune = 0x00B7 // ·
 	BackTick  rune = 0x0060 // `
+)
+
+//// 5. comment keyword
+const (
+	CharZHU rune = 0x6CE8 // 注
 )
 
 //// token constants and constructors (without keyword token)
@@ -103,12 +102,48 @@ const (
 	//// from 40 - 78, reserved for keywords
 )
 
+//// Comment Types -
+const (
+	commentTypeSingle  = 1 // single line
+	commentTypeSlash   = 2 // multiple line, starts with '/*'
+	commentTypeQuoteI  = 3 // multiple line, starts with '注：「'
+	commentTypeQuoteII = 4 // multiple line, starts with '注：“'
+)
+
 // MarkLeads -
 var MarkLeads = []rune{
-	Comma, PauseComma, Colon, Semicolon, QuestionMark, RefMark, BangMark,
-	AnnotationMark, HashMark, LeftBracket,
-	RightBracket, LeftParen, RightParen, Equal,
-	LeftCurlyBracket, RightCurlyBracket, LessThanMark, GreaterThanMark,
+	Comma, PauseComma, Colon, Semicolon, QuestionMark, RefOp, BangMark,
+	AnnotationOp, HashOp, LeftBracket,
+	RightBracket, LeftParen, RightParen, EqualOp,
+	LeftCurlyBracket, RightCurlyBracket, LessThanOp, GreaterThanOp,
+}
+
+var markPunctuations = []rune{
+	Comma,
+	PauseComma,
+	Colon,
+	Semicolon,
+	QuestionMark,
+	BangMark,
+	LeftBracket,
+	RightBracket,
+	LeftParen,
+	RightParen,
+	LeftCurlyBracket,
+	RightCurlyBracket,
+}
+
+var markQuotes = []rune{
+	LeftLibQuoteI,
+	RightLibQuoteI,
+	LeftDoubleQuoteI,
+	RightDoubleQuoteI,
+	LeftDoubleQuoteII,
+	RightDoubleQuoteII,
+	LeftSingleQuoteI,
+	RightSingleQuoteI,
+	LeftSingleQuoteII,
+	RightSingleQuoteII,
 }
 
 // NextToken -
@@ -124,28 +159,28 @@ func NextToken(l *syntax.Lexer) (syntax.Token, error) {
 		return syntax.Token{Type: TypeEOF, StartIdx: l.GetCursor(), EndIdx: l.GetCursor()}, nil
 	// handle 'A + B' case
 	// for numbers like '+1234', this will be handled by parseNumber()
-	case PlusMark, MinusMark, MultiplyMark:
+	case PlusOp, MinusOp, MultiplyOp:
 		startIdx := l.GetCursor()
 		chn := l.Peek()
 
 		t := TypePlus
-		if ch == MinusMark {
+		if ch == MinusOp {
 			t = TypeMinus
-		} else if ch == MultiplyMark {
+		} else if ch == MultiplyOp {
 			t = TypeMultiply
 		}
-		// NOTE: the next char must be space to ensure it's not a part of
+		// NOTE: the next char must be space/punctuations/quotes to ensure it's not a part of
 		// identifier
-		if syntax.IsWhiteSpace(chn) {
+		if syntax.IsWhiteSpace(chn) || syntax.ContainsRune(chn, markPunctuations) || syntax.ContainsRune(chn, markQuotes) {
 			l.Next()
 			return syntax.Token{Type: t, StartIdx: startIdx, EndIdx: l.GetCursor()}, nil
 		}
-	case Slash:
+	case SlashOp:
 		startIdx := l.GetCursor()
 		chn := l.Peek()
 
 		// parse /=, example usage: '如果 X /= 10'
-		if chn == Equal {
+		if chn == EqualOp {
 			l.Next()
 			l.Next()
 			return syntax.Token{
@@ -353,13 +388,13 @@ func parseMarkers(l *syntax.Lexer) (syntax.Token, error) {
 		tokenType = TypeStmtSep
 	case QuestionMark:
 		tokenType = TypeFuncDeclare
-	case RefMark:
+	case RefOp:
 		tokenType = TypeObjRef
 	case BangMark:
 		tokenType = TypeExceptionT
-	case AnnotationMark:
+	case AnnotationOp:
 		tokenType = TypeAnnotationT
-	case HashMark:
+	case HashOp:
 		tokenType = TypeMapHash
 	case LeftBracket:
 		tokenType = TypeArrayQuoteL
@@ -373,22 +408,22 @@ func parseMarkers(l *syntax.Lexer) (syntax.Token, error) {
 		tokenType = TypeStmtQuoteL
 	case RightCurlyBracket:
 		tokenType = TypeStmtQuoteR
-	case Equal:
-		if l.Peek() == Equal {
+	case EqualOp:
+		if l.Peek() == EqualOp {
 			l.Next()
 			tokenType = TypeEqualMark
 		} else {
 			tokenType = TypeAssignMark
 		}
-	case LessThanMark:
-		if l.Peek() == Equal {
+	case LessThanOp:
+		if l.Peek() == EqualOp {
 			l.Next()
 			tokenType = TypeLTEMark
 		} else {
 			tokenType = TypeLTMark
 		}
-	case GreaterThanMark:
-		if l.Peek() == Equal {
+	case GreaterThanOp:
+		if l.Peek() == EqualOp {
 			l.Next()
 			tokenType = TypeGTEMark
 		} else {
@@ -554,7 +589,7 @@ func parseIdentifier(l *syntax.Lexer) (syntax.Token, error) {
 		// 3. when next char is a start of comment, stop here
 		// only 「//」 and 「/*」 type is available
 		// NOTE: we will regard comment type「注」 as a regular identifier
-		if ch == Slash && syntax.ContainsRune(l.Peek(), []rune{Slash, MultiplyMark, Equal}) {
+		if ch == SlashOp && syntax.ContainsRune(l.Peek(), []rune{SlashOp, MultiplyOp, EqualOp}) {
 			return syntax.Token{
 				Type:     TypeIdentifier,
 				StartIdx: startIdx,
@@ -573,7 +608,7 @@ func parseIdentifier(l *syntax.Lexer) (syntax.Token, error) {
 		}
 		// 5. otherwise, if it's an identifier with +, -, *, /, .
 		// add char to literal
-		if isIdentifierChar(ch) || syntax.ContainsRune(ch, []rune{PlusMark, MinusMark, MultiplyMark, Slash, '.'}) {
+		if isIdentifierChar(ch) || syntax.ContainsRune(ch, []rune{PlusOp, MinusOp, MultiplyOp, SlashOp, '.'}) {
 			literal = append(literal, ch)
 			continue
 		}
@@ -628,14 +663,14 @@ func parseComment(l *syntax.Lexer) (bool, syntax.Token, error) {
 		} else {
 			return false, syntax.Token{}, zerr.InvalidChar(l.GetCurrentChar(), l.GetCursor())
 		}
-	case Slash:
+	case SlashOp:
 		p := l.Peek()
-		if p == Slash {
+		if p == SlashOp {
 			l.Next()
 			// single line comment
 			isComment = true
 			multiCommentType = commentTypeSingle
-		} else if p == MultiplyMark {
+		} else if p == MultiplyOp {
 			l.Next()
 			// multiple line comment
 			isComment = true
@@ -703,8 +738,8 @@ func parseComment(l *syntax.Lexer) (bool, syntax.Token, error) {
 						}, nil
 					}
 				}
-			case MultiplyMark:
-				if multiCommentType == commentTypeSlash && l.Peek() == Slash {
+			case MultiplyOp:
+				if multiCommentType == commentTypeSlash && l.Peek() == SlashOp {
 					l.Next()
 					l.Next()
 					return true, syntax.Token{
