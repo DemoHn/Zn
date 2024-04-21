@@ -52,8 +52,7 @@ const (
 
 //// 4. var quote
 const (
-	MiddleDot rune = 0x00B7 // ·
-	BackTick  rune = 0x0060 // `
+	BackTick rune = 0x0060 // `
 )
 
 //// 5. comment keyword
@@ -109,14 +108,6 @@ const (
 	commentTypeQuoteI  = 3 // multiple line, starts with '注：「'
 	commentTypeQuoteII = 4 // multiple line, starts with '注：“'
 )
-
-// MarkLeads -
-var MarkLeads = []rune{
-	Comma, PauseComma, Colon, Semicolon, QuestionMark, RefOp, BangMark,
-	AnnotationOp, HashOp, LeftBracket,
-	RightBracket, LeftParen, RightParen, EqualOp,
-	LeftCurlyBracket, RightCurlyBracket, LessThanOp, GreaterThanOp,
-}
 
 var markPunctuations = []rune{
 	Comma,
@@ -181,7 +172,7 @@ func NextToken(l *syntax.Lexer) (syntax.Token, error) {
 		}
 	case LeftLibQuoteI, LeftDoubleQuoteI, LeftDoubleQuoteII, LeftSingleQuoteI, LeftSingleQuoteII:
 		return parseString(l)
-	case MiddleDot, BackTick:
+	case BackTick:
 		return parseVarQuote(l)
 	}
 
@@ -457,7 +448,7 @@ func parseOperators(l *syntax.Lexer) (bool, syntax.Token, error) {
 	}, nil
 }
 
-// parse · <identifier> ·
+// parse ` <identifier> `
 func parseVarQuote(l *syntax.Lexer) (syntax.Token, error) {
 	startIdx := l.GetCursor()
 	var literal []rune
@@ -471,7 +462,7 @@ func parseVarQuote(l *syntax.Lexer) (syntax.Token, error) {
 				EndIdx:   l.GetCursor(),
 				Literal:  literal,
 			}, nil
-		case MiddleDot, BackTick:
+		case BackTick:
 			l.Next()
 			return syntax.Token{
 				Type:     TypeIdentifier,
@@ -566,11 +557,12 @@ func parseIdentifier(l *syntax.Lexer) (syntax.Token, error) {
 
 	literal := []rune{ch}
 
-	terminators := append([]rune{
+	terminateMarkers := append([]rune{
+		// EOF or newline chars
 		syntax.RuneEOF, syntax.RuneCR, syntax.RuneLF,
-		LeftLibQuoteI, LeftSingleQuoteI, LeftSingleQuoteII,
-		LeftDoubleQuoteI, LeftDoubleQuoteII,
-	}, MarkLeads...)
+		// operators except for PlusOp, MinusOp, MultiplyOp, SlashOp
+		RefOp, AnnotationOp, HashOp, EqualOp, LessThanOp, GreaterThanOp,
+	}, markPunctuations...)
 
 	// 0. first char must be an identifier
 	if !isIdentifierChar(ch) {
@@ -613,7 +605,7 @@ func parseIdentifier(l *syntax.Lexer) (syntax.Token, error) {
 			}, nil
 		}
 		// 4. when next char is a mark, stop here
-		if syntax.ContainsRune(ch, terminators) {
+		if syntax.ContainsRune(ch, terminateMarkers) {
 			return syntax.Token{
 				Type:     TypeIdentifier,
 				StartIdx: startIdx,
