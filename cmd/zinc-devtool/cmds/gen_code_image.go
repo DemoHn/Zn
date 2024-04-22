@@ -2,12 +2,13 @@ package cmds
 
 import (
 	"fmt"
-	"github.com/DemoHn/Zn/pkg/io"
-	"github.com/DemoHn/Zn/pkg/syntax"
-	"github.com/DemoHn/Zn/pkg/syntax/zh"
 	"io/ioutil"
 	"math"
 	"strings"
+
+	"github.com/DemoHn/Zn/pkg/io"
+	"github.com/DemoHn/Zn/pkg/syntax"
+	"github.com/DemoHn/Zn/pkg/syntax/zh"
 
 	"github.com/flopp/go-findfont"
 	"github.com/fogleman/gg"
@@ -246,8 +247,6 @@ func matchColorScheme(tkType uint8, lastTok syntax.Token) string {
 	switch tkType {
 	case zh.TypeString:
 		colorScheme = csString
-	case zh.TypeNumber:
-		colorScheme = csNumber
 	case zh.TypeFuncCall, zh.TypeFuncDeclare:
 		colorScheme = csToken
 	case zh.TypeComment:

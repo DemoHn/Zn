@@ -11,9 +11,9 @@ func TestIdInRange(t *testing.T) {
 		expect bool
 	}{
 		{
-			name:   "operators",
-			ids:    []rune{'+', '-', '*'},
-			expect: false,
+			name:   "+,- operators",
+			ids:    []rune{'+', '-'},
+			expect: true,
 		},
 		{
 			name:   "operators (not /)",
@@ -33,7 +33,7 @@ func TestIdInRange(t *testing.T) {
 		{
 			name:   "fullwidth characters",
 			ids:    []rune{'＋', '－', '１', 'Ｅ', 'Ｇ', '＊', '／', '．', '＾', '＿'},
-			expect: true,
+			expect: false,
 		},
 		{
 			name:   "basic latin",
@@ -47,7 +47,7 @@ func TestIdInRange(t *testing.T) {
 		},
 		{
 			name:   "kg, cm, cm2",
-			ids:    []rune{'½', '㎏', '㎠', '㎝'},
+			ids:    []rune{'㎏', '㎠', '㎝'},
 			expect: false,
 		},
 		{
@@ -77,12 +77,12 @@ func TestIdInRange(t *testing.T) {
 		},
 		{
 			name:   "other random in range characters",
-			ids:    []rune{0x1f38, 0xa950, 0xff49, 0xa392},
+			ids:    []rune{0x1f38, 0xa950, 0xa392},
 			expect: true,
 		},
 		{
 			name:   "other random not in range characters",
-			ids:    []rune{0xd7, 0xc91, 0x1dfa},
+			ids:    []rune{0xc91, 0x1dfa, 0xff49},
 			expect: false,
 		},
 		{

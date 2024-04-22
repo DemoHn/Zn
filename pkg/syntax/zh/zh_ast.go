@@ -373,7 +373,7 @@ func ParseMemberExpr(p *ParserZH) syntax.Expression {
 			memberExpr.Root = expr
 		}
 
-		if match, tk := p.tryConsume(TypeIdentifier, TypeNumber); match {
+		if match, tk := p.tryConsume(TypeIdentifier); match {
 			id := newID(p, tk)
 			p.setStmtCurrentLine(id, tk)
 			memberExpr.MemberType = syntax.MemberID
@@ -397,13 +397,13 @@ func ParseMemberExpr(p *ParserZH) syntax.Expression {
 		mExpr.Root = expr
 		switch tk.Type {
 		case TypeMapHash:
-			match2, tk2 := p.tryConsume(TypeNumber, TypeString, TypeStmtQuoteL)
+			match2, tk2 := p.tryConsume(TypeIdentifier, TypeString, TypeStmtQuoteL)
 			if match2 {
 				// set memberType
 				mExpr.MemberType = syntax.MemberIndex
 				switch tk2.Type {
-				case TypeNumber:
-					mExpr.MemberIndex = newNumber(p, tk2)
+				case TypeIdentifier:
+					mExpr.MemberIndex = newID(p, tk2)
 				case TypeString:
 					mExpr.MemberIndex = newString(p, tk2)
 				case TypeStmtQuoteL:
@@ -443,7 +443,6 @@ func ParseMemberExpr(p *ParserZH) syntax.Expression {
 //       -> （ FuncID ： E、E、...）
 //       -> 以 E （ FuncID ： E、E、...）
 //       -> ID
-//       -> Number
 //       -> String
 //       -> ArrayList
 //
@@ -452,7 +451,6 @@ func ParseMemberExpr(p *ParserZH) syntax.Expression {
 func ParseBasicExpr(p *ParserZH) syntax.Expression {
 	var validTypes = []uint8{
 		TypeIdentifier,
-		TypeNumber,
 		TypeString,
 		TypeArrayQuoteL,
 		TypeStmtQuoteL,
@@ -466,8 +464,6 @@ func ParseBasicExpr(p *ParserZH) syntax.Expression {
 		switch tk.Type {
 		case TypeIdentifier:
 			e = newID(p, tk)
-		case TypeNumber:
-			e = newNumber(p, tk)
 		case TypeString:
 			e = newString(p, tk)
 		case TypeArrayQuoteL:
@@ -1385,7 +1381,7 @@ func parseID(p *ParserZH) *syntax.ID {
 
 // parseFuncID - allow parsing number (as string)
 func parseFuncID(p *ParserZH) *syntax.ID {
-	match, tk := p.tryConsume(TypeIdentifier, TypeNumber)
+	match, tk := p.tryConsume(TypeIdentifier)
 	if !match {
 		panic(p.getInvalidSyntaxCurr())
 	}
@@ -1419,13 +1415,6 @@ func newID(p *ParserZH, tk *syntax.Token) *syntax.ID {
 	id.SetLiteral(tk.Literal)
 	p.setStmtCurrentLine(id, tk)
 	return id
-}
-
-func newNumber(p *ParserZH, tk *syntax.Token) *syntax.Number {
-	num := new(syntax.Number)
-	num.SetLiteral(tk.Literal)
-	p.setStmtCurrentLine(num, tk)
-	return num
 }
 
 func newString(p *ParserZH, tk *syntax.Token) *syntax.String {

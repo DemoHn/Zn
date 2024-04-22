@@ -444,6 +444,12 @@ var idRange = []runePair{
 	// NOTE: 这里不考虑添加 emoji 支持，主要是考虑到目前 emoji 没有一个统一的编码来显示；如果加进去的话会导致不同设备显示混乱
 }
 
+var IDContinue = []rune{
+	0x2e, // . 用作小数点
+	0x2a, // *
+	0x2f, // /
+}
+
 // IdInRange - check if char in idRange table
 // i.e. there exists an index j, that idRange[j][0] <= char <= idRange[j][1]
 // NOTE: using binary search to boost search performance.

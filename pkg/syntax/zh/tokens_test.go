@@ -23,7 +23,7 @@ func TestNextToken_NumberONLY(t *testing.T) {
 			input:       "123456七",
 			expectError: false,
 			tokens: [][]int{
-				{int(TypeNumber), 0, 6},
+				{int(TypeIdentifier), 0, 7},
 			},
 		},
 		{
@@ -31,7 +31,7 @@ func TestNextToken_NumberONLY(t *testing.T) {
 			input:       "1234567",
 			expectError: false,
 			tokens: [][]int{
-				{int(TypeNumber), 0, 7},
+				{int(TypeIdentifier), 0, 7},
 			},
 		},
 		{
@@ -40,7 +40,7 @@ func TestNextToken_NumberONLY(t *testing.T) {
 			expectError: false,
 			tokens: [][]int{
 				{int(TypeComment), 0, 13},
-				{int(TypeNumber), 14, 22},
+				{int(TypeIdentifier), 14, 24},
 			},
 		},
 		{
@@ -48,7 +48,7 @@ func TestNextToken_NumberONLY(t *testing.T) {
 			input:       "+00000.456km",
 			expectError: false,
 			tokens: [][]int{
-				{int(TypeNumber), 0, 10},
+				{int(TypeIdentifier), 0, 12},
 			},
 		},
 		{
@@ -56,7 +56,7 @@ func TestNextToken_NumberONLY(t *testing.T) {
 			input:       "+000003 Rs",
 			expectError: false,
 			tokens: [][]int{
-				{int(TypeNumber), 0, 7},
+				{int(TypeIdentifier), 0, 7},
 			},
 		},
 		{
@@ -64,7 +64,7 @@ func TestNextToken_NumberONLY(t *testing.T) {
 			input:       "+000003E+05 Rs",
 			expectError: false,
 			tokens: [][]int{
-				{int(TypeNumber), 0, 11},
+				{int(TypeIdentifier), 0, 11},
 			},
 		},
 		{
@@ -72,7 +72,7 @@ func TestNextToken_NumberONLY(t *testing.T) {
 			input:       "+000003e-25 Rs",
 			expectError: false,
 			tokens: [][]int{
-				{int(TypeNumber), 0, 11},
+				{int(TypeIdentifier), 0, 11},
 			},
 		},
 		{
@@ -80,7 +80,7 @@ func TestNextToken_NumberONLY(t *testing.T) {
 			input:       "-003.0452e+25 Rs",
 			expectError: false,
 			tokens: [][]int{
-				{int(TypeNumber), 0, 13},
+				{int(TypeIdentifier), 0, 13},
 			},
 		},
 		{
@@ -88,9 +88,9 @@ func TestNextToken_NumberONLY(t *testing.T) {
 			input:       "25 / +3",
 			expectError: false,
 			tokens: [][]int{
-				{int(TypeNumber), 0, 2},
+				{int(TypeIdentifier), 0, 2},
 				{int(TypeDivision), 3, 4},
-				{int(TypeNumber), 5, 7},
+				{int(TypeIdentifier), 5, 7},
 			},
 		},
 		{
@@ -98,7 +98,7 @@ func TestNextToken_NumberONLY(t *testing.T) {
 			input:       "23.5*10^8",
 			expectError: false,
 			tokens: [][]int{
-				{int(TypeNumber), 0, 9},
+				{int(TypeIdentifier), 0, 9},
 			},
 		},
 		/**

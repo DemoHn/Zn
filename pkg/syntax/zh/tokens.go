@@ -191,10 +191,11 @@ func NextToken(l *syntax.Lexer) (syntax.Token, error) {
 			return tk, nil
 		}
 	}
-
-	if isNumber(ch) {
-		return parseNumber(l)
-	}
+	/*
+		if isNumber(ch) {
+			return parseNumber(l)
+		}
+	*/
 
 	// suppose it's a keyword
 	isKeyword, tk, err := parseKeyword(l, true)
@@ -613,9 +614,9 @@ func parseIdentifier(l *syntax.Lexer) (syntax.Token, error) {
 				Literal:  literal,
 			}, nil
 		}
-		// 5. otherwise, if it's an identifier with +, -, *, /, .
+		// 5. otherwise, if it's an identifier with *, /, .
 		// add char to literal
-		if isIdentifierChar(ch) || syntax.ContainsRune(ch, []rune{PlusOp, MinusOp, MultiplyOp, SlashOp, '.'}) {
+		if isIdentifierChar(ch) || syntax.ContainsRune(ch, syntax.IDContinue) {
 			literal = append(literal, ch)
 			continue
 		}
