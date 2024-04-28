@@ -494,14 +494,55 @@ func evalIterateStmt(c *r.Context, node *syntax.IterateStmt) error {
 
 	// define indication variables as "currentKey" and "currentValue" under new iterScope
 	// of course since there's no any iteration is executed yet, the initial values are all "Null"
+	switch nameLen {
+	case 0:
+		// do nothing
+	case 1:
+		// Accept IDName ONLY
+		valueID, err := MatchIDName(node.IndexNames[0])
+		if err != nil {
+			return err
+		}
+		valueSlot = valueID.GetLiteral()
+
+		// init valueSlot as Null
+		if err := c.BindSymbol(valueSlot, value.NewNull()); err != nil {
+			return err
+		}
+	case 2:
+		keyID, err := MatchIDName(node.IndexNames[0])
+		if err != nil {
+			return err
+		}
+		valueID, err := MatchIDName(node.IndexNames[1])
+		if err != nil {
+			return err
+		}
+
+		// set string
+		keySlot = keyID.GetLiteral()
+		valueSlot = valueID.GetLiteral()
+
+		// init symbol value as Null
+		if err := c.BindSymbol(keySlot, value.NewNull()); err != nil {
+			return err
+		}
+		if err := c.BindSymbol(valueSlot, value.NewNull()); err != nil {
+			return err
+		}
+	default:
+		return zerr.MostParamsError(2)
+	}
+
+	/**
 	if nameLen == 1 {
-		valueSlot = node.IndexNames[0].Literal
+		valueSlot = node.IndexNames[0].GetLiteral()
 		if err := c.BindSymbol(valueSlot, value.NewNull()); err != nil {
 			return err
 		}
 	} else if nameLen == 2 {
-		keySlot = node.IndexNames[0].Literal
-		valueSlot = node.IndexNames[1].Literal
+		keySlot = node.IndexNames[0].GetLiteral()
+		valueSlot = node.IndexNames[1].GetLiteral()
 		if err := c.BindSymbol(keySlot, value.NewNull()); err != nil {
 			return err
 		}
@@ -511,6 +552,7 @@ func evalIterateStmt(c *r.Context, node *syntax.IterateStmt) error {
 	} else if nameLen > 2 {
 		return zerr.MostParamsError(2)
 	}
+	*/
 
 	// execute iterations
 	switch tv := targetExpr.(type) {
@@ -573,7 +615,7 @@ func evalExpression(c *r.Context, expr syntax.Expression) (r.Element, error) {
 			return nil, err
 		}
 		return iv.ReduceRHS(c)
-	case *syntax.Number, *syntax.String, *syntax.ID, *syntax.ArrayExpr, *syntax.HashMapExpr:
+	case *syntax.String, *syntax.ID, *syntax.ArrayExpr, *syntax.HashMapExpr:
 		return evalPrimeExpr(c, e)
 	case *syntax.FuncCallExpr:
 		return evalFunctionCall(c, e)
@@ -888,13 +930,22 @@ func evalArithExpr(c *r.Context, expr *syntax.ArithExpr) (*value.Number, error) 
 // eval prime expr
 func evalPrimeExpr(c *r.Context, expr syntax.Expression) (r.Element, error) {
 	switch e := expr.(type) {
-	case *syntax.Number:
-		return value.NewNumberFromString(e.GetLiteral())
 	case *syntax.String:
 		return value.NewString(e.GetLiteral()), nil
 	case *syntax.ID:
-		vtag := e.GetLiteral()
-		return c.FindElement(vtag)
+		idValue, err := MatchIDType(e)
+		if err != nil {
+			return nil, err
+		}
+		switch t := idValue.(type) {
+		case *IDName:
+			return c.FindElement(t.GetLiteral())
+		case *IDNumber:
+			return value.NewNumber(t.GetValue()), nil
+		default:
+			// currently idValue only have IDName or IDNumber
+			return nil, zerr.UnexpectedCase("ID格式", fmt.Sprintf("%T", t))
+		}
 	case *syntax.ArrayExpr:
 		var znObjs []r.Element
 		for _, item := range e.Items {
@@ -924,9 +975,11 @@ func evalPrimeExpr(c *r.Context, expr syntax.Expression) (r.Element, error) {
 			case *syntax.String:
 				exprKey = k.GetLiteral()
 			case *syntax.ID:
-				exprKey = k.GetLiteral()
-			case *syntax.Number:
-				exprKey = k.GetLiteral()
+				if _, err := MatchIDType(k); err != nil {
+					return nil, err
+				} else {
+					exprKey = k.GetLiteral()
+				}
 			default:
 				return nil, zerr.InvalidExprType("string", "number", "id")
 			}

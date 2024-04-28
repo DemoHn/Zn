@@ -345,7 +345,7 @@ func parseArithMulDivExpr(p *ParserZH) syntax.Expression {
 // MemE  -> 其 PropE' IdxE'
 //       -> BsE IdxE'
 //
-// IdxE' -> #  Number   IdxE'
+// IdxE' -> #  ID   IdxE'
 //       -> #  String   IdxE'
 //       -> #  {  Expr  }  IdxE'
 //       -> 之  CallE' IdxE'
@@ -354,10 +354,8 @@ func parseArithMulDivExpr(p *ParserZH) syntax.Expression {
 // CallE' -> FuncID
 //
 // PropE' -> ID
-//        -> Number (as string)
 //
 // FuncID -> ID
-//        -> Number (as string)
 func ParseMemberExpr(p *ParserZH) syntax.Expression {
 	// internal functions
 	var calleeTailParser func(bool, uint8, syntax.Expression) *syntax.MemberExpr
@@ -447,7 +445,6 @@ func ParseMemberExpr(p *ParserZH) syntax.Expression {
 //       -> ArrayList
 //
 // FuncID -> ID
-//        -> Number (as string)
 func ParseBasicExpr(p *ParserZH) syntax.Expression {
 	var validTypes = []uint8{
 		TypeIdentifier,

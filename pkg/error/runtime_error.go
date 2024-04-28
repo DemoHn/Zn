@@ -16,43 +16,43 @@ func (r *RuntimeError) Error() string {
 }
 
 const (
-	ErrIndexOutOfRange          = 30
-	ErrIndexKeyNotFound         = 31
-	ErrNameNotDefined           = 32
-	ErrNameRedeclared           = 33
-	ErrAssignToConstant         = 34
-	ErrPropertyNotFound         = 35
-	ErrMethodNotFound           = 36
-	ErrClassNotOnRoot           = 37
-	ErrThisValueNotFound        = 38
-	ErrLeastParamsError         = 40
-	ErrMismatchParamLengthError = 41
-	ErrMostParamsError          = 42
-	ErrExactParamsError         = 43
+	ErrIndexOutOfRange          = 40
+	ErrIndexKeyNotFound         = 41
+	ErrNameNotDefined           = 42
+	ErrNameRedeclared           = 43
+	ErrAssignToConstant         = 44
+	ErrPropertyNotFound         = 45
+	ErrMethodNotFound           = 46
+	ErrClassNotOnRoot           = 47
+	ErrThisValueNotFound        = 48
+	ErrLeastParamsError         = 50
+	ErrMismatchParamLengthError = 51
+	ErrMostParamsError          = 52
+	ErrExactParamsError         = 53
 	// module error
-	ErrModuleNotFound           = 50
-	ErrImportSameModule         = 51
-	ErrDuplicateModule          = 52
-	ErrModuleCircularDependency = 53
+	ErrModuleNotFound           = 60
+	ErrImportSameModule         = 61
+	ErrDuplicateModule          = 62
+	ErrModuleCircularDependency = 63
 	// internal error
-	ErrUnexpectedCase           = 60
-	ErrUnexpectedEmptyExecLogic = 61
-	ErrUnexpectedAssign         = 62
-	ErrUnexpectedParamWildcard  = 63
+	ErrUnexpectedCase           = 70
+	ErrUnexpectedEmptyExecLogic = 71
+	ErrUnexpectedAssign         = 72
+	ErrUnexpectedParamWildcard  = 73
 	// type error
-	ErrInvalidExprType            = 70
-	ErrInvalidFuncVariable        = 71
-	ErrInvalidParamType           = 72
-	ErrInvalidCompareLType        = 73
-	ErrInvalidCompareRType        = 74
-	ErrInvalidExceptionType       = 75
-	ErrInvalidExceptionObjectType = 76
-	ErrInvalidClassType           = 77
+	ErrInvalidExprType            = 80
+	ErrInvalidFuncVariable        = 81
+	ErrInvalidParamType           = 82
+	ErrInvalidCompareLType        = 83
+	ErrInvalidCompareRType        = 84
+	ErrInvalidExceptionType       = 85
+	ErrInvalidExceptionObjectType = 86
+	ErrInvalidClassType           = 87
 	// arith error
-	ErrArithDivZero          = 80
-	ErrArithRootLessThanZero = 81
+	ErrArithDivZero          = 90
+	ErrArithRootLessThanZero = 91
 	// input error
-	ErrInputValueNotFound = 85
+	ErrInputValueNotFound = 95
 )
 
 var typeNameMap = map[string]string{
@@ -227,7 +227,7 @@ func ModuleCircularDependency() *RuntimeError {
 func UnexpectedCase(tag string, value string) *RuntimeError {
 	return &RuntimeError{
 		Code:    ErrUnexpectedCase,
-		Message: fmt.Sprintf("未定义的条件分支：「%s」的值为「%s」", tag, value),
+		Message: fmt.Sprintf("未定义的分支逻辑：「%s」的值为「%s」", tag, value),
 		Extra:   nil,
 	}
 }

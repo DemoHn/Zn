@@ -3,9 +3,9 @@ package error
 import "fmt"
 
 type SyntaxError struct {
-	Code int
+	Code    int
 	Message string
-	Cursor int
+	Cursor  int
 }
 
 func (e *SyntaxError) Error() string {
@@ -13,20 +13,21 @@ func (e *SyntaxError) Error() string {
 }
 
 const (
-	ErrInvalidSyntax = 20
-	ErrUnexpectedIndent = 21
-	ErrMustTypeID = 22
-	ErrInvalidIndent = 23
+	// 20-25
+	ErrInvalidSyntax           = 20
+	ErrUnexpectedIndent        = 21
+	ErrMustTypeID              = 22
+	ErrInvalidIndent           = 23
 	ErrInvalidIndentSpaceCount = 24
-	ErrInvalidChar = 25
+	ErrInvalidChar             = 25
 )
 
 // InvalidSyntax -
 func InvalidSyntax(startIdx int) *SyntaxError {
 	return &SyntaxError{
 		Code:    ErrInvalidSyntax,
-		Message: "当前语法不符合规范",
-		Cursor:   startIdx,
+		Message: "当前语法不符合要求",
+		Cursor:  startIdx,
 	}
 }
 
@@ -34,16 +35,16 @@ func UnexpectedIndent(startIdx int) *SyntaxError {
 	return &SyntaxError{
 		Code:    ErrUnexpectedIndent,
 		Message: "出现不符合预期的缩进",
-		Cursor:   startIdx,
+		Cursor:  startIdx,
 	}
 }
 
 // ExprMustTypeID -
 func ExprMustTypeID(startIdx int) *SyntaxError {
 	return &SyntaxError{
-		Code: ErrMustTypeID,
+		Code:    ErrMustTypeID,
 		Message: "表达式须为「标识符」",
-		Cursor: startIdx,
+		Cursor:  startIdx,
 	}
 }
 
@@ -69,7 +70,7 @@ func InvalidIndentSpaceCount(count int, startIdx int) *SyntaxError {
 	return &SyntaxError{
 		Code:    ErrInvalidIndentSpaceCount,
 		Message: fmt.Sprintf("当缩进类型为「空格」，其所列字符数应为4之倍数：当前空格字符数为%d", count),
-		Cursor: startIdx,
+		Cursor:  startIdx,
 	}
 }
 
@@ -78,6 +79,6 @@ func InvalidChar(ch rune, startIdx int) *SyntaxError {
 	return &SyntaxError{
 		Code:    ErrInvalidChar,
 		Message: fmt.Sprintf("未能识别字符「%c」", ch),
-		Cursor:   startIdx,
+		Cursor:  startIdx,
 	}
 }

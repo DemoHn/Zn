@@ -78,12 +78,10 @@ func StringifyAST(node Node) string {
 			exprs = append(exprs, fmt.Sprintf("key[]=(%s) value[]=(%s)", StringifyAST(expr.Key), StringifyAST(expr.Value)))
 		}
 		return fmt.Sprintf("$HM(%s)", strings.Join(exprs, " "))
-	case *Number:
-		return fmt.Sprintf("$NUM(%s)", v.Literal)
 	case *String:
-		return fmt.Sprintf("$STR(%s)", v.Literal)
+		return fmt.Sprintf("$STR(%s)", v.GetLiteral())
 	case *ID:
-		return fmt.Sprintf("$ID(%s)", v.Literal)
+		return fmt.Sprintf("$ID(%s)", v.GetLiteral())
 	case *LogicExpr:
 		var typeStrMap = map[uint8]string{
 			LogicEQ:   "$EQ",

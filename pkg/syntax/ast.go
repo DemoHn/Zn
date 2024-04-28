@@ -256,11 +256,6 @@ type ID struct {
 	PrimeExpr
 }
 
-// Number -
-type Number struct {
-	PrimeExpr
-}
-
 // String -
 type String struct {
 	PrimeExpr

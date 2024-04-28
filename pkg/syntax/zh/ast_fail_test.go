@@ -21,14 +21,6 @@ var testFailSuites = []string{
 
 const varDeclCasesFAIL = `
 ========
-1. non-identifiers as assigner (InvalidSyntax)
---------
-注：第一行留给度娘
-令某变量、另一变量、1240为1000
---------
-code=20 cursor=19
-========
-========
 3. incomplete statement (InvalidSyntax)
 --------
     

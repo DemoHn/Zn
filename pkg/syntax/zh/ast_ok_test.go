@@ -44,11 +44,11 @@ $PG($BK(
 					))
 					R=($VA(
 						target=($ID(F))
-						assign=($NUM(100))
+						assign=($ID(100))
 					))
 				))
 		))
-		R=($NUM(0))
+		R=($ID(0))
 	)
 ))
 ========
@@ -78,7 +78,7 @@ const whileLoopCasesOK = `
 --------
 $PG($BK(
 	$WL(
-		expr=($NUM(1))
+		expr=($ID(1))
 		block=($BK($VD($VP(
 				vars[]=($ID(A))
 				expr[]=($ID(B))
@@ -103,19 +103,19 @@ M设为N
 --------
 $PG($BK(
 	$WL(
-		expr=($NUM(1))
+		expr=($ID(1))
 		block=($BK(
 			$VA(target=($ID(A)) assign=($ID(B)))
 			$WL(
-				expr=($NUM(2))
+				expr=($ID(2))
 				block=($BK(
 					$VA(target=($ID(C)) assign=($ID(D)))
 					$VA(target=($ID(E)) assign=($ID(F)))
 				))
 			)
 			$WL(
-				expr=($NUM(3))
-				block=($BK($NUM(100)))
+				expr=($ID(3))
+				block=($BK($ID(100)))
 			)
 			$VA(target=($ID(G)) assign=($ID(H)))
 			$VA(target=($ID(K)) assign=($ID(L)))
@@ -135,7 +135,7 @@ const varDeclCasesOK = `
 $PG($BK(
 	$VD($VP(
 		vars[]=($ID(某变量))
-		expr[]=($NUM(100))
+		expr[]=($ID(100))
 	))
 ))
 ========
@@ -146,7 +146,7 @@ $PG($BK(
 $PG($BK(
 	$VD($VP(
 		vars[]=($ID(某变量))
-		expr[]=($NUM(100))
+		expr[]=($ID(100))
 	))
 ))
 
@@ -158,7 +158,7 @@ $PG($BK(
 $PG($BK(
 	$VD($VP(
 		vars[]=($ID(变量1) $ID(变量2))
-		expr[]=($NUM(100))
+		expr[]=($ID(100))
 	))
 ))
 
@@ -170,7 +170,7 @@ $PG($BK(
 $PG($BK(
 	$VD($VP(
 		vars[]=($ID(小A) $ID(小B) $ID(小C))
-		expr[]=($NUM(100))
+		expr[]=($ID(100))
 	))
 ))
 
@@ -182,7 +182,7 @@ $PG($BK(
 $PG($BK(
 	$VD($VP(
 		vars[]=($ID(小A) $ID(先令))
-		expr[]=($NUM(200))
+		expr[]=($ID(200))
 	))
 ))
 
@@ -216,14 +216,14 @@ $PG($BK(
 --------
 $PG($BK(
 	$VD(
-		$VP(vars[]=($ID(A))		expr[]=($NUM(1)))
-		$VP(vars[]=($ID(B))		expr[]=($NUM(2)))
-		$VP(vars[]=($ID(C) $ID(D))		expr[]=($NUM(3)))
-		$VP(vars[]=($ID(E) $ID(F))		expr[]=($NUM(4)))
+		$VP(vars[]=($ID(A))		expr[]=($ID(1)))
+		$VP(vars[]=($ID(B))		expr[]=($ID(2)))
+		$VP(vars[]=($ID(C) $ID(D))		expr[]=($ID(3)))
+		$VP(vars[]=($ID(E) $ID(F))		expr[]=($ID(4)))
 	)
 	$VD($VP(
 		vars[]=($ID(G))
-		expr[]=($NUM(5))
+		expr[]=($ID(5))
 	))
 ))
 
@@ -234,7 +234,7 @@ $PG($BK(
 --------
 $PG($BK(
 	$VD(
-		$VP(const vars[]=($ID(圆周率)) expr[]=($NUM(3.1415926)))
+		$VP(const vars[]=($ID(圆周率)) expr[]=($ID(3.1415926)))
 	)
 ))
 
@@ -245,7 +245,7 @@ $PG($BK(
 --------
 $PG($BK(
 	$VD(
-		$VP(object vars[]=($ID(圆周率)) class=($ID(数学)) params[]=($NUM(3.1415926)))
+		$VP(object vars[]=($ID(圆周率)) class=($ID(数学)) params[]=($ID(3.1415926)))
 	)
 ))
 
@@ -260,7 +260,7 @@ $PG($BK(
 --------
 $PG($BK(
 	$VD(
-		$VP(object vars[]=($ID(高脚杯) $ID(小盅)) class=($ID(SKU)) params[]=($STR(玻璃制品) $NUM(10) $NUM(20) $NUM(30)))
+		$VP(object vars[]=($ID(高脚杯) $ID(小盅)) class=($ID(SKU)) params[]=($STR(玻璃制品) $ID(10) $ID(20) $ID(30)))
 		$VP(vars[]=($ID(A) $ID(B) $ID(C)) expr[]=($STR(Amazon)))
 		$VP(const vars[]=($ID(D) $ID(E) $ID(F)) expr[]=($ID(空)))
 		$VP(const vars[]=($ID(G)) expr[]=($ID(空)))
@@ -321,7 +321,7 @@ $PG($BK(
 （显示当前时间：「今天」、「15:30」、200、3000）
 --------
 $PG($BK(
-	$FN(name=($ID(显示当前时间)) params=($STR(今天) $STR(15:30) $NUM(200) $NUM(3000)))
+	$FN(name=($ID(显示当前时间)) params=($STR(今天) $STR(15:30) $ID(200) $ID(3000)))
 ))
 
 ========
@@ -351,7 +351,7 @@ $PG($BK(
 		ifBlock=($BK(
 			$FN(
 				name=($ID(X+Y))
-				params=($NUM(20) $NUM(30))
+				params=($ID(20) $ID(30))
 			)
 		))
 	)
@@ -371,13 +371,13 @@ $PG($BK(
 		ifBlock=($BK(			
 			$FN(
 				name=($ID(X+Y))
-				params=($NUM(20) $NUM(30))
+				params=($ID(20) $ID(30))
 			)
 		))
 		elseBlock=($BK(			
 			$FN(
 				name=($ID(X-Y))
-				params=($NUM(20) $NUM(30))
+				params=($ID(20) $ID(30))
 			)
 		))
 	)
@@ -402,27 +402,27 @@ $PG($BK(
 		ifBlock=($BK(
 			$FN(
 				name=($ID(X+Y))
-				params=($NUM(20) $NUM(30))
+				params=($ID(20) $ID(30))
 			)
 		))
 		otherExpr[]=($EQ(
 			L=($ID(A))
-			R=($NUM(200))
+			R=($ID(200))
 		))
 		otherBlock[]=($BK(
 			$FN(
 				name=($ID(X-Y))
-				params=($NUM(20) $NUM(30))
+				params=($ID(20) $ID(30))
 			)
 		))
 		otherExpr[]=($EQ(
 			L=($ID(A))
-			R=($NUM(300))
+			R=($ID(300))
 		))
 		otherBlock[]=($BK(
 			$VA(
 				target=($ID(B))
-				assign=($NUM(10))
+				assign=($ID(10))
 			)
 		$))
 	)
@@ -450,17 +450,17 @@ $PG($BK(
 		ifBlock=($BK(			
 			$FN(
 				name=($ID(X+Y))
-				params=($NUM(20) $NUM(30))
+				params=($ID(20) $ID(30))
 			)
 		))
 		elseBlock=($BK(			
 			$FN(
 				name=($ID(X-Y))
-				params=($NUM(20) $NUM(30))
+				params=($ID(20) $ID(30))
 			)
 		))
 		otherExpr[]=(
-			$EQ(L=($ID(A)) R=($NUM(100)))
+			$EQ(L=($ID(A)) R=($ID(100)))
 		)
 		otherBlock[]=($BK(
 			$FN(
@@ -480,15 +480,15 @@ $PG($BK(
 --------
 $PG($BK(
 	$IF(
-		ifExpr=($EQ(L=($ID(A)) R=($NUM(100))))
+		ifExpr=($EQ(L=($ID(A)) R=($ID(100))))
 		ifBlock=($BK(			
 			$FN(
 				name=($ID(X+Y))
-				params=($NUM(20) $NUM(30))
+				params=($ID(20) $ID(30))
 			)
 		))
 		otherExpr[]=(
-			$EQ(L=($ID(B)) R=($NUM(200)))
+			$EQ(L=($ID(B)) R=($ID(200)))
 		)
 		otherBlock[]=($BK(
 			$FN(
@@ -520,7 +520,7 @@ $PG($BK($HM()))
 --------
 【「MacBook Air 12"」、2080、3000】
 --------
-$PG($BK($ARR($STR(MacBook Air 12") $NUM(2080) $NUM(3000))))
+$PG($BK($ARR($STR(MacBook Air 12") $ID(2080) $ID(3000))))
 
 ========
 4. array with newline
@@ -531,7 +531,7 @@ $PG($BK($ARR($STR(MacBook Air 12") $NUM(2080) $NUM(3000))))
     3000
 】
 --------
-$PG($BK($ARR($STR(MacBook Air 12") $NUM(2080) $NUM(3000))))
+$PG($BK($ARR($STR(MacBook Air 12") $ID(2080) $ID(3000))))
 
 ========
 5. array nest with array
@@ -544,8 +544,8 @@ $PG($BK($ARR($STR(MacBook Air 12") $NUM(2080) $NUM(3000))))
 --------
 $PG($BK($ARR(
 	$STR(MacBook Air 12") 
-	$NUM(2080) 
-	$ARR($NUM(100) $NUM(200) $NUM(300))
+	$ID(2080) 
+	$ARR($ID(100) $ID(200) $ID(300))
 )))
 
 ========
@@ -563,8 +563,8 @@ $PG($BK($ARR(
 --------
 $PG($BK($ARR(
 	$STR(MacBook Air 12") 
-	$NUM(2080) 
-	$ARR($NUM(100) $NUM(200) $NUM(300) $ARR($NUM(10000)))
+	$ID(2080) 
+	$ARR($ID(100) $ID(200) $ID(300) $ARR($ID(10000)))
 )))
 
 ========
@@ -576,8 +576,8 @@ $PG($BK($ARR(
 】
 --------
 $PG($BK($HM(
-	key[]=($STR(数学)) value[]=($NUM(80)) 
-	key[]=($STR(语文)) value[]=($NUM(90))
+	key[]=($STR(数学)) value[]=($ID(80)) 
+	key[]=($STR(语文)) value[]=($ID(90))
 )))
 
 ========
@@ -593,11 +593,11 @@ $PG($BK($HM(
 】
 --------
 $PG($BK($HM(
-	key[]=($STR(数学)) value[]=($NUM(80)) 
+	key[]=($STR(数学)) value[]=($ID(80)) 
 	key[]=($STR(语文)) value[]=($HM(
-		key[]=($STR(阅读)) value[]=($NUM(20))
-		key[]=($STR(听力)) value[]=($NUM(30.5))
-		key[]=($STR(比例)) value[]=($NUM(0.12345))
+		key[]=($STR(阅读)) value[]=($ID(20))
+		key[]=($STR(听力)) value[]=($ID(30.5))
+		key[]=($STR(比例)) value[]=($ID(0.12345))
 	))
 )))
 `
@@ -626,7 +626,7 @@ $PG($BK($VD($VP(vars[]=($ID(树叶) $ID(鲜花) $ID(雪花) $ID(墨水)) expr[]=
     「1」、（调用参数：200、300、
         4000、5000））
 --------
-$PG($BK($FN(name=($ID(显示)) params=($STR(1) $FN(name=($ID(调用参数)) params=($NUM(200) $NUM(300) $NUM(4000) $NUM(5000)))))))
+$PG($BK($FN(name=($ID(显示)) params=($STR(1) $FN(name=($ID(调用参数)) params=($ID(200) $ID(300) $ID(4000) $ID(5000)))))))
 
 ========
 4. multi-line hashmap
@@ -637,7 +637,7 @@ $PG($BK($FN(name=($ID(显示)) params=($STR(1) $FN(name=($ID(调用参数)) para
 		3 = 「车」
 】
 --------
-$PG($BK($VD($VP(vars[]=($ID(对象表)) expr[]=($HM(key[]=($NUM(1)) value[]=($STR(象)) key[]=($NUM(2)) value[]=($STR(士)) key[]=($NUM(3)) value[]=($STR(车))))))))
+$PG($BK($VD($VP(vars[]=($ID(对象表)) expr[]=($HM(key[]=($ID(1)) value[]=($STR(象)) key[]=($ID(2)) value[]=($STR(士)) key[]=($ID(3)) value[]=($STR(车))))))))
 `
 
 const memberExprCasesOK = `
@@ -650,9 +650,9 @@ $PG($BK(
 	$AR(type=(SUB) left=(
 		$AR(type=(MUL) left=(
 			$AR(type=(ADD) left=(
-				$NUM(5)) right=($NUM(8))
-			)) right=($NUM(3)))
-		) right=($AR(type=(DIV) left=($NUM(7)) right=($NUM(4)))))
+				$ID(5)) right=($ID(8))
+			)) right=($ID(3)))
+		) right=($AR(type=(DIV) left=($ID(7)) right=($ID(4)))))
 ))
 ========
 1. normal dot member
@@ -684,7 +684,7 @@ $PG($BK(
 Array#123
 --------
 $PG($BK(
-	$MB(root=($ID(Array)) type=(mIndex) object=($NUM(123)))
+	$MB(root=($ID(Array)) type=(mIndex) object=($ID(123)))
 ))
 
 ========
@@ -711,11 +711,11 @@ $PG($BK(
 					$MB(
 						root=($ID(Array))
 						type=(mIndex)
-						object=($NUM(20))
+						object=($ID(20))
 					)
 				)
 				type=(mIndex)
-				object=($NUM(30))
+				object=($ID(30))
 			)
 		)
 		type=(mIndex)
@@ -734,7 +734,7 @@ $PG($BK(
 			$MB(
 				root=($ID(Array))
 				type=(mIndex)
-				object=($NUM(10))
+				object=($ID(10))
 			)
 		)
 		type=(mID)
@@ -754,7 +754,7 @@ $PG($BK(
 			type=(mID)
 			object=($ID(年龄))
 		))		
-		assign=($NUM(20))
+		assign=($ID(20))
 	)
 ))
 ========
@@ -847,7 +847,7 @@ $PG($BK(
 	$MMF(root=($ID(A)) chain=(
 		$FN(name=($ID(运行方法)) params=())
 		$FN(name=($ID(方法2)) params=($ID(A) $ID(B) $ID(C)))
-		$FN(name=($ID(QAQ)) params=($NUM(1) $NUM(3) $NUM(5) $NUM(7)))
+		$FN(name=($ID(QAQ)) params=($ID(1) $ID(3) $ID(5) $ID(7)))
 	))
 ))
 `
@@ -862,7 +862,7 @@ const iterateCasesOK = `
 --------
 $PG($BK(
 	$IT(
-		target=($ARR($NUM(1) $NUM(2) $NUM(3)))
+		target=($ARR($ID(1) $ID(2) $ID(3)))
 		idxList=()
 		block=($BK(
 			$VD($VP(vars[]=($ID(A)) expr[]=(
@@ -901,9 +901,9 @@ $PG($BK(
 $PG($BK(
 	$IT(
 		target=($HM(
-			key[]=($STR(A)) value[]=($NUM(1))
-			key[]=($STR(B)) value[]=($NUM(2))
-			key[]=($STR(C)) value[]=($NUM(3))
+			key[]=($STR(A)) value[]=($ID(1))
+			key[]=($STR(B)) value[]=($ID(2))
+			key[]=($STR(C)) value[]=($ID(3))
 		))
 		idxList=($ID(K) $ID(V))
 		block=($BK($FN(
@@ -955,7 +955,7 @@ $PG($BK(
 		name=($ID(狗))
 		properties=(
 			$PD(id=($ID(名)) expr=($STR(小黄)))
-			$PD(id=($ID(年龄)) expr=($NUM(0)))
+			$PD(id=($ID(年龄)) expr=($ID(0)))
 		)
 		methods=(
 			$FN(
@@ -969,7 +969,7 @@ $PG($BK(
 				name=($ID(添加年龄))
 				params=()				
 				blockTokens=($BK(
-					$RT($NUM(20))
+					$RT($ID(20))
 				))
 			)
 		)
@@ -977,7 +977,7 @@ $PG($BK(
 			$GT(
 				name=($ID(总和))
 				blockTokens=($BK(
-					$RT($NUM(20))
+					$RT($ID(20))
 				))
 			)
 		)
@@ -1008,7 +1008,7 @@ $PG($BK(
 		name=($ID(狗))
 		properties=(
 			$PD(id=($ID(名)) expr=($STR(小黄)))
-			$PD(id=($ID(年龄)) expr=($NUM(0)))
+			$PD(id=($ID(年龄)) expr=($ID(0)))
 		)
 		methods=(
 			$FN(
@@ -1022,7 +1022,7 @@ $PG($BK(
 				name=($ID(添加年龄))
 				params=()				
 				blockTokens=($BK(
-					$RT($NUM(20))
+					$RT($ID(20))
 				))
 			)
 		)
@@ -1030,7 +1030,7 @@ $PG($BK(
 			$GT(
 				name=($ID(总和))
 				blockTokens=($BK(
-					$RT($NUM(20))
+					$RT($ID(20))
 				))
 			)
 		)
@@ -1050,7 +1050,7 @@ $PG($BK(
 		name=($ID(搞个大新闻))
 		params=()		
 		blockTokens=($BK(
-			$NUM(1024)
+			$ID(1024)
 		))
 	)
 ))
@@ -1066,7 +1066,7 @@ $PG($BK(
 		name=($ID(搞个大新闻))
 		params=($PM(id=($ID(变量1)) ref=(false)))		
 		blockTokens=($BK(
-			$NUM(1024)
+			$ID(1024)
 		))
 	)
 ))
@@ -1086,7 +1086,7 @@ $PG($BK(
 			$PM(id=($ID(华为手机)) ref=(false))			
 		)		
 		blockTokens=($BK(
-			$NUM(1024)
+			$ID(1024)
 		))
 	)
 ))
@@ -1106,7 +1106,7 @@ $PG($BK(
 			$PM(id=($ID(华为手机)) ref=(true))
 		)
 		blockTokens=($BK(
-			$NUM(1024)
+			$ID(1024)
 		))
 	)
 ))
@@ -1130,7 +1130,7 @@ $PG($BK(
 			$IF(
 				ifExpr=($EQ(L=($ID(C)) R=($ID(空))))
 				ifBlock=($BK(
-					$RT($NUM(1024))
+					$RT($ID(1024))
 				))
 			)
 		))
