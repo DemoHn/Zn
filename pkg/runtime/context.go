@@ -231,18 +231,20 @@ func (ctx *Context) CheckDepedency(depModule string, internal bool) error {
 
 // FindElement - find symbol value in the context from current scope
 // up to its root scope
-func (ctx *Context) FindElement(name string) (Element, error) {
+func (ctx *Context) FindElement(name *IDName) (Element, error) {
+	nameStr := name.GetLiteral()
 	// find on globals first
-	if symVal, inGlobals := ctx.globals[name]; inGlobals {
+	if symVal, inGlobals := ctx.globals[nameStr]; inGlobals {
 		return symVal, nil
 	}
 
-	return ctx.GetCurrentModule().FindScopeValue(name)
+	return ctx.GetCurrentModule().FindScopeValue(nameStr)
 }
 
-func (ctx *Context) FindSymbol(name string) (SymbolInfo, error) {
+func (ctx *Context) FindSymbol(name *IDName) (SymbolInfo, error) {
 	// find on globals first
-	if symVal, inGlobals := ctx.globals[name]; inGlobals {
+	nameStr := name.GetLiteral()
+	if symVal, inGlobals := ctx.globals[nameStr]; inGlobals {
 		return SymbolInfo{
 			value:   symVal,
 			isConst: true,
@@ -250,52 +252,57 @@ func (ctx *Context) FindSymbol(name string) (SymbolInfo, error) {
 		}, nil
 	}
 
-	return ctx.GetCurrentModule().FindScopeSymbol(name)
+	return ctx.GetCurrentModule().FindScopeSymbol(nameStr)
 }
 
 // SetSymbol -
-func (ctx *Context) SetSymbol(name string, value Element) error {
-	if _, inGlobals := ctx.globals[name]; inGlobals {
-		return zerr.NameRedeclared(name)
+func (ctx *Context) SetSymbol(name *IDName, value Element) error {
+	nameStr := name.GetLiteral()
+	if _, inGlobals := ctx.globals[nameStr]; inGlobals {
+		return zerr.NameRedeclared(nameStr)
 	}
 	// ...then in symbols
-	return ctx.GetCurrentModule().SetScopeValue(name, value)
+	return ctx.GetCurrentModule().SetScopeValue(nameStr, value)
 }
 
 // BindSymbol - bind non-const value with re-declaration check on same scope
-func (ctx *Context) BindSymbol(name string, value Element) error {
-	if _, inGlobals := ctx.globals[name]; inGlobals {
-		return zerr.NameRedeclared(name)
+func (ctx *Context) BindSymbol(name *IDName, value Element) error {
+	nameStr := name.GetLiteral()
+	if _, inGlobals := ctx.globals[nameStr]; inGlobals {
+		return zerr.NameRedeclared(nameStr)
 	}
 
-	return ctx.GetCurrentModule().BindSymbol(name, value, false, true)
+	return ctx.GetCurrentModule().BindSymbol(nameStr, value, false, true)
 }
 
 // BindSymbolConst - bind const value with re-declaration check on same scope
-func (ctx *Context) BindSymbolConst(name string, value Element) error {
-	if _, inGlobals := ctx.globals[name]; inGlobals {
-		return zerr.NameRedeclared(name)
+func (ctx *Context) BindSymbolConst(name *IDName, value Element) error {
+	nameStr := name.GetLiteral()
+	if _, inGlobals := ctx.globals[nameStr]; inGlobals {
+		return zerr.NameRedeclared(nameStr)
 	}
 
-	return ctx.GetCurrentModule().BindSymbol(name, value, true, true)
+	return ctx.GetCurrentModule().BindSymbol(nameStr, value, true, true)
 }
 
 // BindSymbolDecl - bind value for declaration statement - that variables could be re-bind.
-func (ctx *Context) BindSymbolDecl(name string, value Element, isConst bool) error {
-	if _, inGlobals := ctx.globals[name]; inGlobals {
-		return zerr.NameRedeclared(name)
+func (ctx *Context) BindSymbolDecl(name *IDName, value Element, isConst bool) error {
+	nameStr := name.GetLiteral()
+	if _, inGlobals := ctx.globals[nameStr]; inGlobals {
+		return zerr.NameRedeclared(nameStr)
 	}
 
-	return ctx.GetCurrentModule().BindSymbol(name, value, isConst, false)
+	return ctx.GetCurrentModule().BindSymbol(nameStr, value, isConst, false)
 }
 
 // BindScopeSymbolDecl - bind value for declaration statement - that variables could be re-bind.
-func (ctx *Context) BindScopeSymbolDecl(scope *Scope, name string, value Element) error {
-	if _, inGlobals := ctx.globals[name]; inGlobals {
-		return zerr.NameRedeclared(name)
+func (ctx *Context) BindScopeSymbolDecl(scope *Scope, name *IDName, value Element) error {
+	nameStr := name.GetLiteral()
+	if _, inGlobals := ctx.globals[nameStr]; inGlobals {
+		return zerr.NameRedeclared(nameStr)
 	}
 	if scope != nil {
-		scope.SetSymbolValue(name, value, false, ctx.GetCurrentModule())
+		scope.SetSymbolValue(nameStr, value, false, ctx.GetCurrentModule())
 	}
 	return nil
 }

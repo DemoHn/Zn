@@ -124,7 +124,10 @@ func evalStatement(c *r.Context, stmt syntax.Statement) error {
 		return nil
 	case *syntax.FunctionDeclareStmt:
 		fn := compileFunction(c, v.ParamList, v.ExecBlock)
-		vtag := v.FuncName.GetLiteral()
+		vtag, err := MatchIDName(v.FuncName)
+		if err != nil {
+			return err
+		}
 
 		// add symbol to current scope first
 		if err := c.BindSymbol(vtag, fn); err != nil {
@@ -132,16 +135,20 @@ func evalStatement(c *r.Context, stmt syntax.Statement) error {
 		}
 
 		// then add symbol to export value
-		if err := module.AddExportValue(vtag, fn); err != nil {
+		if err := module.AddExportValue(vtag.GetLiteral(), fn); err != nil {
 			return err
 		}
 		return nil
 	case *syntax.ImportStmt:
 		return evalImportStmt(c, v)
 	case *syntax.ClassDeclareStmt:
-		className := v.ClassName.GetLiteral()
+		className, err := MatchIDName(v.ClassName)
+		if err != nil {
+			return err
+		}
+
 		if c.FindParentScope() != nil {
-			return zerr.ClassNotOnRoot(className)
+			return zerr.ClassNotOnRoot(className.GetLiteral())
 		}
 		// bind classRef
 		classRef, err := compileClass(c, className, v)
@@ -155,14 +162,17 @@ func evalStatement(c *r.Context, stmt syntax.Statement) error {
 		}
 
 		// then add symbol to export value
-		if err := module.AddExportValue(className, classRef); err != nil {
+		if err := module.AddExportValue(className.GetLiteral(), classRef); err != nil {
 			return err
 		}
 		return nil
 
 	case *syntax.ConstructorDeclareStmt:
 		// check if class type is valid
-		className := v.DelcareClassName.GetLiteral()
+		className, err := MatchIDName(v.DelcareClassName)
+		if err != nil {
+			return err
+		}
 		classModel, err := c.FindElement(className)
 		if err != nil {
 			return err
@@ -171,7 +181,7 @@ func evalStatement(c *r.Context, stmt syntax.Statement) error {
 			fn := compileFunction(c, v.ParamList, v.ExecBlock)
 			bindClassConstructor(cmodel, fn)
 		} else {
-			return zerr.InvalidClassType(className)
+			return zerr.InvalidClassType(className.GetLiteral())
 		}
 		return nil
 	case *syntax.IterateStmt:
@@ -187,22 +197,30 @@ func evalStatement(c *r.Context, stmt syntax.Statement) error {
 		// load values from context.varInputs -> current scope
 		varInputs := c.GetVarInputs()
 		for _, id := range v.IDList {
-			idStr := id.GetLiteral()
+			idTag, err := MatchIDName(id)
+			if err != nil {
+				return err
+			}
+			idStr := idTag.GetLiteral()
+
 			inputValue, ok := varInputs[idStr]
 			if !ok {
 				return zerr.InputValueNotFound(idStr)
 			}
 
 			// set inputValue to current scope
-			if err := c.BindSymbolConst(idStr, inputValue); err != nil {
+			if err := c.BindSymbolConst(idTag, inputValue); err != nil {
 				return err
 			}
 		}
 		return nil
 	case *syntax.ThrowExceptionStmt:
 		// profoundly return an ERROR to terminate the execution flow
-		name := v.ExceptionClass.GetLiteral()
-		expClassRef, err := c.FindElement(name)
+		expClassID, err := MatchIDName(v.ExceptionClass)
+		if err != nil {
+			return err
+		}
+		expClassRef, err := c.FindElement(expClassID)
 		if err != nil {
 			return err
 		}
@@ -226,9 +244,9 @@ func evalStatement(c *r.Context, stmt syntax.Statement) error {
 			if expVal, ok := val.(*value.Exception); ok {
 				return zerr.NewRuntimeException(expVal.GetMessage())
 			}
-			return zerr.InvalidExceptionObjectType(name)
+			return zerr.InvalidExceptionObjectType(expClassID.GetLiteral())
 		}
-		return zerr.InvalidExceptionType(name)
+		return zerr.InvalidExceptionType(expClassID.GetLiteral())
 	case *syntax.ContinueStmt:
 		// send continue signal
 		return zerr.NewContinueSignal()
@@ -262,7 +280,11 @@ func evalVarDeclareStmt(c *r.Context, node *syntax.VarDeclareStmt) error {
 			}
 
 			for _, v := range vpair.Variables {
-				vtag := v.GetLiteral()
+				vtag, err := MatchIDName(v)
+				if err != nil {
+					return err
+				}
+
 				if !vpair.RefMark {
 					obj = value.DuplicateValue(obj)
 				}
@@ -283,9 +305,12 @@ func evalVarDeclareStmt(c *r.Context, node *syntax.VarDeclareStmt) error {
 // eval A,B 成为（C：P1，P2，P3，...）
 // ensure VDAssignPair.Type MUST BE syntax.VDTypeObjNew
 func evalNewObject(c *r.Context, node syntax.VDAssignPair) error {
-	vtag := node.ObjClass.GetLiteral()
+	classID, err := MatchIDName(node.ObjClass)
+	if err != nil {
+		return err
+	}
 	// get class definition
-	importVal, err := c.FindElement(vtag)
+	importVal, err := c.FindElement(classID)
 	if err != nil {
 		return err
 	}
@@ -301,7 +326,10 @@ func evalNewObject(c *r.Context, node syntax.VDAssignPair) error {
 
 	// assign new object to variables
 	for _, v := range node.Variables {
-		vtag := v.GetLiteral()
+		vtag, err := MatchIDName(v)
+		if err != nil {
+			return err
+		}
 
 		finalObj, err := classRef.Construct(c, cParams)
 		if err != nil {
@@ -463,7 +491,7 @@ func evalIterateStmt(c *r.Context, node *syntax.IterateStmt) error {
 	defer c.PopScope()
 
 	// pre-defined key, value variable name
-	var keySlot, valueSlot string
+	var keySlot, valueSlot *r.IDName
 	var nameLen = len(node.IndexNames)
 
 	// 以A，B遍历C： D
@@ -499,29 +527,24 @@ func evalIterateStmt(c *r.Context, node *syntax.IterateStmt) error {
 		// do nothing
 	case 1:
 		// Accept IDName ONLY
-		valueID, err := MatchIDName(node.IndexNames[0])
+		valueSlot, err := MatchIDName(node.IndexNames[0])
 		if err != nil {
 			return err
 		}
-		valueSlot = valueID.GetLiteral()
 
 		// init valueSlot as Null
 		if err := c.BindSymbol(valueSlot, value.NewNull()); err != nil {
 			return err
 		}
 	case 2:
-		keyID, err := MatchIDName(node.IndexNames[0])
+		keySlot, err := MatchIDName(node.IndexNames[0])
 		if err != nil {
 			return err
 		}
-		valueID, err := MatchIDName(node.IndexNames[1])
+		valueSlot, err := MatchIDName(node.IndexNames[1])
 		if err != nil {
 			return err
 		}
-
-		// set string
-		keySlot = keyID.GetLiteral()
-		valueSlot = valueID.GetLiteral()
 
 		// init symbol value as Null
 		if err := c.BindSymbol(keySlot, value.NewNull()); err != nil {
@@ -533,26 +556,6 @@ func evalIterateStmt(c *r.Context, node *syntax.IterateStmt) error {
 	default:
 		return zerr.MostParamsError(2)
 	}
-
-	/**
-	if nameLen == 1 {
-		valueSlot = node.IndexNames[0].GetLiteral()
-		if err := c.BindSymbol(valueSlot, value.NewNull()); err != nil {
-			return err
-		}
-	} else if nameLen == 2 {
-		keySlot = node.IndexNames[0].GetLiteral()
-		valueSlot = node.IndexNames[1].GetLiteral()
-		if err := c.BindSymbol(keySlot, value.NewNull()); err != nil {
-			return err
-		}
-		if err := c.BindSymbol(valueSlot, value.NewNull()); err != nil {
-			return err
-		}
-	} else if nameLen > 2 {
-		return zerr.MostParamsError(2)
-	}
-	*/
 
 	// execute iterations
 	switch tv := targetExpr.(type) {
@@ -640,7 +643,10 @@ func evalMemberMethodExpr(c *r.Context, expr *syntax.MemberMethodExpr) (r.Elemen
 
 	for _, methodExpr := range expr.MethodChain {
 		// eval method
-		funcName := methodExpr.FuncName.GetLiteral()
+		funcName, err := MatchIDName(methodExpr.FuncName)
+		if err != nil {
+			return nil, err
+		}
 
 		// exec params
 		params, err := exprsToValues(c, methodExpr.Params)
@@ -657,7 +663,11 @@ func evalMemberMethodExpr(c *r.Context, expr *syntax.MemberMethodExpr) (r.Elemen
 
 	// add yield result
 	if expr.YieldResult != nil {
-		vtag := expr.YieldResult.GetLiteral()
+		vtag, err := MatchIDName(expr.YieldResult)
+		if err != nil {
+			return nil, err
+		}
+
 		// bind yield result
 		if err := c.BindSymbolDecl(vtag, vlast, false); err != nil {
 			return nil, err
@@ -938,9 +948,9 @@ func evalPrimeExpr(c *r.Context, expr syntax.Expression) (r.Element, error) {
 			return nil, err
 		}
 		switch t := idValue.(type) {
-		case *IDName:
-			return c.FindElement(t.GetLiteral())
-		case *IDNumber:
+		case *r.IDName:
+			return c.FindElement(t)
+		case *r.IDNumber:
 			return value.NewNumber(t.GetValue()), nil
 		default:
 			// currently idValue only have IDName or IDNumber
@@ -1015,7 +1025,10 @@ func evalVarAssignExpr(c *r.Context, expr *syntax.VarAssignExpr) (r.Element, err
 	switch v := expr.TargetVar.(type) {
 	case *syntax.ID:
 		// set ID
-		vtag := v.GetLiteral()
+		vtag, err := MatchIDName(v)
+		if err != nil {
+			return nil, err
+		}
 		err2 := c.SetSymbol(vtag, vr)
 		return vr, err2
 	case *syntax.MemberExpr:

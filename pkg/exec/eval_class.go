@@ -7,8 +7,9 @@ import (
 )
 
 // compileClass -
-func compileClass(upperCtx *r.Context, name string, classNode *syntax.ClassDeclareStmt) (*value.ClassModel, error) {
-	ref := value.NewClassModel(name, upperCtx.GetCurrentModule())
+func compileClass(upperCtx *r.Context, classID *r.IDName, classNode *syntax.ClassDeclareStmt) (*value.ClassModel, error) {
+	className := classID.GetLiteral()
+	ref := value.NewClassModel(className, upperCtx.GetCurrentModule())
 
 	// set default constructor
 	ref.Constructor = func(c *r.Context, params []r.Element) (r.Element, error) {

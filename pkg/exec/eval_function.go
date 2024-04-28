@@ -20,7 +20,13 @@ func compileFunction(upperContext *r.Context, paramTags []*syntax.ParamItem, stm
 		for _, stmtI := range stmtBlock.Children {
 			if v, ok := stmtI.(*syntax.FunctionDeclareStmt); ok {
 				fn := compileFunction(c, v.ParamList, v.ExecBlock)
-				if err := c.BindSymbol(v.FuncName.GetLiteral(), fn); err != nil {
+
+				funcName, err := MatchIDName(v.FuncName)
+				if err != nil {
+					return nil, err
+				}
+
+				if err := c.BindSymbol(funcName, fn); err != nil {
 					return nil, err
 				}
 			}
@@ -50,7 +56,10 @@ func compileFunction(upperContext *r.Context, paramTags []*syntax.ParamItem, stm
 			if !param.RefMark {
 				paramVal = value.DuplicateValue(paramVal)
 			}
-			paramName := param.ID.GetLiteral()
+			paramName, err := MatchIDName(param.ID)
+			if err != nil {
+				return nil, err
+			}
 			if err := c.BindSymbol(paramName, paramVal); err != nil {
 				return nil, err
 			}
@@ -68,8 +77,11 @@ func evalFunctionCall(c *r.Context, expr *syntax.FuncCallExpr) (r.Element, error
 	var resultVal r.Element
 	var err error
 
-	// eval method
-	funcName := expr.FuncName.GetLiteral()
+	// match & get funcName
+	funcName, err := MatchIDName(expr.FuncName)
+	if err != nil {
+		return nil, err
+	}
 
 	// exec params
 	params, err := exprsToValues(c, expr.Params)
@@ -121,7 +133,10 @@ func evalFunctionCall(c *r.Context, expr *syntax.FuncCallExpr) (r.Element, error
 	// However, if `得到 [someVar]` semi statement is defined, we will bind the `resultVal` to `someVar` first before ending the procedure.
 	if expr.YieldResult != nil {
 		// add yield result
-		ytag := expr.YieldResult.GetLiteral()
+		ytag, err := MatchIDName(expr.YieldResult)
+		if err != nil {
+			return nil, err
+		}
 		// bind yield result
 		if err := c.BindScopeSymbolDecl(c.GetCurrentScope(), ytag, resultVal); err != nil {
 			return nil, err
@@ -132,7 +147,7 @@ func evalFunctionCall(c *r.Context, expr *syntax.FuncCallExpr) (r.Element, error
 	return resultVal, nil
 }
 
-func execMethodFunction(c *r.Context, root r.Element, funcName string, params []r.Element) (r.Element, error) {
+func execMethodFunction(c *r.Context, root r.Element, funcName *r.IDName, params []r.Element) (r.Element, error) {
 	pushCallstack := false
 
 	if robj, ok := root.(*value.Object); ok {
@@ -150,7 +165,7 @@ func execMethodFunction(c *r.Context, root r.Element, funcName string, params []
 
 	newScope.SetThisValue(root)
 	// exec method
-	elem, err := root.ExecMethod(c, funcName, params)
+	elem, err := root.ExecMethod(c, funcName.GetLiteral(), params)
 	// pop callInfo only when function execution succeed
 	if err == nil && pushCallstack {
 		c.PopCallStack()
@@ -160,7 +175,7 @@ func execMethodFunction(c *r.Context, root r.Element, funcName string, params []
 
 // direct function: defined as standalone function instead of the method of
 // a model
-func execDirectFunction(c *r.Context, funcName string, params []r.Element) (r.Element, error) {
+func execDirectFunction(c *r.Context, funcName *r.IDName, params []r.Element) (r.Element, error) {
 	sym, err := c.FindSymbol(funcName)
 	if err != nil {
 		return nil, err
@@ -172,7 +187,7 @@ func execDirectFunction(c *r.Context, funcName string, params []r.Element) (r.El
 	// assert value is function type
 	funcVal, ok := sym.GetValue().(*value.Function)
 	if !ok {
-		return nil, zerr.InvalidFuncVariable(funcName)
+		return nil, zerr.InvalidFuncVariable(funcName.GetLiteral())
 	}
 
 	elem, err := funcVal.Exec(c, nil, params)

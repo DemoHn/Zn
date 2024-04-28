@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	zerr "github.com/DemoHn/Zn/pkg/error"
+	r "github.com/DemoHn/Zn/pkg/runtime"
 	"github.com/DemoHn/Zn/pkg/syntax"
 )
 
@@ -55,32 +56,7 @@ _window_handler2
 ```
 */
 
-type IDType interface {
-	GetLiteral() string
-}
-
-type IDName struct {
-	literal string
-}
-
-func (id *IDName) GetLiteral() string {
-	return id.literal
-}
-
-type IDNumber struct {
-	literal  string
-	numValue float64
-}
-
-func (id *IDNumber) GetLiteral() string {
-	return id.literal
-}
-
-func (id *IDNumber) GetValue() float64 {
-	return id.numValue
-}
-
-func MatchIDType(id *syntax.ID) (IDType, error) {
+func MatchIDType(id *syntax.ID) (r.IDType, error) {
 	idStr := id.GetLiteral()
 	// #1. match number
 	isNumber, err := tryParseNumber(id)
@@ -88,38 +64,38 @@ func MatchIDType(id *syntax.ID) (IDType, error) {
 		return nil, err
 	}
 	if isNumber {
-		return &IDNumber{
-			literal:  idStr,
-			numValue: parseIDNumberToFloat64(idStr),
+		return &r.IDNumber{
+			Literal:  idStr,
+			NumValue: parseIDNumberToFloat64(idStr),
 		}, nil
 	}
 
 	// #2. match name
-	return &IDName{
-		literal: idStr,
+	return &r.IDName{
+		Literal: idStr,
 	}, nil
 }
 
-func MatchIDName(id *syntax.ID) (*IDName, error) {
+func MatchIDName(id *syntax.ID) (*r.IDName, error) {
 	v, err := MatchIDType(id)
 	if err != nil {
 		return nil, err
 	}
 
-	if idName, ok := v.(*IDName); ok {
+	if idName, ok := v.(*r.IDName); ok {
 		return idName, nil
 	} else {
 		return nil, zerr.IDNameONLY(id.GetLiteral())
 	}
 }
 
-func MatchIDNumber(id *syntax.ID) (*IDNumber, error) {
+func MatchIDNumber(id *syntax.ID) (*r.IDNumber, error) {
 	v, err := MatchIDType(id)
 	if err != nil {
 		return nil, err
 	}
 
-	if idNumber, ok := v.(*IDNumber); ok {
+	if idNumber, ok := v.(*r.IDNumber); ok {
 		return idNumber, nil
 	} else {
 		return nil, zerr.IDNumberONLY(id.GetLiteral())
