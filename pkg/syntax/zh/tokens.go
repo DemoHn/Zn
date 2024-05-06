@@ -433,12 +433,7 @@ func parseIdentifier(l *syntax.Lexer) (syntax.Token, error) {
 		ch = l.Next()
 		// 1. when next char is space, stop here
 		if syntax.IsWhiteSpace(ch) {
-			return syntax.Token{
-				Type:     TypeIdentifier,
-				StartIdx: startIdx,
-				EndIdx:   l.GetCursor(),
-				Literal:  literal,
-			}, nil
+			goto ID_end
 		}
 
 		// 2. when next char is a part of keyword, stop here
@@ -447,32 +442,17 @@ func parseIdentifier(l *syntax.Lexer) (syntax.Token, error) {
 			return syntax.Token{}, err
 		}
 		if isKeyword {
-			return syntax.Token{
-				Type:     TypeIdentifier,
-				StartIdx: startIdx,
-				EndIdx:   l.GetCursor(),
-				Literal:  literal,
-			}, nil
+			goto ID_end
 		}
 		// 3. when next char is a start of comment, stop here
 		// only 「//」 and 「/*」 type is available
 		// NOTE: we will regard comment type「注」 as a regular identifier
 		if ch == SlashOp && syntax.ContainsRune(l.Peek(), []rune{SlashOp, MultiplyOp, EqualOp}) {
-			return syntax.Token{
-				Type:     TypeIdentifier,
-				StartIdx: startIdx,
-				EndIdx:   l.GetCursor(),
-				Literal:  literal,
-			}, nil
+			goto ID_end
 		}
 		// 4. when next char is a mark, stop here
 		if syntax.ContainsRune(ch, terminateMarkers) {
-			return syntax.Token{
-				Type:     TypeIdentifier,
-				StartIdx: startIdx,
-				EndIdx:   l.GetCursor(),
-				Literal:  literal,
-			}, nil
+			goto ID_end
 		}
 		// 5. otherwise, if it's an identifier with *, /, .
 		// add char to literal
@@ -482,6 +462,19 @@ func parseIdentifier(l *syntax.Lexer) (syntax.Token, error) {
 		}
 		return syntax.Token{}, zerr.InvalidChar(ch, l.GetCursor())
 	}
+ID_end:
+	// SlashOp ('/') COULD NOT be the last char of an identifer token
+	// to avoid confusion
+	if literal[len(literal)-1] == SlashOp {
+		return syntax.Token{}, zerr.InvalidChar(SlashOp, l.GetCursor()-1)
+	}
+	// else return a complete identifier token
+	return syntax.Token{
+		Type:     TypeIdentifier,
+		StartIdx: startIdx,
+		EndIdx:   l.GetCursor(),
+		Literal:  literal,
+	}, nil
 }
 
 // validate if the coming block is a comment block then parse comment block
