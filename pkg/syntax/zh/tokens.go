@@ -320,15 +320,10 @@ func parseVarQuote(l *syntax.Lexer) (syntax.Token, error) {
 	var literal []rune
 	for {
 		ch := l.Next()
-		switch ch {
-		case syntax.RuneEOF:
-			return syntax.Token{
-				Type:     TypeIdentifier,
-				StartIdx: startIdx,
-				EndIdx:   l.GetCursor(),
-				Literal:  literal,
-			}, nil
-		case BackTick:
+
+		if isIdentifierChar(ch) || syntax.ContainsRune(ch, syntax.IDContinue) {
+			literal = append(literal, ch)
+		} else if ch == BackTick {
 			l.Next()
 			return syntax.Token{
 				Type:     TypeIdentifier,
@@ -336,8 +331,8 @@ func parseVarQuote(l *syntax.Lexer) (syntax.Token, error) {
 				EndIdx:   l.GetCursor(),
 				Literal:  literal,
 			}, nil
-		default:
-			literal = append(literal, ch)
+		} else {
+			return syntax.Token{}, zerr.InvalidChar(ch, l.GetCursor())
 		}
 	}
 }
@@ -633,10 +628,6 @@ func parseComment(l *syntax.Lexer) (bool, syntax.Token, error) {
 //// utils
 func isPureNumber(ch rune) bool {
 	return ch >= '0' && ch <= '9'
-}
-
-func isNumber(ch rune) bool {
-	return (ch >= '0' && ch <= '9') || syntax.ContainsRune(ch, []rune{'.', '-', '+'})
 }
 
 // @params: ch - input char
