@@ -43,7 +43,7 @@ func setupStmtFromCode(text string) (syntax.Statement, error) {
 
 func injectValuesToRootScope(c *runtime.Context, nameMap map[string]runtime.Element) {
 	for k, v := range nameMap {
-		c.BindSymbolDecl(k, v, false)
+		c.BindSymbolDecl(runtime.NewIDName(k), v, false)
 	}
 }
 

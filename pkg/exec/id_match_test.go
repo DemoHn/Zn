@@ -22,11 +22,6 @@ func TestTryMatchNumber(t *testing.T) {
 			expectResult: true,
 		},
 		{
-			literal:      "045,789",
-			expectError:  false,
-			expectResult: true,
-		},
-		{
 			literal:      "-50",
 			expectError:  false,
 			expectResult: true,

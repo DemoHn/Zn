@@ -144,15 +144,6 @@ func tryParseNumber(id *syntax.ID) (bool, error) {
 			default:
 				goto end
 			}
-		// ignore separator comma: e.g. 2,300,500
-		// NOTE1: we don't check if comma is separating in thousands, thus 2,30 is also OK
-		case ',':
-			switch state {
-			case sIntEnd, sDotDecEnd, sExpEnd:
-				continue
-			default:
-				return false, zerr.InvalidIDFormat(id.GetLiteral())
-			}
 		case '-', '+':
 			switch state {
 			case sBegin:
@@ -242,8 +233,7 @@ end:
 }
 
 func parseIDNumberToFloat64(idStr string) float64 {
-	v := strings.ReplaceAll(idStr, ",", "")
-	v = strings.Replace(v, "*^", "", 1)
+	v := strings.Replace(idStr, "*^", "", 1)
 	v = strings.Replace(v, "*10^", "e", 1)
 
 	f, _ := strconv.ParseFloat(v, 64)
