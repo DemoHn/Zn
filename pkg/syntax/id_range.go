@@ -448,6 +448,7 @@ var IDContinue = []rune{
 	0x2e, // . 用作小数点
 	0x2a, // *
 	0x2f, // /
+	0x25, // %
 }
 
 // IdInRange - check if char in idRange table

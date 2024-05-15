@@ -44,10 +44,12 @@ const (
 	EqualOp       rune = 0x003D // =
 	LessThanOp    rune = 0x003C // <
 	GreaterThanOp rune = 0x003E // >
-	PlusOp        rune = '+'    // +
-	MinusOp       rune = '-'    // -
-	MultiplyOp    rune = '*'    // *
+	PlusOp        rune = 0x002B // +
+	MinusOp       rune = 0x002D // -
+	MultiplyOp    rune = 0x002A // *
 	SlashOp       rune = 0x002F // /
+	IntDivOp      rune = 0x007C // |
+	RemainderOp   rune = 0x0025 // %
 )
 
 //// 4. var quote
@@ -65,39 +67,41 @@ const (
 // for special type Tokens, its range varies from 0 - 9
 // for keyword types, check lex/keyword.go for details
 const (
-	TypeEOF           uint8 = 0
-	TypeString        uint8 = 2  // string (only double quotes)
-	TypeNumber        uint8 = 4  // numbers
-	TypeIdentifier    uint8 = 5  //
-	TypeEnumString    uint8 = 6  // string (with single quotes)
-	TypeLibString     uint8 = 7  // string (with guillemots)
-	TypeComment       uint8 = 10 // 注：
-	TypeCommaSep      uint8 = 11 // ，
-	TypeStmtSep       uint8 = 12 // ；
-	TypeFuncCall      uint8 = 13 // ：
-	TypeFuncDeclare   uint8 = 14 // ？
-	TypeObjRef        uint8 = 15 // &
-	TypeExceptionT    uint8 = 16 // ！
-	TypeAnnotationT   uint8 = 17 // @
-	TypeMapHash       uint8 = 18 // #
-	TypeArrayQuoteL   uint8 = 20 // 【
-	TypeArrayQuoteR   uint8 = 21 // 】
-	TypeFuncQuoteL    uint8 = 22 // （
-	TypeFuncQuoteR    uint8 = 23 // ）
-	TypeStmtQuoteL    uint8 = 25 // {
-	TypeStmtQuoteR    uint8 = 26 // }
-	TypePauseCommaSep uint8 = 28 // 、
-	TypeAssignMark    uint8 = 29 // =
-	TypeGTMark        uint8 = 30 // >
-	TypeLTMark        uint8 = 31 // <
-	TypeGTEMark       uint8 = 32 // >=
-	TypeLTEMark       uint8 = 33 // <=
-	TypeNEMark        uint8 = 34 // /=
-	TypeEqualMark     uint8 = 35 // ==
-	TypePlus          uint8 = 36 // +
-	TypeMinus         uint8 = 37 // -
-	TypeMultiply      uint8 = 38 // *
-	TypeDivision      uint8 = 39 // /
+	TypeEOF              uint8 = 0
+	TypeString           uint8 = 2  // string (only double quotes)
+	TypeNumber           uint8 = 4  // numbers
+	TypeIdentifier       uint8 = 5  //
+	TypeEnumString       uint8 = 6  // string (with single quotes)
+	TypeLibString        uint8 = 7  // string (with guillemots)
+	TypeComment          uint8 = 10 // 注：
+	TypeCommaSep         uint8 = 11 // ，
+	TypeStmtSep          uint8 = 12 // ；
+	TypeFuncCall         uint8 = 13 // ：
+	TypeFuncDeclare      uint8 = 14 // ？
+	TypeObjRef           uint8 = 15 // &
+	TypeExceptionT       uint8 = 16 // ！
+	TypeAnnotationT      uint8 = 17 // @
+	TypeMapHash          uint8 = 18 // #
+	TypeArrayQuoteL      uint8 = 20 // 【
+	TypeArrayQuoteR      uint8 = 21 // 】
+	TypeFuncQuoteL       uint8 = 22 // （
+	TypeFuncQuoteR       uint8 = 23 // ）
+	TypeStmtQuoteL       uint8 = 24 // {
+	TypeStmtQuoteR       uint8 = 25 // }
+	TypePauseCommaSep    uint8 = 26 // 、
+	TypeIntDivMark       uint8 = 27 // |
+	TypeGetRemainderMark uint8 = 28 // %
+	TypeAssignMark       uint8 = 29 // =
+	TypeGTMark           uint8 = 30 // >
+	TypeLTMark           uint8 = 31 // <
+	TypeGTEMark          uint8 = 32 // >=
+	TypeLTEMark          uint8 = 33 // <=
+	TypeNEMark           uint8 = 34 // /=
+	TypeEqualMark        uint8 = 35 // ==
+	TypePlus             uint8 = 36 // +
+	TypeMinus            uint8 = 37 // -
+	TypeMultiply         uint8 = 38 // *
+	TypeDivision         uint8 = 39 // /
 	//// from 40 - 78, reserved for keywords
 )
 
@@ -135,6 +139,8 @@ var markOperators = []rune{
 	MinusOp,
 	MultiplyOp,
 	SlashOp,
+	IntDivOp,
+	RemainderOp,
 }
 
 var markQuotes = []rune{
@@ -268,6 +274,10 @@ func parseOperators(l *syntax.Lexer) (bool, syntax.Token, error) {
 		} else {
 			tokenType = TypeGTMark
 		}
+	case IntDivOp:
+		tokenType = TypeIntDivMark
+	case RemainderOp:
+		tokenType = TypeGetRemainderMark
 	case PlusOp, MinusOp, MultiplyOp, SlashOp: // op: + - * /
 		chn := l.Peek()
 
@@ -422,7 +432,7 @@ func parseIdentifier(l *syntax.Lexer) (syntax.Token, error) {
 		// EOF or newline chars
 		syntax.RuneEOF, syntax.RuneCR, syntax.RuneLF,
 		// operators except for PlusOp, MinusOp, MultiplyOp, SlashOp
-		RefOp, AnnotationOp, HashOp, EqualOp, LessThanOp, GreaterThanOp,
+		RefOp, AnnotationOp, HashOp, EqualOp, LessThanOp, GreaterThanOp, IntDivOp,
 	}, markPunctuations...)
 
 	// 0. first char must be an identifier

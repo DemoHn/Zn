@@ -29,7 +29,6 @@ type consumerFunc func()
 func ParseStatement(p *ParserZH) syntax.Statement {
 	var validTypes = []uint8{
 		TypeStmtSep,
-		TypeComment,
 		TypeDeclareW,
 		TypeCondW,
 		TypeFuncW,
@@ -52,7 +51,7 @@ func ParseStatement(p *ParserZH) syntax.Statement {
 	var s syntax.Statement
 	if match {
 		switch tk.Type {
-		case TypeStmtSep, TypeComment:
+		case TypeStmtSep:
 			// skip them because it's meaningless for syntax parsing
 			return new(syntax.EmptyStmt)
 		case TypeDeclareW:
@@ -712,24 +711,24 @@ func ParseVarDeclareStmt(p *ParserZH) *syntax.VarDeclareStmt {
 		}
 
 		parseItemListBlock(p, blockIndent, func() {
-			if p.stmtCompleteFlag {
-				p.unsetStmtCompleteFlag()
-			}
+			p.unsetStmtCompleteFlag()
+
+			p.tryConsume(TypeStmtSep)
 			// there are at least ONE vdAssignPair on each line!
-			vNode.AssignPair = append(vNode.AssignPair, parseVDAssignPair(p))
-			for {
-				if p.meetStmtLineBreak() && p.stmtCompleteFlag {
-					break
-				}
-				vNode.AssignPair = append(vNode.AssignPair, parseVDAssignPair(p))
+			assignPair := parseVDAssignPair(p)
+
+			// normally, a complete statement should occupy a whole line
+			// or following a stmt
+			if !(p.stmtCompleteFlag || p.meetStmtBreak()) {
+				panic(p.getInvalidSyntaxPeek())
 			}
+			vNode.AssignPair = append(vNode.AssignPair, assignPair)
 		})
 	} else {
 		// #02. consume identifier declare list (comma list) inline
-		// there are at least ONE vdAssignPair on each line!
-		vNode.AssignPair = append(vNode.AssignPair, parseVDAssignPair(p))
-		for !p.meetStmtLineBreak() && !p.meetStmtBreak() {
-			vNode.AssignPair = append(vNode.AssignPair, parseVDAssignPair(p))
+		// there is ONLY ONE vdAssignPair along the statement!
+		vNode.AssignPair = []syntax.VDAssignPair{
+			parseVDAssignPair(p),
 		}
 	}
 
