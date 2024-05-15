@@ -713,7 +713,10 @@ func ParseVarDeclareStmt(p *ParserZH) *syntax.VarDeclareStmt {
 		parseItemListBlock(p, blockIndent, func() {
 			p.unsetStmtCompleteFlag()
 
-			p.tryConsume(TypeStmtSep)
+			match, _ := p.tryConsume(TypeStmtSep)
+			if match {
+				return
+			}
 			// there are at least ONE vdAssignPair on each line!
 			assignPair := parseVDAssignPair(p)
 
@@ -753,7 +756,7 @@ func parseVDAssignPair(p *ParserZH) syntax.VDAssignPair {
 	}
 	match, tk := p.tryConsume(validKeywords...)
 	if !match {
-		panic(p.getInvalidSyntaxCurr())
+		panic(p.getInvalidSyntaxPeek())
 	}
 
 	switch tk.Type {
@@ -1241,7 +1244,7 @@ func ParseImportStmt(p *ParserZH) *syntax.ImportStmt {
 	stmt := &syntax.ImportStmt{}
 	match, tk := p.tryConsume(TypeLibString, TypeString)
 	if !match {
-		panic(p.getInvalidSyntaxCurr())
+		panic(p.getInvalidSyntaxPeek())
 	}
 
 	if tk.Type == TypeLibString {
@@ -1315,7 +1318,7 @@ func ParseClassDeclareStmt(p *ParserZH) *syntax.ClassDeclareStmt {
 
 		match, tk := p.tryConsume(validChildTypes...)
 		if !match {
-			panic(p.getInvalidSyntaxCurr())
+			panic(p.getInvalidSyntaxPeek())
 		}
 
 		switch tk.Type {
@@ -1370,7 +1373,7 @@ func ParseContinueStmt(p *ParserZH) *syntax.ContinueStmt {
 func parseID(p *ParserZH) *syntax.ID {
 	match, tk := p.tryConsume(TypeIdentifier)
 	if !match {
-		panic(p.getInvalidSyntaxCurr())
+		panic(p.getInvalidSyntaxPeek())
 	}
 	return newID(p, tk)
 }
@@ -1379,7 +1382,7 @@ func parseID(p *ParserZH) *syntax.ID {
 func parseFuncID(p *ParserZH) *syntax.ID {
 	match, tk := p.tryConsume(TypeIdentifier)
 	if !match {
-		panic(p.getInvalidSyntaxCurr())
+		panic(p.getInvalidSyntaxPeek())
 	}
 	return newID(p, tk)
 }
