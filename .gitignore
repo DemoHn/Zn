@@ -13,6 +13,8 @@ zinc.exe
 /zinc
 zinc-server.exe
 /zinc-server
+zinc-playground.exe
+/zinc-playground
 coverage.out
 .idea
 .VSCodeCounter

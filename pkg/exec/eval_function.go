@@ -154,9 +154,11 @@ func execMethodFunction(c *r.Context, root r.Element, funcName *r.IDName, params
 		pushCallstack = true
 		refModule := robj.GetRefModule()
 
-		// append callInfo
-		c.PushCallStack()
-		c.SetCurrentRefModule(refModule)
+		if refModule != nil {
+			// append callInfo
+			c.PushCallStack()
+			c.SetCurrentRefModule(refModule)
+		}
 	}
 
 	// create a new scope to denote a new 'thisValue'
@@ -180,9 +182,11 @@ func execDirectFunction(c *r.Context, funcName *r.IDName, params []r.Element) (r
 	if err != nil {
 		return nil, err
 	}
-	// push callInfo
-	c.PushCallStack()
-	c.SetCurrentRefModule(sym.GetModule())
+	if sym.GetModule() != nil {
+		// push callInfo
+		c.PushCallStack()
+		c.SetCurrentRefModule(sym.GetModule())
+	}
 
 	// assert value is function type
 	funcVal, ok := sym.GetValue().(*value.Function)

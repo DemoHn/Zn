@@ -233,7 +233,7 @@ end:
 }
 
 func parseIDNumberToFloat64(idStr string) float64 {
-	v := strings.Replace(idStr, "*^", "", 1)
+	v := strings.Replace(idStr, "*^", "e", 1)
 	v = strings.Replace(v, "*10^", "e", 1)
 
 	f, _ := strconv.ParseFloat(v, 64)
