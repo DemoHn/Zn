@@ -110,6 +110,10 @@ func StringifyAST(node Node) string {
 			t = "MUL"
 		case ArithDiv:
 			t = "DIV"
+		case ArithIntDiv:
+			t = "INTDIV"
+		case ArithModulo:
+			t = "MODULO"
 		}
 
 		return fmt.Sprintf("$AR(type=(%s) left=(%s) right=(%s))", t, StringifyAST(v.LeftExpr), StringifyAST(v.RightExpr))

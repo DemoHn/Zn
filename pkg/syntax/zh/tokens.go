@@ -67,41 +67,41 @@ const (
 // for special type Tokens, its range varies from 0 - 9
 // for keyword types, check lex/keyword.go for details
 const (
-	TypeEOF              uint8 = 0
-	TypeString           uint8 = 2  // string (only double quotes)
-	TypeNumber           uint8 = 4  // numbers
-	TypeIdentifier       uint8 = 5  //
-	TypeEnumString       uint8 = 6  // string (with single quotes)
-	TypeLibString        uint8 = 7  // string (with guillemots)
-	TypeComment          uint8 = 10 // 注：
-	TypeCommaSep         uint8 = 11 // ，
-	TypeStmtSep          uint8 = 12 // ；
-	TypeFuncCall         uint8 = 13 // ：
-	TypeFuncDeclare      uint8 = 14 // ？
-	TypeObjRef           uint8 = 15 // &
-	TypeExceptionT       uint8 = 16 // ！
-	TypeAnnotationT      uint8 = 17 // @
-	TypeMapHash          uint8 = 18 // #
-	TypeArrayQuoteL      uint8 = 20 // 【
-	TypeArrayQuoteR      uint8 = 21 // 】
-	TypeFuncQuoteL       uint8 = 22 // （
-	TypeFuncQuoteR       uint8 = 23 // ）
-	TypeStmtQuoteL       uint8 = 24 // {
-	TypeStmtQuoteR       uint8 = 25 // }
-	TypePauseCommaSep    uint8 = 26 // 、
-	TypeIntDivMark       uint8 = 27 // |
-	TypeGetRemainderMark uint8 = 28 // %
-	TypeAssignMark       uint8 = 29 // =
-	TypeGTMark           uint8 = 30 // >
-	TypeLTMark           uint8 = 31 // <
-	TypeGTEMark          uint8 = 32 // >=
-	TypeLTEMark          uint8 = 33 // <=
-	TypeNEMark           uint8 = 34 // /=
-	TypeEqualMark        uint8 = 35 // ==
-	TypePlus             uint8 = 36 // +
-	TypeMinus            uint8 = 37 // -
-	TypeMultiply         uint8 = 38 // *
-	TypeDivision         uint8 = 39 // /
+	TypeEOF           uint8 = 0
+	TypeString        uint8 = 2  // string (only double quotes)
+	TypeNumber        uint8 = 4  // numbers
+	TypeIdentifier    uint8 = 5  //
+	TypeEnumString    uint8 = 6  // string (with single quotes)
+	TypeLibString     uint8 = 7  // string (with guillemots)
+	TypeComment       uint8 = 10 // 注：
+	TypeCommaSep      uint8 = 11 // ，
+	TypeStmtSep       uint8 = 12 // ；
+	TypeFuncCall      uint8 = 13 // ：
+	TypeFuncDeclare   uint8 = 14 // ？
+	TypeObjRef        uint8 = 15 // &
+	TypeExceptionT    uint8 = 16 // ！
+	TypeAnnotationT   uint8 = 17 // @
+	TypeMapHash       uint8 = 18 // #
+	TypeArrayQuoteL   uint8 = 20 // 【
+	TypeArrayQuoteR   uint8 = 21 // 】
+	TypeFuncQuoteL    uint8 = 22 // （
+	TypeFuncQuoteR    uint8 = 23 // ）
+	TypeStmtQuoteL    uint8 = 24 // {
+	TypeStmtQuoteR    uint8 = 25 // }
+	TypePauseCommaSep uint8 = 26 // 、
+	TypeIntDivMark    uint8 = 27 // |
+	TypeModuloMark    uint8 = 28 // %
+	TypeAssignMark    uint8 = 29 // =
+	TypeGTMark        uint8 = 30 // >
+	TypeLTMark        uint8 = 31 // <
+	TypeGTEMark       uint8 = 32 // >=
+	TypeLTEMark       uint8 = 33 // <=
+	TypeNEMark        uint8 = 34 // /=
+	TypeEqualMark     uint8 = 35 // ==
+	TypePlus          uint8 = 36 // +
+	TypeMinus         uint8 = 37 // -
+	TypeMultiply      uint8 = 38 // *
+	TypeDivision      uint8 = 39 // /
 	//// from 40 - 78, reserved for keywords
 )
 
@@ -277,7 +277,7 @@ func parseOperators(l *syntax.Lexer) (bool, syntax.Token, error) {
 	case IntDivOp:
 		tokenType = TypeIntDivMark
 	case RemainderOp:
-		tokenType = TypeGetRemainderMark
+		tokenType = TypeModuloMark
 	case PlusOp, MinusOp, MultiplyOp, SlashOp: // op: + - * /
 		chn := l.Peek()
 

@@ -352,10 +352,12 @@ const (
 	LogicXNEQ uint8 = 11 // 不为
 
 	// arith types
-	ArithAdd uint8 = 12 // +
-	ArithSub uint8 = 13 // -
-	ArithMul uint8 = 14 // *
-	ArithDiv uint8 = 15 // /
+	ArithAdd    uint8 = 12 // +
+	ArithSub    uint8 = 13 // -
+	ArithMul    uint8 = 14 // *
+	ArithDiv    uint8 = 15 // /
+	ArithIntDiv uint8 = 16 // |
+	ArithModulo uint8 = 17 // %
 )
 
 // LogicExpr - logical expression return TRUE (真) or FALSE (假) only

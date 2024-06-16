@@ -315,13 +315,21 @@ func parseArithMulDivExpr(p *ParserZH) syntax.Expression {
 	var parseTail func(syntax.Expression) syntax.Expression
 
 	parseTail = func(el syntax.Expression) syntax.Expression {
-		if match, tk := p.tryConsume(TypeMultiply, TypeDivision); match {
+		if match, tk := p.tryConsume(TypeMultiply, TypeDivision, TypeIntDivMark, TypeModuloMark); match {
 			exprR := ParseMemberExpr(p)
 
-			t := syntax.ArithMul
-			if tk.Type == TypeDivision {
+			var t uint8
+			switch tk.Type {
+			case TypeMultiply:
+				t = syntax.ArithMul
+			case TypeDivision:
 				t = syntax.ArithDiv
+			case TypeIntDivMark:
+				t = syntax.ArithIntDiv
+			case TypeModuloMark:
+				t = syntax.ArithModulo
 			}
+
 			finalExpr := &syntax.ArithExpr{
 				Type:      t,
 				LeftExpr:  el,

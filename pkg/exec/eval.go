@@ -2,6 +2,7 @@ package exec
 
 import (
 	"fmt"
+	"math"
 	"strings"
 
 	"github.com/DemoHn/Zn/stdlib"
@@ -262,7 +263,7 @@ func evalStatement(c *r.Context, stmt syntax.Statement) error {
 }
 
 // evalVarDeclareStmt - consists of three branches:
-// 1. A，B 为 C
+// 1. A，B 设为 C
 // 2. A，B 成为 X：P1，P2，...
 // 3. A，B 恒为 C
 func evalVarDeclareStmt(c *r.Context, node *syntax.VarDeclareStmt) error {
@@ -933,6 +934,25 @@ func evalArithExpr(c *r.Context, expr *syntax.ArithExpr) (*value.Number, error) 
 			return nil, zerr.ArithDivZero()
 		}
 		return value.NewNumber(leftNum.GetValue() / rightNum.GetValue()), nil
+	case syntax.ArithIntDiv:
+		// python style intDiv, where result close to the closet lower integer e.g. -15 // 2 = -8 (instead of -7)
+		if rightNum.GetValue() == 0 {
+			return nil, zerr.ArithDivZero()
+		}
+		return value.NewNumber(
+			math.Floor(leftNum.GetValue() / rightNum.GetValue()),
+		), nil
+	case syntax.ArithModulo:
+		// a/b = q with remainder r, where b*q + r = a and 0 <= abs(r) < b
+		// so q = a 'intdiv' b, r = a - q * b
+		a := leftNum.GetValue()
+		b := rightNum.GetValue()
+		if b == 0 {
+			return nil, zerr.ArithDivZero()
+		}
+		q := math.Floor(a / b)
+
+		return value.NewNumber(a - q*b), nil
 	}
 	return nil, zerr.UnexpectedCase("运算项", fmt.Sprintf("%d", expr.Type))
 }
