@@ -22,6 +22,10 @@ func NewArray(value []r.Element) *Array {
 	return &Array{value}
 }
 
+func (ar *Array) Length() int {
+	return len(ar.value)
+}
+
 // GetValue -
 func (ar *Array) GetValue() []r.Element {
 	return ar.value

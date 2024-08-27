@@ -1,6 +1,6 @@
 module github.com/DemoHn/Zn
 
-go 1.13
+go 1.16
 
 require (	
 	github.com/flopp/go-findfont v0.0.0-20201103071330-d960cd9a3075
