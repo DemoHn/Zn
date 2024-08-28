@@ -13,7 +13,7 @@ type REPLExecutor struct {
 
 func NewREPLExecutor() *REPLExecutor {
 	return &REPLExecutor{
-		context: r.NewContext(globalValues, r.NewAnonymousModule(nil)),
+		context: r.NewContext(globalValues, r.NewMainModule(nil)),
 	}
 }
 

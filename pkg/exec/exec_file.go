@@ -3,6 +3,7 @@ package exec
 import (
 	"errors"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 
@@ -14,21 +15,28 @@ import (
 )
 
 type FileExecutor struct {
-	rootDir    string
-	rootModule string
-	context    *r.Context
+	rootDir  string
+	mainFile string
+	context  *r.Context
 }
 
-func NewFileExecutor(rootDir string, rootModule string) *FileExecutor {
+func NewFileExecutor(file string) *FileExecutor {
+	// get dir & fileName -
+	// e.g. when exec "/home/user/xxxx/module/a.zn":
+	//  - dir=/home/user/xxxx/module
+	//  - file=a.zn
+	rootDir := filepath.Dir(file)
+	_, fileName := filepath.Split(file)
+
 	// context is initialized after InitRootModule() executed
 	return &FileExecutor{
-		rootDir:    rootDir,
-		rootModule: rootModule,
-		context:    nil,
+		rootDir:  rootDir,
+		mainFile: fileName,
+		context:  nil,
 	}
 }
 
-func (fl *FileExecutor) RunModule() (r.Element, error) {
+func (fl *FileExecutor) Run() (r.Element, error) {
 	// #1. init rootModule & context first
 	if err := fl.initRootModule(); err != nil {
 		return nil, err
@@ -62,14 +70,8 @@ func (fl *FileExecutor) HasPrinted() bool {
 
 // initRootModule - and setup the context where rootModule = $this one
 func (fl *FileExecutor) initRootModule() error {
-	// #1. find filepath of current module
-	moduleFile, err := fl.getModulePath(fl.rootModule)
-	if err != nil {
-		return err
-	}
-
-	// #2. read source code from file
-	in, err := io.NewFileStream(moduleFile)
+	// #1. read source code from file
+	in, err := io.NewFileStream(path.Join(fl.rootDir, fl.mainFile))
 	if err != nil {
 		return err
 	}
@@ -79,9 +81,9 @@ func (fl *FileExecutor) initRootModule() error {
 		return err
 	}
 
-	// #3. create module & init context
+	// #2. create module & init context
 	lexer := syntax.NewLexer(source)
-	fl.context = r.NewContext(globalValues, r.NewModule(fl.rootModule, lexer))
+	fl.context = r.NewContext(globalValues, r.NewMainModule(lexer))
 	// set source code finder
 	fl.context.SetModuleCodeFinder(fl.buildModuleCodeFinder())
 

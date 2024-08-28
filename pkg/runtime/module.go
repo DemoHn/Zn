@@ -59,7 +59,9 @@ func NewModule(name string, lexer *syntax.Lexer) *Module {
 	}
 }
 
-func NewAnonymousModule(lexer *syntax.Lexer) *Module {
+// every code start from mainModule, then from mainModule import other
+// named modules
+func NewMainModule(lexer *syntax.Lexer) *Module {
 	return &Module{
 		name:      "",
 		anonymous: true,

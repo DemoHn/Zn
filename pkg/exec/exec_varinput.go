@@ -51,7 +51,7 @@ func ExecVarInputs(source string) (map[string]r.Element, error) {
 // 2. 恒为 is same as 为 (since all predefined inputs are consts)
 // 3. 成为 is NOT supported (since currently we have no way to fetch object class before actual code starts)
 func evalVarInputStmt(node *syntax.VarDeclareStmt) (map[string]r.Element, error) {
-	blankCtx := r.NewContext(globalValues, r.NewAnonymousModule(nil))
+	blankCtx := r.NewContext(globalValues, r.NewMainModule(nil))
 	varInputMap := make(map[string]r.Element)
 
 	for _, vpair := range node.AssignPair {

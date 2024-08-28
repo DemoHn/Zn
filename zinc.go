@@ -1,32 +1,31 @@
 package zinc
 
 import (
-	"github.com/DemoHn/Zn/pkg/runtime"
-	"github.com/DemoHn/Zn/pkg/syntax"
+	"github.com/DemoHn/Zn/pkg/exec"
+	runtime "github.com/DemoHn/Zn/pkg/runtime"
 )
 
-//// This file provides ALL types for customizing the Zinc Language and services.
 type Element = runtime.Element
 
-/// collect some interfaces we are currently using to help users extend more implementations!
-type ZnExecutor interface {
-	RunCode(varInputs map[string]Element)
+const ZINC_VERSION = "rev07"
+
+type ZnCompiler struct {
+	version string
 }
 
-type ZnServer interface {
-	Listen(connUrl string)
+// NewCompiler - new ZnCompiler object
+func NewCompiler() *ZnCompiler {
+	return &ZnCompiler{
+		version: ZINC_VERSION,
+	}
 }
 
-type ZnASTBuilder interface {
-	ParseAST(lexer *syntax.Lexer) (*syntax.Program, error)
+// GetVersion - get current compiler's version
+func (cp *ZnCompiler) GetVersion() string {
+	return cp.version
 }
 
-type ZnElement interface {
-	GetProperty(*runtime.Context, string) (Element, error)
-	SetProperty(*runtime.Context, string, Element) error
-	ExecMethod(*runtime.Context, string, []Element) (Element, error)
-}
-
-type ZnError interface {
-	Error() string
+// Run - exec a code snippet without any varInput or historial variables
+func (cp *ZnCompiler) Run(code []byte) (Element, error) {
+	return exec.NewPlaygroundExecutor(code).RunCode(map[string]Element{})
 }

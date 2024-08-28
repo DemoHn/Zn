@@ -4,8 +4,6 @@ import (
 	"fmt"
 	eio "io"
 	"os"
-	"path/filepath"
-	"strings"
 
 	r "github.com/DemoHn/Zn/pkg/runtime"
 	"github.com/DemoHn/Zn/pkg/value"
@@ -53,14 +51,9 @@ func EnterREPL() {
 
 // ExecProgram - exec program from file directly
 func ExecProgram(file string) {
-	rootDir := filepath.Dir(file)
-	// get module name
-	_, fileName := filepath.Split(file)
-	rootModule := strings.TrimSuffix(fileName, filepath.Ext(fileName))
-
-	fileExecutor := exec.NewFileExecutor(rootDir, rootModule)
+	fileExecutor := exec.NewFileExecutor(file)
 	// when exec program, unlike REPL, it's not necessary to print last executed value
-	rtnValue, err := fileExecutor.RunModule()
+	rtnValue, err := fileExecutor.Run()
 	if err != nil {
 		prettyPrintError(os.Stdout, err)
 		return
