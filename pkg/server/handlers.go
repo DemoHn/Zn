@@ -5,9 +5,13 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"math"
 	"net/http"
+	"strconv"
+	"strings"
 
 	"github.com/DemoHn/Zn/pkg/exec"
+	"github.com/DemoHn/Zn/pkg/runtime"
 	"github.com/DemoHn/Zn/pkg/value"
 )
 
@@ -54,10 +58,69 @@ func PlaygroundHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func HTTPHandler(w http.ResponseWriter, r *http.Request) {
-	// TODO: impl LOGIC HERE!
-	w.WriteHeader(200)
-	io.WriteString(w, "Hello World")
+func HTTPHandlerWithEntry(entryFile string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		// TODO: construct request
+
+		executor := exec.NewFileExecutor(entryFile)
+		result, err := executor.RunCode(map[string]runtime.Element{
+			"HTTP请求": value.NewNumber(233),
+		})
+
+		if err != nil {
+			respondError(w, err)
+		} else {
+			switch v := result.(type) {
+			case *value.String:
+				respondOK(w, v.GetValue())
+			case *value.Number:
+				respondOK(w, fmt.Sprintf("%v", v.GetValue()))
+			case *value.HashMap, *value.Array:
+				jsonBytes, _ := json.Marshal(buildPlainStrItem(v))
+				// write resp body
+				respondJSON(w, jsonBytes)
+			default:
+				respondOK(w, value.StringifyValue(v))
+			}
+		}
+	}
+}
+
+// buildPlainStrItem - from r.Value -> plain interface{} value
+func buildPlainStrItem(item runtime.Element) interface{} {
+	switch vv := item.(type) {
+	case *value.Null:
+		return nil
+	case *value.String:
+		return vv.String()
+	case *value.Bool:
+		return vv.GetValue()
+	case *value.Number:
+		valStr := vv.String()
+		valStr = strings.Replace(valStr, "*10^", "e", 1)
+		// replace *10^ -> e
+		result, err := strconv.ParseFloat(valStr, 64)
+		// Sometimes parseFloat may fail due to overflow, underflow etc.
+		// For those invalid numbers, return NaN instead.
+		if err != nil {
+			return math.NaN()
+		}
+		return result
+	case *value.Array:
+		var resultList []interface{}
+		for _, vi := range vv.GetValue() {
+			resultList = append(resultList, buildPlainStrItem(vi))
+		}
+		return resultList
+	case *value.HashMap:
+		resultMap := map[string]interface{}{}
+		for k, vi := range vv.GetValue() {
+			resultMap[k] = buildPlainStrItem(vi)
+		}
+		return resultMap
+	}
+	// TODO: stringify other objects
+	return value.StringifyValue(item)
 }
 
 //// helpers
@@ -69,6 +132,15 @@ func respondOK(w http.ResponseWriter, body string) {
 	w.WriteHeader(http.StatusOK)
 	// write resp body
 	io.WriteString(w, body)
+}
+
+func respondJSON(w http.ResponseWriter, body []byte) {
+	// declare content-type = text/plain (not json/file/...)
+	w.Header().Add("Content-Type", "application/json; charset=\"utf-8\"")
+	// http status: 200 OK
+	w.WriteHeader(http.StatusOK)
+	// write resp body
+	w.Write(body)
 }
 
 func respondError(w http.ResponseWriter, reason error) {

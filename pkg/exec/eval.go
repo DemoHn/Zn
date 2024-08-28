@@ -493,6 +493,7 @@ func evalIterateStmt(c *r.Context, node *syntax.IterateStmt) error {
 
 	// pre-defined key, value variable name
 	var keySlot, valueSlot *r.IDName
+	var matchErr error
 	var nameLen = len(node.IndexNames)
 
 	// 以A，B遍历C： D
@@ -528,9 +529,9 @@ func evalIterateStmt(c *r.Context, node *syntax.IterateStmt) error {
 		// do nothing
 	case 1:
 		// Accept IDName ONLY
-		valueSlot, err := MatchIDName(node.IndexNames[0])
-		if err != nil {
-			return err
+		valueSlot, matchErr = MatchIDName(node.IndexNames[0])
+		if matchErr != nil {
+			return matchErr
 		}
 
 		// init valueSlot as Null
@@ -538,13 +539,13 @@ func evalIterateStmt(c *r.Context, node *syntax.IterateStmt) error {
 			return err
 		}
 	case 2:
-		keySlot, err := MatchIDName(node.IndexNames[0])
-		if err != nil {
-			return err
+		keySlot, matchErr = MatchIDName(node.IndexNames[0])
+		if matchErr != nil {
+			return matchErr
 		}
-		valueSlot, err := MatchIDName(node.IndexNames[1])
-		if err != nil {
-			return err
+		valueSlot, matchErr = MatchIDName(node.IndexNames[1])
+		if matchErr != nil {
+			return matchErr
 		}
 
 		// init symbol value as Null

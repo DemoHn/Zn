@@ -36,7 +36,7 @@ func NewFileExecutor(file string) *FileExecutor {
 	}
 }
 
-func (fl *FileExecutor) Run() (r.Element, error) {
+func (fl *FileExecutor) RunCode(varInput map[string]r.Element) (r.Element, error) {
 	// #1. init rootModule & context first
 	if err := fl.initRootModule(); err != nil {
 		return nil, err
@@ -44,6 +44,7 @@ func (fl *FileExecutor) Run() (r.Element, error) {
 
 	// #2. parse program
 	module := fl.context.GetCurrentModule()
+	fl.context.SetVarInputs(varInput)
 	lexer := module.GetLexer()
 	p := syntax.NewParser(lexer, zh.NewParserZH())
 

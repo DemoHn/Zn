@@ -53,7 +53,7 @@ func EnterREPL() {
 func ExecProgram(file string) {
 	fileExecutor := exec.NewFileExecutor(file)
 	// when exec program, unlike REPL, it's not necessary to print last executed value
-	rtnValue, err := fileExecutor.Run()
+	rtnValue, err := fileExecutor.RunCode(map[string]r.Element{})
 	if err != nil {
 		prettyPrintError(os.Stdout, err)
 		return
