@@ -60,11 +60,58 @@ func PlaygroundHandler(w http.ResponseWriter, r *http.Request) {
 
 func HTTPHandlerWithEntry(entryFile string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		// TODO: construct request
+		headerObject := []value.KVPair{}
+		for k, v := range r.Header {
+			if len(v) > 0 {
+				headerObject = append(headerObject, value.KVPair{
+					Key: k,
+					// only read *first* occured value of the header name
+					Value: value.NewString(v[0]),
+				})
+			}
+		}
+		// TODO: handle binary data of request body (e.g. file)
+		// the format of final request body varies from different Content-Type: by default, it's a plain text, but when Content-Type = application/json, it's a json hashmap
+		var requestBody runtime.Element
+
+		bodyData, _ := ioutil.ReadAll(r.Body)
+		switch r.Header.Get("Content-Type") {
+		case "application/json":
+			var unmarshalMap map[string]interface{}
+			// try unmarshal json - if failed then return string directly
+			err := json.Unmarshal(bodyData, &unmarshalMap)
+			if err != nil {
+				requestBody = value.NewString(string(bodyData))
+			} else {
+				requestBody = buildHashMapItem(unmarshalMap)
+			}
+		default:
+			requestBody = value.NewString(string(bodyData))
+		}
+
+		// construct http request: zinc hashMap
+		httpReqObject := value.NewHashMap([]value.KVPair{
+			{
+				Key:   "请求方法",
+				Value: value.NewString(r.Method),
+			},
+			{
+				Key:   "路径",
+				Value: value.NewString(r.URL.Path),
+			},
+			{
+				Key:   "请求头",
+				Value: value.NewHashMap(headerObject),
+			},
+			{
+				Key:   "请求参数",
+				Value: requestBody,
+			},
+		})
 
 		executor := exec.NewFileExecutor(entryFile)
 		result, err := executor.RunCode(map[string]runtime.Element{
-			"HTTP请求": value.NewNumber(233),
+			"HTTP请求": httpReqObject,
 		})
 
 		if err != nil {
@@ -83,6 +130,39 @@ func HTTPHandlerWithEntry(entryFile string) http.HandlerFunc {
 				respondOK(w, value.StringifyValue(v))
 			}
 		}
+	}
+}
+
+// buildHashMapItem - from plain object to HashMap Element
+func buildHashMapItem(item interface{}) runtime.Element {
+	if item == nil { // nil for json value "null"
+		return value.NewNull()
+	}
+	switch vv := item.(type) {
+	case float64:
+		return value.NewNumber(vv)
+	case string:
+		return value.NewString(vv)
+	case bool:
+		return value.NewBool(vv)
+	case map[string]interface{}:
+		target := value.NewHashMap([]value.KVPair{})
+		for k, v := range vv {
+			finalValue := buildHashMapItem(v)
+			target.AppendKVPair(value.KVPair{
+				Key:   k,
+				Value: finalValue,
+			})
+		}
+		return target
+	case []interface{}:
+		varr := value.NewArray([]runtime.Element{})
+		for _, vitem := range vv {
+			varr.AppendValue(buildHashMapItem(vitem))
+		}
+		return varr
+	default:
+		return value.NewString(fmt.Sprintf("%v", vv))
 	}
 }
 
