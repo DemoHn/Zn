@@ -38,7 +38,7 @@ func (pl *PlaygroundExecutor) RunCode(varInputs map[string]r.Element) (r.Element
 	parser := syntax.NewParser(lexer, zh.NewParserZH())
 	program, err := parser.Parse()
 	if err != nil {
-		return nil, WrapSyntaxError(lexer, module, err)
+		return nil, WrapSyntaxError(parser, module, err)
 	}
 
 	// #4. eval code

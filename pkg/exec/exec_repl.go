@@ -44,7 +44,7 @@ func (pl *REPLExecutor) execREPLCode(lexer *syntax.Lexer) (r.Element, error) {
 	// #2. parse program
 	program, err := p.Parse()
 	if err != nil {
-		return nil, WrapSyntaxError(lexer, c.GetCurrentModule(), err)
+		return nil, WrapSyntaxError(p, c.GetCurrentModule(), err)
 	}
 
 	if err := evalProgram(c, program); err != nil {

@@ -50,7 +50,7 @@ func (fl *FileExecutor) RunCode(varInput map[string]r.Element) (r.Element, error
 
 	program, err := p.Parse()
 	if err != nil {
-		return nil, WrapSyntaxError(lexer, module, err)
+		return nil, WrapSyntaxError(p, module, err)
 	}
 
 	// #3. eval program

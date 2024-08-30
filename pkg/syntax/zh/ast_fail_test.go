@@ -227,8 +227,7 @@ func TestAST_FAIL(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			in := io.NewByteStream([]byte(tt.input))
 			source, _ := in.ReadAll()
-			l := syntax.NewLexer(source)
-			p := syntax.NewParser(l, NewParserZH())
+			p := syntax.NewParserFromSource(source, NewParserZH())
 
 			_, err := p.Parse()
 

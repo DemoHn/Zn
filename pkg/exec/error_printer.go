@@ -20,19 +20,19 @@ type ExtraInfo struct {
 
 // SyntaxErrorWrapper - wrap IO errors with file info (current lexer etc.)
 type SyntaxErrorWrapper struct {
-	lexer  *syntax.Lexer
+	parser *syntax.Parser
 	module *r.Module
 	err    error
 }
 
-func WrapSyntaxError(lexer *syntax.Lexer, module *r.Module, err error) error {
+func WrapSyntaxError(parser *syntax.Parser, module *r.Module, err error) error {
 	switch serr := err.(type) {
 	// DO NOT wrap a wrapped error
 	case *SyntaxErrorWrapper, *RuntimeErrorWrapper:
 		return serr
 	default:
 		return &SyntaxErrorWrapper{
-			lexer:  lexer,
+			parser: parser,
 			module: module,
 			err:    err,
 		}
@@ -44,22 +44,23 @@ func (sw *SyntaxErrorWrapper) Error() string {
 	var errLines []string
 
 	code := 0
-	if sw.lexer != nil {
+	if sw.parser != nil {
 		if serr, ok := sw.err.(*zerr.SyntaxError); ok {
 			code = serr.Code
-			lineIdx := sw.lexer.FindLineIdx(serr.Cursor, 0)
+			lineIdx := sw.parser.FindLineIdx(serr.Cursor, 0)
 			// add line 1
 			errLines = append(errLines, fmtErrorLocationHeadLine(sw.module, lineIdx+1))
 			// add line 2
-			errLines = append(errLines, fmtErrorSourceTextLine(sw.lexer, serr.Cursor, true))
+			errLines = append(errLines, fmtErrorSourceTextLine(sw.parser.GetLexer(), serr.Cursor, true))
 		}
 	}
 
 	if sw.err != nil {
 		errLines = append(errLines, fmtErrorMessageLine(code, errClass, sw.err.Error()))
+		return strings.Join(errLines, "\n")
+	} else {
+		return fmtErrorMessageLine(-99, errClass, "未知语法错误 :-(")
 	}
-
-	return strings.Join(errLines, "\n")
 }
 
 type RuntimeErrorWrapper struct {

@@ -23,10 +23,7 @@ func setupMockContext() *runtime.Context {
 func setupStmtFromCode(text string) (syntax.Statement, error) {
 	in := io.NewByteStream([]byte(text))
 	source, _ := in.ReadAll()
-
-	lexer := syntax.NewLexer(source)
-
-	p := syntax.NewParser(lexer, zh.NewParserZH())
+	p := syntax.NewParserFromSource(source, zh.NewParserZH())
 	program, pErr := p.Parse()
 	if pErr != nil {
 		return nil, fmt.Errorf("syntax error on init:%v", pErr)

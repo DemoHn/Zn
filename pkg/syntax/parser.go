@@ -26,6 +26,18 @@ func NewParser(lexer *Lexer, astBuilder ASTBuilder) *Parser {
 	}
 }
 
+func NewParserFromSource(source []rune, astBuilder ASTBuilder) *Parser {
+	lexer := NewLexer(source)
+	return &Parser{
+		Lexer:      lexer,
+		ASTBuilder: astBuilder,
+	}
+}
+
+func (p *Parser) GetLexer() *Lexer {
+	return p.Lexer
+}
+
 // Parser - parse all tokens into syntax tree
 // TODO: in the future we'll parse it into bytecodes directly, instead.
 func (p *Parser) Parse() (ast *Program, err error) {
