@@ -166,7 +166,7 @@ func NextToken(l *syntax.Lexer) (syntax.Token, error) {
 	ch := l.GetCurrentChar()
 	switch ch {
 	case syntax.RuneEOF:
-		return syntax.Token{Type: TypeEOF, StartIdx: l.GetCursor(), EndIdx: l.GetCursor()}, nil
+		return parseEOF(l)
 	case CharZHU, SlashOp:
 		// try to parse 注 or / as comment, if not, try to parse as other types (e.g. identifier)
 		isComment, tk, err := parseComment(l)
@@ -624,6 +624,24 @@ func parseComment(l *syntax.Lexer) (bool, syntax.Token, error) {
 	}
 
 	return false, syntax.Token{}, nil
+}
+
+func parseEOF(l *syntax.Lexer) (syntax.Token, error) {
+	// set last lineText
+	if len(l.Lines) > 0 {
+		lastLine := &(l.Lines[len(l.Lines)-1])
+		startIdx := lastLine.StartIdx
+
+		// skip INDENTS when inserting source text
+		if l.IndentType == syntax.IndentSpace {
+			startIdx += 4 * lastLine.Indents
+		} else if l.IndentType == syntax.IndentTab {
+			startIdx += lastLine.Indents
+		}
+
+		lastLine.LineText = l.Source[startIdx:l.GetCursor()]
+	}
+	return syntax.Token{Type: TypeEOF, StartIdx: l.GetCursor(), EndIdx: l.GetCursor()}, nil
 }
 
 //// parseKeyword logic in keyword.go

@@ -37,21 +37,20 @@ func NewFileExecutor(file string) *FileExecutor {
 }
 
 func (fl *FileExecutor) RunCode(varInput map[string]r.Element) (r.Element, error) {
-	// #1. init rootModule & context first
-	if err := fl.initRootModule(); err != nil {
+	// #1. parse rootModule
+	program, err := fl.parseMainModule()
+	if err != nil {
 		return nil, err
 	}
 
-	// #2. parse program
-	module := fl.context.GetCurrentModule()
-	fl.context.SetVarInputs(varInput)
-	lexer := module.GetLexer()
-	p := syntax.NewParser(lexer, zh.NewParserZH())
+	// #2. create main module context
+	module := r.NewMainModule(program.Lines)
 
-	program, err := p.Parse()
-	if err != nil {
-		return nil, WrapSyntaxError(p, module, err)
-	}
+	runContext := r.NewContext(globalValues, module)
+	runContext.SetModuleCodeFinder(fl.buildModuleCodeFinder())
+	runContext.SetVarInputs(varInput)
+
+	fl.context = runContext
 
 	// #3. eval program
 	if err := evalProgram(fl.context, program); err != nil {
@@ -70,25 +69,21 @@ func (fl *FileExecutor) HasPrinted() bool {
 }
 
 // initRootModule - and setup the context where rootModule = $this one
-func (fl *FileExecutor) initRootModule() error {
+func (fl *FileExecutor) parseMainModule() (*syntax.Program, error) {
 	// #1. read source code from file
 	in, err := io.NewFileStream(path.Join(fl.rootDir, fl.mainFile))
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	source, err := in.ReadAll()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	// #2. create module & init context
-	lexer := syntax.NewLexer(source)
-	fl.context = r.NewContext(globalValues, r.NewMainModule(lexer))
-	// set source code finder
-	fl.context.SetModuleCodeFinder(fl.buildModuleCodeFinder())
-
-	return nil
+	// #2. parse source
+	parser := syntax.NewParserFromSource(source, zh.NewParserZH())
+	return parser.Parse()
 }
 
 func (fl *FileExecutor) getModulePath(name string) (string, error) {

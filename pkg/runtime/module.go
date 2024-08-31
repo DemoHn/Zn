@@ -14,9 +14,9 @@ type Module struct {
 	// internal = true for internal modules (e.g. standard library, plugins)  these are imported via 《 》mark instead of “ ” mark. usually there's no source code in zinc (logics are written in Golang la...) so `module.lexer` = nil
 	internal bool
 
-	// lexer - the lexer of module's source code for mapping objects to source code.
-	// if the module is a standard library, lexer = nil
-	lexer *syntax.Lexer
+	// sourceLines - source code lines for source tracing & error printing
+	// for internal modules, this value is nil (NOT EMPTY SLICE)
+	sourceLines []syntax.LineInfo
 
 	/* scopeStack - the call stack of execution scope
 	   the stack looks like the following diagram:
@@ -47,12 +47,12 @@ type Module struct {
 	exportValues map[string]Element
 }
 
-func NewModule(name string, lexer *syntax.Lexer) *Module {
+func NewModule(name string, sourceLines []syntax.LineInfo) *Module {
 	return &Module{
-		name:      name,
-		anonymous: false,
-		internal:  false,
-		lexer:     lexer,
+		name:        name,
+		anonymous:   false,
+		internal:    false,
+		sourceLines: sourceLines,
 		// init root scope to ensure scopeStack NOT empty
 		scopeStack:   []*Scope{NewScope(nil)},
 		exportValues: map[string]Element{},
@@ -61,11 +61,11 @@ func NewModule(name string, lexer *syntax.Lexer) *Module {
 
 // every code start from mainModule, then from mainModule import other
 // named modules
-func NewMainModule(lexer *syntax.Lexer) *Module {
+func NewMainModule(sourceLines []syntax.LineInfo) *Module {
 	return &Module{
-		name:      "",
-		anonymous: true,
-		lexer:     lexer,
+		name:        "",
+		anonymous:   true,
+		sourceLines: sourceLines,
 		// init root scope to ensure scopeStack NOT empty
 		scopeStack:   []*Scope{NewScope(nil)},
 		exportValues: map[string]Element{},
@@ -75,26 +75,34 @@ func NewMainModule(lexer *syntax.Lexer) *Module {
 // called
 func NewInternalModule(name string) *Module {
 	return &Module{
-		name:      name,
-		anonymous: false,
-		internal:  true,
-		lexer:     nil,
+		name:        name,
+		anonymous:   false,
+		internal:    true,
+		sourceLines: nil,
 		// init root scope to ensure scopeStack NOT empty
 		scopeStack:   []*Scope{NewScope(nil)},
 		exportValues: map[string]Element{},
 	}
 }
 
-func (m *Module) SetLexer(l *syntax.Lexer) {
-	m.lexer = l
-}
-
 func (m *Module) GetName() string {
 	return m.name
 }
 
-func (m *Module) GetLexer() *syntax.Lexer {
-	return m.lexer
+func (m *Module) SetSourceLines(sourceLines []syntax.LineInfo) {
+	m.sourceLines = sourceLines
+}
+
+func (m *Module) GetSourceTextLine(lineIdx int) string {
+	if m.sourceLines == nil {
+		return ""
+	}
+
+	if lineIdx >= len(m.sourceLines) || lineIdx < 0 {
+		return ""
+	}
+
+	return string(m.sourceLines[lineIdx].LineText)
 }
 
 func (m *Module) IsAnonymous() bool {

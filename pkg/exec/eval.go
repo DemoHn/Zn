@@ -1073,26 +1073,27 @@ func execAnotherModule(c *r.Context, name string) (*r.Module, error) {
 		if err != nil {
 			return nil, zerr.ModuleNotFound(name)
 		}
-		// #1.  create & enter module
-		lexer := syntax.NewLexer(source)
-		module := r.NewModule(name, lexer)
-		c.EnterModule(module)
-		defer c.ExitModule()
 
-		// #2. parse program
-		p := syntax.NewParser(lexer, zh.NewParserZH())
+		// #1. parse program
+		p := syntax.NewParserFromSource(source, zh.NewParserZH())
 
 		program, err := p.Parse()
 		if err != nil {
-			return nil, WrapSyntaxError(p, module, err)
+			// moduleName
+			return nil, WrapSyntaxError(p, name, err)
 		}
+
+		// #2. create module & enter module
+		newModule := r.NewModule(name, program.Lines)
+		c.EnterModule(newModule)
+		defer c.ExitModule()
 
 		// #3. eval program
 		if err := evalProgram(c, program); err != nil {
 			return nil, WrapRuntimeError(c, err)
 		}
 
-		return module, nil
+		return newModule, nil
 	}
 	// no finder defined, return nil directly (no throw error)
 	return nil, nil

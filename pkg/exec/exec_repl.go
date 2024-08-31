@@ -20,33 +20,24 @@ func NewREPLExecutor() *REPLExecutor {
 // RunCode - run code as one input line
 func (pl *REPLExecutor) RunCode(text string) (r.Element, error) {
 	in := io.NewByteStream([]byte(text))
+	c := pl.context
 
 	// #1. read source code
 	source, err := in.ReadAll()
 	if err != nil {
 		return nil, err
 	}
-
-	// #2. get lexer
-	lexer := syntax.NewLexer(source)
-	module := pl.context.GetCurrentModule()
-	module.SetLexer(lexer)
-
-	// #3. execute code
-	return pl.execREPLCode(lexer)
-}
-
-func (pl *REPLExecutor) execREPLCode(lexer *syntax.Lexer) (r.Element, error) {
-	c := pl.context
-	// #1. construct parser
-	p := syntax.NewParser(lexer, zh.NewParserZH())
-
-	// #2. parse program
-	program, err := p.Parse()
+	// #2. parse code
+	parser := syntax.NewParserFromSource(source, zh.NewParserZH())
+	program, err := parser.Parse()
 	if err != nil {
-		return nil, WrapSyntaxError(p, c.GetCurrentModule(), err)
+		return nil, WrapSyntaxError(parser, "", err)
 	}
 
+	// #3. bind new source text lines
+	c.GetCurrentModule().SetSourceLines(program.Lines)
+
+	// #4. execute code
 	if err := evalProgram(c, program); err != nil {
 		return nil, WrapRuntimeError(c, err)
 	}

@@ -20,21 +20,21 @@ type ExtraInfo struct {
 
 // SyntaxErrorWrapper - wrap IO errors with file info (current lexer etc.)
 type SyntaxErrorWrapper struct {
-	parser *syntax.Parser
-	module *r.Module
-	err    error
+	parser     *syntax.Parser
+	moduleName string
+	err        error
 }
 
-func WrapSyntaxError(parser *syntax.Parser, module *r.Module, err error) error {
+func WrapSyntaxError(parser *syntax.Parser, moduleName string, err error) error {
 	switch serr := err.(type) {
 	// DO NOT wrap a wrapped error
 	case *SyntaxErrorWrapper, *RuntimeErrorWrapper:
 		return serr
 	default:
 		return &SyntaxErrorWrapper{
-			parser: parser,
-			module: module,
-			err:    err,
+			parser:     parser,
+			moduleName: moduleName,
+			err:        err,
 		}
 	}
 }
@@ -49,9 +49,9 @@ func (sw *SyntaxErrorWrapper) Error() string {
 			code = serr.Code
 			lineIdx := sw.parser.FindLineIdx(serr.Cursor, 0)
 			// add line 1
-			errLines = append(errLines, fmtErrorLocationHeadLine(sw.module, lineIdx+1))
+			errLines = append(errLines, fmtErrorLocationHeadLine(sw.moduleName, lineIdx+1))
 			// add line 2
-			errLines = append(errLines, fmtErrorSourceTextLine(sw.parser.GetLexer(), serr.Cursor, true))
+			errLines = append(errLines, fmtErrorSourceLineWithParser(sw.parser, serr.Cursor, true))
 		}
 	}
 
@@ -112,12 +112,11 @@ func (rw *RuntimeErrorWrapper) Error() string {
 	if len(rw.traceback) > 0 {
 		// append head lines
 		headTrace := rw.traceback[0]
-		errLines = append(errLines, fmtErrorLocationHeadLine(headTrace.Module, headTrace.LastLineIdx+1))
+		errLines = append(errLines, fmtErrorLocationHeadLine(headTrace.Module.GetName(), headTrace.LastLineIdx+1))
+
 		// get line text
-		l := headTrace.GetLexer()
-		if lineInfo := l.GetLineInfo(headTrace.LastLineIdx); lineInfo != nil {
-			startIdx := lineInfo.StartIdx
-			errLines = append(errLines, fmtErrorSourceTextLine(l, startIdx, false))
+		if lineText := headTrace.GetSourceTextLine(headTrace.LastLineIdx); lineText != "" {
+			errLines = append(errLines, fmtErrorSourceTextLine(lineText))
 		}
 
 		// append body
@@ -125,10 +124,8 @@ func (rw *RuntimeErrorWrapper) Error() string {
 			if tr.Module != nil {
 				errLines = append(errLines, fmtErrorLocationBodyLine(tr.Module.GetName(), tr.LastLineIdx+1))
 				// get line text
-				l := tr.Module.GetLexer()
-				if lineInfo := l.GetLineInfo(tr.LastLineIdx); lineInfo != nil {
-					startIdx := lineInfo.StartIdx
-					errLines = append(errLines, fmtErrorSourceTextLine(l, startIdx, false))
+				if lineText := tr.GetSourceTextLine(tr.LastLineIdx); lineText != "" {
+					errLines = append(errLines, fmtErrorSourceTextLine(lineText))
 				}
 			}
 		}
@@ -172,16 +169,20 @@ func DisplayError(err error) string {
 
 // fmtErrorLocationHeadLine -
 // e.g. 在「example」模块中，位于第 12 行发生异常：
-func fmtErrorLocationHeadLine(module *r.Module, lineNum int) string {
-	if module.IsAnonymous() {
+func fmtErrorLocationHeadLine(moduleName string, lineNum int) string {
+	if moduleName == "" {
 		return fmt.Sprintf("在主模块中，位于第 %d 行发生异常：", lineNum)
 	}
-	return fmt.Sprintf("在模块“%s”中，位于第 %d 行发生异常：", module.GetName(), lineNum)
+	return fmt.Sprintf("在模块“%s”中，位于第 %d 行发生异常：", moduleName, lineNum)
 }
 
 // fmtErrorLocationBodyLine -
 // e.g. 来自「example2」模块，第 12 行：
 func fmtErrorLocationBodyLine(moduleName string, lineNum int) string {
+	if moduleName == "" {
+		return fmt.Sprintf("来自主模块，第 %d 行：", lineNum)
+	}
+
 	return fmt.Sprintf("来自“%s”模块，第 %d 行：", moduleName, lineNum)
 }
 
@@ -191,11 +192,11 @@ func fmtErrorLocationBodyLine(moduleName string, lineNum int) string {
 // e.g.:
 //     如果代码不为空：
 //        ^
-func fmtErrorSourceTextLine(l *syntax.Lexer, cursorIdx int, withCursorMark bool) string {
+func fmtErrorSourceLineWithParser(p *syntax.Parser, cursorIdx int, withCursorMark bool) string {
 	startIdx := cursorIdx
 	endIdx := startIdx
 	// append EOF to source to avoid index exceed exception
-	sourceT := append(l.Source, 0)
+	sourceT := append(p.GetSource(), 0)
 	for sourceT[startIdx] == syntax.RuneCR || sourceT[startIdx] == syntax.RuneLF {
 		startIdx -= 1
 	}
@@ -228,6 +229,15 @@ func fmtErrorSourceTextLine(l *syntax.Lexer, cursorIdx int, withCursorMark bool)
 	}
 
 	return fmtLine
+}
+
+// fmtErrorSourceTextLine -
+// cursorIdx: global index inside the source text from denoted lexer
+// if withCursorMark == false, hide the "^" mark that indicates the specific location where error occurs.
+// e.g.:
+//     如果代码不为空：
+func fmtErrorSourceTextLine(lineText string) string {
+	return fmt.Sprintf("    %s", lineText)
 }
 
 // fmtErrorMessageLine - format error message line

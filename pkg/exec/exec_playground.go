@@ -30,16 +30,16 @@ func (pl *PlaygroundExecutor) RunCode(varInputs map[string]r.Element) (r.Element
 	}
 
 	// #2. get lexer
-	lexer := syntax.NewLexer(source)
 	module := pl.context.GetCurrentModule()
-	module.SetLexer(lexer)
 
 	// #3. parse program
-	parser := syntax.NewParser(lexer, zh.NewParserZH())
+	parser := syntax.NewParserFromSource(source, zh.NewParserZH())
 	program, err := parser.Parse()
 	if err != nil {
-		return nil, WrapSyntaxError(parser, module, err)
+		return nil, WrapSyntaxError(parser, module.GetName(), err)
 	}
+	// set source lines
+	module.SetSourceLines(program.Lines)
 
 	// #4. eval code
 	// #4.1 first set init input value

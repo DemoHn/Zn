@@ -111,7 +111,7 @@ func HTTPHandlerWithEntry(entryFile string) http.HandlerFunc {
 
 		executor := exec.NewFileExecutor(entryFile)
 		result, err := executor.RunCode(map[string]runtime.Element{
-			"HTTP请求": httpReqObject,
+			"当前请求": httpReqObject,
 		})
 
 		if err != nil {

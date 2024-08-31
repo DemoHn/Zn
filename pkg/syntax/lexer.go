@@ -27,6 +27,8 @@ type LineInfo struct {
 	Indents int
 	// startIdx - start index of lineBuffer
 	StartIdx int
+	// LineText
+	LineText []rune
 }
 
 // Token - general token type
@@ -101,6 +103,10 @@ func (l *Lexer) GetCursor() int {
 // GetCurrentChar -
 func (l *Lexer) GetCurrentChar() rune {
 	return l.getChar(l.cursor)
+}
+
+func (l *Lexer) GetSource() []rune {
+	return l.Source
 }
 
 // SetCursor - set cursor
@@ -255,10 +261,25 @@ func (l *Lexer) parseSpaces(ch rune) error {
 func (l *Lexer) parseLine(c rune, withIndent bool) error {
 	ch := c
 head:
+	endCursor := l.GetCursor()
 	chn := l.Next()
 	// read line-break chars: CRLF or LFCR
 	if (ch == RuneCR && chn == RuneLF) || (ch == RuneLF && chn == RuneCR) {
 		chn = l.Next()
+	}
+
+	// get last lineText
+	if len(l.Lines) > 0 {
+		lastLine := &(l.Lines[len(l.Lines)-1])
+		startIdx := lastLine.StartIdx
+
+		// skip INDENTS when inserting source text
+		if l.IndentType == IndentSpace {
+			startIdx += 4 * lastLine.Indents
+		} else if l.IndentType == IndentTab {
+			startIdx += lastLine.Indents
+		}
+		lastLine.LineText = l.Source[startIdx:endCursor]
 	}
 
 	// append next line info
