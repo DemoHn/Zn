@@ -33,7 +33,7 @@ func (pl *PlaygroundExecutor) RunCode(varInputs map[string]r.Element) (r.Element
 	module := pl.context.GetCurrentModule()
 
 	// #3. parse program
-	parser := syntax.NewParserFromSource(source, zh.NewParserZH())
+	parser := syntax.NewParser(source, zh.NewParserZH())
 	program, err := parser.Parse()
 	if err != nil {
 		return nil, WrapSyntaxError(parser, module.GetName(), err)

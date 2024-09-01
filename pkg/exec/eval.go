@@ -1069,13 +1069,13 @@ func evalVarAssignExpr(c *r.Context, expr *syntax.VarAssignExpr) (r.Element, err
 // execAnotherModule - load source code of the module, parse the coe, execute the program, and build depCache!
 func execAnotherModule(c *r.Context, name string) (*r.Module, error) {
 	if finder := c.GetModuleCodeFinder(); finder != nil {
-		source, err := finder(name)
+		source, err := finder(false, name)
 		if err != nil {
 			return nil, zerr.ModuleNotFound(name)
 		}
 
 		// #1. parse program
-		p := syntax.NewParserFromSource(source, zh.NewParserZH())
+		p := syntax.NewParser(source, zh.NewParserZH())
 
 		program, err := p.Parse()
 		if err != nil {
@@ -1175,3 +1175,5 @@ func extractSignalValue(err error, sigType uint8) (r.Element, error) {
 	}
 	return nil, err
 }
+
+var EvaluateProgram = evalProgram

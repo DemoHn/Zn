@@ -28,7 +28,7 @@ func (pl *REPLExecutor) RunCode(text string) (r.Element, error) {
 		return nil, err
 	}
 	// #2. parse code
-	parser := syntax.NewParserFromSource(source, zh.NewParserZH())
+	parser := syntax.NewParser(source, zh.NewParserZH())
 	program, err := parser.Parse()
 	if err != nil {
 		return nil, WrapSyntaxError(parser, "", err)

@@ -18,15 +18,7 @@ type ASTBuilder interface {
 	ParseVarInputs(lexer *Lexer) (*VarDeclareStmt, error)
 }
 
-// NewParser - create a new parser from source
-func NewParser(lexer *Lexer, astBuilder ASTBuilder) *Parser {
-	return &Parser{
-		Lexer:      lexer,
-		ASTBuilder: astBuilder,
-	}
-}
-
-func NewParserFromSource(source []rune, astBuilder ASTBuilder) *Parser {
+func NewParser(source []rune, astBuilder ASTBuilder) *Parser {
 	lexer := NewLexer(source)
 	return &Parser{
 		Lexer:      lexer,

@@ -77,6 +77,33 @@ func NewZnPMServer(reqHandler http.HandlerFunc) *ZnPMServer {
 	}
 }
 
+func (zns *ZnPMServer) Launch(connUrl string, cfg ZnPMServerConfig) error {
+	childWorkerFlag := false
+
+	// check if --child-worker flag exists
+	for _, arg := range os.Args {
+		if arg == "--child-worker" {
+			childWorkerFlag = true
+			break
+		}
+	}
+
+	///// run child worker if  --child-worker = true & preForkChild env is "OK"
+	if childWorkerFlag && os.Getenv(EnvPreforkChildKey) == EnvPreforkChildVal {
+		// start child worker to handle requests
+		if err := zns.StartWorker(); err != nil {
+			return err
+		}
+	} else {
+		//// otherwise, just listen to the server
+		if err := zns.StartMaster(connUrl, cfg); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 ////////////////////////////
 /////// MASTER logic ///////
 ////////////////////////////

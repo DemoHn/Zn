@@ -3,7 +3,6 @@ package server
 import (
 	"encoding/json"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"math"
 	"net/http"
@@ -18,6 +17,42 @@ import (
 type playgroundReq struct {
 	VarInput   string
 	SourceCode string
+}
+
+func ReadRequestForPlayground(r *http.Request) ([]rune, map[string]runtime.Element, error) {
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		return nil, nil, fmt.Errorf("读取请求内容出现异常：%s", err.Error())
+	}
+
+	var reqInfo playgroundReq
+	if err := json.Unmarshal(body, &reqInfo); err != nil {
+		return nil, nil, fmt.Errorf("解析请求格式不符合要求！")
+	}
+
+	if reqInfo.VarInput != "" {
+		varInputs, err := exec.ExecVarInputs(reqInfo.VarInput)
+		if err != nil {
+			return nil, nil, err
+		}
+		return []rune(reqInfo.SourceCode), varInputs, nil
+	}
+	return []rune(reqInfo.SourceCode), map[string]runtime.Element{}, nil
+}
+
+func WriteResponseForPlayground(w http.ResponseWriter, rtnValue runtime.Element, err error) {
+	if err != nil {
+		respondError(w, err)
+		return
+	}
+
+	// write return value as resp body
+	switch rtnValue.(type) {
+	case *value.Null:
+		respondOK(w, "")
+	default:
+		respondOK(w, value.StringifyValue(rtnValue))
+	}
 }
 
 // if exec code ok - return 200 with result (ignore outputs from「显示」)
@@ -201,33 +236,4 @@ func buildPlainStrItem(item runtime.Element) interface{} {
 	}
 	// TODO: stringify other objects
 	return value.StringifyValue(item)
-}
-
-//// helpers
-
-func respondOK(w http.ResponseWriter, body string) {
-	// declare content-type = text/plain (not json/file/...)
-	w.Header().Add("Content-Type", "text/plain; charset=\"utf-8\"")
-	// http status: 200 OK
-	w.WriteHeader(http.StatusOK)
-	// write resp body
-	io.WriteString(w, body)
-}
-
-func respondJSON(w http.ResponseWriter, body []byte) {
-	// declare content-type = text/plain (not json/file/...)
-	w.Header().Add("Content-Type", "application/json; charset=\"utf-8\"")
-	// http status: 200 OK
-	w.WriteHeader(http.StatusOK)
-	// write resp body
-	w.Write(body)
-}
-
-func respondError(w http.ResponseWriter, reason error) {
-	// declare content-type = text/plain (not json/file/...)
-	w.Header().Add("Content-Type", "text/plain; charset=\"utf-8\"")
-	// http status: 500 Internal Error
-	w.WriteHeader(http.StatusInternalServerError)
-	// write resp body
-	io.WriteString(w, reason.Error())
 }

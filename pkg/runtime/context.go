@@ -56,7 +56,7 @@ func finder (name string) ([]rune, error) {
 }
 ```
 */
-type ModuleCodeFinder func(string) ([]rune, error)
+type ModuleCodeFinder func(isMainModule bool, moduleName string) ([]rune, error)
 
 // NewContext - create new Zn Context. Notice through the life-cycle
 // of one code execution, there's only one running context to store all states.

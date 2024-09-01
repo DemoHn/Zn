@@ -82,8 +82,13 @@ func (fl *FileExecutor) parseMainModule() (*syntax.Program, error) {
 	}
 
 	// #2. parse source
-	parser := syntax.NewParserFromSource(source, zh.NewParserZH())
-	return parser.Parse()
+	parser := syntax.NewParser(source, zh.NewParserZH())
+	program, err := parser.Parse()
+	if err != nil {
+		return nil, WrapSyntaxError(parser, "", err)
+	}
+
+	return program, err
 }
 
 func (fl *FileExecutor) getModulePath(name string) (string, error) {
@@ -102,7 +107,7 @@ func (fl *FileExecutor) getModulePath(name string) (string, error) {
 
 //// define moduleCodeFinder for finding other modules
 func (fl *FileExecutor) buildModuleCodeFinder() r.ModuleCodeFinder {
-	return func(s string) ([]rune, error) {
+	return func(isMainModule bool, s string) ([]rune, error) {
 		// #1. find filepath of current module
 		moduleFile, err := fl.getModulePath(s)
 		if err != nil {

@@ -33,11 +33,8 @@ func ExecVarInputs(source string) (map[string]r.Element, error) {
 		return nil, zerr.ReadVarInputError(err)
 	}
 
-	// #2. get lexer
-	lexer := syntax.NewLexer(sourceCode)
-
-	// #3.  parse program
-	parser := syntax.NewParser(lexer, zh.NewParserZH())
+	// #2.  parse program
+	parser := syntax.NewParser(sourceCode, zh.NewParserZH())
 	vdStmt, err := parser.ParseVarInputs()
 	if err != nil {
 		return nil, zerr.NewErrorSLOT("解析预定义变量出现错误")

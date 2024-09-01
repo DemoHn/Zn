@@ -2,8 +2,8 @@ package main
 
 import (
 	"fmt"
-	"os"
 
+	zinc "github.com/DemoHn/Zn"
 	"github.com/DemoHn/Zn/pkg/server"
 	"github.com/spf13/cobra"
 )
@@ -22,26 +22,18 @@ var (
 		Short: "zinc playground",
 		Long:  "zinc playground - 在启动服务器之后，用户发送HTTP请求并提交代码后即可执行，并返回对应的结果；这样用户可以线上编写并运行代码",
 		Run: func(c *cobra.Command, args []string) {
-
-			pmServer := server.NewZnPMServer(server.PlaygroundHandler)
-			///// run child worker if  --child-worker = true & preForkChild env is "OK"
-			if childWorkerFlag && os.Getenv(server.EnvPreforkChildKey) == server.EnvPreforkChildVal {
-				// start child worker to handle requests
-				if err := pmServer.StartWorker(); err != nil {
-					fmt.Printf("启动子进程时发生错误：%v\n", err)
-					return
-				}
-			} else {
-				cfg := server.ZnPMServerConfig{
+			err := zinc.NewServer().
+				SetPlaygroundHandler().
+				SetPMServerConfig(server.ZnPMServerConfig{
 					InitProcs: initProcs,
 					MaxProcs:  maxProcs,
 					Timeout:   timeout,
-				}
-				//// otherwise, just listen to the server
-				if err := pmServer.StartMaster(connUrl, cfg); err != nil {
-					fmt.Printf("启动服务器主进程时发生错误：%v\n", err)
-					return
-				}
+				}).
+				Launch(connUrl)
+
+			if err != nil {
+				fmt.Println("启动服务器时发生异常：%s\n", err)
+				return
 			}
 		},
 	}

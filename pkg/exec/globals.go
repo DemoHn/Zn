@@ -10,6 +10,8 @@ type funcExecutor = func(*r.Context, []r.Element) (r.Element, error)
 // globalValues -
 var globalValues map[string]r.Element
 
+var GlobalValues map[string]r.Element
+
 // init function
 func init() {
 	var funcNameMap = map[string]funcExecutor{
@@ -41,4 +43,6 @@ func init() {
 	for name, executor := range funcNameMap {
 		globalValues[name] = value.NewFunction(nil, executor)
 	}
+
+	GlobalValues = globalValues
 }
