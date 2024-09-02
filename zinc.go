@@ -196,7 +196,7 @@ func (s *ZnServer) Launch(connUrl string) error {
 // is too long/dead loop, this childWorker will be killed automatically to avoid using resources too much.
 func (s *ZnServer) LaunchPMServer(connUrl string) error {
 	pmServer := server.NewZnPMServer(s.reqHandler)
-	return pmServer.Launch(connUrl, s.pmServerConfig)
+	return pmServer.Start(connUrl, s.pmServerConfig)
 }
 
 func (s *ZnServer) LaunchThreadServer(connUrl string) error {

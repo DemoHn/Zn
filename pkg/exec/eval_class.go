@@ -11,14 +11,6 @@ func compileClass(upperCtx *r.Context, classID *r.IDName, classNode *syntax.Clas
 	className := classID.GetLiteral()
 	ref := value.NewClassModel(className, upperCtx.GetCurrentModule())
 
-	// set default constructor
-	ref.Constructor = func(c *r.Context, params []r.Element) (r.Element, error) {
-		// create new object when exec ONLY
-		obj := value.NewObject(ref)
-
-		return obj, nil
-	}
-
 	// init prop list and its default value
 	for _, propPair := range classNode.PropertyList {
 		propID := propPair.PropertyID.GetLiteral()
@@ -27,32 +19,20 @@ func compileClass(upperCtx *r.Context, classID *r.IDName, classNode *syntax.Clas
 			return nil, err
 		}
 
-		ref.PropList[propID] = element
+		ref.DefineProperty(propID, element)
 	}
 
 	// add getters
 	for _, gNode := range classNode.GetterList {
 		getterTag := gNode.GetterName.GetLiteral()
-		ref.CompPropList[getterTag] = compileFunction(upperCtx, []*syntax.ParamItem{}, gNode.ExecBlock)
+		ref.DefineCompProperty(getterTag, compileFunction(upperCtx, []*syntax.ParamItem{}, gNode.ExecBlock))
 	}
 
 	// add methods
 	for _, mNode := range classNode.MethodList {
 		mTag := mNode.FuncName.GetLiteral()
-		ref.MethodList[mTag] = compileFunction(upperCtx, mNode.ParamList, mNode.ExecBlock)
+		ref.DefineMethod(mTag, compileFunction(upperCtx, mNode.ParamList, mNode.ExecBlock))
 	}
 
 	return ref, nil
-}
-
-func bindClassConstructor(model *value.ClassModel, fn *value.Function) {
-	model.Constructor = func(c *r.Context, params []r.Element) (r.Element, error) {
-		obj := value.NewObject(model)
-
-		// exec constructor logic (last value is useless)
-		if _, err := fn.Exec(c, obj, params); err != nil {
-			return nil, err
-		}
-		return obj, nil
-	}
 }

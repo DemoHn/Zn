@@ -158,7 +158,7 @@ func evalStatement(c *r.Context, stmt syntax.Statement) error {
 		}
 
 		// add symbol to current scope first
-		if err := c.BindSymbol(className, classRef); err != nil {
+		if err := c.BindSymbolConst(className, classRef); err != nil {
 			return err
 		}
 
@@ -180,7 +180,7 @@ func evalStatement(c *r.Context, stmt syntax.Statement) error {
 		}
 		if cmodel, ok := classModel.(*value.ClassModel); ok {
 			fn := compileFunction(c, v.ParamList, v.ExecBlock)
-			bindClassConstructor(cmodel, fn)
+			cmodel.SetConstructorFunc(fn)
 		} else {
 			return zerr.InvalidClassType(className.GetLiteral())
 		}

@@ -3,6 +3,7 @@ package exec
 import (
 	r "github.com/DemoHn/Zn/pkg/runtime"
 	"github.com/DemoHn/Zn/pkg/value"
+	"github.com/DemoHn/Zn/pkg/value/cmodels"
 )
 
 type funcExecutor = func(*r.Context, []r.Element) (r.Element, error)
@@ -18,17 +19,6 @@ func init() {
 		"显示": value.DisplayExecutor,
 	}
 
-	// construct 异常 class
-	expClassRef := value.NewClassModel("异常", nil)
-	expClassRef.Constructor = func(c *r.Context, values []r.Element) (r.Element, error) {
-		if err := value.ValidateExactParams(values, "string"); err != nil {
-			return nil, err
-		}
-
-		message := values[0].(*value.String)
-		return value.NewException(message.String()), nil
-	}
-
 	//// predefined values - those variables (symbols) are defined before
 	//// any execution procedure.
 	//// NOTICE: those variables are all constants!
@@ -36,7 +26,7 @@ func init() {
 		"真":  value.NewBool(true),
 		"假":  value.NewBool(false),
 		"空":  value.NewNull(),
-		"异常": expClassRef,
+		"异常": cmodels.NewExceptionModel(),
 	}
 
 	// append executor

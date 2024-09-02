@@ -77,7 +77,7 @@ func NewZnPMServer(reqHandler http.HandlerFunc) *ZnPMServer {
 	}
 }
 
-func (zns *ZnPMServer) Launch(connUrl string, cfg ZnPMServerConfig) error {
+func (zns *ZnPMServer) Start(connUrl string, cfg ZnPMServerConfig) error {
 	childWorkerFlag := false
 
 	// check if --child-worker flag exists

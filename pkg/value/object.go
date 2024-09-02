@@ -11,32 +11,10 @@ type Object struct {
 	model    *ClassModel
 }
 
-// ClassModel - aka. Class Definition Reference
-// It defines the structure of a class, including compPropList, methodList and propList.
-// All instances created from this class MUST inherits from those configurations.
-type ClassModel struct {
-	// Name - class name
-	Name string
-	// Constructor defines default logic (mostly for initialization) when a new instance
-	// is created by "x 成为 C：P，Q，R"
-	Constructor FuncExecutor
-	// PropList defines all property name & default value of the class, each property CANNOT be appended or removed
-	PropList map[string]r.Element
-	// CompPropList - CompProp stands for "Computed Property", which means the value is get or set
-	// from a pre-defined function. Computed property offers more extensions for manipulations
-	// of properties.
-	CompPropList map[string]*Function
-	// MethodList - stores all available methods definition of class
-	MethodList map[string]*Function
-
-	// refModule: record current module
-	refModule *r.Module
-}
-
 // NewObject -
 func NewObject(model *ClassModel) *Object {
 	objPropList := make(map[string]r.Element)
-	for prop, elem := range model.PropList {
+	for prop, elem := range model.GetPropList() {
 		// duplicate default prop values
 		objPropList[prop] = DuplicateValue(elem)
 	}
@@ -45,33 +23,6 @@ func NewObject(model *ClassModel) *Object {
 		propList: objPropList,
 		model:    model,
 	}
-}
-
-// NewClassModel - create new empty r.ClassRef
-func NewClassModel(name string, refModule *r.Module) *ClassModel {
-	return &ClassModel{
-		Name:         name,
-		Constructor:  nil,
-		PropList:     map[string]r.Element{},
-		CompPropList: map[string]*Function{},
-		MethodList:   map[string]*Function{},
-		refModule:    refModule,
-	}
-}
-
-// GetPropList -
-func (zo *Object) GetPropList() map[string]r.Element {
-	return zo.propList
-}
-
-// SetPropList -
-func (zo *Object) SetPropList(propList map[string]r.Element) {
-	zo.propList = propList
-}
-
-// GetModel -
-func (zo *Object) GetModel() *ClassModel {
-	return zo.model
 }
 
 func (zo *Object) GetRefModule() *r.Module {
@@ -90,7 +41,7 @@ func (zo *Object) GetProperty(c *r.Context, name string) (r.Element, error) {
 		return prop, nil
 	}
 	// look up computed properties
-	cprop, ok2 := zo.model.CompPropList[name]
+	cprop, ok2 := zo.model.FindCompProp(name)
 	if !ok2 {
 		return nil, zerr.PropertyNotFound(name)
 	}
@@ -105,7 +56,7 @@ func (zo *Object) SetProperty(c *r.Context, name string, value r.Element) error 
 		return nil
 	}
 	// execute computed properties
-	if cprop, ok2 := zo.model.CompPropList[name]; ok2 {
+	if cprop, ok2 := zo.model.FindCompProp(name); ok2 {
 		_, err := cprop.Exec(c, zo, []r.Element{})
 		return err
 	}
@@ -114,34 +65,8 @@ func (zo *Object) SetProperty(c *r.Context, name string, value r.Element) error 
 
 // ExecMethod -
 func (zo *Object) ExecMethod(c *r.Context, name string, values []r.Element) (r.Element, error) {
-	if method, ok := zo.model.MethodList[name]; ok {
+	if method, ok := zo.model.FindMethod(name); ok {
 		return method.Exec(c, zo, values)
 	}
-	return nil, zerr.MethodNotFound(name)
-}
-
-//// NOTE: ClassRef is also a type of Value
-// Construct - yield new instance of this class
-func (cr *ClassModel) Construct(c *r.Context, params []r.Element) (r.Element, error) {
-	c.PushScope()
-	defer c.PopScope()
-
-	if cr.Constructor != nil {
-		return cr.Constructor(c, params)
-	}
-
-	return nil, nil
-}
-
-// GetProperty - currently there's NO any property inside classRef Value
-func (cr *ClassModel) GetProperty(c *r.Context, name string) (r.Element, error) {
-	return nil, zerr.PropertyNotFound(name)
-}
-
-func (cr *ClassModel) SetProperty(c *r.Context, name string, value r.Element) error {
-	return zerr.PropertyNotFound(name)
-}
-
-func (cr *ClassModel) ExecMethod(c *r.Context, name string, values []r.Element) (r.Element, error) {
 	return nil, zerr.MethodNotFound(name)
 }
