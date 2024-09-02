@@ -339,7 +339,7 @@ var DisplayExecutor = func(c *r.Context, params []r.Element) (r.Element, error) 
 			items = append(items, StringifyValue(param))
 		}
 	}
-	c.MarkHasPrinted()
+
 	os.Stdout.Write([]byte(fmt.Sprintf("%s\n", strings.Join(items, " "))))
 	return NewNull(), nil
 }

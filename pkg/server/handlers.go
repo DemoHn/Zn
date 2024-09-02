@@ -55,44 +55,6 @@ func WriteResponseForPlayground(w http.ResponseWriter, rtnValue runtime.Element,
 	}
 }
 
-// if exec code ok - return 200 with result (ignore outputs from「显示」)
-func PlaygroundHandler(w http.ResponseWriter, r *http.Request) {
-	// exec program
-	body, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		respondError(w, fmt.Errorf("读取请求内容出现异常：%s", err.Error()))
-		return
-	}
-
-	var reqInfo playgroundReq
-	if err := json.Unmarshal(body, &reqInfo); err != nil {
-		respondError(w, fmt.Errorf("解析请求格式不符合要求！"))
-		return
-	}
-
-	pExecutor := exec.NewPlaygroundExecutor([]byte(reqInfo.SourceCode))
-	// exec varInputs
-	varInputs, err := exec.ExecVarInputs(reqInfo.VarInput)
-	if err != nil {
-		respondError(w, err)
-		return
-	}
-
-	rtnValue, err := pExecutor.RunCode(varInputs)
-	if err != nil {
-		respondError(w, err)
-		return
-	}
-
-	// write return value as resp body
-	switch rtnValue.(type) {
-	case *value.Null:
-		respondOK(w, "")
-	default:
-		respondOK(w, value.StringifyValue(rtnValue))
-	}
-}
-
 func HTTPHandlerWithEntry(entryFile string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		headerObject := []value.KVPair{}

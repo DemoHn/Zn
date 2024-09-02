@@ -14,9 +14,6 @@ type Context struct {
 	// used for input stmt: `输入XX、YY、ZZ`
 	varInputs map[string]Element
 
-	// hasPrinted - if stdout has been used to output message before program end, set `hasPrinted` -> true; so that after message is done
-	hasPrinted bool
-
 	// currentLine - current execution lineNum (index, start from 0)
 	currentLine      int
 	currentRefModule *Module
@@ -68,7 +65,6 @@ func NewContext(globalsMap map[string]Element, initModule *Module) *Context {
 
 	return &Context{
 		globals:          globalsMap,
-		hasPrinted:       false,
 		moduleGraph:      graph,
 		moduleCodeFinder: nil,
 		callStack:        []CallInfo{},
@@ -97,10 +93,6 @@ func (ctx *Context) GetCurrentScope() *Scope {
 		return module.GetCurrentScope()
 	}
 	return nil
-}
-
-func (ctx *Context) GetHasPrinted() bool {
-	return ctx.hasPrinted
 }
 
 func (ctx *Context) GetModuleCodeFinder() ModuleCodeFinder {
@@ -320,9 +312,4 @@ func (ctx *Context) BindImportSymbol(name string, value Element, refModule *Modu
 func (ctx *Context) GetThisValue() Element {
 	m := ctx.GetCurrentModule()
 	return m.GetCurrentScope().thisValue
-}
-
-// MarkHasPrinted - called by `显示` function only
-func (ctx *Context) MarkHasPrinted() {
-	ctx.hasPrinted = true
 }

@@ -5,14 +5,13 @@ import (
 	eio "io"
 	"os"
 
+	zinc "github.com/DemoHn/Zn"
 	r "github.com/DemoHn/Zn/pkg/runtime"
 	"github.com/DemoHn/Zn/pkg/value"
 
 	"github.com/DemoHn/Zn/pkg/exec"
 	"github.com/peterh/liner"
 )
-
-const version = "rev07"
 
 // EnterREPL - enter REPL to handle data
 func EnterREPL() {
@@ -51,9 +50,9 @@ func EnterREPL() {
 
 // ExecProgram - exec program from file directly
 func ExecProgram(file string) {
-	fileExecutor := exec.NewFileExecutor(file)
-	// when exec program, unlike REPL, it's not necessary to print last executed value
-	rtnValue, err := fileExecutor.RunCode(map[string]r.Element{})
+	znCompiler := zinc.NewCompiler()
+	rtnValue, err := znCompiler.LoadFile(file).Execute(map[string]r.Element{})
+
 	if err != nil {
 		prettyPrintError(os.Stdout, err)
 		return
@@ -64,9 +63,6 @@ func ExecProgram(file string) {
 	case *value.Null:
 		return
 	default:
-		if fileExecutor.HasPrinted() {
-			os.Stdout.Write([]byte{'\n'})
-		}
 		os.Stdout.Write([]byte(value.StringifyValue(rtnValue)))
 		os.Stdout.Write([]byte{'\n'})
 	}
@@ -74,7 +70,8 @@ func ExecProgram(file string) {
 
 // ShowVersion - show version
 func ShowVersion() {
-	fmt.Printf("Zn语言版本：%s\n", version)
+	znCompiler := zinc.NewCompiler()
+	fmt.Printf("Zn语言版本：%s\n", znCompiler.GetVersion())
 }
 
 //// display helpers

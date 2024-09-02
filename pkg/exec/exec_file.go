@@ -61,13 +61,6 @@ func (fl *FileExecutor) RunCode(varInput map[string]r.Element) (r.Element, error
 	return returnValue, nil
 }
 
-func (fl *FileExecutor) HasPrinted() bool {
-	if fl.context != nil {
-		return fl.context.GetHasPrinted()
-	}
-	return false
-}
-
 // initRootModule - and setup the context where rootModule = $this one
 func (fl *FileExecutor) parseMainModule() (*syntax.Program, error) {
 	// #1. read source code from file
