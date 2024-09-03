@@ -34,6 +34,11 @@ func (zo *Object) GetRefModule() *r.Module {
 	return zo.model.refModule
 }
 
+// get object name
+func (zo *Object) GetObjectName() string {
+	return zo.model.GetName()
+}
+
 // GetProperty -
 func (zo *Object) GetProperty(c *r.Context, name string) (r.Element, error) {
 	// internal properties

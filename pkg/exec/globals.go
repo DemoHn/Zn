@@ -2,9 +2,12 @@ package exec
 
 import (
 	"fmt"
+	"io/ioutil"
+	"net/http"
 	"os"
 	"strings"
 
+	zerr "github.com/DemoHn/Zn/pkg/error"
 	r "github.com/DemoHn/Zn/pkg/runtime"
 	"github.com/DemoHn/Zn/pkg/value"
 )
@@ -59,12 +62,32 @@ func newExceptionModel() *value.ClassModel {
 }
 
 func newHTTPRequestModel() *value.ClassModel {
+	readRequestBodyFunc := func(c *r.Context, values []r.Element) (r.Element, error) {
+		if thisValue, ok := c.GetThisValue().(*value.Object); ok {
+			if goValue, err := thisValue.GetProperty(c, "-goHttpRequest-"); err == nil {
+				if t, ok := goValue.(*value.GoValue); ok {
+					if t.GetTag() == "*http.Request" {
+						reqV := t.GetValue().(*http.Request)
+						data, err := ioutil.ReadAll(reqV.Body)
+						if err != nil {
+							return nil, zerr.NewRuntimeException("读取请求内容出现异常！")
+						}
+
+						return value.NewString(string(data)), nil
+					}
+				}
+			}
+		}
+		return nil, zerr.InvalidParamType("goType: *http.Request")
+	}
+
 	return value.NewClassModel("HTTP请求", nil).
 		DefineProperty("路径", value.NewString("")).
 		DefineProperty("方法", value.NewString("")).
 		DefineProperty("头部", value.NewHashMap([]value.KVPair{})).
 		DefineProperty("查询参数", value.NewHashMap([]value.KVPair{})).
-		DefineProperty("-goHttpRequest-", value.NewGoValue("*http.Request", nil))
+		DefineProperty("-goHttpRequest-", value.NewGoValue("*http.Request", nil)).
+		DefineMethod("读取内容", value.NewFunction(nil, readRequestBodyFunc))
 }
 
 func newDisplayFunc() *value.Function {

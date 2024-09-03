@@ -188,11 +188,12 @@ func StringifyValue(value r.Element) string {
 		}
 		return data
 	case *Function:
-		return "[方法]"
+		return fmt.Sprintf("[某方法]")
 	case *Null:
 		return "空"
 	case *Object:
-		return "[对象]"
+		// show object as "[对象: <name>]"
+		return fmt.Sprintf("[对象: %s]", v.GetObjectName())
 	case *HashMap:
 		strs := []string{}
 		for _, key := range v.keyOrder {
@@ -200,6 +201,9 @@ func StringifyValue(value r.Element) string {
 			strs = append(strs, fmt.Sprintf("%s = %s", key, StringifyValue(value)))
 		}
 		return fmt.Sprintf("【%s】", strings.Join(strs, "，"))
+	case *GoValue:
+		// show go value as string like "[GoValue type:<tag>]"
+		return fmt.Sprintf("[GoValue type:%s]", v.GetTag())
 	}
 	return ""
 }

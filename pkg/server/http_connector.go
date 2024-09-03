@@ -73,13 +73,10 @@ func ConstructHTTPRequestObject(r *http.Request) (runtime.Element, error) {
 		"路径":   value.NewString(r.URL.Path),
 		"头部":   buildHashMapItem(headerMap),
 		"查询参数": value.NewHashMap(queryPair),
+		"-goHttpRequest-": value.NewGoValue("*http.Request", r),
 	}
 
-	// wrap r (*http.Request) into HTTPRequest class
-	httpRequestGoValue := value.NewGoValue("*http.Request", r)
-
-	reqObj := value.NewObject(exec.ZnConstHTTPRequestClass, initialProps)
-	return reqObj, nil 
+	return value.NewObject(exec.ZnConstHTTPRequestClass, initialProps), nil
 }
 
 func ConstructHTTPResponseObject() (runtime.Element, error) {
