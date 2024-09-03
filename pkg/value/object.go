@@ -12,11 +12,16 @@ type Object struct {
 }
 
 // NewObject -
-func NewObject(model *ClassModel) *Object {
+func NewObject(model *ClassModel, initProps map[string]r.Element) *Object {
 	objPropList := make(map[string]r.Element)
 	for prop, elem := range model.GetPropList() {
-		// duplicate default prop values
-		objPropList[prop] = DuplicateValue(elem)
+		// find value from initial props first
+		if initValue, ok := initProps[prop]; ok {
+			objPropList[prop] = initValue
+		} else {
+			// duplicate default prop values
+			objPropList[prop] = DuplicateValue(elem)
+		}
 	}
 
 	return &Object{

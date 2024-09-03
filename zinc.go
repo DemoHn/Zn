@@ -16,17 +16,28 @@ import (
 	"github.com/DemoHn/Zn/pkg/server"
 	"github.com/DemoHn/Zn/pkg/syntax"
 	"github.com/DemoHn/Zn/pkg/syntax/zh"
+	"github.com/DemoHn/Zn/pkg/value"
 )
 
 type Element = runtime.Element
 type Context = runtime.Context
 type ModuleCodeFinder = runtime.ModuleCodeFinder
 
-var DefaultPMServerConfig = server.ZnPMServerConfig{
-	InitProcs: 20,
-	MaxProcs:  100,
-	Timeout:   60,
-}
+type ZnNumber = value.Number
+type ZnString = value.String
+type ZnBool = value.Bool
+type ZnArray = value.Array
+type ZnHashMap = value.HashMap
+type ZnObject = value.Object
+type ZnNull = value.Null
+
+var NewZnNumber = value.NewNumber
+var NewZnString = value.NewString
+var NewZnBool = value.NewBool
+var NewZnArray = value.NewArray
+var NewZnHashMap = value.NewHashMap
+var NewZnObject = value.NewObject
+var NewZnNull = value.NewNull
 
 const ZINC_VERSION = "rev07"
 
@@ -144,9 +155,15 @@ type ZnServer struct {
 }
 
 func NewServer() *ZnServer {
+	var defaultPMServerConfig = server.ZnPMServerConfig{
+		InitProcs: 20,
+		MaxProcs:  100,
+		Timeout:   60,
+	}
+
 	return &ZnServer{
 		reqHandler:     nil,
-		pmServerConfig: DefaultPMServerConfig,
+		pmServerConfig: defaultPMServerConfig,
 	}
 }
 
@@ -173,8 +190,20 @@ func (s *ZnServer) SetPlaygroundHandler() *ZnServer {
 }
 
 func (s *ZnServer) SetHTTPHandler(entryFile string) *ZnServer {
+	compiler := NewCompiler()
 	s.reqHandler = func(w http.ResponseWriter, r *http.Request) {
-		// TBD
+		reqObj, err := server.ConstructHTTPRequestObject(r)
+		if err != nil {
+			server.SendHTTPResponse(nil, err, w)
+			return
+		}
+
+		varInput := map[string]runtime.Element{
+			"当前请求": reqObj,
+		}
+		// execute code
+		rtnValue, err := compiler.LoadFile(entryFile).Execute(varInput)
+		server.SendHTTPResponse(rtnValue, err, w)
 	}
 	return s
 }

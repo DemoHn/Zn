@@ -4,9 +4,15 @@ import (
 	"bufio"
 	"fmt"
 	"io"
+	"math"
 	"net"
 	"net/http"
 	"net/url"
+	"strconv"
+	"strings"
+
+	"github.com/DemoHn/Zn/pkg/runtime"
+	"github.com/DemoHn/Zn/pkg/value"
 )
 
 type RespWriter struct {
@@ -93,4 +99,76 @@ func parseConnUrl(connUrl string) (string, string, error) {
 	default:
 		return "", "", fmt.Errorf("不支持的协议：%s", u.Scheme)
 	}
+}
+
+//// object <-> value.Hashmap
+
+// buildHashMapItem - from plain object to HashMap Element
+func buildHashMapItem(item interface{}) runtime.Element {
+	if item == nil { // nil for json value "null"
+		return value.NewNull()
+	}
+	switch vv := item.(type) {
+	case float64:
+		return value.NewNumber(vv)
+	case string:
+		return value.NewString(vv)
+	case bool:
+		return value.NewBool(vv)
+	case map[string]interface{}:
+		target := value.NewHashMap([]value.KVPair{})
+		for k, v := range vv {
+			finalValue := buildHashMapItem(v)
+			target.AppendKVPair(value.KVPair{
+				Key:   k,
+				Value: finalValue,
+			})
+		}
+		return target
+	case []interface{}:
+		varr := value.NewArray([]runtime.Element{})
+		for _, vitem := range vv {
+			varr.AppendValue(buildHashMapItem(vitem))
+		}
+		return varr
+	default:
+		return value.NewString(fmt.Sprintf("%v", vv))
+	}
+}
+
+// buildPlainStrItem - from r.Value -> plain interface{} value
+func buildPlainStrItem(item runtime.Element) interface{} {
+	switch vv := item.(type) {
+	case *value.Null:
+		return nil
+	case *value.String:
+		return vv.String()
+	case *value.Bool:
+		return vv.GetValue()
+	case *value.Number:
+		valStr := vv.String()
+		valStr = strings.Replace(valStr, "*10^", "e", 1)
+		// replace *10^ -> e
+		result, err := strconv.ParseFloat(valStr, 64)
+		// Sometimes parseFloat may fail due to overflow, underflow etc.
+		// For those invalid numbers, return NaN instead.
+		if err != nil {
+			return math.NaN()
+		}
+		return result
+	case *value.Array:
+		var resultList []interface{}
+		for _, vi := range vv.GetValue() {
+			resultList = append(resultList, buildPlainStrItem(vi))
+		}
+		return resultList
+	case *value.HashMap:
+		resultMap := map[string]interface{}{}
+		for k, vi := range vv.GetValue() {
+			resultMap[k] = buildPlainStrItem(vi)
+		}
+		return resultMap
+	}
+	// TODO: stringify other objects
+	return value.StringifyValue(item)
 }

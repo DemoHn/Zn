@@ -5,6 +5,8 @@ import (
 	r "github.com/DemoHn/Zn/pkg/runtime"
 )
 
+type GoValueFunc = func() interface{}
+
 // ClassModel - aka. Class Definition Reference
 // It defines the structure of a class, including compPropList, methodList and propList.
 // All instances created from this class MUST inherits from those configurations.
@@ -43,7 +45,8 @@ func NewClassModel(name string, refModule *r.Module) *ClassModel {
 	}
 
 	defaultConstructor := func(*r.Context, []r.Element) (r.Element, error) {
-		return NewObject(model), nil
+		var initProps = map[string]r.Element{}
+		return NewObject(model, initProps), nil
 	}
 
 	// set default constructor
@@ -82,7 +85,7 @@ func (cm *ClassModel) FindMethod(name string) (*Function, bool) {
 ////// SETTERS //////
 func (cm *ClassModel) SetConstructorFunc(fn *Function) *ClassModel {
 	cm.constructor = func(ctx *r.Context, params []r.Element) (r.Element, error) {
-		obj := NewObject(cm)
+		obj := NewObject(cm, map[string]r.Element{})
 
 		// exec constructor logic (last value is useless)
 		if _, err := fn.Exec(ctx, obj, params); err != nil {

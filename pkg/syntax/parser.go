@@ -31,7 +31,6 @@ func (p *Parser) GetLexer() *Lexer {
 }
 
 // Parser - parse all tokens into syntax tree
-// TODO: in the future we'll parse it into bytecodes directly, instead.
 func (p *Parser) Parse() (ast *Program, err error) {
 	// handle panics
 	defer func() {

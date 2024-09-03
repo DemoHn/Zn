@@ -2,7 +2,6 @@ package value
 
 import (
 	"fmt"
-	"os"
 	"regexp"
 	"strconv"
 	"strings"
@@ -322,24 +321,4 @@ func validateOneParam(v r.Element, typeStr string) error {
 		return zerr.InvalidParamType(typeStr)
 	}
 	return nil
-}
-
-//// Program Executors
-
-// （显示） 方法的执行逻辑
-var DisplayExecutor = func(c *r.Context, params []r.Element) (r.Element, error) {
-	// display format string
-	var items = []string{}
-
-	for _, param := range params {
-		// if param is a string, display its value (without 「 」 quotes) directly
-		if str, ok := param.(*String); ok {
-			items = append(items, str.String())
-		} else {
-			items = append(items, StringifyValue(param))
-		}
-	}
-
-	os.Stdout.Write([]byte(fmt.Sprintf("%s\n", strings.Join(items, " "))))
-	return NewNull(), nil
 }
