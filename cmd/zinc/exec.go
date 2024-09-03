@@ -18,7 +18,8 @@ func EnterREPL() {
 	linerR := liner.NewLiner()
 	linerR.SetCtrlCAborts(true)
 
-	replExecutor := exec.NewREPLExecutor()
+	compiler := zinc.NewCompiler()
+	runContext := compiler.NewContext()
 	// REPL loop
 	for {
 		text, err := linerR.Prompt("Zn> ")
@@ -39,7 +40,8 @@ func EnterREPL() {
 			break
 		}
 
-		result, err := replExecutor.RunCode(text)
+		varInput := map[string]r.Element{}
+		result, err := compiler.LoadScript([]rune(text)).ExecuteWithContext(runContext, varInput)
 		if err != nil {
 			prettyPrintError(os.Stdout, err)
 		} else if result != nil {

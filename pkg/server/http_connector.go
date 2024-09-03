@@ -69,21 +69,16 @@ func ConstructHTTPRequestObject(r *http.Request) (runtime.Element, error) {
 	}
 
 	initialProps := map[string]runtime.Element{
-		"方法":   value.NewString(r.Method),
-		"路径":   value.NewString(r.URL.Path),
-		"头部":   buildHashMapItem(headerMap),
-		"查询参数": value.NewHashMap(queryPair),
+		"方法":              value.NewString(r.Method),
+		"路径":              value.NewString(r.URL.Path),
+		"头部":              buildHashMapItem(headerMap),
+		"查询参数":            value.NewHashMap(queryPair),
 		"-goHttpRequest-": value.NewGoValue("*http.Request", r),
 	}
 
 	return value.NewObject(exec.ZnConstHTTPRequestClass, initialProps), nil
 }
 
-func ConstructHTTPResponseObject() (runtime.Element, error) {
-	return nil, nil
-}
-
-// TODO - use ConstructHTTPResponseObject() to send response
 func SendHTTPResponse(result runtime.Element, err error, w http.ResponseWriter) {
 	if err != nil {
 		respondError(w, err)
