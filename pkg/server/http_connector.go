@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/DemoHn/Zn/pkg/exec"
 	"github.com/DemoHn/Zn/pkg/runtime"
 	"github.com/DemoHn/Zn/pkg/value"
+	"github.com/DemoHn/Zn/pkg/value/ext"
 )
 
 /** construct 当前请求 object for HTTP handler input
@@ -38,45 +38,7 @@ NOTE2: Definition of class `HTTP响应`:
 */
 
 func ConstructHTTPRequestObject(r *http.Request) (runtime.Element, error) {
-	headerMap := map[string]string{}
-	for k, v := range r.Header {
-		if len(v) > 0 {
-			headerMap[k] = v[0]
-		}
-	}
-
-	// build query params
-	queryPair := []value.KVPair{}
-	for k, v := range r.URL.Query() {
-		if len(v) > 0 {
-			if len(v) > 1 {
-				qsArr := []runtime.Element{}
-				for _, qs := range v {
-					qsArr = append(qsArr, value.NewString(qs))
-				}
-
-				queryPair = append(queryPair, value.KVPair{
-					Key:   k,
-					Value: value.NewArray(qsArr),
-				})
-			} else {
-				queryPair = append(queryPair, value.KVPair{
-					Key:   k,
-					Value: value.NewString(v[0]),
-				})
-			}
-		}
-	}
-
-	initialProps := map[string]runtime.Element{
-		"方法":              value.NewString(r.Method),
-		"路径":              value.NewString(r.URL.Path),
-		"头部":              buildHashMapItem(headerMap),
-		"查询参数":            value.NewHashMap(queryPair),
-		"-goHttpRequest-": value.NewGoValue("*http.Request", r),
-	}
-
-	return value.NewObject(exec.ZnConstHTTPRequestClass, initialProps), nil
+	return ext.NewHTTPRequest(r), nil
 }
 
 func SendHTTPResponse(result runtime.Element, err error, w http.ResponseWriter) {

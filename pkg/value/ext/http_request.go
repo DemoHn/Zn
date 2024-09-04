@@ -1,6 +1,7 @@
 package ext
 
 import (
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -90,7 +91,7 @@ func (h *HTTPRequest) SetProperty(c *r.Context, name string, value r.Element) er
 // ExecMethod - execute method of HTTPRequest
 func (h *HTTPRequest) ExecMethod(c *r.Context, name string, values []r.Element) (r.Element, error) {
 	methodMap := map[string]httpRequestMethodFunc{
-		"读取内容": httpRequestReadBody,
+		"读取内容": httpRequestExecReadBody,
 	}
 
 	if method, ok := methodMap[name]; ok {
@@ -99,11 +100,20 @@ func (h *HTTPRequest) ExecMethod(c *r.Context, name string, values []r.Element) 
 	return nil, zerr.MethodNotFound(name)
 }
 
-func httpRequestReadBody(h *HTTPRequest, c *r.Context, values []r.Element) (r.Element, error) {
+func httpRequestExecReadBody(h *HTTPRequest, c *r.Context, values []r.Element) (r.Element, error) {
 	// impl GetBody function here
 	body, err := ioutil.ReadAll(h.request.Body)
 	if err != nil {
-		return nil, zerr.NewRuntimeException("读取请求体失败")
+		return nil, zerr.NewRuntimeException("读取请求内容出现异常")
+	}
+
+	contentType := h.request.Header.Get("Content-Type")
+	if contentType == "application/json" {
+		var jsonBody interface{}
+		if err := json.Unmarshal(body, &jsonBody); err != nil {
+			return nil, zerr.NewRuntimeException("将请求内容解析成JSON格式时出现异常")
+		}
+		return buildHashMapItem(jsonBody), nil
 	}
 	return value.NewString(string(body)), nil
 }

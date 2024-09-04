@@ -2,12 +2,9 @@ package exec
 
 import (
 	"fmt"
-	"io/ioutil"
-	"net/http"
 	"os"
 	"strings"
 
-	zerr "github.com/DemoHn/Zn/pkg/error"
 	r "github.com/DemoHn/Zn/pkg/runtime"
 	"github.com/DemoHn/Zn/pkg/value"
 )
@@ -16,12 +13,11 @@ type funcExecutor = func(*r.Context, []r.Element) (r.Element, error)
 
 // global consts
 var (
-	ZnConstBoolTrue         = value.NewBool(true)
-	ZnConstBoolFalse        = value.NewBool(false)
-	ZnConstNull             = value.NewNull()
-	ZnConstExceptionClass   = newExceptionModel()
-	ZnConstHTTPRequestClass = newHTTPRequestModel()
-	ZnConstDisplayFunc      = newDisplayFunc()
+	ZnConstBoolTrue       = value.NewBool(true)
+	ZnConstBoolFalse      = value.NewBool(false)
+	ZnConstNull           = value.NewNull()
+	ZnConstExceptionClass = newExceptionModel()
+	ZnConstDisplayFunc    = newDisplayFunc()
 )
 
 // globalValues -
@@ -59,40 +55,6 @@ func newExceptionModel() *value.ClassModel {
 	return value.NewClassModel("异常", nil).
 		SetConstructorFunc(constructorFunc).
 		DefineProperty("内容", value.NewString(""))
-}
-
-func newHTTPRequestModel() *value.ClassModel {
-	readRequestBodyFunc := func(c *r.Context, values []r.Element) (r.Element, error) {
-		if err := value.ValidateAllParams([]r.Element{c.GetThisValue()}, "object"); err != nil {
-			return nil, zerr.InvalidParamType("goType: *http.Request")
-		}
-
-		thisValue := c.GetThisValue().(*value.Object)
-		goValue, err := thisValue.GetProperty(c, "-goHttpRequest-")
-		if err != nil {
-			return nil, zerr.PropertyNotFound("-goHttpRequest-")
-		}
-
-		if err := value.ValidateAllParams([]r.Element{goValue}, "golang:*http.Request"); err != nil {
-			return nil, zerr.InvalidParamType("goType: *http.Request")
-		}
-
-		reqV := goValue.(*value.GoValue).GetValue().(*http.Request)
-		data, err := ioutil.ReadAll(reqV.Body)
-		if err != nil {
-			return nil, zerr.NewRuntimeException("读取请求内容出现异常！")
-		}
-
-		return value.NewString(string(data)), nil
-	}
-
-	return value.NewClassModel("HTTP请求", nil).
-		DefineProperty("路径", value.NewString("")).
-		DefineProperty("方法", value.NewString("")).
-		DefineProperty("头部", value.NewHashMap([]value.KVPair{})).
-		DefineProperty("查询参数", value.NewHashMap([]value.KVPair{})).
-		DefineProperty("-goHttpRequest-", value.NewGoValue("*http.Request", nil)).
-		DefineMethod("读取内容", value.NewFunction(nil, readRequestBodyFunc))
 }
 
 func newDisplayFunc() *value.Function {
