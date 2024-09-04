@@ -210,6 +210,10 @@ func strExecFormat(s *String, c *r.Context, values []r.Element) (r.Element, erro
 }
 
 func strExecAtoi(s *String, c *r.Context, values []r.Element) (r.Element, error) {
+	v := strings.Replace(s.value, "*^", "e", 1)
+	v = strings.Replace(v, "*10^", "e", 1)
+	s.value = v
+
 	num, err := strconv.ParseFloat(s.value, 64)
 	if err != nil {
 		return nil, zerr.NewRuntimeException("转成数值失败，文本可能并不符合合适的数值格式")

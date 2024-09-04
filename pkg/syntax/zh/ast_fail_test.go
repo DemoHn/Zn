@@ -28,7 +28,7 @@ const varDeclCasesFAIL = `
     【A，B】为100
     
 --------
-code=20 cursor=10
+code=20 cursor=19
 ========
 4. invalid token (lexError)
 --------
@@ -36,7 +36,7 @@ code=20 cursor=10
 令#'x设为100
     
 --------
-code=20 cursor=8
+code=20 cursor=9
 ========
 5. block indent unexpected
 --------
@@ -62,7 +62,7 @@ code=20 cursor=6
 --------
 令
 --------
-code=20 cursor=0
+code=20 cursor=1
 `
 
 const whileLoopCasesFAIL = `
@@ -120,7 +120,7 @@ code=20 cursor=6
 --------
 （{80000}）
 --------
-code=20 cursor=0
+code=20 cursor=1
 ========
 3. func name includes otehr expr
 --------
@@ -190,7 +190,7 @@ code=20 cursor=21
 如何搞个大新闻？
     已知A、&&B	
 --------
-code=20 cursor=17
+code=20 cursor=18
 `
 
 const importStmtCasesFAIL = `
@@ -200,7 +200,7 @@ const importStmtCasesFAIL = `
 导入《ASDF》 之
 令代码为空
 --------
-code=20 cursor=9
+code=20 cursor=11
 `
 
 type astFailCase struct {

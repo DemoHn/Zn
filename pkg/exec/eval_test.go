@@ -52,6 +52,64 @@ func TestEvalWhileLoopStmt_OKCases(t *testing.T) {
 		expectLogic func(*runtime.Context, *testing.T)
 	}{
 		{
+			name: "loop with multiple conditions",
+			code: "每当A小于5且B大于0：\n    A = A + 1\n    B = B - 1",
+			initValue: map[string]runtime.Element{
+				"A": value.NewNumber(1),
+				"B": value.NewNumber(10),
+			},
+			expectLogic: func(ctx *runtime.Context, t *testing.T) {
+				symA, _ := ctx.FindElement(runtime.NewIDName("A"))
+				symB, _ := ctx.FindElement(runtime.NewIDName("B"))
+				assertA := 5
+				assertB := 6
+				if symA.(*value.Number).GetValue() != float64(assertA) {
+					t.Errorf("expect A (in root scope) = %f, got %f", float64(assertA), symA.(*value.Number).GetValue())
+				}
+				if symB.(*value.Number).GetValue() != float64(assertB) {
+					t.Errorf("expect B (in root scope) = %f, got %f", float64(assertB), symB.(*value.Number).GetValue())
+				}
+			},
+		},
+		{
+			name: "loop with nested loops",
+			code: `
+每当A小于3：
+    A = A + 1
+    每当B小于3：
+        B = B + 1`,
+			initValue: map[string]runtime.Element{
+				"A": value.NewNumber(0),
+				"B": value.NewNumber(0),
+			},
+			expectLogic: func(ctx *runtime.Context, t *testing.T) {
+				symA, _ := ctx.FindElement(runtime.NewIDName("A"))
+				symB, _ := ctx.FindElement(runtime.NewIDName("B"))
+				assertA := 3
+				assertB := 3
+				if symA.(*value.Number).GetValue() != float64(assertA) {
+					t.Errorf("expect A (in root scope) = %f, got %f", float64(assertA), symA.(*value.Number).GetValue())
+				}
+				if symB.(*value.Number).GetValue() != float64(assertB) {
+					t.Errorf("expect B (in root scope) = %f, got %f", float64(assertB), symB.(*value.Number).GetValue())
+				}
+			},
+		},
+		{
+			name: "loop with condition that never meets",
+			code: "每当A大于5：\n    A = A + 1",
+			initValue: map[string]runtime.Element{
+				"A": value.NewNumber(1),
+			},
+			expectLogic: func(ctx *runtime.Context, t *testing.T) {
+				sym, _ := ctx.FindElement(runtime.NewIDName("A"))
+				assertA := 1
+				if sym.(*value.Number).GetValue() != float64(assertA) {
+					t.Errorf("expect A (in root scope) = %f, got %f", float64(assertA), sym.(*value.Number).GetValue())
+				}
+			},
+		},
+		{
 			name: "normal loop (5 times)",
 			code: "每当真且A小于5：\n    A = A + 1\n    B = B + 10",
 			initValue: map[string]runtime.Element{

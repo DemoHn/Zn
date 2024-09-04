@@ -32,7 +32,7 @@ var (
 				Launch(connUrl)
 
 			if err != nil {
-				fmt.Println("启动服务器时发生异常：%s\n", err)
+				fmt.Printf("启动服务器时发生异常：%s\n", err.Error())
 				return
 			}
 		},

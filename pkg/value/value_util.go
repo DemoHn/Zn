@@ -188,7 +188,7 @@ func StringifyValue(value r.Element) string {
 		}
 		return data
 	case *Function:
-		return fmt.Sprintf("[某方法]")
+		return "[某方法]"
 	case *Null:
 		return "空"
 	case *Object:
@@ -221,7 +221,9 @@ func StringifyValue(value r.Element) string {
 // 5. bool     --> *Bool
 // 6. object   --> *Object
 // 7. function --> *Function
-// 8. any      --> any value type
+// 8. govalue  --> *GoValue (and. govalue:<tag> --> *GoValue with v.tag = <tag>)
+// 9. any      --> any value type
+
 func ValidateExactParams(values []r.Element, typeStr ...string) error {
 	if len(values) != len(typeStr) {
 		return zerr.ExactParamsError(len(typeStr))
@@ -289,6 +291,7 @@ func ValidateAllParams(values []r.Element, typeStr string) error {
 
 func validateOneParam(v r.Element, typeStr string) error {
 	valid := true
+
 	switch typeStr {
 	case "number":
 		if _, ok := v.(*Number); !ok {
@@ -318,9 +321,24 @@ func validateOneParam(v r.Element, typeStr string) error {
 		if _, ok := v.(*Function); !ok {
 			valid = false
 		}
+	case "govalue":
+		if _, ok := v.(*GoValue); !ok {
+			valid = false
+		}
 	case "any":
 		valid = true
 	}
+
+	// if typeStr starts with "govalue" then check if v is *GoValue and tag is equal "<tag>" after "golang:"
+	if strings.HasPrefix(typeStr, "golang:") {
+		if _, ok := v.(*GoValue); !ok {
+			valid = false
+		}
+		if v.(*GoValue).GetTag() != strings.TrimPrefix(typeStr, "golang:") {
+			valid = false
+		}
+	}
+
 	if !valid {
 		return zerr.InvalidParamType(typeStr)
 	}

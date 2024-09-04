@@ -122,37 +122,8 @@ func (z *ZnCompiler) LoadFile(file string) *ZnCompiler {
 }
 
 func (z *ZnCompiler) Execute(varInput map[string]Element) (Element, error) {
-	// #1. get the main source
-	if z.moduleCodeFinder == nil {
-		return nil, fmt.Errorf("code script/file not loaded")
-	}
-
-	finder := z.moduleCodeFinder
-	// #2. load main module
-	source, err := finder(true, "")
-	if err != nil {
-		return nil, err
-	}
-
-	// #3. parse the program
-	parser := syntax.NewParser(source, zh.NewParserZH())
-	program, err := parser.Parse()
-	if err != nil {
-		return nil, exec.WrapSyntaxError(parser, "", err)
-	}
-
-	// create context
-	runContext := runtime.NewContext(exec.GlobalValues, runtime.NewMainModule(program.Lines))
-	runContext.SetModuleCodeFinder(z.moduleCodeFinder)
-	runContext.SetVarInputs(varInput)
-
-	// #4. eval program
-	if err := exec.EvaluateProgram(runContext, program); err != nil {
-		return nil, exec.WrapRuntimeError(runContext, err)
-	}
-
-	// #5. get return value
-	return runContext.GetCurrentScope().GetReturnValue(), nil
+	runContext := z.NewContext()
+	return z.ExecuteWithContext(runContext, varInput)
 }
 
 func (z *ZnCompiler) ExecuteWithContext(ctx *runtime.Context, varInput map[string]Element) (Element, error) {
