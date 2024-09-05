@@ -2,7 +2,6 @@ package exec
 
 import (
 	"fmt"
-	"strconv"
 	"strings"
 
 	zerr "github.com/DemoHn/Zn/pkg/error"
@@ -41,7 +40,7 @@ func formatString(formatStr *value.String, params *value.Array) (*value.String, 
 				state = sFormat
 				fmtStack = append(fmtStack, []int{idx, fmtTypeFormatter, idx + 1}...)
 			default:
-				return nil, zerr.NewErrorSLOT("解析模板异常")
+				return nil, zerr.InvalidFmtTemplate(formatStr.String())
 			}
 		case '}':
 			switch state {
@@ -50,7 +49,7 @@ func formatString(formatStr *value.String, params *value.Array) (*value.String, 
 				state = sBegin
 				fmtStack = append(fmtStack, idx)
 			default:
-				return nil, zerr.NewErrorSLOT("解析模板异常")
+				return nil, zerr.InvalidFmtTemplate(formatStr.String())
 			}
 		default:
 			switch state {
@@ -68,12 +67,12 @@ func formatString(formatStr *value.String, params *value.Array) (*value.String, 
 
 	//// since fmtStack = [fmtType, startIdx, endIdx] * N
 	if len(fmtStack)%3 != 0 {
-		return nil, zerr.NewErrorSLOT("解析模板异常")
+		return nil, zerr.InvalidFmtTemplate(formatStr.String())
 	}
 
 	paramElemList := params.GetValue()
 	if len(paramElemList) != formatterCount {
-		return nil, zerr.NewErrorSLOT("参数与模板数量不匹配")
+		return nil, zerr.UnmatchFmtParams(formatStr.String())
 	}
 
 	///// #2. fill string
@@ -117,12 +116,12 @@ func formatString(formatStr *value.String, params *value.Array) (*value.String, 
    1c. '#+' -> format numbers, add a '+' sign for positive numbers and 0
 */
 func elementToString(formatter string, elem r.Element) (string, error) {
-	if len(formatter) == 0 {
+	if formatter == "" {
 		switch elem.(type) {
 		case *value.String, *value.Number, *value.Bool, *value.Array, *value.HashMap, *value.Null:
 			return value.StringifyValue(elem), nil
 		default:
-			return "", zerr.NewErrorSLOT("无效的元素类型")
+			return "", zerr.InvalidParamType("")
 		}
 	}
 
@@ -133,30 +132,100 @@ func elementToString(formatter string, elem r.Element) (string, error) {
 			return "", zerr.NewErrorSLOT("格式化字符串只能用于数字")
 		}
 
-		numValue := num.GetValue()
-		switch {
-		case formatter == "#":
-			return fmt.Sprintf("%.6g", numValue), nil
-		case formatter == "#+":
-			return fmt.Sprintf("%+.6g", numValue), nil
-		case strings.HasPrefix(formatter, "#."):
-			precision, err := strconv.Atoi(formatter[2:])
-			if err != nil {
-				return "", zerr.NewErrorSLOT("无效的格式化字符串")
-			}
-			formatStr := fmt.Sprintf("%%.%df", precision)
-			return fmt.Sprintf(formatStr, numValue), nil
-		case strings.HasPrefix(formatter, "#+."):
-			precision, err := strconv.Atoi(formatter[3:])
-			if err != nil {
-				return "", zerr.NewErrorSLOT("无效的格式化字符串")
-			}
-			formatStr := fmt.Sprintf("%%+.%df", precision)
-			return fmt.Sprintf(formatStr, numValue), nil
-		default:
-			return "", zerr.NewErrorSLOT("无效的格式化字符串")
-		}
+		return parseNumberFormatter(formatter[1:], num)
 	}
 
 	return "", zerr.NewErrorSLOT("无效的格式化字符串")
+}
+
+func parseNumberFormatter(formatter string, value *value.Number) (string, error) {
+	// formatter: [+][.precision][E|%]
+	const (
+		sBegin          = 1
+		sPositiveSign   = 2
+		sFixedSign      = 3
+		sScientificSign = 4
+		sPercentSign    = 5
+	)
+	var (
+		numFixedPrecision = 0
+		flagPositive      = false
+		flagFixed         = false
+		flagScientific    = false
+		flagPercent       = false
+	)
+
+	var state = sBegin
+
+	// 1. parse formatter
+	for _, ch := range formatter {
+		switch ch {
+		case '+':
+			switch state {
+			case sBegin:
+				state = sPositiveSign
+				flagPositive = true
+			default:
+				return "", zerr.NewErrorSLOT("无效的格式化字符串")
+			}
+		case '.':
+			switch state {
+			case sBegin, sPositiveSign:
+				state = sFixedSign
+				flagFixed = true
+			default:
+				return "", zerr.NewErrorSLOT("无效的格式化字符串")
+			}
+		case 'E':
+			switch state {
+			case sBegin, sPositiveSign, sFixedSign:
+				state = sScientificSign
+				flagScientific = true
+			default:
+				return "", zerr.NewErrorSLOT("无效的格式化字符串")
+			}
+		case '%':
+			switch state {
+			case sBegin, sPositiveSign, sFixedSign:
+				state = sPercentSign
+				flagPercent = true
+			default:
+				return "", zerr.NewErrorSLOT("无效的格式化字符串")
+			}
+		default:
+			if ch >= '0' && ch <= '9' {
+				switch state {
+				case sFixedSign:
+					numFixedPrecision = numFixedPrecision*10 + int(ch-'0')
+				default:
+					return "", zerr.NewErrorSLOT("无效的格式化字符串")
+				}
+			} else {
+				return "", zerr.NewErrorSLOT("无效的格式化字符串")
+			}
+		}
+	}
+
+	// 2. get format number string (e.g. "%+.1E" / "%+.1f" / "%.6g")
+	fmtStr := "%"
+	if flagPositive {
+		fmtStr += "+"
+	}
+	if flagFixed {
+		fmtStr += fmt.Sprintf(".%d", numFixedPrecision)
+	}
+	// add E / f / .6g
+	if flagScientific {
+		fmtStr += "E"
+	} else if flagFixed {
+		fmtStr += "f"
+	} else { // default case: NO FIXED & NO SCIENTIFIC_FLAG
+		fmtStr += ".6g"
+	}
+
+	// 3. stringify number
+	if flagPercent { // multiply 100 for percentage, then add "%"
+		return fmt.Sprintf(fmtStr, value.GetValue()*100) + "%", nil
+	}
+	return fmt.Sprintf(fmtStr, value.GetValue()), nil
 }

@@ -13,9 +13,11 @@ func (e *SemanticError) Error() string {
 
 const (
 	// 30-39
-	ErrInvalidIDFormat = 30
-	ErrIDNumberONLY    = 31
-	ErrIDNameONLY      = 32
+	ErrInvalidIDFormat    = 30
+	ErrIDNumberONLY       = 31
+	ErrIDNameONLY         = 32
+	ErrInvalidFmtTemplate = 33
+	ErrUnmatchFmtParams   = 34
 )
 
 func InvalidIDFormat(idStr string) *SemanticError {
@@ -36,5 +38,19 @@ func IDNameONLY(idStr string) *SemanticError {
 	return &SemanticError{
 		Code:    ErrIDNameONLY,
 		Message: "标识符只允许「名称」格式",
+	}
+}
+
+func InvalidFmtTemplate(template string) *SemanticError {
+	return &SemanticError{
+		Code:    ErrInvalidFmtTemplate,
+		Message: fmt.Sprintf("解析文本拼接模板「%s」出现异常", template),
+	}
+}
+
+func UnmatchFmtParams(template string) *SemanticError {
+	return &SemanticError{
+		Code:    ErrUnmatchFmtParams,
+		Message: fmt.Sprintf("文本拼接模板「%s」所需数量与参数不匹配", template),
 	}
 }
