@@ -25,8 +25,8 @@ func TestHTTPRequest_GetProperty(t *testing.T) {
 		propertyName string
 		expected     string
 	}{
-		{"路径", "「/path」"},
-		{"方法", "「GET」"},
+		{"路径", "/path"},
+		{"方法", "GET"},
 	}
 
 	for _, tt := range tests {
@@ -37,7 +37,7 @@ func TestHTTPRequest_GetProperty(t *testing.T) {
 			}
 
 			if value.StringifyValue(prop) != tt.expected {
-				t.Errorf("Expected %s, but got %s", tt.expected, value.StringifyValue(prop))
+				t.Errorf("Expected %s to be '%s', but return %s", tt.propertyName, tt.expected, value.StringifyValue(prop))
 			}
 		})
 	}
@@ -61,16 +61,16 @@ func TestHTTPRequest_GetHeaders(t *testing.T) {
 	}
 
 	headers := prop.(*value.HashMap).GetValue()
-	if value.StringifyValue(headers["Content-Type"]) != "「application/json」" {
-		t.Errorf("Expected Content-Type to be 「application/json」, but got %s", value.StringifyValue(headers["Content-Type"]))
+	if value.StringifyValue(headers["Content-Type"]) != "application/json" {
+		t.Errorf("Expected Content-Type to be 'application/json', but got '%s'", value.StringifyValue(headers["Content-Type"]))
 	}
-	if value.StringifyValue(headers["X-Custom-Header"]) != "「custom-value」" {
-		t.Errorf("Expected X-Custom-Header to be 「custom-value」, but got %s", value.StringifyValue(headers["X-Custom-Header"]))
+	if value.StringifyValue(headers["X-Custom-Header"]) != "custom-value" {
+		t.Errorf("Expected X-Custom-Header to be 'custom-value', but got '%s'", value.StringifyValue(headers["X-Custom-Header"]))
 	}
 
 	// NOTE: golang will uppercase the header key, so we need to check the value
-	if value.StringifyValue(headers["X-Lowercase-Header"]) != "「lowercase-value」" {
-		t.Errorf("Expected x-lowercase-header to be 「lowercase-value」, but got %s", value.StringifyValue(headers["x-lowercase-header"]))
+	if value.StringifyValue(headers["X-Lowercase-Header"]) != "lowercase-value" {
+		t.Errorf("Expected x-lowercase-header to be 'lowercase-value', but got '%s'", value.StringifyValue(headers["x-lowercase-header"]))
 	}
 }
 
@@ -90,11 +90,11 @@ func TestHTTPRequest_GetQueryParams(t *testing.T) {
 	}
 
 	queryParams := prop.(*value.HashMap).GetValue()
-	if value.StringifyValue(queryParams["param1"]) != "「value1」" {
-		t.Errorf("Expected param1 to be 「value1」, but got %s", value.StringifyValue(queryParams["param1"]))
+	if value.StringifyValue(queryParams["param1"]) != "value1" {
+		t.Errorf("Expected param1 to be 'value1', but got '%s'", value.StringifyValue(queryParams["param1"]))
 	}
-	if value.StringifyValue(queryParams["param2"]) != "「value2」" {
-		t.Errorf("Expected param2 to be 「value2」, but got %s", value.StringifyValue(queryParams["param2"]))
+	if value.StringifyValue(queryParams["param2"]) != "value2" {
+		t.Errorf("Expected param2 to be 'value2', but got '%s'", value.StringifyValue(queryParams["param2"]))
 	}
 }
 
@@ -114,19 +114,19 @@ func TestHTTPRequest_GetQueryParams_Array(t *testing.T) {
 	}
 
 	queryParams := prop.(*value.HashMap).GetValue()
-	if value.StringifyValue(queryParams["param1"]) != "「value1」" {
-		t.Errorf("Expected param1 to be 「value1」, but got %s", value.StringifyValue(queryParams["param1"]))
+	if value.StringifyValue(queryParams["param1"]) != "value1" {
+		t.Errorf("Expected param1 to be 'value1', but got '%s'", value.StringifyValue(queryParams["param1"]))
 	}
 
 	param2Array := queryParams["param2"].(*value.Array).GetValue()
 	if len(param2Array) != 2 {
 		t.Errorf("Expected param2 to have 2 values, but got %d", len(param2Array))
 	} else {
-		if value.StringifyValue(param2Array[0]) != "「value2」" {
-			t.Errorf("Expected param2[0] to be 「value2」, but got %s", value.StringifyValue(param2Array[0]))
+		if value.StringifyValue(param2Array[0]) != "value2" {
+			t.Errorf("Expected param2[0] to be 'value2', but got '%s'", value.StringifyValue(param2Array[0]))
 		}
-		if value.StringifyValue(param2Array[1]) != "「value3」" {
-			t.Errorf("Expected param2[1] to be 「value3」, but got %s", value.StringifyValue(param2Array[1]))
+		if value.StringifyValue(param2Array[1]) != "value3" {
+			t.Errorf("Expected param2[1] to be 'value3', but got '%s'", value.StringifyValue(param2Array[1]))
 		}
 	}
 }
@@ -146,8 +146,8 @@ func TestHTTPRequest_ReadBody(t *testing.T) {
 		t.Fatalf("Failed to read body: %v", err)
 	}
 
-	if value.StringifyValue(result) != fmt.Sprintf("「%s」", body) {
-		t.Errorf("Expected body to be %s, but got %s", body, value.StringifyValue(result))
+	if value.StringifyValue(result) != fmt.Sprintf("%s", body) {
+		t.Errorf("Expected body to be '%s', but got '%s'", body, value.StringifyValue(result))
 	}
 }
 
@@ -168,19 +168,19 @@ func TestHTTPRequest_ReadBody_JSON(t *testing.T) {
 	}
 
 	resultMap := result.(*value.HashMap).GetValue()
-	if value.StringifyValue(resultMap["key1"]) != "「value1」" {
-		t.Errorf("Expected key1 to be 「value1」, but got %s", value.StringifyValue(resultMap["key1"]))
+	if value.StringifyValue(resultMap["key1"]) != "value1" {
+		t.Errorf("Expected key1 to be 'value1', but got '%s'", value.StringifyValue(resultMap["key1"]))
 	}
 	if value.StringifyValue(resultMap["key2"]) != "2" {
-		t.Errorf("Expected key2 to be 2, but got %s", value.StringifyValue(resultMap["key2"]))
+		t.Errorf("Expected key2 to be '2', but got '%s'", value.StringifyValue(resultMap["key2"]))
 	}
 	if value.StringifyValue(resultMap["key3"]) != "真" {
-		t.Errorf("Expected key3 to be 真, but got %s", value.StringifyValue(resultMap["key3"]))
+		t.Errorf("Expected key3 to be '真', but got '%s'", value.StringifyValue(resultMap["key3"]))
 	}
 
 	// Check nested JSON
 	nestedMap := resultMap["key4"].(*value.HashMap).GetValue()
-	if value.StringifyValue(nestedMap["nestedKey"]) != "「nestedValue」" {
-		t.Errorf("Expected nestedKey to be 「nestedValue」, but got %s", value.StringifyValue(nestedMap["nestedKey"]))
+	if value.StringifyValue(nestedMap["nestedKey"]) != "nestedValue" {
+		t.Errorf("Expected nestedKey to be 'nestedValue', but got '%s'", value.StringifyValue(nestedMap["nestedKey"]))
 	}
 }

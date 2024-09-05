@@ -2,6 +2,7 @@ package exec
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 
 	zerr "github.com/DemoHn/Zn/pkg/error"
@@ -84,14 +85,16 @@ func formatString(formatStr *value.String, params *value.Array) (*value.String, 
 		var startIdx = fmtStack[i+1]
 		var endIdx = fmtStack[i+2]
 
+		formatter := string(formatStrRune[startIdx:endIdx])
 		if fmtType == fmtTypeLiteral {
-			fmtRuneList = append(fmtRuneList, string(formatStrRune[startIdx:endIdx]))
+			fmtRuneList = append(fmtRuneList, formatter)
 		} else if fmtType == fmtTypeFormatter {
-			fmtRuneList = append(fmtRuneList, elementToString(
-				formatStrRune[startIdx:endIdx],
-				paramElemList[paramElemIdx],
-			))
+			str, err := elementToString(formatter, paramElemList[paramElemIdx])
+			if err != nil {
+				return nil, err
+			}
 
+			fmtRuneList = append(fmtRuneList, str)
 			paramElemIdx += 1
 		}
 	}
@@ -99,13 +102,61 @@ func formatString(formatStr *value.String, params *value.Array) (*value.String, 
 	return value.NewString(strings.Join(fmtRuneList, "")), nil
 }
 
-func elementToString(formatter []rune, elem r.Element) string {
-	switch v := elem.(type) {
-	case *value.String:
-		return v.GetValue()
-	case *value.Number:
-		return fmt.Sprintf("%.2f", v.GetValue())
-	default:
-		return ""
+/** Formatter Rules:
+
+1. start with '#' - only Numbers are allowed to format
+   1a. '#' -> format numbers with 6 significant digits (SD). The precise rules are as follows (copied from Python's `%g` format):
+
+       suppose that the result formatted with presentation type 'e' 6 SD would have exponent exp. Then, if -4 <= exp < 6, the number is formatted with presentation type 'f' and precision 5-exp. Otherwise, the number is formatted with presentation type 'e' and 6 SD.
+
+       Example:
+	   1234 --> "1234"
+	   12.3456789 --> "12.3457"
+   1b. '#.N' -> format numbers, where N is the number of digits after the decimal point.
+
+   1c. '#+' -> format numbers, add a '+' sign for positive numbers and 0
+*/
+func elementToString(formatter string, elem r.Element) (string, error) {
+	if len(formatter) == 0 {
+		switch elem.(type) {
+		case *value.String, *value.Number, *value.Bool, *value.Array, *value.HashMap, *value.Null:
+			return value.StringifyValue(elem), nil
+		default:
+			return "", zerr.NewErrorSLOT("无效的元素类型")
+		}
 	}
+
+	// if formatter starts from #
+	if strings.HasPrefix(formatter, "#") {
+		num, ok := elem.(*value.Number)
+		if !ok {
+			return "", zerr.NewErrorSLOT("格式化字符串只能用于数字")
+		}
+
+		numValue := num.GetValue()
+		switch {
+		case formatter == "#":
+			return fmt.Sprintf("%.6g", numValue), nil
+		case formatter == "#+":
+			return fmt.Sprintf("%+.6g", numValue), nil
+		case strings.HasPrefix(formatter, "#."):
+			precision, err := strconv.Atoi(formatter[2:])
+			if err != nil {
+				return "", zerr.NewErrorSLOT("无效的格式化字符串")
+			}
+			formatStr := fmt.Sprintf("%%.%df", precision)
+			return fmt.Sprintf(formatStr, numValue), nil
+		case strings.HasPrefix(formatter, "#+."):
+			precision, err := strconv.Atoi(formatter[3:])
+			if err != nil {
+				return "", zerr.NewErrorSLOT("无效的格式化字符串")
+			}
+			formatStr := fmt.Sprintf("%%+.%df", precision)
+			return fmt.Sprintf(formatStr, numValue), nil
+		default:
+			return "", zerr.NewErrorSLOT("无效的格式化字符串")
+		}
+	}
+
+	return "", zerr.NewErrorSLOT("无效的格式化字符串")
 }

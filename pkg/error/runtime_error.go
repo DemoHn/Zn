@@ -266,7 +266,9 @@ func InvalidExprType(assertType ...string) *RuntimeError {
 		if v, ok := typeNameMap[at]; ok {
 			label = v
 		}
-		labels = append(labels, fmt.Sprintf("「%s」", label))
+		if label != "" {
+			labels = append(labels, fmt.Sprintf("「%s」", label))
+		}
 	}
 
 	return &RuntimeError{

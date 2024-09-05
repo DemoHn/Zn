@@ -37,6 +37,7 @@ func (s *String) String() string {
 	return s.value
 }
 
+// GetValues - alias of s.String()
 func (s *String) GetValue() string {
 	return s.value
 }

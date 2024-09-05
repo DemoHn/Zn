@@ -164,12 +164,23 @@ func DuplicateValue(in r.Element) r.Element {
 		return in
 	case *Object: // we don't copy object value at all
 		return in
+	case *GoValue:
+		return in
 	}
 	return in
 }
 
-// StringifyValue - yield a string from r.Value
+// StringifyValue - format string from r.Value
+// NOTE: for `String` element, the result does not contain「 & 」
 func StringifyValue(value r.Element) string {
+	if v, ok := value.(*String); ok {
+		return v.GetValue()
+	}
+	return stringifyInnerValue(value)
+}
+
+// stringifyInnerValue - stringify inner value, used for array and hashmap
+func stringifyInnerValue(value r.Element) string {
 	switch v := value.(type) {
 	case *String:
 		return fmt.Sprintf("「%s」", v.value)
@@ -178,9 +189,9 @@ func StringifyValue(value r.Element) string {
 	case *Array:
 		strs := []string{}
 		for _, item := range v.value {
-			strs = append(strs, StringifyValue(item))
+			strs = append(strs, stringifyInnerValue(item))
 		}
-		return fmt.Sprintf("【%s】", strings.Join(strs, "、"))
+		return fmt.Sprintf("【%s】", strings.Join(strs, "，"))
 	case *Bool:
 		data := "真"
 		if !v.value {
@@ -198,12 +209,12 @@ func StringifyValue(value r.Element) string {
 		strs := []string{}
 		for _, key := range v.keyOrder {
 			value := v.value[key]
-			strs = append(strs, fmt.Sprintf("%s = %s", key, StringifyValue(value)))
+			strs = append(strs, fmt.Sprintf("%s = %s", key, stringifyInnerValue(value)))
 		}
 		return fmt.Sprintf("【%s】", strings.Join(strs, "，"))
 	case *GoValue:
 		// show go value as string like "[GoValue type:<tag>]"
-		return fmt.Sprintf("[GoValue type:%s]", v.GetTag())
+		return fmt.Sprintf("[GoValue type=%s]", v.GetTag())
 	}
 	return ""
 }

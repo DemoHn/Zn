@@ -86,7 +86,8 @@ func prettyDisplayValue(v r.Element, w eio.Writer) {
 		displayData = fmt.Sprintf("\x1b[38;5;147m%s\x1b[0m\n", valStr)
 	case *value.String:
 		// FG color: Green
-		displayData = fmt.Sprintf("\x1b[38;5;184m%s\x1b[0m\n", valStr)
+		// NOTE: string value quoted with 「 & 」
+		displayData = fmt.Sprintf("\x1b[38;5;184m「%s」\x1b[0m\n", valStr)
 	case *value.Bool:
 		// FG color: White
 		displayData = fmt.Sprintf("\x1b[38;5;231m%s\x1b[0m\n", valStr)

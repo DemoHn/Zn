@@ -62,12 +62,7 @@ func newDisplayFunc() *value.Function {
 		// display format string
 		var items = []string{}
 		for _, param := range params {
-			// if param is a string, display its value (without 「 」 quotes) directly
-			if str, ok := param.(*value.String); ok {
-				items = append(items, str.String())
-			} else {
-				items = append(items, value.StringifyValue(param))
-			}
+			items = append(items, value.StringifyValue(param))
 		}
 
 		os.Stdout.Write([]byte(fmt.Sprintf("%s\n", strings.Join(items, " "))))

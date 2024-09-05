@@ -21,7 +21,7 @@ var (
 			znServer := zinc.NewServer()
 
 			// listen and handle
-			if err := znServer.SetHTTPHandler(entryFile).Launch(connUrl); err != nil {
+			if err := znServer.SetHTTPHandler(entryFile).LaunchThreadServer(connUrl); err != nil {
 				fmt.Printf("启动服务器时发生错误：%v\n", err)
 				return
 			}

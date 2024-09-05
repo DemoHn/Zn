@@ -1,7 +1,6 @@
 package exec
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/DemoHn/Zn/pkg/runtime"
@@ -11,22 +10,35 @@ import (
 type fmtCase struct {
 	formatter string
 	params    []runtime.Element
+	expected  string
 }
 
 func TestFormatStr(t *testing.T) {
 	cases := []fmtCase{
 		{
-			"HK{}-{xyz}",
+			"HK{#}-{}",
 			[]runtime.Element{
+				value.NewNumber(13.208945),
 				value.NewString("香港记者"),
-				value.NewNumber(12.208945),
 			},
+			"HK13.2089-香港记者",
+		},
+		{
+			"HK{#.2}-{}",
+			[]runtime.Element{
+				value.NewNumber(-13.208945),
+				value.NewString("香港记者"),
+			},
+			"HK-13.21-香港记者",
 		},
 	}
 
 	for _, c := range cases {
 		paramArr := value.NewArray(c.params)
 		res, _ := formatString(value.NewString(c.formatter), paramArr)
-		fmt.Println(res)
+
+		if res.String() != c.expected {
+			t.Errorf("formatString('%s'): expect '%s', result: '%s'", c.formatter, c.expected, res.String())
+		}
 	}
 }

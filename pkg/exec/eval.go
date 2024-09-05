@@ -613,6 +613,9 @@ func evalExpression(c *r.Context, expr syntax.Expression) (r.Element, error) {
 		}
 		return evalLogicComparator(c, e)
 	case *syntax.ArithExpr:
+		if e.Type == syntax.ArithModulo {
+			return evalArithTypeModuloExpr(c, e)
+		}
 		return evalArithExpr(c, e)
 	case *syntax.MemberExpr:
 		iv, err := getMemberExprIV(c, e)
@@ -943,19 +946,54 @@ func evalArithExpr(c *r.Context, expr *syntax.ArithExpr) (*value.Number, error) 
 		return value.NewNumber(
 			math.Floor(leftNum.GetValue() / rightNum.GetValue()),
 		), nil
-	case syntax.ArithModulo:
-		// a/b = q with remainder r, where b*q + r = a and 0 <= abs(r) < b
-		// so q = a 'intdiv' b, r = a - q * b
-		a := leftNum.GetValue()
-		b := rightNum.GetValue()
-		if b == 0 {
-			return nil, zerr.ArithDivZero()
-		}
-		q := math.Floor(a / b)
-
-		return value.NewNumber(a - q*b), nil
 	}
 	return nil, zerr.UnexpectedCase("运算项", fmt.Sprintf("%d", expr.Type))
+}
+
+// evalArithTypeModuloExpr - handle special case of ArithExpr where Type = ArithModulo (%)
+// A % B has two types:
+//   1. ArithModulo: [Number] % [Number] -> [Number] (e.g  5 % 2 = 1)
+//   2. String format: [String] % [Array] -> [String] (e.g. “{}-{}” % 【1、2】= “1-2”)
+func evalArithTypeModuloExpr(c *r.Context, expr *syntax.ArithExpr) (r.Element, error) {
+	leftExpr, err := evalExpression(c, expr.LeftExpr)
+	if err != nil {
+		return nil, err
+	}
+
+	rightExpr, err := evalExpression(c, expr.RightExpr)
+	if err != nil {
+		return nil, err
+	}
+
+	// handle CASE 1
+	if leftNum, okL := leftExpr.(*value.Number); okL {
+		if rightNum, okR := rightExpr.(*value.Number); okR {
+			// a/b = q with remainder r, where b*q + r = a and 0 <= abs(r) < b
+			// so q = a 'intdiv' b, r = a - q * b
+			a := leftNum.GetValue()
+			b := rightNum.GetValue()
+			if b == 0 {
+				return nil, zerr.ArithDivZero()
+			}
+			q := math.Floor(a / b)
+
+			return value.NewNumber(a - q*b), nil
+		}
+	}
+
+	// handle CASE 2
+	if leftStr, okL := leftExpr.(*value.String); okL {
+		if rightArr, okR := rightExpr.(*value.Array); okR {
+			formattedStr, err := formatString(leftStr, rightArr)
+			if err != nil {
+				return nil, err
+			}
+
+			return formattedStr, nil
+		}
+	}
+
+	return nil, zerr.InvalidExprType("")
 }
 
 // eval prime expr
