@@ -13,8 +13,17 @@ type fmtCase struct {
 	expected  string
 }
 
-func TestFormatStr(t *testing.T) {
+func TestFormatStr_Number(t *testing.T) {
 	cases := []fmtCase{
+		{
+			"{#}{#.2}{#.4E}",
+			[]runtime.Element{
+				value.NewNumber(0),
+				value.NewNumber(9),
+				value.NewNumber(-398.77775),
+			},
+			"09.00-3.9878E+02",
+		},
 		{
 			"HK{#}-{}",
 			[]runtime.Element{

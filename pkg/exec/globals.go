@@ -2,6 +2,7 @@ package exec
 
 import (
 	"fmt"
+	"math/rand"
 	"os"
 	"strings"
 
@@ -18,6 +19,7 @@ var (
 	ZnConstNull           = value.NewNull()
 	ZnConstExceptionClass = newExceptionModel()
 	ZnConstDisplayFunc    = newDisplayFunc()
+	ZnConstGetRandomFloat = newGetRandomFloatFunc()
 )
 
 // globalValues -
@@ -32,11 +34,12 @@ func init() {
 	//// any execution procedure.
 	//// NOTICE: those variables are all constants!
 	globalValues = map[string]r.Element{
-		"真":  ZnConstBoolTrue,
-		"假":  ZnConstBoolFalse,
-		"空":  ZnConstNull,
-		"异常": ZnConstExceptionClass,
-		"显示": ZnConstDisplayFunc,
+		"真":    ZnConstBoolTrue,
+		"假":    ZnConstBoolFalse,
+		"空":    ZnConstNull,
+		"异常":   ZnConstExceptionClass,
+		"显示":   ZnConstDisplayFunc,
+		"取随机数": ZnConstGetRandomFloat,
 	}
 
 	GlobalValues = globalValues
@@ -70,4 +73,12 @@ func newDisplayFunc() *value.Function {
 	}
 
 	return value.NewFunction(nil, displayExecutor)
+}
+
+func newGetRandomFloatFunc() *value.Function {
+	getRandomFloatExecutor := func(c *r.Context, params []r.Element) (r.Element, error) {
+		return value.NewNumber(rand.Float64()), nil
+	}
+
+	return value.NewFunction(nil, getRandomFloatExecutor)
 }
