@@ -1,18 +1,17 @@
 package error
 
 type Exception struct {
-	Name string
-	Message string
+	name    string
+	message string
 }
 
 func (e *Exception) Error() string {
-	return e.Message
+	return e.message
 }
 
 func NewRuntimeException(message string) *Exception {
 	return &Exception{
-		Name:    "运行异常",
-		Message: message,
+		name:    "运行异常",
+		message: message,
 	}
 }
-

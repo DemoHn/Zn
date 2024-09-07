@@ -54,6 +54,8 @@ JI      继
 XU      续
 XUN     循
 HUAN    环
+CHUANG  创
+JIAN    建
 ===============================
 # Part II： 定义每一个关键词及其对应的 tokenType。
 # 使用说明：
@@ -79,7 +81,7 @@ LogicGtW        55      大于
 VarOneW         56      以
 CondElseW       59      否则
 WhileLoopW      60      每当
-ObjNewW         61      成为
+ObjNewW         61      创建
 ObjDefineW      63      定义
 ObjThisW        65      其
 LogicOrW        69      或
