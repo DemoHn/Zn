@@ -476,7 +476,12 @@ func ParseBasicExpr(p *ParserZH) syntax.Expression {
 			e = ParseExpression(p)
 			p.consume(TypeStmtQuoteR)
 		case TypeFuncQuoteL:
-			e = ParseFuncCallExpr(p, true)
+			matchNewObj, _ := p.tryConsume(TypeObjNewW)
+			if matchNewObj {
+				e = ParseObjNewExpr(p)
+			} else {
+				e = ParseFuncCallExpr(p, true)
+			}
 		case TypeVarOneW:
 			e = ParseMemberFuncCallExpr(p)
 		}
@@ -606,6 +611,8 @@ func tryParseEmptyMapList(p *ParserZH) (bool, syntax.UnionMapList) {
 // CFG:
 // FuncCallExpr  -> （ FuncID ： pcommaList ）YieldResultTail
 //               -> （ FuncID ） YieldResultTail
+//               -> （ 新建 ClassID ： pcommaList ）
+//               -> （ 新建 ClassID ：）
 // pcommaList     -> E pcommaListTail
 // pcommaListTail -> 、 E pcommaListTail
 //               ->
@@ -760,7 +767,6 @@ func parseVDAssignPair(p *ParserZH) syntax.VDAssignPair {
 		TypeAssignW,
 		TypeAssignMark,
 		TypeAssignConstW,
-		TypeObjNewW,
 	}
 	match, tk := p.tryConsume(validKeywords...)
 	if !match {
@@ -795,32 +801,33 @@ func parseVDAssignPair(p *ParserZH) syntax.VDAssignPair {
 			AssignExpr: expr,
 		}
 	default: // ObjNewW
-		p.consume(TypeFuncQuoteL)
-		className := parseID(p)
-		// parse colon
-		match, _ := p.tryConsume(TypeFuncCall)
-		if !match {
-			p.consume(TypeFuncQuoteR)
-			return syntax.VDAssignPair{
-				Type:      syntax.VDTypeObjNew,
-				Variables: idfList,
-				ObjClass:  className,
-				ObjParams: []syntax.Expression{},
-			}
-		}
-		// param param list
+		panic(p.getInvalidSyntaxPeek())
+	}
+}
+
+// ParseObjNewExpr - yield ObjNewExpr node
+// CFG:
+// ObjNewExpr -> （创建 ID ：Expr、 Expr、 ... ）
+//            -> （创建 ID ）
+func ParseObjNewExpr(p *ParserZH) *syntax.ObjNewExpr {
+	objClass := parseID(p)
+	if match, _ := p.tryConsume(TypeFuncCall); match {
 		params := []syntax.Expression{}
 		parsePauseCommaList(p, func() {
 			e := ParseExpression(p)
 			params = append(params, e)
 		})
 		p.consume(TypeFuncQuoteR)
+		return &syntax.ObjNewExpr{
+			ClassName: objClass,
+			Params:    params,
+		}
+	} else {
+		p.consume(TypeFuncQuoteR)
 
-		return syntax.VDAssignPair{
-			Type:      syntax.VDTypeObjNew,
-			Variables: idfList,
-			ObjClass:  className,
-			ObjParams: params,
+		return &syntax.ObjNewExpr{
+			ClassName: objClass,
+			Params:    []syntax.Expression{},
 		}
 	}
 }

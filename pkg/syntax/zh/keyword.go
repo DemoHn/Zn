@@ -36,8 +36,6 @@ const (
 	GlyphCHU rune = 0x51FA
 	// GlyphZE - 则 - 否则
 	GlyphZE rune = 0x5219
-	// GlyphCHUANG - 创 - 创建
-	GlyphCHUANG rune = 0x521B
 	// GlyphDAOy - 到 - 得到
 	GlyphDAOy rune = 0x5230
 	// GlyphLI - 历 - 遍历
@@ -60,7 +58,7 @@ const (
 	GlyphXIAO rune = 0x5C0F
 	// GlyphYI - 已 - 已知
 	GlyphYI rune = 0x5DF2
-	// GlyphJIAN - 建 - 创建
+	// GlyphJIAN - 建 - 新建
 	GlyphJIAN rune = 0x5EFA
 	// GlyphDANG - 当 - 每当
 	GlyphDANG rune = 0x5F53
@@ -76,6 +74,8 @@ const (
 	GlyphHUO rune = 0x6216
 	// GlyphPAO - 抛 - 抛出
 	GlyphPAO rune = 0x629B
+	// GlyphXIN - 新 - 新建
+	GlyphXIN rune = 0x65B0
 	// GlyphSHI - 是 -
 	GlyphSHI rune = 0x662F
 	// GlyphSHUy - 束 - 结束循环
@@ -129,7 +129,7 @@ const (
 	TypeVarOneW      uint8 = 56 // 以
 	TypeCondElseW    uint8 = 59 // 否则
 	TypeWhileLoopW   uint8 = 60 // 每当
-	TypeObjNewW      uint8 = 61 // 创建
+	TypeObjNewW      uint8 = 61 // 新建
 	TypeObjDefineW   uint8 = 63 // 定义
 	TypeObjThisW     uint8 = 65 // 其
 	TypeLogicOrW     uint8 = 69 // 或
@@ -205,13 +205,6 @@ func parseKeyword(l *syntax.Lexer, moveForward bool) (bool, syntax.Token, error)
 		} else {
 			return false, syntax.Token{}, nil
 		}
-	case GlyphCHUANG:
-		if l.Peek() == GlyphJIAN {
-			wordLen = 2
-			tk.Type = TypeObjNewW
-		} else {
-			return false, syntax.Token{}, nil
-		}
 	case GlyphFOU:
 		if l.Peek() == GlyphZE {
 			wordLen = 2
@@ -284,6 +277,13 @@ func parseKeyword(l *syntax.Lexer, moveForward bool) (bool, syntax.Token, error)
 		if l.Peek() == GlyphCHU {
 			wordLen = 2
 			tk.Type = TypeThrowErrorW
+		} else {
+			return false, syntax.Token{}, nil
+		}
+	case GlyphXIN:
+		if l.Peek() == GlyphJIAN {
+			wordLen = 2
+			tk.Type = TypeObjNewW
 		} else {
 			return false, syntax.Token{}, nil
 		}

@@ -294,54 +294,34 @@ func evalVarDeclareStmt(c *r.Context, node *syntax.VarDeclareStmt) error {
 					return err
 				}
 			}
-		case syntax.VDTypeObjNew: // 成为
-			if err := evalNewObject(c, vpair); err != nil {
-				return err
-			}
 		}
 	}
 	return nil
 }
 
-// eval A,B 成为（C：P1，P2，P3，...）
+// eval 创建XX：P1，P2，P3，...！
 // ensure VDAssignPair.Type MUST BE syntax.VDTypeObjNew
-func evalNewObject(c *r.Context, node syntax.VDAssignPair) error {
-	classID, err := MatchIDName(node.ObjClass)
+func evalNewObject(c *r.Context, node *syntax.ObjNewExpr) (r.Element, error) {
+	classID, err := MatchIDName(node.ClassName)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	// get class definition
 	importVal, err := c.FindElement(classID)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	classRef, ok := importVal.(*value.ClassModel)
 	if !ok {
-		return zerr.InvalidParamType("classRef")
+		return nil, zerr.InvalidParamType("classRef")
 	}
 
-	cParams, err := exprsToValues(c, node.ObjParams)
+	cParams, err := exprsToValues(c, node.Params)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	// assign new object to variables
-	for _, v := range node.Variables {
-		vtag, err := MatchIDName(v)
-		if err != nil {
-			return err
-		}
-
-		finalObj, err := classRef.Construct(c, cParams)
-		if err != nil {
-			return err
-		}
-
-		if err := c.BindSymbol(vtag, finalObj); err != nil {
-			return err
-		}
-	}
-	return nil
+	return classRef.Construct(c, cParams)
 }
 
 // eval 导入《模块A》
@@ -629,6 +609,8 @@ func evalExpression(c *r.Context, expr syntax.Expression) (r.Element, error) {
 		return evalFunctionCall(c, e)
 	case *syntax.MemberMethodExpr:
 		return evalMemberMethodExpr(c, e)
+	case *syntax.ObjNewExpr:
+		return evalNewObject(c, e)
 	default:
 		return nil, zerr.InvalidExprType()
 	}

@@ -106,7 +106,7 @@ func (rw *RuntimeErrorWrapper) Error() string {
 		code = werr.Code
 	}
 	if ex, ok := rw.err.(*zerr.Exception); ok {
-		errClass = ex.Name
+		errClass = ex.GetName()
 	}
 
 	if len(rw.traceback) > 0 {

@@ -101,16 +101,13 @@ type VDAssignPair struct {
 	Variables  []*ID
 	AssignExpr Expression
 	RefMark    bool
-	ObjClass   *ID          // 成为 XX： 1，2，3 ... valid only when Type = 2 (VDTypeObjNew)
-	ObjParams  []Expression // 成为 XX：P1，P2，P3，... valid only when Type = 2 (VDTypeObjNew)
 }
 
 type vdAssignPairTypeE uint8
 
 // declare VD Assign type
 const (
-	VDTypeAssign      = 1 // 为
-	VDTypeObjNew      = 2 // 成为
+	VDTypeAssign      = 1 // 设为
 	VDTypeAssignConst = 3 // 恒为
 )
 
@@ -289,6 +286,12 @@ type VarAssignExpr struct {
 	TargetVar  Assignable
 	RefMark    bool
 	AssignExpr Expression
+}
+
+type ObjNewExpr struct {
+	ExprBase
+	ClassName *ID
+	Params    []Expression
 }
 
 // FuncCallExpr - function call

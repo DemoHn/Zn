@@ -152,6 +152,13 @@ func StringifyAST(node Node) string {
 			yieldRes = fmt.Sprintf(" yield=(%s)", StringifyAST(v.YieldResult))
 		}
 		return fmt.Sprintf("$MMF(root=(%s) chain=(%s)%s)", rootStr, strings.Join(chain, " "), yieldRes)
+	case *ObjNewExpr:
+		// chain
+		var params = []string{}
+		for _, p := range v.Params {
+			params = append(params, StringifyAST(p))
+		}
+		return fmt.Sprintf("$NEW(class=(%s) params=(%s))", StringifyAST(v.ClassName), strings.Join(params, " "))
 	case *EmptyStmt:
 		return "$"
 	case *VarDeclareStmt:
@@ -172,17 +179,6 @@ func StringifyAST(node Node) string {
 				} else {
 					items = append(items, fmt.Sprintf("$VP(vars[]=(%s) expr[]=(%s))", strings.Join(vars, " "), expr))
 				}
-			case VDTypeObjNew:
-				paramsStr := []string{}
-				for _, vp := range vpair.ObjParams {
-					paramsStr = append(paramsStr, StringifyAST(vp))
-				}
-				items = append(items, fmt.Sprintf(
-					"$VP(object vars[]=(%s) class=(%s) params[]=(%s))",
-					strings.Join(vars, " "),
-					StringifyAST(vpair.ObjClass),
-					strings.Join(paramsStr, " "),
-				))
 			}
 		}
 		// parse exprs
