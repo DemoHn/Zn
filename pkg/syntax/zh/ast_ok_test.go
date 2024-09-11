@@ -243,12 +243,7 @@ $PG($BK(
 --------
 令圆周率 =（新建数学：3.1415926）
 --------
-$PG($BK(
-	$VD(
-		$VP(object vars[]=($ID(圆周率)) class=($ID(数学)) params[]=($ID(3.1415926)))
-	)
-))
-
+$PG($BK($VD($VP(vars[]=($ID(圆周率)) expr[]=($NEW(class=($ID(数学)) params=($ID(3.1415926))))))))
 ========
 9. block declaration - mixture of const,assign,newObj
 --------
@@ -258,25 +253,21 @@ $PG($BK(
 	D、E、F恒为空
 	G恒为空
 --------
-$PG($BK(
-	$VD(
-		$VP(object vars[]=($ID(高脚杯) $ID(小盅)) class=($ID(SKU)) params[]=($STR(玻璃制品) $ID(10) $ID(20) $ID(30)))
-		$VP(vars[]=($ID(A) $ID(B) $ID(C)) expr[]=($STR(Amazon)))
-		$VP(const vars[]=($ID(D) $ID(E) $ID(F)) expr[]=($ID(空)))
-		$VP(const vars[]=($ID(G)) expr[]=($ID(空)))
+$PG($BK($VD(
+	$VP(vars[]=($ID(高脚杯) $ID(小盅)) expr[]=(
+		$NEW(class=($ID(SKU)) params=($STR(玻璃制品) $ID(10) $ID(20) $ID(30))))
 	)
-))
+	$VP(vars[]=($ID(A) $ID(B) $ID(C)) expr[]=($STR(Amazon)))
+	$VP(const vars[]=($ID(D) $ID(E) $ID(F)) expr[]=($ID(空)))
+	$VP(const vars[]=($ID(G)) expr[]=($ID(空)))))
+)
 
 ========
 10. block declaration - new object without params
 --------
 令A =（新建B）
 --------
-$PG($BK(
-	$VD(
-		$VP(object vars[]=($ID(A)) class=($ID(B)) params[]=())
-	)
-))
+$PG($BK($VD($VP(vars[]=($ID(A)) expr[]=($NEW(class=($ID(B)) params=()))))))
 `
 const funcCallCasesOK = `
 ========
