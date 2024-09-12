@@ -1127,6 +1127,43 @@ $PG($BK(
 		))
 	)
 ))
+========
+6. with catch block
+--------
+如何搞个大新闻？
+	如果C == 空：
+		A = A * 2
+		输出1024
+	否则：
+		输出1024	
+接到A异常：
+	输出233
+接到B异常：
+	输出566
+--------
+$PG($BK(
+	$FN(
+		name=($ID(搞个大新闻))
+		params=()
+		blockTokens=($BK(
+			$IF(
+				ifExpr=($EQ(L=($ID(C)) R=($ID(空))))
+				ifBlock=($BK($VA(target=($ID(A)) assign=($AR(type=(MUL) left=($ID(A)) right=($ID(2))))) $RT($ID(1024))))
+				elseBlock=($BK($RT($ID(1024))))
+			)
+		))
+		catchBlocks=(			
+			class=($ID(A异常))
+			block=($BK(
+				$RT($ID(233))
+			))		
+			class=($ID(B异常))
+			block=($BK(
+				$RT($ID(566))
+			))			
+		)
+	)
+))
 `
 
 type astSuccessCase struct {

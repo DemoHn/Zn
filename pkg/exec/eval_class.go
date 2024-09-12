@@ -25,13 +25,13 @@ func compileClass(upperCtx *r.Context, classID *r.IDName, classNode *syntax.Clas
 	// add getters
 	for _, gNode := range classNode.GetterList {
 		getterTag := gNode.GetterName.GetLiteral()
-		ref.DefineCompProperty(getterTag, compileFunction(upperCtx, []*syntax.ParamItem{}, gNode.ExecBlock))
+		ref.DefineCompProperty(getterTag, compileFunction(upperCtx, []*syntax.ParamItem{}, gNode.ExecBlock, []*syntax.CatchBlockPair{}))
 	}
 
 	// add methods
 	for _, mNode := range classNode.MethodList {
 		mTag := mNode.FuncName.GetLiteral()
-		ref.DefineMethod(mTag, compileFunction(upperCtx, mNode.ParamList, mNode.ExecBlock))
+		ref.DefineMethod(mTag, compileFunction(upperCtx, mNode.ParamList, mNode.ExecBlock, mNode.CatchBlocks))
 	}
 
 	return ref, nil

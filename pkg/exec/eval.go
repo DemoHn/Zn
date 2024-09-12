@@ -124,7 +124,7 @@ func evalStatement(c *r.Context, stmt syntax.Statement) error {
 	case *syntax.EmptyStmt:
 		return nil
 	case *syntax.FunctionDeclareStmt:
-		fn := compileFunction(c, v.ParamList, v.ExecBlock)
+		fn := compileFunction(c, v.ParamList, v.ExecBlock, v.CatchBlocks)
 		vtag, err := MatchIDName(v.FuncName)
 		if err != nil {
 			return err
@@ -179,7 +179,7 @@ func evalStatement(c *r.Context, stmt syntax.Statement) error {
 			return err
 		}
 		if cmodel, ok := classModel.(*value.ClassModel); ok {
-			fn := compileFunction(c, v.ParamList, v.ExecBlock)
+			fn := compileFunction(c, v.ParamList, v.ExecBlock, v.CatchBlocks)
 			cmodel.SetConstructorFunc(fn)
 		} else {
 			return zerr.InvalidClassType(className.GetLiteral())

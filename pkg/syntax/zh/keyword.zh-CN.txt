@@ -44,6 +44,7 @@ DE      的
 DUI     对
 QU      取
 DEy     得
+JIEy    接
 DAOy    到
 PAO     抛
 CHU     出
@@ -88,6 +89,7 @@ LogicOrW        69      或
 LogicAndW       70      且
 ObjDotW         71      之
 ObjDotIIW       72      的
+CatchErrorW     73      接到
 LogicEqualW     74      等于
 InputW          75      输入
 IteratorW       76      遍历

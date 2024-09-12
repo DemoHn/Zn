@@ -175,18 +175,25 @@ type BlockStmt struct {
 // FunctionDeclareStmt - function declaration
 type FunctionDeclareStmt struct {
 	StmtBase
-	FuncName  *ID
-	ParamList []*ParamItem
-	ExecBlock *BlockStmt
+	FuncName    *ID
+	ParamList   []*ParamItem
+	ExecBlock   *BlockStmt
+	CatchBlocks []*CatchBlockPair
 }
 
-// ConstructorDeclareStmt - (如何成为) constructor is a special function
+type CatchBlockPair struct {
+	ExceptionClass *ID
+	ExecBlock      *BlockStmt
+}
+
+// ConstructorDeclareStmt - (如何新建) constructor is a special function
 // to help create a new Object with some pre-defined logic
 type ConstructorDeclareStmt struct {
 	StmtBase
 	DelcareClassName *ID
 	ParamList        []*ParamItem
 	ExecBlock        *BlockStmt
+	CatchBlocks      []*CatchBlockPair
 }
 
 // GetterDeclareStmt - getter declaration (何为)
@@ -194,6 +201,8 @@ type GetterDeclareStmt struct {
 	StmtBase
 	GetterName *ID
 	ExecBlock  *BlockStmt
+	// NOTE: Intentionally NO CatchBlocks!!
+	// since getter is a property access, it should not have any exception
 }
 
 // FunctionReturnStmt - return (expr)

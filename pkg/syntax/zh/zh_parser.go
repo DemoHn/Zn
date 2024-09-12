@@ -281,6 +281,17 @@ func (p *ParserZH) getPeekIndent() int {
 	return lineInfo.Indents
 }
 
+// getCurrIndent -
+func (p *ParserZH) getCurrIndent() int {
+	var currLine = p.StartLineIdxP1
+
+	lineInfo := p.GetLineInfo(currLine)
+	if lineInfo == nil {
+		return 0
+	}
+	return lineInfo.Indents
+}
+
 // equals to s.SetCurrentLine(<line of tk>)
 func (p *ParserZH) setStmtCurrentLine(s syntax.Statement, tk *syntax.Token) {
 	if tk != nil {

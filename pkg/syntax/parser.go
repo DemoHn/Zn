@@ -248,10 +248,21 @@ func StringifyAST(node Node) string {
 			paramsStr = append(paramsStr, StringifyAST(p))
 		}
 
-		return fmt.Sprintf("$FN(name=(%s) params=(%s) blockTokens=(%s))",
+		catchBlocksStr := []string{}
+		for _, cb := range v.CatchBlocks {
+			catchBlocksStr = append(catchBlocksStr, fmt.Sprintf("class=(%s) block=(%s)", StringifyAST(cb.ExceptionClass), StringifyAST(cb.ExecBlock)))
+		}
+
+		finalCatchBlocksStr := ""
+		if len(catchBlocksStr) > 0 {
+			finalCatchBlocksStr = fmt.Sprintf(" catchBlocks=(%s)", strings.Join(catchBlocksStr, " "))
+		}
+
+		return fmt.Sprintf("$FN(name=(%s) params=(%s) blockTokens=(%s)%s)",
 			StringifyAST(v.FuncName),
 			strings.Join(paramsStr, " "),
-			StringifyAST(v.ExecBlock))
+			StringifyAST(v.ExecBlock),
+			finalCatchBlocksStr)
 	case *GetterDeclareStmt:
 		return fmt.Sprintf("$GT(name=(%s) blockTokens=(%s))",
 			StringifyAST(v.GetterName),

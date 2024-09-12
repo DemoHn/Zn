@@ -11,36 +11,7 @@ import (
 
 // compileFunction - create a function (with default param handler logic)
 // from Zn code (*syntax.BlockStmt). It's the constructor of 如何XX or (anoymous function in the future)
-func compileFunction(upperContext *r.Context, paramTags []*syntax.ParamItem, stmtBlock *syntax.BlockStmt) *value.Function {
-	var executor = func(c *r.Context, params []r.Element) (r.Element, error) {
-		// iterate block round I - function hoisting
-		// NOTE: function hoisting means bind function definitions at the begining
-		// of execution so that even if "function execution" statement is before
-		// "function definition" statement.
-		for _, stmtI := range stmtBlock.Children {
-			if v, ok := stmtI.(*syntax.FunctionDeclareStmt); ok {
-				fn := compileFunction(c, v.ParamList, v.ExecBlock)
-
-				funcName, err := MatchIDName(v.FuncName)
-				if err != nil {
-					return nil, err
-				}
-
-				if err := c.BindSymbol(funcName, fn); err != nil {
-					return nil, err
-				}
-			}
-		}
-		// iterate block round II - execution of rest code blocks
-		for _, stmtII := range stmtBlock.Children {
-			if _, ok := stmtII.(*syntax.FunctionDeclareStmt); !ok {
-				if err := evalStatement(c, stmtII); err != nil {
-					return extractSignalValue(err, zerr.SigTypeReturn)
-				}
-			}
-		}
-		return c.GetCurrentScope().GetReturnValue(), nil
-	}
+func compileFunction(upperContext *r.Context, paramTags []*syntax.ParamItem, stmtBlock *syntax.BlockStmt, catchBlocks []*syntax.CatchBlockPair) *value.Function {
 
 	var paramHandler = func(c *r.Context, params []r.Element) (r.Element, error) {
 		// check param length
@@ -67,9 +38,47 @@ func compileFunction(upperContext *r.Context, paramTags []*syntax.ParamItem, stm
 		return nil, nil
 	}
 
-	fn := value.NewFunction(upperContext.GetCurrentScope(), executor)
+	fn := value.NewFunction(upperContext.GetCurrentScope(), buildCodeBlockExecutor(stmtBlock))
 	fn.SetParamHandler(paramHandler)
+
+	for _, catchBlock := range catchBlocks {
+		// TODO: add exception class type check
+		fn.AddExceptionHandler(buildCodeBlockExecutor(catchBlock.ExecBlock))
+	}
 	return fn
+}
+
+func buildCodeBlockExecutor(codeBlock *syntax.BlockStmt) funcExecutor {
+
+	return func(c *r.Context, params []r.Element) (r.Element, error) {
+		// iterate block round I - function hoisting
+		// NOTE: function hoisting means bind function definitions at the begining
+		// of execution so that even if "function execution" statement is before
+		// "function definition" statement.
+		for _, stmtI := range codeBlock.Children {
+			if v, ok := stmtI.(*syntax.FunctionDeclareStmt); ok {
+				fn := compileFunction(c, v.ParamList, v.ExecBlock, v.CatchBlocks)
+
+				funcName, err := MatchIDName(v.FuncName)
+				if err != nil {
+					return nil, err
+				}
+
+				if err := c.BindSymbol(funcName, fn); err != nil {
+					return nil, err
+				}
+			}
+		}
+		// iterate block round II - execution of rest code blocks
+		for _, stmtII := range codeBlock.Children {
+			if _, ok := stmtII.(*syntax.FunctionDeclareStmt); !ok {
+				if err := evalStatement(c, stmtII); err != nil {
+					return extractSignalValue(err, zerr.SigTypeReturn)
+				}
+			}
+		}
+		return c.GetCurrentScope().GetReturnValue(), nil
+	}
 }
 
 // （显示：A、B、C），得到D

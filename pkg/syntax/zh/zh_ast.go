@@ -57,8 +57,7 @@ func ParseStatement(p *ParserZH) syntax.Statement {
 		case TypeDeclareW:
 			s = ParseVarDeclareStmt(p)
 		case TypeCondW:
-			mainIndent := p.getPeekIndent()
-			s = ParseBranchStmt(p, mainIndent)
+			s = ParseBranchStmt(p)
 		case TypeFuncW:
 			// constructor function: 如何成为XX？
 			matchC, _ := p.tryConsume(TypeObjNewW)
@@ -698,8 +697,7 @@ func ParseMemberFuncCallExpr(p *ParserZH) *syntax.MemberMethodExpr {
 // VDPairTail -> VDItem VDPairTail
 //            ->
 //
-// VDItem     -> IdfList 为 Expr
-//            -> IdfList 成为 （Idf ： Expr1、 Expr2、 ...）
+// VDItem     -> IdfList 设为 Expr
 //            -> IdfList 恒为 Expr
 //
 //    IdfList -> I I'
@@ -889,7 +887,7 @@ func ParseBlockStmt(p *ParserZH, blockIndent int) *syntax.BlockStmt {
 //         ... ....
 //             否则 ：
 //         ...     IfFalseBlock
-func ParseBranchStmt(p *ParserZH, mainIndent int) *syntax.BranchStmt {
+func ParseBranchStmt(p *ParserZH) *syntax.BranchStmt {
 	var condExpr syntax.Expression
 	var condBlock *syntax.BlockStmt
 
@@ -910,6 +908,8 @@ func ParseBranchStmt(p *ParserZH, mainIndent int) *syntax.BranchStmt {
 		stateElseBranch  = 2
 		stateOtherBranch = 3
 	)
+
+	mainIndent := p.getCurrIndent()
 	var hState = stateInit
 
 	for p.peek().Type != TypeEOF {
@@ -983,34 +983,39 @@ func ParseBranchStmt(p *ParserZH, mainIndent int) *syntax.BranchStmt {
 // FunctionDeclareStmt -> 如何 FuncName ？
 //       ...     已知 ID1、 & ID2、 ...
 //       ...     ExecBlock
-//       ...     ....
+//       ... 接到 ID3：
+//       ...     CatchBlock
+// 		 ... 接到 ID4：
+//       ...     CatchBlock
 //
 // FunctionDeclareStmt -> 如何 FuncName ？
 //       ...     ExecBlock
 //       ...     ....
 //
 func ParseFunctionDeclareStmt(p *ParserZH) *syntax.FunctionDeclareStmt {
-	xID, xParamList, xExecBlock := parseFunctionBlock(p)
+	xID, xParamList, xExecBlock, xCatchBlocks := parseFunctionBlock(p)
 
 	return &syntax.FunctionDeclareStmt{
-		FuncName:  xID,
-		ParamList: xParamList,
-		ExecBlock: xExecBlock,
+		FuncName:    xID,
+		ParamList:   xParamList,
+		ExecBlock:   xExecBlock,
+		CatchBlocks: xCatchBlocks,
 	}
 }
 
-// ParseFunctionDeclareStmt - similiar to ParseFunctionDeclareStmt, but it yields `如何成为XX？`
+// ParseFunctionDeclareStmt - similiar to ParseFunctionDeclareStmt, but it yields `如何新建XX？`
 func ParseConstructorDeclareStmt(p *ParserZH) *syntax.ConstructorDeclareStmt {
-	xID, xParamList, xExecBlock := parseFunctionBlock(p)
+	xID, xParamList, xExecBlock, xCatchBlocks := parseFunctionBlock(p)
 
 	return &syntax.ConstructorDeclareStmt{
 		DelcareClassName: xID,
 		ParamList:        xParamList,
 		ExecBlock:        xExecBlock,
+		CatchBlocks:      xCatchBlocks,
 	}
 }
 
-func parseFunctionBlock(p *ParserZH) (*syntax.ID, []*syntax.ParamItem, *syntax.BlockStmt) {
+func parseFunctionBlock(p *ParserZH) (*syntax.ID, []*syntax.ParamItem, *syntax.BlockStmt, []*syntax.CatchBlockPair) {
 	// by definition, when 已知 syntax.Statement exists, it should be at first line
 	// of function block
 	const (
@@ -1022,6 +1027,9 @@ func parseFunctionBlock(p *ParserZH) (*syntax.ID, []*syntax.ParamItem, *syntax.B
 	var xID *syntax.ID
 	var xParamList []*syntax.ParamItem = make([]*syntax.ParamItem, 0)
 	var xExecBlock *syntax.BlockStmt
+	var xCatchBlocks []*syntax.CatchBlockPair = make([]*syntax.CatchBlockPair, 0)
+
+	mainIndent := p.getCurrIndent()
 
 	// #1. try to parse ID
 	xID = parseFuncID(p)
@@ -1058,8 +1066,39 @@ func parseFunctionBlock(p *ParserZH) (*syntax.ID, []*syntax.ParamItem, *syntax.B
 			xExecBlock = ParseBlockStmt(p, blockIndent)
 		}
 	})
+	// #3.2 parse catch blocks
+	for p.peek().Type != TypeEOF {
+		if p.getPeekIndent() != mainIndent {
+			break
+		}
+		p.unsetStmtCompleteFlag()
+		if match, _ := p.tryConsume(TypeCatchErrorW); match {
+			catchClass := parseFuncID(p)
+			var catchBlock = &syntax.BlockStmt{
+				Children: []syntax.Statement{},
+			}
+			// #2. parse question mark
+			p.consume(TypeFuncCall)
 
-	return xID, xParamList, xExecBlock
+			// #3. parse block manually
+			ok, blockIndent := p.expectBlockIndent()
+			if !ok {
+				panic(p.getUnexpectedIndentPeek())
+			}
+
+			catchBlock = ParseBlockStmt(p, blockIndent)
+
+			xCatchBlocks = append(xCatchBlocks, &syntax.CatchBlockPair{
+				ExceptionClass: catchClass,
+				ExecBlock:      catchBlock,
+			})
+		} else {
+			p.setStmtCompleteFlag()
+			break
+		}
+	}
+
+	return xID, xParamList, xExecBlock, xCatchBlocks
 }
 
 // ParseGetterDeclareStmt - yield GetterDeclareStmt node

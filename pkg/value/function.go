@@ -12,9 +12,8 @@ type Function struct {
 	closureScope  *r.Scope
 	paramHandler  FuncExecutor
 	logicHandlers []FuncExecutor
-	// exceptionHandler - when an exception raise up, run this handler to catch the exception (like try...catch...)
-	// TODO -
-	exceptionHandler FuncExecutor
+	// exceptionHandlers - when an exception raise up, run this handler to catch the exception. NOTE: there're multiple exception handlers according to different exception class type!
+	exceptionHandlers []FuncExecutor
 }
 
 func NewFunction(closureScope *r.Scope, executor FuncExecutor) *Function {
@@ -24,10 +23,10 @@ func NewFunction(closureScope *r.Scope, executor FuncExecutor) *Function {
 	}
 
 	return &Function{
-		closureScope:     closureScope,
-		paramHandler:     nil,
-		logicHandlers:    logicHandlers,
-		exceptionHandler: nil,
+		closureScope:      closureScope,
+		paramHandler:      nil,
+		logicHandlers:     logicHandlers,
+		exceptionHandlers: []FuncExecutor{},
 	}
 }
 
@@ -39,6 +38,11 @@ func (fn *Function) SetParamHandler(handler FuncExecutor) {
 // add logic handler
 func (fn *Function) AddLogicHandler(handler FuncExecutor) {
 	fn.logicHandlers = append(fn.logicHandlers, handler)
+}
+
+// add exception handler
+func (fn *Function) AddExceptionHandler(handler FuncExecutor) {
+	fn.exceptionHandlers = append(fn.exceptionHandlers, handler)
 }
 
 //// core function: Exec
