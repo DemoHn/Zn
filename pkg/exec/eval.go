@@ -240,12 +240,9 @@ func evalStatement(c *r.Context, stmt syntax.Statement) error {
 			val, err := ref.Construct(c, exprs)
 			if err != nil {
 				return err
+			} else {
+				return zerr.NewExceptionSignal(val)
 			}
-			// val MUST BE an Exception Value!
-			if expVal, ok := val.(*value.Exception); ok {
-				return zerr.NewRuntimeException(expVal.GetMessage())
-			}
-			return zerr.InvalidExceptionObjectType(expClassID.GetLiteral())
 		}
 		return zerr.InvalidExceptionType(expClassID.GetLiteral())
 	case *syntax.ContinueStmt:

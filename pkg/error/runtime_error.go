@@ -25,6 +25,7 @@ const (
 	ErrMethodNotFound           = 46
 	ErrClassNotOnRoot           = 47
 	ErrThisValueNotFound        = 48
+	ErrInvalidExceptionClass    = 49
 	ErrLeastParamsError         = 50
 	ErrMismatchParamLengthError = 51
 	ErrMostParamsError          = 52
@@ -145,6 +146,14 @@ func ThisValueNotFound() *RuntimeError {
 		Code:    ErrThisValueNotFound,
 		Message: "未找到此方法/属性对应的主对象 (thisValue)",
 		Extra:   nil,
+	}
+}
+
+func InvalidExceptionClass(name string) *RuntimeError {
+	return &RuntimeError{
+		Code:    ErrInvalidExceptionClass,
+		Message: fmt.Sprintf("当前接到的异常类型并非「%s」", name),
+		Extra:   name,
 	}
 }
 

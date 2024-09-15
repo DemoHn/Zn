@@ -78,10 +78,37 @@ func (fn *Function) Exec(c *r.Context, thisValue r.Element, params []r.Element) 
 	for _, handler := range fn.logicHandlers {
 		lastValue, execError = handler(c, params)
 		if execError != nil {
-			return nil, execError
+			errVal, realErr := extractExceptionValue(execError)
+			// go to exception handler
+			if realErr == nil {
+				for _, expHandler := range fn.exceptionHandlers {
+					newScope := c.PushScope()
+					newScope.SetThisValue(errVal)
+					defer c.PopScope()
+
+					_, expHandlerErr := expHandler(c, params)
+					if expHandlerErr != nil {
+						return nil, expHandlerErr
+					}
+				}
+			} else {
+				return nil, realErr
+			}
 		}
 	}
 	return lastValue, nil
+}
+
+func extractExceptionValue(err error) (r.Element, error) {
+	// if recv breaks
+	if sig, ok := err.(*zerr.Signal); ok {
+		if sig.SigType == zerr.SigTypeException {
+			if extra, ok2 := sig.Extra.(r.Element); ok2 {
+				return extra, nil
+			}
+		}
+	}
+	return nil, err
 }
 
 // impl Value interface

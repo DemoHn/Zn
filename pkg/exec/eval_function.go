@@ -42,8 +42,28 @@ func compileFunction(upperContext *r.Context, paramTags []*syntax.ParamItem, stm
 	fn.SetParamHandler(paramHandler)
 
 	for _, catchBlock := range catchBlocks {
-		// TODO: add exception class type check
-		fn.AddExceptionHandler(buildCodeBlockExecutor(catchBlock.ExecBlock))
+		var exceptionHandler = func(c *r.Context, params []r.Element) (r.Element, error) {
+			classID, err := MatchIDName(catchBlock.ExceptionClass)
+			if err != nil {
+				return nil, err
+			}
+			// check if thisValue is a valid exception class
+			thisValue := c.GetThisValue()
+			classIDStr := classID.GetLiteral()
+			if thisValue == nil {
+				return nil, zerr.ThisValueNotFound()
+			}
+			if obj, ok := thisValue.(*value.Object); ok {
+				if obj.GetObjectName() == classIDStr {
+					blockExecutor := buildCodeBlockExecutor(catchBlock.ExecBlock)
+					return blockExecutor(c, params)
+				}
+			}
+			// DO NOTHING
+			return value.NewNull(), nil
+		}
+
+		fn.AddExceptionHandler(exceptionHandler)
 	}
 	return fn
 }
@@ -51,12 +71,24 @@ func compileFunction(upperContext *r.Context, paramTags []*syntax.ParamItem, stm
 func buildCodeBlockExecutor(codeBlock *syntax.BlockStmt) funcExecutor {
 
 	return func(c *r.Context, params []r.Element) (r.Element, error) {
-		// iterate block round I - function hoisting
-		// NOTE: function hoisting means bind function definitions at the begining
-		// of execution so that even if "function execution" statement is before
-		// "function definition" statement.
+		fnDeclareStmts := make([]syntax.Statement, 0)
+		otherStmts := make([]syntax.Statement, 0)
+		allStmts := make([]syntax.Statement, 0)
+
 		for _, stmtI := range codeBlock.Children {
 			if v, ok := stmtI.(*syntax.FunctionDeclareStmt); ok {
+				fnDeclareStmts = append(fnDeclareStmts, v)
+			} else {
+				otherStmts = append(otherStmts, stmtI)
+			}
+		}
+
+		allStmts = append(allStmts, fnDeclareStmts...)
+		allStmts = append(allStmts, otherStmts...)
+
+		for _, stmtX := range allStmts {
+			switch v := stmtX.(type) {
+			case *syntax.FunctionDeclareStmt:
 				fn := compileFunction(c, v.ParamList, v.ExecBlock, v.CatchBlocks)
 
 				funcName, err := MatchIDName(v.FuncName)
@@ -67,16 +99,13 @@ func buildCodeBlockExecutor(codeBlock *syntax.BlockStmt) funcExecutor {
 				if err := c.BindSymbol(funcName, fn); err != nil {
 					return nil, err
 				}
-			}
-		}
-		// iterate block round II - execution of rest code blocks
-		for _, stmtII := range codeBlock.Children {
-			if _, ok := stmtII.(*syntax.FunctionDeclareStmt); !ok {
-				if err := evalStatement(c, stmtII); err != nil {
+			default:
+				if err := evalStatement(c, stmtX); err != nil {
 					return extractSignalValue(err, zerr.SigTypeReturn)
 				}
 			}
 		}
+
 		return c.GetCurrentScope().GetReturnValue(), nil
 	}
 }

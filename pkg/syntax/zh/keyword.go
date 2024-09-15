@@ -36,7 +36,7 @@ const (
 	GlyphCHU rune = 0x51FA
 	// GlyphZE - 则 - 否则
 	GlyphZE rune = 0x5219
-	// GlyphDAOy - 到 - 接到，得到
+	// GlyphDAOy - 到 - 得到
 	GlyphDAOy rune = 0x5230
 	// GlyphLI - 历 - 遍历
 	GlyphLI rune = 0x5386
@@ -72,10 +72,12 @@ const (
 	GlyphCHENG rune = 0x6210
 	// GlyphHUO - 或 - 或
 	GlyphHUO rune = 0x6216
+	// GlyphJIEy - 截 - 拦截
+	GlyphJIEy rune = 0x622A
 	// GlyphPAO - 抛 - 抛出
 	GlyphPAO rune = 0x629B
-	// GlyphJIEy - 接 - 接到
-	GlyphJIEy rune = 0x63A5
+	// GlyphLAN - 拦 - 拦截
+	GlyphLAN rune = 0x62E6
 	// GlyphXIN - 新 - 新建
 	GlyphXIN rune = 0x65B0
 	// GlyphSHI - 是 -
@@ -138,7 +140,7 @@ const (
 	TypeLogicAndW    uint8 = 70 // 且
 	TypeObjDotW      uint8 = 71 // 之
 	TypeObjDotIIW    uint8 = 72 // 的
-	TypeCatchErrorW  uint8 = 73 // 接到
+	TypeCatchErrorW  uint8 = 73 // 拦截
 	TypeLogicEqualW  uint8 = 74 // 等于
 	TypeInputW       uint8 = 75 // 输入
 	TypeIteratorW    uint8 = 76 // 遍历
@@ -283,8 +285,8 @@ func parseKeyword(l *syntax.Lexer, moveForward bool) (bool, syntax.Token, error)
 		} else {
 			return false, syntax.Token{}, nil
 		}
-	case GlyphJIEy:
-		if l.Peek() == GlyphDAOy {
+	case GlyphLAN:
+		if l.Peek() == GlyphJIEy {
 			wordLen = 2
 			tk.Type = TypeCatchErrorW
 		} else {
