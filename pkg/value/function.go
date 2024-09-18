@@ -8,6 +8,7 @@ import (
 type FuncExecutor = func(*r.Context, []r.Element) (r.Element, error)
 
 type Function struct {
+	name string
 	// closureScope - when compiling a function, we will create an exclusive scope for this function to store values created inside the function.
 	closureScope  *r.Scope
 	paramHandler  FuncExecutor
@@ -23,6 +24,7 @@ func NewFunction(closureScope *r.Scope, executor FuncExecutor) *Function {
 	}
 
 	return &Function{
+		name:              "",
 		closureScope:      closureScope,
 		paramHandler:      nil,
 		logicHandlers:     logicHandlers,
@@ -30,19 +32,27 @@ func NewFunction(closureScope *r.Scope, executor FuncExecutor) *Function {
 	}
 }
 
+func (fn *Function) SetName(name string) *Function {
+	fn.name = name
+	return fn
+}
+
 // setters
-func (fn *Function) SetParamHandler(handler FuncExecutor) {
+func (fn *Function) SetParamHandler(handler FuncExecutor) *Function {
 	fn.paramHandler = handler
+	return fn
 }
 
 // add logic handler
-func (fn *Function) AddLogicHandler(handler FuncExecutor) {
+func (fn *Function) AddLogicHandler(handler FuncExecutor) *Function {
 	fn.logicHandlers = append(fn.logicHandlers, handler)
+	return fn
 }
 
 // add exception handler
-func (fn *Function) AddExceptionHandler(handler FuncExecutor) {
+func (fn *Function) AddExceptionHandler(handler FuncExecutor) *Function {
 	fn.exceptionHandlers = append(fn.exceptionHandlers, handler)
+	return fn
 }
 
 //// core function: Exec

@@ -11,12 +11,10 @@ import (
 
 /**
 Unlike most languages, the token _Identifier_ (type = 5) has a large variety of
-representation types, including variable name, number, datetime, unit value, even
-currency value!
+representation types, including variable name, number, datetime, unit value, even currency value!
 
 This module aims to breakdown the identifier token to match more specific idTypes for
-further code execution usages: For example, if an identifier is matched as a "number", then
-it's impossible to be assigned to another value!
+further code execution usages: For example, if an identifier is matched as a "number", then it's impossible to be assigned to another value!
 
 So far, we support only two idTypes, which corresponds to its specific format; For other formats of this identifier token, we throw an error as "SemanticError"!
 

@@ -172,10 +172,20 @@ type BlockStmt struct {
 	Children []Statement
 }
 
+const (
+	// 如何XX
+	DeclareTypeFunc = 1
+	// 何为XX
+	DeclareTypeGetter = 2
+	// 如何新建XX
+	DeclareTypeConstructor = 3
+)
+
 // FunctionDeclareStmt - function declaration
 type FunctionDeclareStmt struct {
 	StmtBase
-	FuncName    *ID
+	Name        *ID
+	DeclareType uint8
 	ParamList   []*ParamItem
 	ExecBlock   *BlockStmt
 	CatchBlocks []*CatchBlockPair
@@ -184,25 +194,6 @@ type FunctionDeclareStmt struct {
 type CatchBlockPair struct {
 	ExceptionClass *ID
 	ExecBlock      *BlockStmt
-}
-
-// ConstructorDeclareStmt - (如何新建) constructor is a special function
-// to help create a new Object with some pre-defined logic
-type ConstructorDeclareStmt struct {
-	StmtBase
-	DelcareClassName *ID
-	ParamList        []*ParamItem
-	ExecBlock        *BlockStmt
-	CatchBlocks      []*CatchBlockPair
-}
-
-// GetterDeclareStmt - getter declaration (何为)
-type GetterDeclareStmt struct {
-	StmtBase
-	GetterName *ID
-	ExecBlock  *BlockStmt
-	// NOTE: Intentionally NO CatchBlocks!!
-	// since getter is a property access, it should not have any exception
 }
 
 // FunctionReturnStmt - return (expr)
@@ -226,7 +217,7 @@ type ClassDeclareStmt struct {
 	// 如何XXX？
 	MethodList []*FunctionDeclareStmt
 	// 何为XXX？
-	GetterList []*GetterDeclareStmt
+	GetterList []*FunctionDeclareStmt
 }
 
 // PropertyDeclareStmt - valid inside Class

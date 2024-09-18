@@ -57,8 +57,6 @@ func evalProgram(c *r.Context, program *syntax.Program) error {
 			classDefStmts = append(classDefStmts, v)
 		case *syntax.FunctionDeclareStmt:
 			funcDefStmts = append(funcDefStmts, v)
-		case *syntax.ConstructorDeclareStmt:
-			funcDefStmts = append(funcDefStmts, v)
 		default:
 			otherStmts = append(otherStmts, v)
 		}
@@ -124,22 +122,42 @@ func evalStatement(c *r.Context, stmt syntax.Statement) error {
 	case *syntax.EmptyStmt:
 		return nil
 	case *syntax.FunctionDeclareStmt:
-		fn := compileFunction(c, v.ParamList, v.ExecBlock, v.CatchBlocks)
-		vtag, err := MatchIDName(v.FuncName)
-		if err != nil {
-			return err
-		}
+		if v.DeclareType == syntax.DeclareTypeConstructor {
+			// check if class type is valid
+			className, err := MatchIDName(v.Name)
+			if err != nil {
+				return err
+			}
+			classModel, err := c.FindElement(className)
+			if err != nil {
+				return err
+			}
+			if cmodel, ok := classModel.(*value.ClassModel); ok {
+				fn := compileFunction(c, v.ParamList, v.ExecBlock, v.CatchBlocks)
+				cmodel.SetConstructorFunc(fn)
+			} else {
+				return zerr.InvalidClassType(className.GetLiteral())
+			}
+			return nil
+		} else {
+			// declare as normal function
+			vtag, err := MatchIDName(v.Name)
+			if err != nil {
+				return err
+			}
+			fn := compileFunction(c, v.ParamList, v.ExecBlock, v.CatchBlocks)
 
-		// add symbol to current scope first
-		if err := c.BindSymbol(vtag, fn); err != nil {
-			return err
-		}
+			// add symbol to current scope first
+			if err := c.BindSymbol(vtag, fn); err != nil {
+				return err
+			}
 
-		// then add symbol to export value
-		if err := module.AddExportValue(vtag.GetLiteral(), fn); err != nil {
-			return err
+			// then add symbol to export value
+			if err := module.AddExportValue(vtag.GetLiteral(), fn); err != nil {
+				return err
+			}
+			return nil
 		}
-		return nil
 	case *syntax.ImportStmt:
 		return evalImportStmt(c, v)
 	case *syntax.ClassDeclareStmt:
@@ -165,24 +183,6 @@ func evalStatement(c *r.Context, stmt syntax.Statement) error {
 		// then add symbol to export value
 		if err := module.AddExportValue(className.GetLiteral(), classRef); err != nil {
 			return err
-		}
-		return nil
-
-	case *syntax.ConstructorDeclareStmt:
-		// check if class type is valid
-		className, err := MatchIDName(v.DelcareClassName)
-		if err != nil {
-			return err
-		}
-		classModel, err := c.FindElement(className)
-		if err != nil {
-			return err
-		}
-		if cmodel, ok := classModel.(*value.ClassModel); ok {
-			fn := compileFunction(c, v.ParamList, v.ExecBlock, v.CatchBlocks)
-			cmodel.SetConstructorFunc(fn)
-		} else {
-			return zerr.InvalidClassType(className.GetLiteral())
 		}
 		return nil
 	case *syntax.IterateStmt:

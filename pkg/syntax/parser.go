@@ -243,6 +243,12 @@ func StringifyAST(node Node) string {
 
 		return fmt.Sprintf("$IN(%s)", strings.Join(idList, " "))
 	case *FunctionDeclareStmt:
+		fnTypeStr := ""
+		if v.DeclareType == DeclareTypeConstructor {
+			fnTypeStr = "T=constructor "
+		} else if v.DeclareType == DeclareTypeGetter {
+			fnTypeStr = "T=getter"
+		}
 		paramsStr := []string{}
 		for _, p := range v.ParamList {
 			paramsStr = append(paramsStr, StringifyAST(p))
@@ -258,15 +264,12 @@ func StringifyAST(node Node) string {
 			finalCatchBlocksStr = fmt.Sprintf(" catchBlocks=(%s)", strings.Join(catchBlocksStr, " "))
 		}
 
-		return fmt.Sprintf("$FN(name=(%s) params=(%s) blockTokens=(%s)%s)",
-			StringifyAST(v.FuncName),
+		return fmt.Sprintf("$FN(%sname=(%s) params=(%s) blockTokens=(%s)%s)",
+			fnTypeStr,
+			StringifyAST(v.Name),
 			strings.Join(paramsStr, " "),
 			StringifyAST(v.ExecBlock),
 			finalCatchBlocksStr)
-	case *GetterDeclareStmt:
-		return fmt.Sprintf("$GT(name=(%s) blockTokens=(%s))",
-			StringifyAST(v.GetterName),
-			StringifyAST(v.ExecBlock))
 	case *BlockStmt:
 		var statements = []string{}
 		for _, stmt := range v.Children {

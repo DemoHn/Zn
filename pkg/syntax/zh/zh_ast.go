@@ -983,9 +983,9 @@ func ParseBranchStmt(p *ParserZH) *syntax.BranchStmt {
 // FunctionDeclareStmt -> 如何 FuncName ？
 //       ...     已知 ID1、 & ID2、 ...
 //       ...     ExecBlock
-//       ... 接到 ID3：
+//       ... 拦截 ID3：
 //       ...     CatchBlock
-// 		 ... 接到 ID4：
+// 		 ... 拦截 ID4：
 //       ...     CatchBlock
 //
 // FunctionDeclareStmt -> 如何 FuncName ？
@@ -996,7 +996,8 @@ func ParseFunctionDeclareStmt(p *ParserZH) *syntax.FunctionDeclareStmt {
 	xID, xParamList, xExecBlock, xCatchBlocks := parseFunctionBlock(p)
 
 	return &syntax.FunctionDeclareStmt{
-		FuncName:    xID,
+		Name:        xID,
+		DeclareType: syntax.DeclareTypeFunc,
 		ParamList:   xParamList,
 		ExecBlock:   xExecBlock,
 		CatchBlocks: xCatchBlocks,
@@ -1004,14 +1005,15 @@ func ParseFunctionDeclareStmt(p *ParserZH) *syntax.FunctionDeclareStmt {
 }
 
 // ParseFunctionDeclareStmt - similiar to ParseFunctionDeclareStmt, but it yields `如何新建XX？`
-func ParseConstructorDeclareStmt(p *ParserZH) *syntax.ConstructorDeclareStmt {
+func ParseConstructorDeclareStmt(p *ParserZH) *syntax.FunctionDeclareStmt {
 	xID, xParamList, xExecBlock, xCatchBlocks := parseFunctionBlock(p)
 
-	return &syntax.ConstructorDeclareStmt{
-		DelcareClassName: xID,
-		ParamList:        xParamList,
-		ExecBlock:        xExecBlock,
-		CatchBlocks:      xCatchBlocks,
+	return &syntax.FunctionDeclareStmt{
+		Name:        xID,
+		DeclareType: syntax.DeclareTypeConstructor,
+		ParamList:   xParamList,
+		ExecBlock:   xExecBlock,
+		CatchBlocks: xCatchBlocks,
 	}
 }
 
@@ -1107,25 +1109,16 @@ func parseFunctionBlock(p *ParserZH) (*syntax.ID, []*syntax.ParamItem, *syntax.B
 //       ...     ExecBlock
 //       ...     ....
 //
-func ParseGetterDeclareStmt(p *ParserZH) *syntax.GetterDeclareStmt {
-	var fdStmt = &syntax.GetterDeclareStmt{}
+func ParseGetterDeclareStmt(p *ParserZH) *syntax.FunctionDeclareStmt {
+	xID, xParamList, xExecBlock, xCatchBlocks := parseFunctionBlock(p)
 
-	// #1. try to parse ID
-	fdStmt.GetterName = parseFuncID(p)
-	// #2. try to parse question mark
-	p.consume(TypeFuncDeclare)
-
-	// #3. parse block manually
-	ok, blockIndent := p.expectBlockIndent()
-	if !ok {
-		panic(p.getUnexpectedIndentPeek())
+	return &syntax.FunctionDeclareStmt{
+		DeclareType: syntax.DeclareTypeGetter,
+		Name:        xID,
+		ParamList:   xParamList,
+		ExecBlock:   xExecBlock,
+		CatchBlocks: xCatchBlocks,
 	}
-	// #3.1 parse param def list
-	parseItemListBlock(p, blockIndent, func() {
-		fdStmt.ExecBlock = ParseBlockStmt(p, blockIndent)
-	})
-
-	return fdStmt
 }
 
 // ParseVarOneLeadStmt -

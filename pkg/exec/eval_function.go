@@ -11,7 +11,12 @@ import (
 
 // compileFunction - create a function (with default param handler logic)
 // from Zn code (*syntax.BlockStmt). It's the constructor of 如何XX or (anoymous function in the future)
-func compileFunction(upperContext *r.Context, paramTags []*syntax.ParamItem, stmtBlock *syntax.BlockStmt, catchBlocks []*syntax.CatchBlockPair) *value.Function {
+func compileFunction(
+	upperContext *r.Context,
+	paramTags []*syntax.ParamItem,
+	stmtBlock *syntax.BlockStmt,
+	catchBlocks []*syntax.CatchBlockPair,
+) *value.Function {
 
 	var paramHandler = func(c *r.Context, params []r.Element) (r.Element, error) {
 		// check param length
@@ -91,7 +96,7 @@ func buildCodeBlockExecutor(codeBlock *syntax.BlockStmt) funcExecutor {
 			case *syntax.FunctionDeclareStmt:
 				fn := compileFunction(c, v.ParamList, v.ExecBlock, v.CatchBlocks)
 
-				funcName, err := MatchIDName(v.FuncName)
+				funcName, err := MatchIDName(v.Name)
 				if err != nil {
 					return nil, err
 				}
@@ -112,9 +117,6 @@ func buildCodeBlockExecutor(codeBlock *syntax.BlockStmt) funcExecutor {
 
 // （显示：A、B、C），得到D
 func evalFunctionCall(c *r.Context, expr *syntax.FuncCallExpr) (r.Element, error) {
-	var resultVal r.Element
-	var err error
-
 	// match & get funcName
 	funcName, err := MatchIDName(expr.FuncName)
 	if err != nil {
@@ -126,43 +128,8 @@ func evalFunctionCall(c *r.Context, expr *syntax.FuncCallExpr) (r.Element, error
 	if err != nil {
 		return nil, err
 	}
-	// for a function call, if thisValue NOT FOUND, that means the target closure is a FUNCTION
-	// instead of a METHOD (which is defined on class definition statement)
-	//
-	// If thisValue != nil, we will attempt to find closure from its method list;
-	// then look up from scope's values.
-	//
-	// If thisValue == nil, we will look up target closure from scope's values directly.
-	thisValue := c.GetThisValue()
 
-	// if thisValue exists, find ID from its method list
-	/* example:
-	如何外部方法？
-		输出「这是外部方法」
-
-	定义示例类：
-		如何内部类方法？
-			输出「内部类方法」
-
-		如何方法B？
-			（内部类方法）  //  等价于 `以 [某示例类对象]（内部类方法）`
-			（外部方法）   //  1. 先示例类中寻找「外部方法」，如同调用 `以 [某示例类对象]（内部类方法）` 2. 寻找无果（抛出 zerr.ErrMethodNotFound 错误）后再去全局作用域寻找「外部方法」的方法对象并调用其逻辑
-	*/
-	if thisValue != nil {
-		resultVal, err = execMethodFunction(c, thisValue, funcName, params)
-		if err != nil {
-			if errX, ok := err.(*zerr.RuntimeError); ok {
-				if errX.Code == zerr.ErrMethodNotFound {
-					// fallback to execute direct function
-					resultVal, err = execDirectFunction(c, funcName, params)
-				}
-			}
-		}
-	} else {
-		// no parent object denoted, execute function directly
-		resultVal, err = execDirectFunction(c, funcName, params)
-	}
-
+	resultVal, err := execDirectFunction(c, funcName, params)
 	if err != nil {
 		return nil, err
 	}
