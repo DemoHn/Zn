@@ -76,6 +76,13 @@ type Program struct {
 	Content *StmtBlock
 }
 
+type ProgramX struct {
+	StmtBase
+	*Lexer      // include source code info
+	ImportBlock []*ImportStmt
+	ExecBlock   *ExecBlock
+}
+
 // NodeList - a simple struct that packs several nodes, with custom tag to indicate its feature.
 type NodeList struct {
 	Tag      int

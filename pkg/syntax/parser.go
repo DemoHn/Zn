@@ -256,7 +256,7 @@ func StringifyAST(node Node) string {
 
 		catchBlocksStr := []string{}
 		for _, cb := range v.CatchBlocks {
-			catchBlocksStr = append(catchBlocksStr, fmt.Sprintf("class=(%s) block=(%s)", StringifyAST(cb.ExceptionClass), StringifyAST(cb.ExecBlock)))
+			catchBlocksStr = append(catchBlocksStr, fmt.Sprintf("class=(%s) block=(%s)", StringifyAST(cb.ExceptionClass), StringifyAST(cb.StmtBlock)))
 		}
 
 		finalCatchBlocksStr := ""

@@ -13,20 +13,18 @@ import (
 // from Zn code (*syntax.BlockStmt). It's the constructor of 如何XX or (anoymous function in the future)
 func compileFunction(
 	upperContext *r.Context,
-	paramTags []*syntax.ParamItem,
-	stmtBlock *syntax.StmtBlock,
-	catchBlocks []*syntax.CatchBlockPair,
+	node *syntax.FunctionDeclareStmt,
 ) *value.Function {
 
 	var paramHandler = func(c *r.Context, params []r.Element) (r.Element, error) {
 		// check param length
-		if len(params) != len(paramTags) {
-			return nil, zerr.MismatchParamLengthError(len(paramTags), len(params))
+		if len(params) != len(node.ParamList) {
+			return nil, zerr.MismatchParamLengthError(len(node.Name.GetLiteral()), len(params))
 		}
 
 		// bind params (as variable) to function scope
 		for idx, paramVal := range params {
-			param := paramTags[idx]
+			param := node.ParamList[idx]
 			// if param is NOT a reference type, then we need additionally
 			// copy its value
 			if !param.RefMark {
@@ -43,10 +41,10 @@ func compileFunction(
 		return nil, nil
 	}
 
-	fn := value.NewFunction(upperContext.GetCurrentScope(), buildCodeBlockExecutor(stmtBlock))
+	fn := value.NewFunction(upperContext.GetCurrentScope(), buildCodeBlockExecutor(node.ExecBlock))
 	fn.SetParamHandler(paramHandler)
 
-	for _, catchBlock := range catchBlocks {
+	for _, catchBlock := range node.CatchBlocks {
 		var exceptionHandler = func(c *r.Context, params []r.Element) (r.Element, error) {
 			classID, err := MatchIDName(catchBlock.ExceptionClass)
 			if err != nil {
@@ -60,7 +58,7 @@ func compileFunction(
 			}
 			if obj, ok := thisValue.(*value.Object); ok {
 				if obj.GetObjectName() == classIDStr {
-					blockExecutor := buildCodeBlockExecutor(catchBlock.ExecBlock)
+					blockExecutor := buildCodeBlockExecutor(catchBlock.StmtBlock)
 					return blockExecutor(c, params)
 				}
 			}
@@ -94,7 +92,7 @@ func buildCodeBlockExecutor(codeBlock *syntax.StmtBlock) funcExecutor {
 		for _, stmtX := range allStmts {
 			switch v := stmtX.(type) {
 			case *syntax.FunctionDeclareStmt:
-				fn := compileFunction(c, v.ParamList, v.ExecBlock, v.CatchBlocks)
+				fn := compileFunction(c, v)
 
 				funcName, err := MatchIDName(v.Name)
 				if err != nil {

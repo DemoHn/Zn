@@ -133,7 +133,7 @@ func evalStatement(c *r.Context, stmt syntax.Statement) error {
 				return err
 			}
 			if cmodel, ok := classModel.(*value.ClassModel); ok {
-				fn := compileFunction(c, v.ParamList, v.ExecBlock, v.CatchBlocks)
+				fn := compileFunction(c, v)
 				cmodel.SetConstructorFunc(fn)
 			} else {
 				return zerr.InvalidClassType(className.GetLiteral())
@@ -145,7 +145,7 @@ func evalStatement(c *r.Context, stmt syntax.Statement) error {
 			if err != nil {
 				return err
 			}
-			fn := compileFunction(c, v.ParamList, v.ExecBlock, v.CatchBlocks)
+			fn := compileFunction(c, v)
 
 			// add symbol to current scope first
 			if err := c.BindSymbol(vtag, fn); err != nil {

@@ -8,6 +8,38 @@ type consumerFunc func()
 
 //////// Parse Methods
 
+// TODO - use ParseProgram in the future!
+func ParseProgramX(p *ParserZH) *syntax.ProgramX {
+	peekIndent := p.getPeekIndent()
+
+	program := &syntax.ProgramX{
+		Lexer:       p.Lexer,
+		ImportBlock: []*syntax.ImportStmt{},
+	}
+
+	const (
+		stateImportBlock = 1
+		stateExecBlock   = 2
+	)
+	var hState = stateImportBlock
+	parseItemListBlock(p, peekIndent, func() {
+		switch hState {
+		case stateImportBlock:
+			if match, _ := p.tryConsume(TypeImportW); match {
+				// parse import statement
+				stmt := ParseImportStmt(p)
+				program.ImportBlock = append(program.ImportBlock, stmt)
+			} else {
+				hState = stateExecBlock
+			}
+		case stateExecBlock:
+			program.ExecBlock = parseExecBlock(p, peekIndent)
+		}
+	})
+
+	return program
+}
+
 //// NOTE: the following methods are all using panic -> recover for zerr.management.
 //// This is to expect eliminating `err != nil` statements.
 
@@ -1101,6 +1133,81 @@ func parseFunctionBlock(p *ParserZH) (*syntax.ID, []*syntax.ParamItem, *syntax.S
 	}
 
 	return xID, xParamList, xExecBlock, xCatchBlocks
+}
+
+// parseExecBlock - execBlock = inputStmt + stmtBlock + catchBlock
+func parseExecBlock(p *ParserZH, mainIndent int) *syntax.ExecBlock {
+	execBlock := &syntax.ExecBlock{
+		InputBlock: []*syntax.ParamItem{},
+		StmtBlock:  &syntax.StmtBlock{},
+		CatchBlock: []*syntax.CatchBlockPair{},
+	}
+	const (
+		stateInputBlock = 1
+		stateStmtBlock  = 2
+		stateCatchBlock = 3
+	)
+
+	var validEndStates = []int{
+		stateStmtBlock, stateCatchBlock,
+	}
+
+	var hState = stateInputBlock
+	parseItemListBlock(p, mainIndent, func() {
+		switch hState {
+		case stateInputBlock:
+			if match, _ := p.tryConsume(TypeInputW); match {
+				parsePauseCommaList(p, func() {
+					id := parseID(p)
+					execBlock.InputBlock = append(execBlock.InputBlock, &syntax.ParamItem{
+						ID:      id,
+						RefMark: false, // NOTE: RefMark will deprecate in the future!
+					})
+				})
+			}
+
+			hState = stateStmtBlock
+		case stateStmtBlock:
+			if match, _ := p.tryConsume(TypeCatchErrorW); match {
+				hState = stateCatchBlock
+			} else {
+				// 2. parse statement block
+				stmt := ParseStatement(p)
+				execBlock.StmtBlock.Children = append(execBlock.StmtBlock.Children, stmt)
+			}
+		case stateCatchBlock:
+			if match, _ := p.tryConsume(TypeCatchErrorW); match {
+				// keep the value
+				hState = stateCatchBlock
+			} else {
+				// 3. parse (one of) catchBlock
+				catchClass := parseFuncID(p)
+
+				// #2. parse question mark
+				p.consume(TypeFuncCall)
+
+				// #3. parse block manually
+				ok, newIndent := p.expectBlockIndent()
+				if !ok {
+					panic(p.getUnexpectedIndentPeek())
+				}
+
+				// only stmt block here (NO INPUT)
+				catchBlock := ParseBlockStmt(p, newIndent)
+
+				execBlock.CatchBlock = append(execBlock.CatchBlock, &syntax.CatchBlockPair{
+					ExceptionClass: catchClass,
+					StmtBlock:      catchBlock,
+				})
+			}
+		}
+	})
+
+	if !syntax.ContainsInt(hState, validEndStates) {
+		panic(p.getInvalidSyntaxCurr())
+	}
+
+	return execBlock
 }
 
 // ParseGetterDeclareStmt - yield GetterDeclareStmt node
