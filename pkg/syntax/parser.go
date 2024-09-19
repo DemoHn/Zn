@@ -270,7 +270,7 @@ func StringifyAST(node Node) string {
 			strings.Join(paramsStr, " "),
 			StringifyAST(v.ExecBlock),
 			finalCatchBlocksStr)
-	case *BlockStmt:
+	case *StmtBlock:
 		var statements = []string{}
 		for _, stmt := range v.Children {
 			statements = append(statements, StringifyAST(stmt))

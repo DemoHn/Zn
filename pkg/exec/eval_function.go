@@ -14,7 +14,7 @@ import (
 func compileFunction(
 	upperContext *r.Context,
 	paramTags []*syntax.ParamItem,
-	stmtBlock *syntax.BlockStmt,
+	stmtBlock *syntax.StmtBlock,
 	catchBlocks []*syntax.CatchBlockPair,
 ) *value.Function {
 
@@ -73,7 +73,7 @@ func compileFunction(
 	return fn
 }
 
-func buildCodeBlockExecutor(codeBlock *syntax.BlockStmt) funcExecutor {
+func buildCodeBlockExecutor(codeBlock *syntax.StmtBlock) funcExecutor {
 
 	return func(c *r.Context, params []r.Element) (r.Element, error) {
 		fnDeclareStmts := make([]syntax.Statement, 0)

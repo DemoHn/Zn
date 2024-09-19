@@ -73,7 +73,7 @@ type UnionMapList interface {
 type Program struct {
 	StmtBase
 	*Lexer  // include lexing info
-	Content *BlockStmt
+	Content *StmtBlock
 }
 
 // NodeList - a simple struct that packs several nodes, with custom tag to indicate its feature.
@@ -116,12 +116,12 @@ type BranchStmt struct {
 	StmtBase
 	// if
 	IfTrueExpr  Expression
-	IfTrueBlock *BlockStmt
+	IfTrueBlock *StmtBlock
 	// else
-	IfFalseBlock *BlockStmt
+	IfFalseBlock *StmtBlock
 	// else if
 	OtherExprs  []Expression
-	OtherBlocks []*BlockStmt
+	OtherBlocks []*StmtBlock
 	// else-branch exists or not
 	HasElse bool
 }
@@ -132,7 +132,7 @@ type WhileLoopStmt struct {
 	// while this expression satisfies (return TRUE), the following block executes.
 	TrueExpr Expression
 	// execution block
-	LoopBlock *BlockStmt
+	LoopBlock *StmtBlock
 }
 
 // IterateStmt - 以 ... 遍历 ... statement
@@ -140,7 +140,7 @@ type IterateStmt struct {
 	StmtBase
 	IterateExpr  Expression
 	IndexNames   []*ID
-	IterateBlock *BlockStmt
+	IterateBlock *StmtBlock
 }
 
 // ImportStmt - 导入《 ... 》 statement
@@ -166,10 +166,27 @@ const (
 	LibTypeCustom uint8 = 2
 )
 
-// BlockStmt -
-type BlockStmt struct {
+// StmtBlock -
+type StmtBlock struct {
 	StmtBase
 	Children []Statement
+}
+
+// ExecBlock - execution block inside a function/main program
+// ExecBlock example:
+//
+// 如何XX？
+//    输入AA、BB  /* InputBlock */
+//
+//    令...      /* StmtBlock */
+//    ...
+//
+//    拦截异常：  /* CatchBlock */
+//        令...   /* StmtBlock inside CatchBlock */
+type ExecBlock struct {
+	InputBlock []*ParamItem
+	StmtBlock  *StmtBlock
+	CatchBlock []*CatchBlockPair
 }
 
 const (
@@ -187,13 +204,13 @@ type FunctionDeclareStmt struct {
 	Name        *ID
 	DeclareType uint8
 	ParamList   []*ParamItem
-	ExecBlock   *BlockStmt
+	ExecBlock   *StmtBlock
 	CatchBlocks []*CatchBlockPair
 }
 
 type CatchBlockPair struct {
 	ExceptionClass *ID
-	ExecBlock      *BlockStmt
+	StmtBlock      *StmtBlock
 }
 
 // FunctionReturnStmt - return (expr)

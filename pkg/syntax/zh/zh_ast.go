@@ -854,8 +854,8 @@ func ParseWhileLoopStmt(p *ParserZH) *syntax.WhileLoopStmt {
 }
 
 // ParseBlockStmt - parse all statements inside a block
-func ParseBlockStmt(p *ParserZH, blockIndent int) *syntax.BlockStmt {
-	bStmt := &syntax.BlockStmt{
+func ParseBlockStmt(p *ParserZH, blockIndent int) *syntax.StmtBlock {
+	bStmt := &syntax.StmtBlock{
 		Children: []syntax.Statement{},
 	}
 
@@ -889,7 +889,7 @@ func ParseBlockStmt(p *ParserZH, blockIndent int) *syntax.BlockStmt {
 //         ...     IfFalseBlock
 func ParseBranchStmt(p *ParserZH) *syntax.BranchStmt {
 	var condExpr syntax.Expression
-	var condBlock *syntax.BlockStmt
+	var condBlock *syntax.StmtBlock
 
 	var stmt = new(syntax.BranchStmt)
 
@@ -1017,7 +1017,7 @@ func ParseConstructorDeclareStmt(p *ParserZH) *syntax.FunctionDeclareStmt {
 	}
 }
 
-func parseFunctionBlock(p *ParserZH) (*syntax.ID, []*syntax.ParamItem, *syntax.BlockStmt, []*syntax.CatchBlockPair) {
+func parseFunctionBlock(p *ParserZH) (*syntax.ID, []*syntax.ParamItem, *syntax.StmtBlock, []*syntax.CatchBlockPair) {
 	// by definition, when 已知 syntax.Statement exists, it should be at first line
 	// of function block
 	const (
@@ -1028,7 +1028,7 @@ func parseFunctionBlock(p *ParserZH) (*syntax.ID, []*syntax.ParamItem, *syntax.B
 
 	var xID *syntax.ID
 	var xParamList []*syntax.ParamItem = make([]*syntax.ParamItem, 0)
-	var xExecBlock *syntax.BlockStmt
+	var xExecBlock *syntax.StmtBlock
 	var xCatchBlocks []*syntax.CatchBlockPair = make([]*syntax.CatchBlockPair, 0)
 
 	mainIndent := p.getCurrIndent()
@@ -1076,7 +1076,7 @@ func parseFunctionBlock(p *ParserZH) (*syntax.ID, []*syntax.ParamItem, *syntax.B
 		p.unsetStmtCompleteFlag()
 		if match, _ := p.tryConsume(TypeCatchErrorW); match {
 			catchClass := parseFuncID(p)
-			var catchBlock = &syntax.BlockStmt{
+			var catchBlock = &syntax.StmtBlock{
 				Children: []syntax.Statement{},
 			}
 			// #2. parse question mark
@@ -1092,7 +1092,7 @@ func parseFunctionBlock(p *ParserZH) (*syntax.ID, []*syntax.ParamItem, *syntax.B
 
 			xCatchBlocks = append(xCatchBlocks, &syntax.CatchBlockPair{
 				ExceptionClass: catchClass,
-				ExecBlock:      catchBlock,
+				StmtBlock:      catchBlock,
 			})
 		} else {
 			p.setStmtCompleteFlag()

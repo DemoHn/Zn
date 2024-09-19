@@ -70,7 +70,7 @@ func evalProgram(c *r.Context, program *syntax.Program) error {
 	allStmts = append(allStmts, otherStmts...)
 
 	// exec all statements
-	errBlock := evalStmtBlock(c, &syntax.BlockStmt{
+	errBlock := evalStmtBlock(c, &syntax.StmtBlock{
 		Children: allStmts,
 	})
 	if errBlock != nil {
@@ -413,7 +413,7 @@ func evalWhileLoopStmt(c *r.Context, node *syntax.WhileLoopStmt) error {
 }
 
 // EvalStmtBlock -
-func evalStmtBlock(c *r.Context, block *syntax.BlockStmt) error {
+func evalStmtBlock(c *r.Context, block *syntax.StmtBlock) error {
 	for _, stmt := range block.Children {
 		if err := evalStatement(c, stmt); err != nil {
 			return err
