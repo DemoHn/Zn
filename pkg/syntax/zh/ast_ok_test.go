@@ -1166,6 +1166,91 @@ $PG($BK(
 ))
 `
 
+//////// BY FUNC ////////
+// test ParseProgramX() only
+const testProgramOKCases = `
+=========
+1. normal case with both importBlock & execBlock
+---------
+导入《X》
+
+输出666
+---------
+$PG($IM(name=($STR(X)) items=()) $X(I=() S=($BK($RT($ID(666)))) C=()))
+=========
+2. only statements
+---------
+输出668
+---------
+$PG($X(I=() S=($BK($RT($ID(668)))) C=()))
+`
+
+const testExecBlockOKCases = `
+=========
+1. normal case with both importBlock & execBlock
+---------
+输入A、B、C
+
+令X = A + B + C
+
+拦截异常1：
+	输出123
+拦截异常2：
+	输出456
+---------
+$X(
+	I=($PM(id=($ID(A)) ref=(false)) $PM(id=($ID(B)) ref=(false)) $PM(id=($ID(C)) ref=(false))) 
+	
+	S=($BK($VD($VP(vars[]=($ID(X)) expr[]=($AR(type=(ADD) left=($AR(type=(ADD) left=($ID(A)) right=($ID(B)))) right=($ID(C)))))))) 
+	
+	C=( cls[]=($ID(异常1)) stmt[]=($BK($RT($ID(123)))) 
+		cls[]=($ID(异常2)) stmt[]=($BK($RT($ID(456))))
+	)
+)
+==========
+2. normal case with importBlock & stmtBlock only
+---------
+输入A、B、C
+
+233
+---------
+$X(
+	I=($PM(id=($ID(A)) ref=(false)) $PM(id=($ID(B)) ref=(false)) $PM(id=($ID(C)) ref=(false))) 
+	
+	S=($BK($ID(233))) 
+	
+	C=()
+)
+==========
+3. normal case with stmtBlock only
+---------
+输出233
+---------
+$X(	
+	I=()
+	S=($BK($RT($ID(233))))
+	C=()
+)
+`
+
+var testByFuncCaseList = []struct {
+	cases   string
+	astFunc func(*ParserZH) syntax.Node
+}{
+	{
+		cases: testProgramOKCases,
+		astFunc: func(pz *ParserZH) syntax.Node {
+			return ParseProgramX(pz)
+		},
+	},
+	{
+		cases: testExecBlockOKCases,
+		astFunc: func(pz *ParserZH) syntax.Node {
+			return ParseExecBlock(pz, 0)
+		},
+	},
+}
+
 type astSuccessCase struct {
 	name    string
 	input   string
@@ -1204,6 +1289,52 @@ func TestAST_OK(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestAST_WithFunc_OK(t *testing.T) {
+	var errX error
+	defer func() {
+		if r := recover(); r != nil {
+			errX, _ = r.(error)
+		}
+	}()
+
+	for _, suData := range testByFuncCaseList {
+		astCases := []astSuccessCase{}
+
+		suites := splitTestSuites(suData.cases)
+		for _, suite := range suites {
+			astCases = append(astCases, astSuccessCase{
+				name:    suite[0],
+				input:   suite[1],
+				astTree: suite[2],
+			})
+		}
+
+		for _, tt := range astCases {
+			t.Run(tt.name, func(t *testing.T) {
+				l := syntax.NewLexer([]rune(tt.input))
+				p := NewParserZH()
+				p.Lexer = l
+				// advance token ONCE
+				p.next()
+
+				astFuncX := suData.astFunc
+				node := astFuncX(p)
+				if errX != nil {
+					t.Errorf("expect no error, got error: %s", errX)
+				} else {
+					// compare with ast
+					expect := syntax.StringifyAST(node)
+					got := formatASTstr(tt.astTree)
+
+					if expect != got {
+						t.Errorf("AST compare:\nexpect ->\n%s\ngot ->\n%s", expect, got)
+					}
+				}
+			})
+		}
 	}
 }
 

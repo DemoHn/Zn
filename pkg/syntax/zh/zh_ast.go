@@ -22,10 +22,12 @@ func ParseProgramX(p *ParserZH) *syntax.ProgramX {
 		stateExecBlock   = 2
 	)
 	var hState = stateImportBlock
+
 	parseItemListBlock(p, peekIndent, func() {
 		switch hState {
 		case stateImportBlock:
 			if match, _ := p.tryConsume(TypeImportW); match {
+				p.unsetStmtCompleteFlag()
 				// parse import statement
 				stmt := ParseImportStmt(p)
 				program.ImportBlock = append(program.ImportBlock, stmt)
@@ -33,7 +35,7 @@ func ParseProgramX(p *ParserZH) *syntax.ProgramX {
 				hState = stateExecBlock
 			}
 		case stateExecBlock:
-			program.ExecBlock = parseExecBlock(p, peekIndent)
+			program.ExecBlock = ParseExecBlock(p, peekIndent)
 		}
 	})
 
@@ -113,6 +115,94 @@ func ParseStatement(p *ParserZH) syntax.Statement {
 			s = ParseClassDeclareStmt(p)
 		case TypeImportW:
 			s = ParseImportStmt(p)
+		case TypeThrowErrorW:
+			s = ParseThrowExceptionStmt(p)
+		case TypeBreakW:
+			s = ParseBreakStmt(p)
+		case TypeContinueW:
+			s = ParseContinueStmt(p)
+		}
+		p.setStmtCurrentLine(s, tk)
+	} else {
+		// other case, parse syntax.syntax.Expression
+		s = ParseExpression(p)
+	}
+
+	// normally, a complete statement should occupy a whole line
+	// or following a stmt
+	if !(p.stmtCompleteFlag || p.meetStmtBreak()) {
+		panic(p.getInvalidSyntaxPeek())
+	}
+	return s
+}
+
+//// NOTE: the following methods are all using panic -> recover for zerr.management.
+//// This is to expect eliminating `err != nil` statements.
+
+// ParseStatement - a program consists of statements
+//
+// CFG:
+// syntax.Statement -> VarDeclareStmt
+//           -> BranchStmt
+//           -> WhileLoopStmt
+//           -> IterateStmt
+//           -> FunctionDeclareStmt
+//           -> FunctionReturnStmt
+//           -> VarInputStmt
+//           -> VOStmt
+//           -> ImportStmt
+//           -> ClassStmt
+//           -> Expr
+//           -> ；
+func ParseStatementX(p *ParserZH) syntax.Statement {
+	var validTypes = []uint8{
+		TypeStmtSep,
+		TypeDeclareW,
+		TypeCondW,
+		TypeFuncW,
+		TypeReturnW,
+		TypeWhileLoopW,
+		TypeVarOneW,
+		TypeIteratorW,
+		TypeObjDefineW,
+		TypeThrowErrorW,
+		TypeBreakW,
+		TypeContinueW,
+	}
+	// remove lineTerminationFlag at the beginning of executing
+	// a statement
+	p.unsetStmtCompleteFlag()
+	match, tk := p.tryConsume(validTypes...)
+
+	var s syntax.Statement
+	if match {
+		switch tk.Type {
+		case TypeStmtSep:
+			// skip them because it's meaningless for syntax parsing
+			return new(syntax.EmptyStmt)
+		case TypeDeclareW:
+			s = ParseVarDeclareStmt(p)
+		case TypeCondW:
+			s = ParseBranchStmt(p)
+		case TypeFuncW:
+			// constructor function: 如何成为XX？
+			matchC, _ := p.tryConsume(TypeObjNewW)
+			if matchC {
+				s = ParseConstructorDeclareStmt(p)
+			} else {
+				// normal function: 如何xxx？
+				s = ParseFunctionDeclareStmt(p)
+			}
+		case TypeReturnW:
+			s = ParseFunctionReturnStmt(p)
+		case TypeWhileLoopW:
+			s = ParseWhileLoopStmt(p)
+		case TypeVarOneW:
+			s = ParseVarOneLeadStmt(p) // parse any statements leads with 「以」
+		case TypeIteratorW:
+			s = ParseIteratorStmt(p)
+		case TypeObjDefineW:
+			s = ParseClassDeclareStmt(p)
 		case TypeThrowErrorW:
 			s = ParseThrowExceptionStmt(p)
 		case TypeBreakW:
@@ -1135,8 +1225,8 @@ func parseFunctionBlock(p *ParserZH) (*syntax.ID, []*syntax.ParamItem, *syntax.S
 	return xID, xParamList, xExecBlock, xCatchBlocks
 }
 
-// parseExecBlock - execBlock = inputStmt + stmtBlock + catchBlock
-func parseExecBlock(p *ParserZH, mainIndent int) *syntax.ExecBlock {
+// ParseExecBlock - execBlock = inputStmt + stmtBlock + catchBlock
+func ParseExecBlock(p *ParserZH, mainIndent int) *syntax.ExecBlock {
 	execBlock := &syntax.ExecBlock{
 		InputBlock: []*syntax.ParamItem{},
 		StmtBlock:  &syntax.StmtBlock{},
@@ -1164,41 +1254,23 @@ func parseExecBlock(p *ParserZH, mainIndent int) *syntax.ExecBlock {
 						RefMark: false, // NOTE: RefMark will deprecate in the future!
 					})
 				})
+			} else {
+				hState = stateStmtBlock
 			}
-
-			hState = stateStmtBlock
 		case stateStmtBlock:
+			p.unsetStmtCompleteFlag()
 			if match, _ := p.tryConsume(TypeCatchErrorW); match {
+				execBlock.CatchBlock = append(execBlock.CatchBlock, ParseCatchErrorStmt(p))
 				hState = stateCatchBlock
 			} else {
 				// 2. parse statement block
-				stmt := ParseStatement(p)
+				stmt := ParseStatementX(p)
 				execBlock.StmtBlock.Children = append(execBlock.StmtBlock.Children, stmt)
 			}
 		case stateCatchBlock:
+			p.unsetStmtCompleteFlag()
 			if match, _ := p.tryConsume(TypeCatchErrorW); match {
-				// keep the value
-				hState = stateCatchBlock
-			} else {
-				// 3. parse (one of) catchBlock
-				catchClass := parseFuncID(p)
-
-				// #2. parse question mark
-				p.consume(TypeFuncCall)
-
-				// #3. parse block manually
-				ok, newIndent := p.expectBlockIndent()
-				if !ok {
-					panic(p.getUnexpectedIndentPeek())
-				}
-
-				// only stmt block here (NO INPUT)
-				catchBlock := ParseBlockStmt(p, newIndent)
-
-				execBlock.CatchBlock = append(execBlock.CatchBlock, &syntax.CatchBlockPair{
-					ExceptionClass: catchClass,
-					StmtBlock:      catchBlock,
-				})
+				execBlock.CatchBlock = append(execBlock.CatchBlock, ParseCatchErrorStmt(p))
 			}
 		}
 	})
@@ -1382,6 +1454,33 @@ func ParseThrowExceptionStmt(p *ParserZH) *syntax.ThrowExceptionStmt {
 	return &syntax.ThrowExceptionStmt{
 		ExceptionClass: exceptionClass,
 		Params:         exprs,
+	}
+}
+
+// ParseCatchErrorStmt - parse "拦截" statement (like Python's `catch`)
+//
+// CFG:
+//
+// CatchStmt   ->  拦截 ID ：  ^[stmtBlock]
+func ParseCatchErrorStmt(p *ParserZH) *syntax.CatchBlockPair {
+	// 3. parse (one of) catchBlock
+	catchClass := parseFuncID(p)
+
+	// #2. parse question mark
+	p.consume(TypeFuncCall)
+
+	// #3. parse block manually
+	ok, newIndent := p.expectBlockIndent()
+	if !ok {
+		panic(p.getUnexpectedIndentPeek())
+	}
+
+	// only stmt block here (NO INPUT)
+	catchBlock := ParseBlockStmt(p, newIndent)
+
+	return &syntax.CatchBlockPair{
+		ExceptionClass: catchClass,
+		StmtBlock:      catchBlock,
 	}
 }
 
