@@ -9,108 +9,36 @@ import (
 	"github.com/DemoHn/Zn/pkg/value"
 )
 
-// compileFunction - create a function (with default param handler logic)
+// compileFunction - create a Function object (with default param handler logic)
 // from Zn code (*syntax.BlockStmt). It's the constructor of 如何XX or (anoymous function in the future)
-func compileFunction(
-	upperContext *r.Context,
-	node *syntax.FunctionDeclareStmt,
-) *value.Function {
-
-	var paramHandler = func(c *r.Context, params []r.Element) (r.Element, error) {
-		// check param length
-		if len(params) != len(node.ParamList) {
+func compileFunction(upperCtx *r.Context, node *syntax.FunctionDeclareStmt) *value.Function {
+	var mainLogicHandler = func(c *r.Context, params []r.Element) (r.Element, error) {
+		// 1. handle params (convert params -> varInput map inside the function scope)
+		// 1.1 check param length
+		if len(params) != len(node.ExecBlock.InputBlock) {
 			return nil, zerr.MismatchParamLengthError(len(node.Name.GetLiteral()), len(params))
 		}
 
-		// bind params (as variable) to function scope
-		for idx, paramVal := range params {
-			param := node.ParamList[idx]
-			// if param is NOT a reference type, then we need additionally
-			// copy its value
-			if !param.RefMark {
-				paramVal = value.DuplicateValue(paramVal)
-			}
-			paramName, err := MatchIDName(param.ID)
+		varInputMap := map[string]r.Element{}
+		// 1.2 match param list with param name
+		for idx, inputV := range node.ExecBlock.InputBlock {
+			inputName, err := MatchIDName(inputV.ID)
 			if err != nil {
 				return nil, err
 			}
-			if err := c.BindSymbol(paramName, paramVal); err != nil {
-				return nil, err
-			}
-		}
-		return nil, nil
-	}
-
-	fn := value.NewFunction(upperContext.GetCurrentScope(), buildCodeBlockExecutor(node.ExecBlock))
-	fn.SetParamHandler(paramHandler)
-
-	for _, catchBlock := range node.CatchBlocks {
-		var exceptionHandler = func(c *r.Context, params []r.Element) (r.Element, error) {
-			classID, err := MatchIDName(catchBlock.ExceptionClass)
-			if err != nil {
-				return nil, err
-			}
-			// check if thisValue is a valid exception class
-			thisValue := c.GetThisValue()
-			classIDStr := classID.GetLiteral()
-			if thisValue == nil {
-				return nil, zerr.ThisValueNotFound()
-			}
-			if obj, ok := thisValue.(*value.Object); ok {
-				if obj.GetObjectName() == classIDStr {
-					blockExecutor := buildCodeBlockExecutor(catchBlock.StmtBlock)
-					return blockExecutor(c, params)
-				}
-			}
-			// DO NOTHING
-			return value.NewNull(), nil
+			inputParam := inputName.GetLiteral()
+			varInputMap[inputParam] = params[idx]
 		}
 
-		fn.AddExceptionHandler(exceptionHandler)
-	}
-	return fn
-}
-
-func buildCodeBlockExecutor(codeBlock *syntax.StmtBlock) funcExecutor {
-
-	return func(c *r.Context, params []r.Element) (r.Element, error) {
-		fnDeclareStmts := make([]syntax.Statement, 0)
-		otherStmts := make([]syntax.Statement, 0)
-		allStmts := make([]syntax.Statement, 0)
-
-		for _, stmtI := range codeBlock.Children {
-			if v, ok := stmtI.(*syntax.FunctionDeclareStmt); ok {
-				fnDeclareStmts = append(fnDeclareStmts, v)
-			} else {
-				otherStmts = append(otherStmts, stmtI)
-			}
-		}
-
-		allStmts = append(allStmts, fnDeclareStmts...)
-		allStmts = append(allStmts, otherStmts...)
-
-		for _, stmtX := range allStmts {
-			switch v := stmtX.(type) {
-			case *syntax.FunctionDeclareStmt:
-				fn := compileFunction(c, v)
-
-				funcName, err := MatchIDName(v.Name)
-				if err != nil {
-					return nil, err
-				}
-
-				if err := c.BindSymbol(funcName, fn); err != nil {
-					return nil, err
-				}
-			default:
-				if err := evalStatement(c, stmtX); err != nil {
-					return extractSignalValue(err, zerr.SigTypeReturn)
-				}
-			}
+		// 2. do eval exec block
+		if err := evalExecBlock(c, node.ExecBlock, varInputMap); err != nil {
+			return nil, err
 		}
 
 		return c.GetCurrentScope().GetReturnValue(), nil
 	}
+
+	return value.NewFunction(upperCtx.GetCurrentScope(), mainLogicHandler)
 }
 
 // （显示：A、B、C），得到D
@@ -192,12 +120,12 @@ func execDirectFunction(c *r.Context, funcName *r.IDName, params []r.Element) (r
 	}
 
 	// assert value is function type
-	funcVal, ok := sym.GetValue().(*value.Function)
+	fn, ok := sym.GetValue().(*value.Function)
 	if !ok {
 		return nil, zerr.InvalidFuncVariable(funcName.GetLiteral())
 	}
 
-	elem, err := funcVal.Exec(c, nil, params)
+	elem, err := fn.Exec(c, nil, params)
 	if err == nil {
 		c.PopCallStack()
 	}

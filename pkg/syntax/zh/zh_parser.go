@@ -40,13 +40,8 @@ func (p *ParserZH) ParseAST(l *syntax.Lexer) (pg *syntax.Program, err error) {
 	// advance tokens ONCE
 	p.next()
 
-	peekIndent := p.getPeekIndent()
-	// parse global block
-	block := ParseBlockStmt(p, peekIndent)
-	pg = &syntax.Program{
-		Lexer:   l,
-		Content: block,
-	}
+	// ParseProgram
+	pg = ParseProgram(p)
 
 	// ensure there's no remaining token after parsing global block
 	if p.peek().Type != TypeEOF {

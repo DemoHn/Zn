@@ -39,40 +39,48 @@ import (
 // it doesn't matter - we will order the statements in the program automatically before execution.
 // (This will not affect line numbers)
 func evalProgram(c *r.Context, program *syntax.Program) error {
-	inputVarStmts := make([]syntax.Statement, 0)
-	importStmts := make([]syntax.Statement, 0)
-	classDefStmts := make([]syntax.Statement, 0)
-	funcDefStmts := make([]syntax.Statement, 0)
-	otherStmts := make([]syntax.Statement, 0)
-
-	allStmts := make([]syntax.Statement, 0)
-
-	for _, stmtX := range program.Content.Children {
-		switch v := stmtX.(type) {
-		case *syntax.VarInputStmt:
-			inputVarStmts = append(inputVarStmts, v)
-		case *syntax.ImportStmt:
-			importStmts = append(importStmts, v)
-		case *syntax.ClassDeclareStmt:
-			classDefStmts = append(classDefStmts, v)
-		case *syntax.FunctionDeclareStmt:
-			funcDefStmts = append(funcDefStmts, v)
-		default:
-			otherStmts = append(otherStmts, v)
+	// 1. import libs
+	for _, importStmt := range program.ImportBlock {
+		if err := evalImportStmt(c, importStmt); err != nil {
+			return err
 		}
 	}
 
-	// reorder the statements
-	allStmts = append(allStmts, inputVarStmts...)
-	allStmts = append(allStmts, importStmts...)
-	allStmts = append(allStmts, classDefStmts...)
-	allStmts = append(allStmts, funcDefStmts...)
-	allStmts = append(allStmts, otherStmts...)
+	// 2. do exec block -> load values from context.varInputs -> current scope
+	return evalExecBlock(c, program.ExecBlock, c.GetVarInputs())
+}
 
-	// exec all statements
-	errBlock := evalStmtBlock(c, &syntax.StmtBlock{
-		Children: allStmts,
-	})
+func evalExecBlock(c *r.Context, execBlock *syntax.ExecBlock, varInputs map[string]r.Element) error {
+	for _, param := range execBlock.InputBlock {
+		idTag, err := MatchIDName(param.ID)
+		if err != nil {
+			return err
+		}
+		idStr := idTag.GetLiteral()
+
+		inputValue, ok := varInputs[idStr]
+		if !ok {
+			return zerr.InputValueNotFound(idStr)
+		}
+
+		// set inputValue to current scope
+		if err := c.BindSymbolConst(idTag, inputValue); err != nil {
+			return err
+		}
+	}
+
+	var errBlock error
+	errBlock = evalStmtBlock(c, execBlock.StmtBlock)
+
+	// extract & handle exception value (抛出)
+	if errBlock != nil {
+		exception, realErr := extractSignalValue(errBlock, zerr.SigTypeException)
+		if realErr == nil {
+			errBlock = handleExceptions(c, execBlock.CatchBlock, exception)
+		}
+	}
+
+	// extract & handle return value (输出)
 	if errBlock != nil {
 		rtnValue, err := extractSignalValue(errBlock, zerr.SigTypeReturn)
 		if err != nil {
@@ -83,6 +91,65 @@ func evalProgram(c *r.Context, program *syntax.Program) error {
 		return nil
 	}
 	return errBlock
+}
+
+func evalStmtBlock(c *r.Context, stmtBlock *syntax.StmtBlock) error {
+	classDefStmts := make([]syntax.Statement, 0)
+	funcDefStmts := make([]syntax.Statement, 0)
+	otherStmts := make([]syntax.Statement, 0)
+
+	allStmts := make([]syntax.Statement, 0)
+
+	for _, stmtX := range stmtBlock.Children {
+		switch v := stmtX.(type) {
+		case *syntax.ClassDeclareStmt:
+			classDefStmts = append(classDefStmts, v)
+		case *syntax.FunctionDeclareStmt:
+			funcDefStmts = append(funcDefStmts, v)
+		default:
+			otherStmts = append(otherStmts, v)
+		}
+	}
+
+	// reorder the statements
+	allStmts = append(allStmts, classDefStmts...)
+	allStmts = append(allStmts, funcDefStmts...)
+	allStmts = append(allStmts, otherStmts...)
+
+	for _, stmt := range allStmts {
+		if err := evalStatement(c, stmt); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func handleExceptions(c *r.Context, catchBlock []*syntax.CatchBlockPair, exception r.Element) error {
+	if obj, ok := exception.(*value.Object); ok {
+		objClass := obj.GetObjectName()
+
+		// iterate catchBlock to match
+		for _, catchBlockItem := range catchBlock {
+			classID, err := MatchIDName(catchBlockItem.ExceptionClass)
+			if err != nil {
+				return nil
+			}
+
+			if classID.GetLiteral() == objClass {
+				newScope := c.PushScope()
+				defer c.PopScope()
+
+				newScope.SetThisValue(exception)
+
+				// do execution
+				return evalStmtBlock(c, catchBlockItem.StmtBlock)
+			}
+		}
+	} else {
+		return zerr.NewErrorSLOT("暂不支持拦截非对象型的异常！")
+	}
+	return nil
 }
 
 //// eval statements
@@ -194,27 +261,6 @@ func evalStatement(c *r.Context, stmt syntax.Statement) error {
 		}
 		// send RETURN break
 		return zerr.NewReturnSignal(val)
-	case *syntax.VarInputStmt:
-		// load values from context.varInputs -> current scope
-		varInputs := c.GetVarInputs()
-		for _, id := range v.IDList {
-			idTag, err := MatchIDName(id)
-			if err != nil {
-				return err
-			}
-			idStr := idTag.GetLiteral()
-
-			inputValue, ok := varInputs[idStr]
-			if !ok {
-				return zerr.InputValueNotFound(idStr)
-			}
-
-			// set inputValue to current scope
-			if err := c.BindSymbolConst(idTag, inputValue); err != nil {
-				return err
-			}
-		}
-		return nil
 	case *syntax.ThrowExceptionStmt:
 		// profoundly return an ERROR to terminate the execution flow
 		expClassID, err := MatchIDName(v.ExceptionClass)
@@ -410,17 +456,6 @@ func evalWhileLoopStmt(c *r.Context, node *syntax.WhileLoopStmt) error {
 			return err
 		}
 	}
-}
-
-// EvalStmtBlock -
-func evalStmtBlock(c *r.Context, block *syntax.StmtBlock) error {
-	for _, stmt := range block.Children {
-		if err := evalStatement(c, stmt); err != nil {
-			return err
-		}
-	}
-
-	return nil
 }
 
 func evalBranchStmt(c *r.Context, node *syntax.BranchStmt) error {

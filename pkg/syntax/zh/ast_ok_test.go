@@ -1167,7 +1167,7 @@ $PG($BK(
 `
 
 //////// BY FUNC ////////
-// test ParseProgramX() only
+// test ParseProgram() only
 const testProgramOKCases = `
 =========
 1. normal case with both importBlock & execBlock
@@ -1226,7 +1226,7 @@ $X(
 ---------
 输出233
 ---------
-$X(	
+$X(
 	I=()
 	S=($BK($RT($ID(233))))
 	C=()
@@ -1240,7 +1240,7 @@ var testByFuncCaseList = []struct {
 	{
 		cases: testProgramOKCases,
 		astFunc: func(pz *ParserZH) syntax.Node {
-			return ParseProgramX(pz)
+			return ParseProgram(pz)
 		},
 	},
 	{

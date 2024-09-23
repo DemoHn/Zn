@@ -7,12 +7,10 @@ import (
 type consumerFunc func()
 
 //////// Parse Methods
-
-// TODO - use ParseProgram in the future!
-func ParseProgramX(p *ParserZH) *syntax.ProgramX {
+func ParseProgram(p *ParserZH) *syntax.Program {
 	peekIndent := p.getPeekIndent()
 
-	program := &syntax.ProgramX{
+	program := &syntax.Program{
 		Lexer:       p.Lexer,
 		ImportBlock: []*syntax.ImportStmt{},
 	}
@@ -54,107 +52,12 @@ func ParseProgramX(p *ParserZH) *syntax.ProgramX {
 //           -> IterateStmt
 //           -> FunctionDeclareStmt
 //           -> FunctionReturnStmt
-//           -> VarInputStmt
 //           -> VOStmt
 //           -> ImportStmt
 //           -> ClassStmt
 //           -> Expr
 //           -> ；
 func ParseStatement(p *ParserZH) syntax.Statement {
-	var validTypes = []uint8{
-		TypeStmtSep,
-		TypeDeclareW,
-		TypeCondW,
-		TypeFuncW,
-		TypeReturnW,
-		TypeInputW,
-		TypeWhileLoopW,
-		TypeVarOneW,
-		TypeIteratorW,
-		TypeObjDefineW,
-		TypeImportW,
-		TypeThrowErrorW,
-		TypeBreakW,
-		TypeContinueW,
-	}
-	// remove lineTerminationFlag at the beginning of executing
-	// a statement
-	p.unsetStmtCompleteFlag()
-	match, tk := p.tryConsume(validTypes...)
-
-	var s syntax.Statement
-	if match {
-		switch tk.Type {
-		case TypeStmtSep:
-			// skip them because it's meaningless for syntax parsing
-			return new(syntax.EmptyStmt)
-		case TypeDeclareW:
-			s = ParseVarDeclareStmt(p)
-		case TypeCondW:
-			s = ParseBranchStmt(p)
-		case TypeFuncW:
-			// constructor function: 如何成为XX？
-			matchC, _ := p.tryConsume(TypeObjNewW)
-			if matchC {
-				s = ParseConstructorDeclareStmt(p)
-			} else {
-				// normal function: 如何xxx？
-				s = ParseFunctionDeclareStmt(p)
-			}
-		case TypeReturnW:
-			s = ParseFunctionReturnStmt(p)
-		case TypeInputW:
-			s = ParseVarInputStmt(p)
-		case TypeWhileLoopW:
-			s = ParseWhileLoopStmt(p)
-		case TypeVarOneW:
-			s = ParseVarOneLeadStmt(p) // parse any statements leads with 「以」
-		case TypeIteratorW:
-			s = ParseIteratorStmt(p)
-		case TypeObjDefineW:
-			s = ParseClassDeclareStmt(p)
-		case TypeImportW:
-			s = ParseImportStmt(p)
-		case TypeThrowErrorW:
-			s = ParseThrowExceptionStmt(p)
-		case TypeBreakW:
-			s = ParseBreakStmt(p)
-		case TypeContinueW:
-			s = ParseContinueStmt(p)
-		}
-		p.setStmtCurrentLine(s, tk)
-	} else {
-		// other case, parse syntax.syntax.Expression
-		s = ParseExpression(p)
-	}
-
-	// normally, a complete statement should occupy a whole line
-	// or following a stmt
-	if !(p.stmtCompleteFlag || p.meetStmtBreak()) {
-		panic(p.getInvalidSyntaxPeek())
-	}
-	return s
-}
-
-//// NOTE: the following methods are all using panic -> recover for zerr.management.
-//// This is to expect eliminating `err != nil` statements.
-
-// ParseStatement - a program consists of statements
-//
-// CFG:
-// syntax.Statement -> VarDeclareStmt
-//           -> BranchStmt
-//           -> WhileLoopStmt
-//           -> IterateStmt
-//           -> FunctionDeclareStmt
-//           -> FunctionReturnStmt
-//           -> VarInputStmt
-//           -> VOStmt
-//           -> ImportStmt
-//           -> ClassStmt
-//           -> Expr
-//           -> ；
-func ParseStatementX(p *ParserZH) syntax.Statement {
 	var validTypes = []uint8{
 		TypeStmtSep,
 		TypeDeclareW,
@@ -1115,45 +1018,29 @@ func ParseBranchStmt(p *ParserZH) *syntax.BranchStmt {
 //       ...     ....
 //
 func ParseFunctionDeclareStmt(p *ParserZH) *syntax.FunctionDeclareStmt {
-	xID, xParamList, xExecBlock, xCatchBlocks := parseFunctionBlock(p)
+	xID, xExecBlock := parseFunctionBlock(p)
 
 	return &syntax.FunctionDeclareStmt{
 		Name:        xID,
 		DeclareType: syntax.DeclareTypeFunc,
-		ParamList:   xParamList,
 		ExecBlock:   xExecBlock,
-		CatchBlocks: xCatchBlocks,
 	}
 }
 
 // ParseFunctionDeclareStmt - similiar to ParseFunctionDeclareStmt, but it yields `如何新建XX？`
 func ParseConstructorDeclareStmt(p *ParserZH) *syntax.FunctionDeclareStmt {
-	xID, xParamList, xExecBlock, xCatchBlocks := parseFunctionBlock(p)
+	xID, xExecBlock := parseFunctionBlock(p)
 
 	return &syntax.FunctionDeclareStmt{
 		Name:        xID,
 		DeclareType: syntax.DeclareTypeConstructor,
-		ParamList:   xParamList,
 		ExecBlock:   xExecBlock,
-		CatchBlocks: xCatchBlocks,
 	}
 }
 
-func parseFunctionBlock(p *ParserZH) (*syntax.ID, []*syntax.ParamItem, *syntax.StmtBlock, []*syntax.CatchBlockPair) {
-	// by definition, when 已知 syntax.Statement exists, it should be at first line
-	// of function block
-	const (
-		stateParamList = 0
-		stateFuncBlock = 2
-	)
-	var hState = stateParamList
-
+func parseFunctionBlock(p *ParserZH) (*syntax.ID, *syntax.ExecBlock) {
 	var xID *syntax.ID
-	var xParamList []*syntax.ParamItem = make([]*syntax.ParamItem, 0)
-	var xExecBlock *syntax.StmtBlock
-	var xCatchBlocks []*syntax.CatchBlockPair = make([]*syntax.CatchBlockPair, 0)
-
-	mainIndent := p.getCurrIndent()
+	var xExecBlock *syntax.ExecBlock
 
 	// #1. try to parse ID
 	xID = parseFuncID(p)
@@ -1165,64 +1052,9 @@ func parseFunctionBlock(p *ParserZH) (*syntax.ID, []*syntax.ParamItem, *syntax.S
 	if !ok {
 		panic(p.getUnexpectedIndentPeek())
 	}
-	// #3.1 parse param def list
-	parseItemListBlock(p, blockIndent, func() {
-		switch hState {
-		case stateParamList:
-			// parse 已知 expr
-			if match, _ := p.tryConsume(TypeParamAssignW); match {
-				parsePauseCommaList(p, func() {
-					refMark, _ := p.tryConsume(TypeObjRef)
+	xExecBlock = ParseExecBlock(p, blockIndent)
 
-					idItem := parseID(p)
-					xParamList = append(xParamList, &syntax.ParamItem{
-						RefMark: refMark,
-						ID:      idItem,
-					})
-				})
-
-				// then change state
-				hState = stateFuncBlock
-			} else {
-				hState = stateFuncBlock
-			}
-		case stateFuncBlock:
-			xExecBlock = ParseBlockStmt(p, blockIndent)
-		}
-	})
-	// #3.2 parse catch blocks
-	for p.peek().Type != TypeEOF {
-		if p.getPeekIndent() != mainIndent {
-			break
-		}
-		p.unsetStmtCompleteFlag()
-		if match, _ := p.tryConsume(TypeCatchErrorW); match {
-			catchClass := parseFuncID(p)
-			var catchBlock = &syntax.StmtBlock{
-				Children: []syntax.Statement{},
-			}
-			// #2. parse question mark
-			p.consume(TypeFuncCall)
-
-			// #3. parse block manually
-			ok, blockIndent := p.expectBlockIndent()
-			if !ok {
-				panic(p.getUnexpectedIndentPeek())
-			}
-
-			catchBlock = ParseBlockStmt(p, blockIndent)
-
-			xCatchBlocks = append(xCatchBlocks, &syntax.CatchBlockPair{
-				ExceptionClass: catchClass,
-				StmtBlock:      catchBlock,
-			})
-		} else {
-			p.setStmtCompleteFlag()
-			break
-		}
-	}
-
-	return xID, xParamList, xExecBlock, xCatchBlocks
+	return xID, xExecBlock
 }
 
 // ParseExecBlock - execBlock = inputStmt + stmtBlock + catchBlock
@@ -1264,7 +1096,7 @@ func ParseExecBlock(p *ParserZH, mainIndent int) *syntax.ExecBlock {
 				hState = stateCatchBlock
 			} else {
 				// 2. parse statement block
-				stmt := ParseStatementX(p)
+				stmt := ParseStatement(p)
 				execBlock.StmtBlock.Children = append(execBlock.StmtBlock.Children, stmt)
 			}
 		case stateCatchBlock:
@@ -1289,14 +1121,12 @@ func ParseExecBlock(p *ParserZH, mainIndent int) *syntax.ExecBlock {
 //       ...     ....
 //
 func ParseGetterDeclareStmt(p *ParserZH) *syntax.FunctionDeclareStmt {
-	xID, xParamList, xExecBlock, xCatchBlocks := parseFunctionBlock(p)
+	xID, xExecBlock := parseFunctionBlock(p)
 
 	return &syntax.FunctionDeclareStmt{
 		DeclareType: syntax.DeclareTypeGetter,
 		Name:        xID,
-		ParamList:   xParamList,
 		ExecBlock:   xExecBlock,
-		CatchBlocks: xCatchBlocks,
 	}
 }
 
@@ -1409,18 +1239,6 @@ func ParseFunctionReturnStmt(p *ParserZH) *syntax.FunctionReturnStmt {
 	expr := ParseExpression(p)
 	return &syntax.FunctionReturnStmt{
 		ReturnExpr: expr,
-	}
-}
-
-func ParseVarInputStmt(p *ParserZH) *syntax.VarInputStmt {
-	var idList []*syntax.ID
-	parsePauseCommaList(p, func() {
-		id := parseID(p)
-		idList = append(idList, id)
-	})
-
-	return &syntax.VarInputStmt{
-		IDList: idList,
 	}
 }
 

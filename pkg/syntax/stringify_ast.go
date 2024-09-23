@@ -8,9 +8,7 @@ import (
 // StringifyAST - stringify an abstract ProgramNode into a readable string, mainly for UNITTEST purpose
 func StringifyAST(node Node) string {
 	switch v := node.(type) {
-	case *Program:
-		return fmt.Sprintf("$PG(%s)", StringifyAST(v.Content))
-	case *ProgramX: // replace program in the future
+	case *Program: // replace program in the future
 		importBlockStr := []string{}
 		for _, importBlock := range v.ImportBlock {
 			importBlockStr = append(importBlockStr, StringifyAST(importBlock))
@@ -209,41 +207,16 @@ func StringifyAST(node Node) string {
 		return fmt.Sprintf("$IM(name=(%s) items=(%s))", StringifyAST(v.ImportName), strings.Join(itemsStr, " "))
 	case *FunctionReturnStmt:
 		return fmt.Sprintf("$RT(%s)", StringifyAST(v.ReturnExpr))
-	case *VarInputStmt:
-		var idList = make([]string, 0)
-		for _, id := range v.IDList {
-			idList = append(idList, StringifyAST(id))
-		}
-
-		return fmt.Sprintf("$IN(%s)", strings.Join(idList, " "))
 	case *FunctionDeclareStmt:
-		fnTypeStr := ""
+		fnTypeStr := "FN"
 		if v.DeclareType == DeclareTypeConstructor {
-			fnTypeStr = "T=constructor "
+			fnTypeStr = "COS"
 		} else if v.DeclareType == DeclareTypeGetter {
-			fnTypeStr = "T=getter"
+			fnTypeStr = "GET"
 		}
-		paramsStr := []string{}
-		for _, p := range v.ParamList {
-			paramsStr = append(paramsStr, StringifyAST(p))
-		}
-
-		catchBlocksStr := []string{}
-		for _, cb := range v.CatchBlocks {
-			catchBlocksStr = append(catchBlocksStr, fmt.Sprintf("class=(%s) block=(%s)", StringifyAST(cb.ExceptionClass), StringifyAST(cb.StmtBlock)))
-		}
-
-		finalCatchBlocksStr := ""
-		if len(catchBlocksStr) > 0 {
-			finalCatchBlocksStr = fmt.Sprintf(" catchBlocks=(%s)", strings.Join(catchBlocksStr, " "))
-		}
-
-		return fmt.Sprintf("$FN(%sname=(%s) params=(%s) blockTokens=(%s)%s)",
+		return fmt.Sprintf("$FN(type=%s block=(%s))",
 			fnTypeStr,
-			StringifyAST(v.Name),
-			strings.Join(paramsStr, " "),
-			StringifyAST(v.ExecBlock),
-			finalCatchBlocksStr)
+			StringifyAST(v.ExecBlock))
 	case *StmtBlock:
 		var statements = []string{}
 		for _, stmt := range v.Children {

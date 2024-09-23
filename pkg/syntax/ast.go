@@ -68,15 +68,7 @@ type UnionMapList interface {
 }
 
 //// program (struct)
-
-// Program -
 type Program struct {
-	StmtBase
-	*Lexer  // include lexing info
-	Content *StmtBlock
-}
-
-type ProgramX struct {
 	StmtBase
 	*Lexer      // include source code info
 	ImportBlock []*ImportStmt
@@ -210,9 +202,7 @@ type FunctionDeclareStmt struct {
 	StmtBase
 	Name        *ID
 	DeclareType uint8
-	ParamList   []*ParamItem
-	ExecBlock   *StmtBlock
-	CatchBlocks []*CatchBlockPair
+	ExecBlock   *ExecBlock
 }
 
 type CatchBlockPair struct {
@@ -224,12 +214,6 @@ type CatchBlockPair struct {
 type FunctionReturnStmt struct {
 	StmtBase
 	ReturnExpr Expression
-}
-
-// 输入XX、XX、XX...
-type VarInputStmt struct {
-	StmtBase
-	IDList []*ID
 }
 
 // ClassDeclareStmt - class definition (定义XX：)
