@@ -52,7 +52,7 @@ func evalProgram(c *r.Context, program *syntax.Program) error {
 
 func evalExecBlock(c *r.Context, execBlock *syntax.ExecBlock, varInputs map[string]r.Element) error {
 	for _, param := range execBlock.InputBlock {
-		idTag, err := MatchIDName(param.ID)
+		idTag, err := MatchIDName(param)
 		if err != nil {
 			return err
 		}
@@ -133,7 +133,7 @@ func handleExceptions(c *r.Context, catchBlock []*syntax.CatchBlockPair, excepti
 		for _, catchBlockItem := range catchBlock {
 			classID, err := MatchIDName(catchBlockItem.ExceptionClass)
 			if err != nil {
-				return nil
+				return err
 			}
 
 			if classID.GetLiteral() == objClass {
@@ -146,10 +146,18 @@ func handleExceptions(c *r.Context, catchBlock []*syntax.CatchBlockPair, excepti
 				return evalStmtBlock(c, catchBlockItem.StmtBlock)
 			}
 		}
+		// TODO: show error from Element!
+		finalStr := "出现异常"
+		s, _ := exception.GetProperty(c, "内容")
+		if s != nil {
+			if ss, ok := s.(*value.String); ok {
+				finalStr = ss.GetValue()
+			}
+		}
+		return zerr.NewRuntimeException(finalStr)
 	} else {
 		return zerr.NewErrorSLOT("暂不支持拦截非对象型的异常！")
 	}
-	return nil
 }
 
 //// eval statements
@@ -329,10 +337,7 @@ func evalVarDeclareStmt(c *r.Context, node *syntax.VarDeclareStmt) error {
 					return err
 				}
 
-				if !vpair.RefMark {
-					obj = value.DuplicateValue(obj)
-				}
-
+				obj = value.DuplicateValue(obj)
 				if err := c.BindSymbolDecl(vtag, obj, isConst); err != nil {
 					return err
 				}
@@ -1089,10 +1094,7 @@ func evalVarAssignExpr(c *r.Context, expr *syntax.VarAssignExpr) (r.Element, err
 	if err != nil {
 		return nil, err
 	}
-	// if var assignment is NOT by reference, then duplicate value
-	if !expr.RefMark {
-		vr = value.DuplicateValue(vr)
-	}
+	vr = value.DuplicateValue(vr)
 
 	// Left Side
 	switch v := expr.TargetVar.(type) {

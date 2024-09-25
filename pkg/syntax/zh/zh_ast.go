@@ -272,12 +272,6 @@ func parseExpressionLv4(p *ParserZH, cfg syntax.EqMarkConfig) syntax.Expression 
 
 	exprL := ParseArithExpr(p)
 	if match, tk := p.tryConsume(validTypes...); match {
-		// parse &
-		refMarkForLogicYes := false
-		if match2, _ := p.tryConsume(TypeObjRef); match2 {
-			refMarkForLogicYes = true
-		}
-
 		vid, ok := exprL.(syntax.Assignable)
 		if !ok {
 			panic(p.getExprMustTypeIDPeek())
@@ -285,7 +279,6 @@ func parseExpressionLv4(p *ParserZH, cfg syntax.EqMarkConfig) syntax.Expression 
 		exprR := ParseArithExpr(p)
 		finalExpr := &syntax.VarAssignExpr{
 			TargetVar:  vid,
-			RefMark:    refMarkForLogicYes,
 			AssignExpr: exprR,
 		}
 
@@ -796,35 +789,16 @@ func parseVDAssignPair(p *ParserZH) syntax.VDAssignPair {
 		panic(p.getInvalidSyntaxPeek())
 	}
 
-	switch tk.Type {
-	case TypeAssignW, TypeAssignMark:
-		refMark := false
-		if match, _ := p.tryConsume(TypeObjRef); match {
-			refMark = true
-		}
-		expr := ParseExpression(p)
+	asnType := syntax.VDTypeAssign
+	if tk.Type == TypeAssignConstW {
+		asnType = syntax.VDTypeAssignConst
+	}
+	expr := ParseExpression(p)
 
-		return syntax.VDAssignPair{
-			Type:       syntax.VDTypeAssign,
-			Variables:  idfList,
-			RefMark:    refMark,
-			AssignExpr: expr,
-		}
-	case TypeAssignConstW:
-		refMark := false
-		if match, _ := p.tryConsume(TypeObjRef); match {
-			refMark = true
-		}
-		expr := ParseExpression(p)
-
-		return syntax.VDAssignPair{
-			Type:       syntax.VDTypeAssignConst,
-			Variables:  idfList,
-			RefMark:    refMark,
-			AssignExpr: expr,
-		}
-	default: // ObjNewW
-		panic(p.getInvalidSyntaxPeek())
+	return syntax.VDAssignPair{
+		Type:       asnType,
+		Variables:  idfList,
+		AssignExpr: expr,
 	}
 }
 
@@ -1060,7 +1034,7 @@ func parseFunctionBlock(p *ParserZH) (*syntax.ID, *syntax.ExecBlock) {
 // ParseExecBlock - execBlock = inputStmt + stmtBlock + catchBlock
 func ParseExecBlock(p *ParserZH, mainIndent int) *syntax.ExecBlock {
 	execBlock := &syntax.ExecBlock{
-		InputBlock: []*syntax.ParamItem{},
+		InputBlock: []*syntax.ID{},
 		StmtBlock:  &syntax.StmtBlock{},
 		CatchBlock: []*syntax.CatchBlockPair{},
 	}
@@ -1081,10 +1055,7 @@ func ParseExecBlock(p *ParserZH, mainIndent int) *syntax.ExecBlock {
 			if match, _ := p.tryConsume(TypeInputW); match {
 				parsePauseCommaList(p, func() {
 					id := parseID(p)
-					execBlock.InputBlock = append(execBlock.InputBlock, &syntax.ParamItem{
-						ID:      id,
-						RefMark: false, // NOTE: RefMark will deprecate in the future!
-					})
+					execBlock.InputBlock = append(execBlock.InputBlock, id)
 				})
 			} else {
 				hState = stateStmtBlock

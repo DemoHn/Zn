@@ -263,16 +263,6 @@ func StringifyAST(node Node) string {
 			StringifyAST(v.PropertyID),
 			StringifyAST(v.InitValue),
 		)
-	case *ParamItem:
-		refMark := "false"
-		if v.RefMark {
-			refMark = "true"
-		}
-		return fmt.Sprintf(
-			"$PM(id=(%s) ref=(%s))",
-			StringifyAST(v.ID),
-			refMark,
-		)
 	default:
 		return ""
 	}

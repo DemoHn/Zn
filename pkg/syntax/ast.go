@@ -96,13 +96,10 @@ type EmptyStmt struct {
 
 // VDAssignPair - helper type
 type VDAssignPair struct {
-	Type       vdAssignPairTypeE
+	Type       int
 	Variables  []*ID
 	AssignExpr Expression
-	RefMark    bool
 }
-
-type vdAssignPairTypeE uint8
 
 // declare VD Assign type
 const (
@@ -183,7 +180,7 @@ type StmtBlock struct {
 //    拦截异常：  /* CatchBlock */
 //        令...   /* StmtBlock inside CatchBlock */
 type ExecBlock struct {
-	InputBlock []*ParamItem
+	InputBlock []*ID
 	StmtBlock  *StmtBlock
 	CatchBlock []*CatchBlockPair
 }
@@ -242,12 +239,6 @@ type ThrowExceptionStmt struct {
 	Params         []Expression
 }
 
-// ParamItem - parameter item
-type ParamItem struct {
-	ID      *ID
-	RefMark bool
-}
-
 //// Expressions (struct)
 
 // PrimeExpr - primitive expression
@@ -292,7 +283,6 @@ type HashMapKeyValuePair struct {
 type VarAssignExpr struct {
 	ExprBase
 	TargetVar  Assignable
-	RefMark    bool
 	AssignExpr Expression
 }
 

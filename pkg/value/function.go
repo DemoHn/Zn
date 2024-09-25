@@ -9,15 +9,15 @@ type FuncExecutor = func(*r.Context, []r.Element) (r.Element, error)
 
 type Function struct {
 	name string
-	// closureScope - when compiling a function, we will create an exclusive scope for this function to store values created inside the function.
-	closureScope *r.Scope
+	// outerScope - when compiling an "inner" function (i.e. a "child" function defined inside another "parent" function), we will copy the outer scope into the function to impl the Closure feature
+	outerScope   *r.Scope
 	logicHandler FuncExecutor
 }
 
-func NewFunction(closureScope *r.Scope, executor FuncExecutor) *Function {
+func NewFunction(outerScope *r.Scope, executor FuncExecutor) *Function {
 	return &Function{
 		name:         "",
-		closureScope: closureScope,
+		outerScope:   outerScope,
 		logicHandler: executor,
 	}
 }
@@ -34,8 +34,8 @@ func (fn *Function) Exec(c *r.Context, thisValue r.Element, params []r.Element) 
 	module := c.GetCurrentModule()
 
 	// add the pre-defined closure scope to current module
-	if fn.closureScope != nil {
-		module.AddScope(fn.closureScope)
+	if fn.outerScope != nil {
+		module.AddScope(fn.outerScope)
 		defer c.PopScope()
 	}
 
@@ -43,7 +43,16 @@ func (fn *Function) Exec(c *r.Context, thisValue r.Element, params []r.Element) 
 	fnScope := c.PushScope()
 	defer c.PopScope()
 
-	fnScope.SetThisValue(thisValue)
+	if thisValue != nil {
+		// set thisValue of current scope
+		fnScope.SetThisValue(thisValue)
+
+		// add a const variable "此" to represent "$this"
+		// usage: 以此（调用某方法：XX、YY）
+		if err := c.BindSymbolConst(r.NewIDName("此"), thisValue); err != nil {
+			return nil, err
+		}
+	}
 
 	fnLogiHandler := fn.logicHandler
 	return fnLogiHandler(c, params)

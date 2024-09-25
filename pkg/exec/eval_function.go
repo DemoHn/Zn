@@ -15,14 +15,15 @@ func compileFunction(upperCtx *r.Context, node *syntax.FunctionDeclareStmt) *val
 	var mainLogicHandler = func(c *r.Context, params []r.Element) (r.Element, error) {
 		// 1. handle params (convert params -> varInput map inside the function scope)
 		// 1.1 check param length
-		if len(params) != len(node.ExecBlock.InputBlock) {
-			return nil, zerr.MismatchParamLengthError(len(node.Name.GetLiteral()), len(params))
+		inputParamNum := len(node.ExecBlock.InputBlock)
+		if len(params) != inputParamNum {
+			return nil, zerr.MismatchParamLengthError(inputParamNum, len(params))
 		}
 
 		varInputMap := map[string]r.Element{}
 		// 1.2 match param list with param name
 		for idx, inputV := range node.ExecBlock.InputBlock {
-			inputName, err := MatchIDName(inputV.ID)
+			inputName, err := MatchIDName(inputV)
 			if err != nil {
 				return nil, err
 			}
