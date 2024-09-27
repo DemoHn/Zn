@@ -29,11 +29,12 @@ import (
 
 // evalProgram - eval the statements of the program with the following order:
 //
-// 1. INPUTVAR statement - `输入长、宽、高`
-// 2. IMPORT statement(s) - `导入《文件》`
+// 1. IMPORT statement(s) - `导入《文件》`
+// 2. INPUTVAR statement - `输入长、宽、高`
 // 3. CLASSDEF statement(s) - `定义货件`
 // 4. FUNCDEF statement(s) - `如何执行？`
 // 5. other statements
+// 6. CATCH statement(s) - `拦截异常`
 //
 // If the program doesn't follow the order (e.g. the func declare block at the end of program),
 // it doesn't matter - we will order the statements in the program automatically before execution.
@@ -46,25 +47,46 @@ func evalProgram(c *r.Context, program *syntax.Program) error {
 		}
 	}
 
-	// 2. do exec block -> load values from context.varInputs -> current scope
-	return evalExecBlock(c, program.ExecBlock, c.GetVarInputs())
+	if program.ExecBlock != nil {
+		varInputs := c.GetVarInputs()
+
+		// 2. do exec block -> load values from context.varInputs -> current scope
+		paramList := []r.Element{}
+		for _, inputV := range program.ExecBlock.InputBlock {
+			inputName, err := MatchIDName(inputV)
+			if err != nil {
+				return err
+			}
+			inputNameStr := inputName.GetLiteral()
+
+			// match name from idList and append the value from varInputMap
+			if elem, ok := varInputs[inputNameStr]; ok {
+				paramList = append(paramList, elem)
+			} else {
+				return zerr.InputValueNotFound(inputNameStr)
+			}
+		}
+		return evalExecBlock(c, program.ExecBlock, paramList)
+	}
+
+	return nil
 }
 
-func evalExecBlock(c *r.Context, execBlock *syntax.ExecBlock, varInputs map[string]r.Element) error {
-	for _, param := range execBlock.InputBlock {
+func evalExecBlock(c *r.Context, execBlock *syntax.ExecBlock, params []r.Element) error {
+	// 1.1 check param length
+	inputParamNum := len(execBlock.InputBlock)
+	if len(params) != inputParamNum {
+		return zerr.MismatchParamLengthError(inputParamNum, len(params))
+	}
+
+	for idx, param := range execBlock.InputBlock {
 		idTag, err := MatchIDName(param)
 		if err != nil {
 			return err
 		}
-		idStr := idTag.GetLiteral()
-
-		inputValue, ok := varInputs[idStr]
-		if !ok {
-			return zerr.InputValueNotFound(idStr)
-		}
 
 		// set inputValue to current scope
-		if err := c.BindSymbolConst(idTag, inputValue); err != nil {
+		if err := c.BindSymbolConst(idTag, params[idx]); err != nil {
 			return err
 		}
 	}
@@ -233,8 +255,6 @@ func evalStatement(c *r.Context, stmt syntax.Statement) error {
 			}
 			return nil
 		}
-	case *syntax.ImportStmt:
-		return evalImportStmt(c, v)
 	case *syntax.ClassDeclareStmt:
 		className, err := MatchIDName(v.ClassName)
 		if err != nil {

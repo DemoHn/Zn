@@ -541,7 +541,7 @@ func ParseArrayExpr(p *ParserZH) syntax.UnionMapList {
 	var isArrayType = true
 	// #1. consume first syntax.Expression
 	exprI := ParseExpressionMAP(p)
-	if match, tk := p.tryConsume(TypeAssignMark, TypePauseCommaSep, TypeArrayQuoteR); match {
+	if match, tk := p.tryConsume(TypeAssignMark, TypeArrayQuoteR); match {
 		switch tk.Type {
 		case TypeArrayQuoteR:
 			ar.Items = append(ar.Items, exprI)
@@ -556,29 +556,23 @@ func ParseArrayExpr(p *ParserZH) syntax.UnionMapList {
 				Value: exprR,
 			})
 			p.unsetStmtCompleteFlag()
-		case TypePauseCommaSep:
-			isArrayType = true
-			// append item on array
-			ar.Items = append(ar.Items, exprI)
 		}
 	} else {
-		panic(p.getInvalidSyntaxPeek())
+		isArrayType = true
+		// append item on array
+		ar.Items = append(ar.Items, exprI)
 	}
 
 	if isArrayType {
-		// parse array like 【1、2、3、4、5】
+		// parse array like 【1，2，3，4，5】
 		for {
 			// if not, parse next expr
 			expr := ParseExpressionMAP(p)
 			ar.Items = append(ar.Items, expr)
 
 			// if parse to end
-			if match, tk := p.tryConsume(TypeArrayQuoteR, TypePauseCommaSep); match {
-				if tk.Type == TypeArrayQuoteR {
-					return ar
-				}
-			} else {
-				panic(p.getInvalidSyntaxPeek())
+			if match, _ := p.tryConsume(TypeArrayQuoteR); match {
+				return ar
 			}
 		}
 	} else {

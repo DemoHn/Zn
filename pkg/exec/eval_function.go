@@ -13,26 +13,8 @@ import (
 // from Zn code (*syntax.BlockStmt). It's the constructor of 如何XX or (anoymous function in the future)
 func compileFunction(upperCtx *r.Context, node *syntax.FunctionDeclareStmt) *value.Function {
 	var mainLogicHandler = func(c *r.Context, params []r.Element) (r.Element, error) {
-		// 1. handle params (convert params -> varInput map inside the function scope)
-		// 1.1 check param length
-		inputParamNum := len(node.ExecBlock.InputBlock)
-		if len(params) != inputParamNum {
-			return nil, zerr.MismatchParamLengthError(inputParamNum, len(params))
-		}
-
-		varInputMap := map[string]r.Element{}
-		// 1.2 match param list with param name
-		for idx, inputV := range node.ExecBlock.InputBlock {
-			inputName, err := MatchIDName(inputV)
-			if err != nil {
-				return nil, err
-			}
-			inputParam := inputName.GetLiteral()
-			varInputMap[inputParam] = params[idx]
-		}
-
 		// 2. do eval exec block
-		if err := evalExecBlock(c, node.ExecBlock, varInputMap); err != nil {
+		if err := evalExecBlock(c, node.ExecBlock, params); err != nil {
 			return nil, err
 		}
 
