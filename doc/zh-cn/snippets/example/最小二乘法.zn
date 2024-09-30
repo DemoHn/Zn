@@ -1,6 +1,6 @@
 注：关于线性拟合的基础理论以及公式可参阅 https://en.wikipedia.org/wiki/Simple_linear_regression
 如何线性拟合？
-    已知数据源
+    输入数据源
     令Sx、Sy、Sxx、Sxy、Syy = 0
     令N、Xi、Yi = 0
     注：最后得到的线性方程的斜率β、截距α、残差R²    

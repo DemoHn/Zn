@@ -23,6 +23,7 @@ const (
 
 	EnvPreforkChildKey = "ZINC_PREFORK_CHILD"
 	EnvExecTimeout     = "ZINC_EXEC_TIMEOUT"
+	EnvNamedPipeID     = "ZINC_PIPE_ID"
 	EnvPreforkChildVal = "OK"
 
 	NamedPipe = "named-pipe"
@@ -124,7 +125,9 @@ func (zns *ZnPMServer) StartMaster(connUrl string, cfg ZnPMServerConfig) error {
 	ln := l.(*net.TCPListener)
 
 	log.Print("即将打开父-子进程通信通道")
-	if err := syscall.Mkfifo(NamedPipe, 0666); err != nil {
+	p, err := CreateNamedPipe()
+	if err != nil {
+		log.Fatalf("CreatePipe: failed - %s", err)
 		return err
 	}
 
@@ -144,19 +147,13 @@ func (zns *ZnPMServer) StartMaster(connUrl string, cfg ZnPMServerConfig) error {
 	}()
 
 	//// read named pipe data to recv msg from child process
-	go zns.readNamedPipe(NamedPipe)
-
-	// open named pipe write to child process
-	pipeWriter, err := os.OpenFile(NamedPipe, os.O_WRONLY, 0777)
-	if err != nil {
-		return err
-	}
+	go zns.readNamedPipe(p)
 
 	//// maintain child state (DO NOT UPDATE child data directly!)
-	go zns.maintainChildState(cfg, ln, pipeWriter)
+	go zns.maintainChildState(cfg, ln, p)
 
 	for i := 0; i < cfg.InitProcs; i++ {
-		if err := zns.spawnProcess(cfg, ln, pipeWriter); err != nil {
+		if err := zns.spawnProcess(cfg, ln, p); err != nil {
 			return err
 		}
 	}
@@ -176,7 +173,7 @@ func (zns *ZnPMServer) StartMaster(connUrl string, cfg ZnPMServerConfig) error {
 }
 
 //// fork child processes
-func (zns *ZnPMServer) spawnProcess(cfg ZnPMServerConfig, l *net.TCPListener, pipeWriter *os.File) error {
+func (zns *ZnPMServer) spawnProcess(cfg ZnPMServerConfig, l *net.TCPListener, p *pipe) error {
 	// prepare net.Conn file to transfer to child processes
 	lf, err := l.File()
 	if err != nil {
@@ -192,12 +189,13 @@ func (zns *ZnPMServer) spawnProcess(cfg ZnPMServerConfig, l *net.TCPListener, pi
 	cmd.Env = append(os.Environ(),
 		fmt.Sprintf("%s=%s", EnvPreforkChildKey, EnvPreforkChildVal),
 		fmt.Sprintf("%s=%d", EnvExecTimeout, cfg.Timeout),
+		fmt.Sprintf("%s=%s", EnvNamedPipeID, GetPipeID(p)),
 	)
 
 	// pass connection FD to child process as ExtraFile
 	cmd.Stderr = os.Stderr
 	cmd.Stdout = os.Stdout
-	cmd.ExtraFiles = []*os.File{lf, pipeWriter}
+	cmd.ExtraFiles = []*os.File{lf}
 
 	if err := cmd.Start(); err != nil {
 		return err
@@ -221,22 +219,20 @@ func (zns *ZnPMServer) spawnProcess(cfg ZnPMServerConfig, l *net.TCPListener, pi
 	return nil
 }
 
-func (zns *ZnPMServer) readNamedPipe(pipeFile string) {
-	pipeReader, err := os.OpenFile(pipeFile, os.O_RDONLY, os.ModeNamedPipe)
+func (zns *ZnPMServer) readNamedPipe(pipe *pipe) {
+	pipeReader, err := OpenNamedPipeReader(pipe)
 	if err != nil {
 		log.Fatal("[PARENT] Open named pipe file error:", err)
 		return
 	}
-	os.Remove(pipeFile)
 
 	var buf = make([]byte, 5)
 	for {
 		var state uint8
 		var pid int
 		// read packet
-		_, err := pipeReader.Read(buf)
-		if err != nil {
-			log.Fatal("[PARENT] read buffer failed")
+		if err := ReadDataFromNamedPipe(pipeReader, buf); err != nil {
+			log.Fatalf("[PARENT] read buffer failed: %s", err)
 			continue
 		}
 
@@ -253,7 +249,7 @@ func (zns *ZnPMServer) readNamedPipe(pipeFile string) {
 }
 
 // summon all writing actions into one goroutine to ensure thread-safe on writing.
-func (zns *ZnPMServer) maintainChildState(cfg ZnPMServerConfig, ln *net.TCPListener, pipeWriter *os.File) {
+func (zns *ZnPMServer) maintainChildState(cfg ZnPMServerConfig, ln *net.TCPListener, p *pipe) {
 	for {
 		select {
 		case aw := <-zns.addChan:
@@ -291,7 +287,7 @@ func (zns *ZnPMServer) maintainChildState(cfg ZnPMServerConfig, ln *net.TCPListe
 				zns.refCount = finalProcNum
 				go func() {
 					for i := 0; i < addNum; i++ {
-						if err := zns.spawnProcess(cfg, ln, pipeWriter); err != nil {
+						if err := zns.spawnProcess(cfg, ln, p); err != nil {
 							log.Fatalf("启动子进程失败：%v", err)
 							break
 						}
@@ -310,7 +306,7 @@ func (zns *ZnPMServer) maintainChildState(cfg ZnPMServerConfig, ln *net.TCPListe
 					for i := 0; i < numsToSpawn; i++ {
 						// add time delay to avoid non-stop reboot too quick
 						time.Sleep(100 * time.Millisecond)
-						if err := zns.spawnProcess(cfg, ln, pipeWriter); err != nil {
+						if err := zns.spawnProcess(cfg, ln, p); err != nil {
 							log.Fatalf("启动子进程失败：%v", err)
 							break
 						}
@@ -331,11 +327,18 @@ func (zns *ZnPMServer) StartWorker() error {
 	lf := os.NewFile(uintptr(3), fmt.Sprintf("listener-%d", pid))
 	defer lf.Close()
 
-	pipeWriter := os.NewFile(uintptr(4), fmt.Sprintf("pipe-%d", pid))
+	// read pipeID from env
+	p := NewPipe(os.Getenv(EnvNamedPipeID))
+	pipeWriter, err := OpenNamedPipeWriter(p)
+	if err != nil {
+		log.Fatalf("[CHILD] OpenNamedPipeWriter failed: %s", err.Error())
+		return err
+	}
 	defer pipeWriter.Close()
 
 	lc, err := net.FileListener(lf)
 	if err != nil {
+		log.Fatalf("[CHILD] Inherit Parent TCPListener failed: %s", err.Error())
 		return err
 	}
 	// get execution timeout
