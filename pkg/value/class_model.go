@@ -85,15 +85,8 @@ func (cm *ClassModel) FindMethod(name string) (*Function, bool) {
 ////// SETTERS //////
 func (cm *ClassModel) SetConstructorFunc(fn *Function) *ClassModel {
 	cm.constructor = func(ctx *r.Context, params []r.Element) (r.Element, error) {
-		obj := NewObject(cm, map[string]r.Element{})
-
-		// exec constructor logic (last value is useless)
-		if _, err := fn.Exec(ctx, obj, params); err != nil {
-			return nil, err
-		}
-		return obj, nil
+		return fn.Exec(ctx, nil, params)
 	}
-
 	return cm
 }
 

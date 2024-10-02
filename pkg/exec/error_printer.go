@@ -98,15 +98,12 @@ func WrapRuntimeError(c *r.Context, err error) error {
 }
 
 func (rw *RuntimeErrorWrapper) Error() string {
-	errClass := "运行错误"
+	errClass := "运行异常"
 	var errLines []string
 	code := 0
 
 	if werr, ok := rw.err.(*zerr.RuntimeError); ok {
 		code = werr.Code
-	}
-	if ex, ok := rw.err.(*zerr.Exception); ok {
-		errClass = ex.GetName()
 	}
 
 	if len(rw.traceback) > 0 {

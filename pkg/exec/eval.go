@@ -148,37 +148,40 @@ func evalStmtBlock(c *r.Context, stmtBlock *syntax.StmtBlock) error {
 }
 
 func handleExceptions(c *r.Context, catchBlock []*syntax.CatchBlockPair, exception r.Element) error {
+	objClass := "异常"
 	if obj, ok := exception.(*value.Object); ok {
-		objClass := obj.GetObjectName()
+		objClass = obj.GetObjectName()
+	}
 
-		// iterate catchBlock to match
-		for _, catchBlockItem := range catchBlock {
-			classID, err := MatchIDName(catchBlockItem.ExceptionClass)
-			if err != nil {
-				return err
-			}
-
-			if classID.GetLiteral() == objClass {
-				newScope := c.PushScope()
-				defer c.PopScope()
-
-				newScope.SetThisValue(exception)
-
-				// do execution
-				return evalStmtBlock(c, catchBlockItem.StmtBlock)
-			}
+	// iterate catchBlock to match
+	for _, catchBlockItem := range catchBlock {
+		classID, err := MatchIDName(catchBlockItem.ExceptionClass)
+		if err != nil {
+			return err
 		}
-		// TODO: show error from Element!
-		finalStr := "出现异常"
+
+		if classID.GetLiteral() == objClass {
+			newScope := c.PushScope()
+			defer c.PopScope()
+
+			newScope.SetThisValue(exception)
+
+			// do execution
+			return evalStmtBlock(c, catchBlockItem.StmtBlock)
+		}
+	}
+
+	if objE, ok := exception.(*value.Exception); ok {
+		return objE
+	} else {
+		finalStr := ""
 		s, _ := exception.GetProperty(c, "内容")
 		if s != nil {
 			if ss, ok := s.(*value.String); ok {
 				finalStr = ss.GetValue()
 			}
 		}
-		return zerr.NewRuntimeException(finalStr)
-	} else {
-		return zerr.NewErrorSLOT("暂不支持拦截非对象型的异常！")
+		return value.NewException(finalStr)
 	}
 }
 

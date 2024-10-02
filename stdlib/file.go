@@ -4,7 +4,6 @@ import (
 	"io/ioutil"
 	"os"
 
-	zerr "github.com/DemoHn/Zn/pkg/error"
 	"github.com/DemoHn/Zn/pkg/value"
 
 	r "github.com/DemoHn/Zn/pkg/runtime"
@@ -22,12 +21,12 @@ func readTextFromFileFunc(c *r.Context, values []r.Element) (r.Element, error) {
 	// open file
 	file, err := os.Open(v.String())
 	if err != nil {
-		return nil, zerr.NewRuntimeException("打开文件失败：" + err.Error())
+		return nil, value.NewException("打开文件失败：" + err.Error())
 	}
 	defer file.Close()
 	data, err := ioutil.ReadAll(file)
 	if err != nil {
-		return nil, zerr.NewRuntimeException("读取文件失败：" + err.Error())
+		return nil, value.NewException("读取文件失败：" + err.Error())
 	}
 	return value.NewString(string(data)), nil
 }
@@ -42,7 +41,7 @@ func writeTextFromFileFunc(c *r.Context, values []r.Element) (r.Element, error) 
 
 	err := ioutil.WriteFile(fileName.String(), []byte(content.String()), 0644)
 	if err != nil {
-		return nil, zerr.NewRuntimeException("写入文件失败：" + err.Error())
+		return nil, value.NewException("写入文件失败：" + err.Error())
 	}
 	return nil, nil
 }
@@ -55,7 +54,7 @@ func readDirFunc(c *r.Context, values []r.Element) (r.Element, error) {
 	dirName := values[0].(*value.String)
 	dirs, err := os.ReadDir(dirName.String())
 	if err != nil {
-		return nil, zerr.NewRuntimeException("读取目录失败：" + err.Error())
+		return nil, value.NewException("读取目录失败：" + err.Error())
 	}
 
 	info := value.NewArray([]r.Element{})

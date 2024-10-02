@@ -55,9 +55,7 @@ func newExceptionModel() *value.ClassModel {
 		return value.NewException(message.String()), nil
 	})
 
-	return value.NewClassModel("异常", nil).
-		SetConstructorFunc(constructorFunc).
-		DefineProperty("内容", value.NewString(""))
+	return value.NewClassModel("异常", nil).SetConstructorFunc(constructorFunc)
 }
 
 func newDisplayFunc() *value.Function {

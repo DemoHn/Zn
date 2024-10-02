@@ -13,12 +13,15 @@ func NewException(message string) *Exception {
 	return &Exception{Message: message}
 }
 
-func (e *Exception) GetMessage() string {
+func (e *Exception) Error() string {
 	return e.Message
 }
 
 // GetProperty -
 func (e *Exception) GetProperty(c *r.Context, name string) (r.Element, error) {
+	if name == "内容" {
+		return NewString(e.Message), nil
+	}
 	return nil, zerr.PropertyNotFound(name)
 }
 
