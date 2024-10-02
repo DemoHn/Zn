@@ -87,6 +87,7 @@ func (cm *ClassModel) SetConstructorFunc(fn *Function) *ClassModel {
 	cm.constructor = func(ctx *r.Context, params []r.Element) (r.Element, error) {
 		return fn.Exec(ctx, nil, params)
 	}
+
 	return cm
 }
 

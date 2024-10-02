@@ -5,6 +5,10 @@ import (
 	r "github.com/DemoHn/Zn/pkg/runtime"
 )
 
+const (
+	EVConstThisVariableName = "此"
+)
+
 type FuncExecutor = func(*r.Context, []r.Element) (r.Element, error)
 
 type Function struct {
@@ -49,7 +53,7 @@ func (fn *Function) Exec(c *r.Context, thisValue r.Element, params []r.Element) 
 
 		// add a const variable "此" to represent "$this"
 		// usage: 以此（调用某方法：XX、YY）
-		if err := c.BindSymbolConst(r.NewIDName("此"), thisValue); err != nil {
+		if err := c.BindSymbolConst(r.NewIDName(EVConstThisVariableName), thisValue); err != nil {
 			return nil, err
 		}
 	}

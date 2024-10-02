@@ -14,6 +14,11 @@ import (
 	"github.com/DemoHn/Zn/pkg/value"
 )
 
+const (
+	EVConstExceptionClassName       = "异常"
+	EVConstExceptionContentProperty = "内容"
+)
+
 // eval.go evaluates program from generated AST tree with specific scopes
 // common signature of eval functions:
 //
@@ -148,34 +153,42 @@ func evalStmtBlock(c *r.Context, stmtBlock *syntax.StmtBlock) error {
 }
 
 func handleExceptions(c *r.Context, catchBlock []*syntax.CatchBlockPair, exception r.Element) error {
-	objClass := "异常"
-	if obj, ok := exception.(*value.Object); ok {
-		objClass = obj.GetObjectName()
+	// by default, we use "异常" to match *value.Exception type exceptions
+	var objClassName = ""
+	switch v := exception.(type) {
+	case *value.Exception:
+		objClassName = EVConstExceptionClassName
+	case *value.Object:
+		objClassName = v.GetObjectName()
 	}
 
-	// iterate catchBlock to match
+	// iterate catchBlocks to match
 	for _, catchBlockItem := range catchBlock {
 		classID, err := MatchIDName(catchBlockItem.ExceptionClass)
 		if err != nil {
 			return err
 		}
 
-		if classID.GetLiteral() == objClass {
+		// if exception block matches exception className
+		if objClassName != "" && classID.GetLiteral() == objClassName {
 			newScope := c.PushScope()
 			defer c.PopScope()
 
 			newScope.SetThisValue(exception)
 
-			// do execution
+			// do execution (with "this" value = exception value)
 			return evalStmtBlock(c, catchBlockItem.StmtBlock)
 		}
 	}
 
+	// no handle block catches this error, then throw it anyway
+	// for default *value.Exception class
 	if objE, ok := exception.(*value.Exception); ok {
 		return objE
 	} else {
+		// other custom exception class
 		finalStr := ""
-		s, _ := exception.GetProperty(c, "内容")
+		s, _ := exception.GetProperty(c, EVConstExceptionContentProperty)
 		if s != nil {
 			if ss, ok := s.(*value.String); ok {
 				finalStr = ss.GetValue()
@@ -192,7 +205,6 @@ func evalStatement(c *r.Context, stmt syntax.Statement) error {
 	var returnValue r.Element
 	var sp = c.GetCurrentScope()
 
-	module := c.GetCurrentModule()
 	// set current line
 	c.SetCurrentLine(stmt.GetCurrentLine())
 
@@ -223,66 +235,12 @@ func evalStatement(c *r.Context, stmt syntax.Statement) error {
 		return nil
 	case *syntax.FunctionDeclareStmt:
 		if v.DeclareType == syntax.DeclareTypeConstructor {
-			// check if class type is valid
-			className, err := MatchIDName(v.Name)
-			if err != nil {
-				return err
-			}
-			classModel, err := c.FindElement(className)
-			if err != nil {
-				return err
-			}
-			if cmodel, ok := classModel.(*value.ClassModel); ok {
-				fn := compileFunction(c, v)
-				cmodel.SetConstructorFunc(fn)
-			} else {
-				return zerr.InvalidClassType(className.GetLiteral())
-			}
-			return nil
+			return evalConstructorDeclareStmt(c, v)
 		} else {
-			// declare as normal function
-			vtag, err := MatchIDName(v.Name)
-			if err != nil {
-				return err
-			}
-			fn := compileFunction(c, v)
-
-			// add symbol to current scope first
-			if err := c.BindSymbol(vtag, fn); err != nil {
-				return err
-			}
-
-			// then add symbol to export value
-			if err := module.AddExportValue(vtag.GetLiteral(), fn); err != nil {
-				return err
-			}
-			return nil
+			return evalFunctionDeclareStmt(c, v)
 		}
 	case *syntax.ClassDeclareStmt:
-		className, err := MatchIDName(v.ClassName)
-		if err != nil {
-			return err
-		}
-
-		if c.FindParentScope() != nil {
-			return zerr.ClassNotOnRoot(className.GetLiteral())
-		}
-		// bind classRef
-		classRef, err := compileClass(c, className, v)
-		if err != nil {
-			return err
-		}
-
-		// add symbol to current scope first
-		if err := c.BindSymbolConst(className, classRef); err != nil {
-			return err
-		}
-
-		// then add symbol to export value
-		if err := module.AddExportValue(className.GetLiteral(), classRef); err != nil {
-			return err
-		}
-		return nil
+		return evalClassDeclareStmt(c, v)
 	case *syntax.IterateStmt:
 		return evalIterateStmt(c, v)
 	case *syntax.FunctionReturnStmt:
@@ -293,35 +251,7 @@ func evalStatement(c *r.Context, stmt syntax.Statement) error {
 		// send RETURN break
 		return zerr.NewReturnSignal(val)
 	case *syntax.ThrowExceptionStmt:
-		// profoundly return an ERROR to terminate the execution flow
-		expClassID, err := MatchIDName(v.ExceptionClass)
-		if err != nil {
-			return err
-		}
-		expClassRef, err := c.FindElement(expClassID)
-		if err != nil {
-			return err
-		}
-
-		if ref, ok := expClassRef.(*value.ClassModel); ok {
-			// exec expressions
-			var exprs []r.Element
-			for _, param := range v.Params {
-				exprI, err := evalExpression(c, param)
-				if err != nil {
-					return err
-				}
-				exprs = append(exprs, exprI)
-			}
-			// get exception value!
-			val, err := ref.Construct(c, exprs)
-			if err != nil {
-				return err
-			} else {
-				return zerr.NewExceptionSignal(val)
-			}
-		}
-		return zerr.InvalidExceptionType(expClassID.GetLiteral())
+		return evalThrowExceptionStmt(c, v)
 	case *syntax.ContinueStmt:
 		// send continue signal
 		return zerr.NewContinueSignal()
@@ -367,6 +297,98 @@ func evalVarDeclareStmt(c *r.Context, node *syntax.VarDeclareStmt) error {
 			}
 		}
 	}
+	return nil
+}
+
+// 定义XX
+func evalClassDeclareStmt(c *r.Context, node *syntax.ClassDeclareStmt) error {
+	module := c.GetCurrentModule()
+
+	className, err := MatchIDName(node.ClassName)
+	if err != nil {
+		return err
+	}
+
+	if c.FindParentScope() != nil {
+		return zerr.ClassNotOnRoot(className.GetLiteral())
+	}
+	// bind classRef
+	classRef, err := compileClass(c, className, node)
+	if err != nil {
+		return err
+	}
+
+	// add symbol to current scope first
+	if err := c.BindSymbolConst(className, classRef); err != nil {
+		return err
+	}
+
+	// then add symbol to export value
+	if err := module.AddExportValue(className.GetLiteral(), classRef); err != nil {
+		return err
+	}
+	return nil
+}
+
+// 如何XX？
+func evalFunctionDeclareStmt(c *r.Context, node *syntax.FunctionDeclareStmt) error {
+	module := c.GetCurrentModule()
+
+	// declare as normal function
+	vtag, err := MatchIDName(node.Name)
+	if err != nil {
+		return err
+	}
+	fn := compileFunction(c, node)
+
+	// add symbol to current scope first
+	if err := c.BindSymbol(vtag, fn); err != nil {
+		return err
+	}
+
+	// then add symbol to export value
+	if err := module.AddExportValue(vtag.GetLiteral(), fn); err != nil {
+		return err
+	}
+	return nil
+}
+
+// 如何新建XX？
+func evalConstructorDeclareStmt(upperCtx *r.Context, node *syntax.FunctionDeclareStmt) error {
+	// 1. check if class type is valid
+	className, err := MatchIDName(node.Name)
+	if err != nil {
+		return err
+	}
+	// 2. find class model
+	classModel, err := upperCtx.FindElement(className)
+	if err != nil {
+		return err
+	}
+
+	cmodel, ok := classModel.(*value.ClassModel)
+	if !ok {
+		return zerr.InvalidClassType(className.GetLiteral())
+	}
+
+	//// there are some different Factors from normal method function:
+	// 1. no outerScope (clousure scope)
+	// 2. no 此 const variable inside the fn scope
+	constructorLogic := func(c *r.Context, elems []r.Element) (r.Element, error) {
+		fnScope := c.PushScope()
+		defer c.PopScope()
+
+		newObject := value.NewObject(cmodel, map[string]r.Element{})
+		// set "this" value
+		fnScope.SetThisValue(newObject)
+
+		if err := evalExecBlock(c, node.ExecBlock, elems); err != nil {
+			return nil, err
+		}
+		return newObject, nil
+	}
+	cmodel.SetConstructorFunc(value.NewFunction(nil, constructorLogic))
+
 	return nil
 }
 
@@ -767,6 +789,40 @@ func evalLogicCombiner(c *r.Context, expr *syntax.LogicExpr) (*value.Bool, error
 	default: // logicOR
 		return value.NewBool(vleft.GetValue() || vright.GetValue()), nil
 	}
+}
+
+// 抛出XX异常：“xxx”！
+func evalThrowExceptionStmt(c *r.Context, node *syntax.ThrowExceptionStmt) error {
+	// profoundly return an ERROR to terminate the execution flow
+	expClassID, err := MatchIDName(node.ExceptionClass)
+	if err != nil {
+		return err
+	}
+	expClassModel, err := c.FindElement(expClassID)
+	if err != nil {
+		return err
+	}
+
+	cmodel, ok := expClassModel.(*value.ClassModel)
+	if !ok {
+		return zerr.InvalidExceptionType(expClassID.GetLiteral())
+	}
+	// exec expressions, similiar to "新建XX" statement
+	var exprs []r.Element
+	for _, param := range node.Params {
+		exprI, err := evalExpression(c, param)
+		if err != nil {
+			return err
+		}
+		exprs = append(exprs, exprI)
+	}
+
+	// build exception value!
+	exceptionObj, err := cmodel.Construct(c, exprs)
+	if err != nil {
+		return err
+	}
+	return zerr.NewExceptionSignal(exceptionObj)
 }
 
 // evaluate logic comparator
