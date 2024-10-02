@@ -13,6 +13,7 @@ func ParseProgram(p *ParserZH) *syntax.Program {
 	program := &syntax.Program{
 		Lexer:       p.Lexer,
 		ImportBlock: []*syntax.ImportStmt{},
+		ExecBlock:   nil,
 	}
 
 	const (

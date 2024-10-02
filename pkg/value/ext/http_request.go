@@ -104,14 +104,14 @@ func httpRequestExecReadBody(h *HTTPRequest, c *r.Context, values []r.Element) (
 	// impl GetBody function here
 	body, err := ioutil.ReadAll(h.request.Body)
 	if err != nil {
-		return nil, value.NewException("读取请求内容出现异常")
+		return nil, value.ThrowException("读取请求内容出现异常")
 	}
 
 	contentType := h.request.Header.Get("Content-Type")
 	if contentType == "application/json" {
 		var jsonBody interface{}
 		if err := json.Unmarshal(body, &jsonBody); err != nil {
-			return nil, value.NewException("将请求内容解析成JSON格式时出现异常")
+			return nil, value.ThrowException("将请求内容解析成JSON格式时出现异常")
 		}
 		return buildHashMapItem(jsonBody), nil
 	}

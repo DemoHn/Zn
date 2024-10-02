@@ -509,7 +509,7 @@ $PG($BK($HM()))
 ========
 3. mixed string and decimal array
 --------
-【「MacBook Air 12"」、2080、3000】
+【「MacBook Air 12"」，2080，3000】
 --------
 $PG($BK($ARR($STR(MacBook Air 12") $ID(2080) $ID(3000))))
 
@@ -517,9 +517,9 @@ $PG($BK($ARR($STR(MacBook Air 12") $ID(2080) $ID(3000))))
 4. array with newline
 --------
 【
-    「MacBook Air 12"」、
-    2080、
-    3000
+    「MacBook Air 12"」，
+    2080，
+    3000，
 】
 --------
 $PG($BK($ARR($STR(MacBook Air 12") $ID(2080) $ID(3000))))
@@ -528,9 +528,9 @@ $PG($BK($ARR($STR(MacBook Air 12") $ID(2080) $ID(3000))))
 5. array nest with array
 --------
 【
-    「MacBook Air 12"」、
-    2080、
-    【100、200、300】
+    「MacBook Air 12"」，
+    2080，
+    【100，200，300】
 】
 --------
 $PG($BK($ARR(
@@ -543,9 +543,9 @@ $PG($BK($ARR(
 6. array nest with array nest with array
 --------
 【
-    「MacBook Air 12"」、
-    2080、
-    【100、200、300、
+    「MacBook Air 12"」，
+    2080，
+    【100，200，300，
         【
             10000
         】
@@ -847,7 +847,7 @@ const iterateCasesOK = `
 ========
 1. normal iterate expr
 --------
-遍历【1、2、3】：
+遍历【1，2，3】：
     令A设为值
     结束循环
 --------
@@ -1049,7 +1049,7 @@ $PG($BK(
 2. with one param
 --------
 如何搞个大新闻？
-	已知变量1
+	输入变量1
 	1024
 --------
 $PG($BK(
@@ -1065,7 +1065,7 @@ $PG($BK(
 3. with multiple params
 --------
 如何搞个大新闻？
-	已知A、B、` + "`" + `华为手机` + "`" + `
+	输入A、B、` + "`" + `华为手机` + "`" + `
 	1024
 --------
 $PG($BK(
@@ -1082,53 +1082,7 @@ $PG($BK(
 	)
 ))
 ========
-4. with multiple params and refs
---------
-如何搞个大新闻？
-	已知A、&B、&` + "`" + `华为手机` + "`" + `
-	1024
---------
-$PG($BK(
-	$FN(
-		name=($ID(搞个大新闻))
-		params=(
-			$PM(id=($ID(A)) ref=(false))
-			$PM(id=($ID(B)) ref=(true))
-			$PM(id=($ID(华为手机)) ref=(true))
-		)
-		blockTokens=($BK(
-			$ID(1024)
-		))
-	)
-))
-========
-5. with multiple refs and return block
---------
-如何搞个大新闻？
-	已知 &A、&B、&` + "`" + `华为手机` + "`" + `
-	如果C == 空：
-		输出1024
---------
-$PG($BK(
-	$FN(
-		name=($ID(搞个大新闻))
-		params=(
-			$PM(id=($ID(A)) ref=(true))
-			$PM(id=($ID(B)) ref=(true))
-			$PM(id=($ID(华为手机)) ref=(true))
-		)
-		blockTokens=($BK(
-			$IF(
-				ifExpr=($EQ(L=($ID(C)) R=($ID(空))))
-				ifBlock=($BK(
-					$RT($ID(1024))
-				))
-			)
-		))
-	)
-))
-========
-6. with catch block
+4. with catch block
 --------
 如何搞个大新闻？
 	如果C == 空：
@@ -1136,10 +1090,10 @@ $PG($BK(
 		输出1024
 	否则：
 		输出1024	
-接到A异常：
-	输出233
-接到B异常：
-	输出566
+	拦截A异常：
+		输出233
+	拦截B异常：
+		输出566
 --------
 $PG($BK(
 	$FN(

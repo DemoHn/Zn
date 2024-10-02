@@ -170,6 +170,11 @@ func DuplicateValue(in r.Element) r.Element {
 	return in
 }
 
+func ThrowException(message string) *zerr.Signal {
+	expValue := NewException(message)
+	return zerr.NewExceptionSignal(expValue)
+}
+
 // StringifyValue - format string from r.Value
 // NOTE: for `String` element, the result does not contain「 & 」
 func StringifyValue(value r.Element) string {

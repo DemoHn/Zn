@@ -26,7 +26,7 @@ func parseJsonFunc(c *r.Context, values []r.Element) (r.Element, error) {
 	result := map[string]interface{}{}
 	// core logic (via Go's stdlib)
 	if err := json.Unmarshal(vd, &result); err != nil {
-		return nil, value.NewException("解析JSON失败：" + err.Error())
+		return nil, value.ThrowException("解析JSON失败：" + err.Error())
 	}
 
 	return buildHashMapItem(result), nil
@@ -39,7 +39,7 @@ func generateJsonFunc(c *r.Context, values []r.Element) (r.Element, error) {
 	}
 	data, err := json.Marshal(buildPlainStrItem(values[0]))
 	if err != nil {
-		return nil, value.NewException("生成JSON失败：" + err.Error())
+		return nil, value.ThrowException("生成JSON失败：" + err.Error())
 	}
 	return value.NewString(string(data)), nil
 }

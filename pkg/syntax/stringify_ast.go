@@ -18,9 +18,13 @@ func StringifyAST(node Node) string {
 		if len(importBlockStr) > 0 {
 			importSS = strings.Join(importBlockStr, " ") + " "
 		}
+		execBlockSS := ""
+		if v.ExecBlock != nil {
+			execBlockSS = StringifyAST(v.ExecBlock)
+		}
 		return fmt.Sprintf("$PG(%s%s)",
 			importSS,
-			StringifyAST(v.ExecBlock),
+			execBlockSS,
 		)
 	case *ExecBlock:
 		// input block

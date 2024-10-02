@@ -217,7 +217,7 @@ func strExecAtoi(s *String, c *r.Context, values []r.Element) (r.Element, error)
 
 	num, err := strconv.ParseFloat(s.value, 64)
 	if err != nil {
-		return nil, NewException("转成数值失败，文本可能并不符合合适的数值格式")
+		return nil, ThrowException("转成数值失败，文本可能并不符合合适的数值格式")
 	}
 
 	return NewNumber(num), nil

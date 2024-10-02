@@ -29,7 +29,7 @@ func setupStmtFromCode(text string) (syntax.Statement, error) {
 		return nil, fmt.Errorf("syntax error on init:%v", pErr)
 	}
 
-	stmts := program.Content.Children
+	stmts := program.ExecBlock.StmtBlock.Children
 	if len(stmts) > 0 {
 		// get first child statement ONLY
 		return stmts[0], nil
