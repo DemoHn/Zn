@@ -13,8 +13,6 @@ SHE     设
 SHI     是
 RU      如
 HE      何
-YI      已
-ZHIy    知
 BU      不
 DENG    等
 YU      于
@@ -71,7 +69,6 @@ CondOtherW      43      再如
 CondW           44      如果
 FuncW           45      如何
 GetterW         46      何为
-ParamAssignW    47      已知
 ReturnW         48      输出
 AssignW         49      设为
 LogicNoW        50      不为

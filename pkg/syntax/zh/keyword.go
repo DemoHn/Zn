@@ -56,8 +56,6 @@ const (
 	GlyphDAO rune = 0x5BFC
 	// GlyphXIAO - 小 - 小于，不小于
 	GlyphXIAO rune = 0x5C0F
-	// GlyphYI - 已 - 已知
-	GlyphYI rune = 0x5DF2
 	// GlyphJIAN - 建 - 新建
 	GlyphJIAN rune = 0x5EFA
 	// GlyphDANG - 当 - 每当
@@ -94,8 +92,6 @@ const (
 	GlyphHUAN rune = 0x73AF
 	// GlyphDE - 的 - 的
 	GlyphDE rune = 0x7684
-	// GlyphZHIy - 知 - 已知
-	GlyphZHIy rune = 0x77E5
 	// GlyphDENG - 等 - 等于，不等于
 	GlyphDENG rune = 0x7B49
 	// GlyphJIE - 结 - 结束循环
@@ -121,7 +117,6 @@ const (
 	TypeCondW        uint8 = 44 // 如果
 	TypeFuncW        uint8 = 45 // 如何
 	TypeGetterW      uint8 = 46 // 何为
-	TypeParamAssignW uint8 = 47 // 已知
 	TypeReturnW      uint8 = 48 // 输出
 	TypeAssignW      uint8 = 49 // 设为
 	TypeLogicNoW     uint8 = 50 // 不为
@@ -252,13 +247,6 @@ func parseKeyword(l *syntax.Lexer, moveForward bool) (bool, syntax.Token, error)
 		if l.Peek() == GlyphYU {
 			wordLen = 2
 			tk.Type = TypeLogicLtW
-		} else {
-			return false, syntax.Token{}, nil
-		}
-	case GlyphYI:
-		if l.Peek() == GlyphZHIy {
-			wordLen = 2
-			tk.Type = TypeParamAssignW
 		} else {
 			return false, syntax.Token{}, nil
 		}

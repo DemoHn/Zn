@@ -26,8 +26,6 @@ const (
 	EnvNamedPipeID     = "ZINC_PIPE_ID"
 	EnvPreforkChildVal = "OK"
 
-	NamedPipe = "named-pipe"
-
 	WORKER_STATE_IDLE    uint8 = 1 << 0
 	WORKER_STATE_BUSY    uint8 = 1 << 1
 	WORKER_STATE_STOPPED uint8 = 1 << 2
