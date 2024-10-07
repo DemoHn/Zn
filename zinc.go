@@ -39,7 +39,7 @@ var NewZnHashMap = value.NewHashMap
 var NewZnObject = value.NewObject
 var NewZnNull = value.NewNull
 
-const ZINC_VERSION = "rev07"
+const ZINC_VERSION = "rev08"
 
 type ZnCompiler struct {
 	// version - compiler version
