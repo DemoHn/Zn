@@ -4,7 +4,7 @@ import (
 	"github.com/DemoHn/Zn/pkg/syntax"
 )
 
-//// keyword character (ideographs) definition
+// // keyword character (ideographs) definition
 // keywords are all ideographs that its length varies from its definitions.
 // so here we define all possible chars that may be an element of one keyword.
 const (

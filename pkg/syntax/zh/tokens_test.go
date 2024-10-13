@@ -14,6 +14,12 @@ type nextTokenCase struct {
 	tokens [][]int
 }
 
+type escapeStringCase struct {
+	name       string
+	input      string
+	expLiteral string
+}
+
 func TestNextToken_NumberONLY(t *testing.T) {
 	// NOTE 1:
 	// nums such as 2..3 will be regarded as `2.`(2.0) and `.3`(0.3) combination
@@ -149,6 +155,82 @@ func TestNextToken_NumberONLY(t *testing.T) {
 	}
 
 	assertParseTokens(cases, t)
+}
+
+func TestNextToken_StringONLY_EscapeString(t *testing.T) {
+	cases := []escapeStringCase{
+		{
+			name:       "no escape",
+			input:      "““正常测试””",
+			expLiteral: "“正常测试”",
+		},
+		{
+			name:       "quote one leftDouble mark",
+			input:      "““正常测`“`试””",
+			expLiteral: "“正常测“试”",
+		},
+		{
+			name:       "quote one incomplete leftDouble mark",
+			input:      "““正常测`”试”",
+			expLiteral: "“正常测`”试",
+		},
+		{
+			name:       "quote one incomplete single mark",
+			input:      "“正常‘测试”",
+			expLiteral: "正常‘测试",
+		},
+		{
+			name:       "escape all special chars",
+			input:      "“A`SP`A`BK`B`CR`B`LF`C`CRLF`C`TAB`DD”",
+			expLiteral: "A A`B\rB\nC\r\nC\tDD",
+		},
+		{
+			name:       "backticks together",
+			input:      "“A`SP``SP`”",
+			expLiteral: "A  ",
+		},
+		{
+			name:       "incomplete backtick quote",
+			input:      "“A`SPQR2”",
+			expLiteral: "A`SPQR2",
+		},
+		{
+			name:       "incomplete backtick quote",
+			input:      "“A`SPQR`2”",
+			expLiteral: "A`SPQR`2",
+		},
+		{
+			name:       "incomplete backtick quote#2",
+			input:      "“`B`”",
+			expLiteral: "`B`",
+		},
+		{
+			name:       "unicode string",
+			input:      "“`U+1F004`B`U+083`C`U+2A`”",
+			expLiteral: "\U0001F004B\u0083C\u002A",
+		},
+		{
+			name:       "invalid unicode quote",
+			input:      "“A`U+1f0a`B`U+999999999`C`U30`”",
+			expLiteral: "A`U+1f0a`B`U+999999999`C`U30`",
+		},
+	}
+
+	for _, tt := range cases {
+		t.Run(tt.name, func(t *testing.T) {
+			tks, _, err := parseTokens([]rune(tt.input))
+			// suppose only 1 string token
+			if err != nil {
+				t.Errorf("expect no error, meet error: %s", err.Error())
+				return
+			}
+			tk := tks[0]
+
+			if string(tk.Literal) != tt.expLiteral {
+				t.Errorf("escape string fail: expect %s, got %s", tt.expLiteral, string(tk.Literal))
+			}
+		})
+	}
 }
 
 func assertParseTokens(cases []nextTokenCase, t *testing.T) {

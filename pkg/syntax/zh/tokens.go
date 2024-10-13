@@ -1,11 +1,13 @@
 package zh
 
 import (
+	"strconv"
+
 	zerr "github.com/DemoHn/Zn/pkg/error"
 	"github.com/DemoHn/Zn/pkg/syntax"
 )
 
-//// 1. punctuations
+// // 1. punctuations
 const (
 	Comma             rune = 0xFF0C // ，
 	PauseComma        rune = 0x3001 // 、
@@ -21,22 +23,23 @@ const (
 	RightCurlyBracket rune = 0x007D // }
 )
 
-//// 2. quotes
+// // 2. quotes
 // declare quotes
+
 const (
 	LeftLibQuoteI      rune = 0x300A //《
 	RightLibQuoteI     rune = 0x300B // 》
 	LeftDoubleQuoteI   rune = 0x300C // 「
 	RightDoubleQuoteI  rune = 0x300D // 」
 	LeftDoubleQuoteII  rune = 0x201C // “
-	RightDoubleQuoteII rune = 0x201D // “
+	RightDoubleQuoteII rune = 0x201D // ”
 	LeftSingleQuoteI   rune = 0x300E // 『
 	RightSingleQuoteI  rune = 0x300F // 』
 	LeftSingleQuoteII  rune = 0x2018 // ‘
-	RightSingleQuoteII rune = 0x2019 // ‘
+	RightSingleQuoteII rune = 0x2019 // ’
 )
 
-//// 3. operators
+// // 3. operators
 const (
 	RefOp         rune = 0x0026 // &
 	AnnotationOp  rune = 0x0040 // @
@@ -52,17 +55,17 @@ const (
 	RemainderOp   rune = 0x0025 // %
 )
 
-//// 4. var quote
+// // 4. var quote
 const (
 	BackTick rune = 0x0060 // `
 )
 
-//// 5. comment keyword
+// // 5. comment keyword
 const (
 	CharZHU rune = 0x6CE8 // 注
 )
 
-//// token constants and constructors (without keyword token)
+// // token constants and constructors (without keyword token)
 // token types -
 // for special type Tokens, its range varies from 0 - 9
 // for keyword types, check lex/keyword.go for details
@@ -105,7 +108,7 @@ const (
 	//// from 40 - 78, reserved for keywords
 )
 
-//// Comment Types -
+// // Comment Types -
 const (
 	commentTypeSingle  = 1 // single line
 	commentTypeSlash   = 2 // multiple line, starts with '/*'
@@ -156,6 +159,15 @@ var markQuotes = []rune{
 	RightSingleQuoteII,
 }
 
+// quote match map
+var quoteMatchMap = map[rune]rune{
+	LeftDoubleQuoteI:  RightDoubleQuoteI,
+	LeftDoubleQuoteII: RightDoubleQuoteII,
+	LeftSingleQuoteI:  RightSingleQuoteI,
+	LeftSingleQuoteII: RightSingleQuoteII,
+	LeftLibQuoteI:     RightLibQuoteI,
+}
+
 // NextToken -
 func NextToken(l *syntax.Lexer) (syntax.Token, error) {
 	// parse non-keyword tokens e.g.: Spaces, LineBreaks
@@ -168,6 +180,10 @@ func NextToken(l *syntax.Lexer) (syntax.Token, error) {
 	case syntax.RuneEOF:
 		return parseEOF(l)
 	case CharZHU, SlashOp:
+		// save current cursor location (as) savepoint - when parsing 注-like
+		// token as comment failed, it's time to turn back (to the savepoint) and try to treat it
+		// as an identifier
+		savePointLoc := l.GetCursor()
 		// try to parse 注 or / as comment, if not, try to parse as other types (e.g. identifier)
 		isComment, tk, err := parseComment(l)
 		if err != nil {
@@ -175,6 +191,10 @@ func NextToken(l *syntax.Lexer) (syntax.Token, error) {
 		}
 		if isComment {
 			return tk, nil
+		} else {
+			l.SetCursor(savePointLoc)
+			// then fallthrough to the next logic - parse as an operator or identifier
+			// DO NOT WRITE return-statement HERE!!!
 		}
 	case LeftLibQuoteI, LeftDoubleQuoteI, LeftDoubleQuoteII, LeftSingleQuoteI, LeftSingleQuoteII:
 		return parseString(l)
@@ -358,13 +378,6 @@ func parseString(l *syntax.Lexer) (syntax.Token, error) {
 
 	quoteNum := 1
 	tkType := TypeString
-	quoteMatchMap := map[rune]rune{
-		LeftDoubleQuoteI:  RightDoubleQuoteI,
-		LeftDoubleQuoteII: RightDoubleQuoteII,
-		LeftSingleQuoteI:  RightSingleQuoteI,
-		LeftSingleQuoteII: RightSingleQuoteII,
-		LeftLibQuoteI:     RightLibQuoteI,
-	}
 
 	// get token type
 	if sch == LeftSingleQuoteI || sch == LeftSingleQuoteII {
@@ -415,6 +428,8 @@ func parseString(l *syntax.Lexer) (syntax.Token, error) {
 				}
 			}
 			literal = append(literal, ch)
+		case BackTick:
+			literal = unescapeBackTickSpecialStr(l, literal)
 		default:
 			literal = append(literal, ch)
 		}
@@ -532,7 +547,7 @@ func parseComment(l *syntax.Lexer) (bool, syntax.Token, error) {
 				multiCommentType = commentTypeSingle
 			}
 		} else {
-			return false, syntax.Token{}, zerr.InvalidChar(l.GetCurrentChar(), l.GetCursor())
+			return false, syntax.Token{}, nil
 		}
 	case SlashOp:
 		p := l.Peek()
@@ -646,7 +661,187 @@ func parseEOF(l *syntax.Lexer) (syntax.Token, error) {
 
 //// parseKeyword logic in keyword.go
 
-//// utils
+// unescape backtick-marked special string (e.g. `CR`, `U+1F005`) to its original character
+func unescapeBackTickSpecialStr(l *syntax.Lexer, srcLiteral []rune) []rune {
+	// store all characters after the backtick (including the 'backtick' marker itself)
+	literalBuffer := []rune{l.GetCurrentChar()}
+
+	// hand-written CR state matchine
+	const (
+		sBegin  = 1
+		sC      = 2
+		sR      = 3
+		sL      = 4
+		sF      = 5
+		sT      = 6
+		sA      = 7
+		sB      = 8
+		sK      = 9
+		sS      = 10
+		sP      = 11
+		sU      = 12
+		smP     = 13 // U+xxxx
+		sHexNum = 14
+	)
+	var state = sBegin
+	var hexCount = 0
+
+	for {
+		// peek the next char - if the next char is a quote mark, there are 2 cases:
+		//   a) the next next char is a backtick (`“`) - the mark is "considered" as a standalone quote (no need to pair)
+		//      and we add the char to srcLiteral directly
+		//   b) the next next char is other string (`”balhbalh)- NO WAY, stop before parsing the quote mark
+		switch l.Peek() {
+		case LeftDoubleQuoteI, LeftDoubleQuoteII, LeftSingleQuoteI, LeftSingleQuoteII, LeftLibQuoteI,
+			RightDoubleQuoteI, RightDoubleQuoteII, RightSingleQuoteI, RightSingleQuoteII, RightLibQuoteI:
+			qch := l.Peek()
+			if l.GetCurrentChar() == BackTick && l.Peek2() == BackTick {
+				l.Next()
+				l.Next()
+				return append(srcLiteral, qch)
+			} else {
+				goto UNDONE_end
+			}
+		}
+
+		cch := l.Next()
+		literalBuffer = append(literalBuffer, cch)
+		// to match U+xxxx, the char range is [0-9A-Fa-f]
+		// because A,B,C,F could be either part of unicode Number or inside the word "TAB", "CR", "LF"
+		if (cch >= '0' && cch <= '9') || (cch >= 'A' && cch <= 'F') {
+			switch state {
+			case smP:
+				state = sHexNum
+				hexCount = 1
+				continue
+			case sHexNum:
+				hexCount += 1
+				continue
+			}
+			// for other cases, fallthrough to CR/LF/TAB etc... keyword handling
+		}
+
+		switch cch {
+		case 'C': // CR / CRLF
+			switch state {
+			case sBegin:
+				state = sC
+			default:
+				goto UNDONE_end
+			}
+		case 'L': // LF / CRLF
+			switch state {
+			case sBegin, sR:
+				state = sL
+			default:
+				goto UNDONE_end
+			}
+		case 'T': // TAB
+			switch state {
+			case sBegin:
+				state = sT
+			default:
+				goto UNDONE_end
+			}
+		case 'S': // SP
+			switch state {
+			case sBegin:
+				state = sS
+			default:
+				goto UNDONE_end
+			}
+		case 'B': // BK / TAB
+			switch state {
+			case sBegin, sA:
+				state = sB
+			default:
+				goto UNDONE_end
+			}
+		case 'U': // U+xxxx
+			switch state {
+			case sBegin:
+				state = sU
+			default:
+				goto UNDONE_end
+			}
+		case 'R':
+			switch state {
+			case sC:
+				state = sR
+			default:
+				goto UNDONE_end
+			}
+		case 'F':
+			switch state {
+			case sL:
+				state = sF
+			default:
+				goto UNDONE_end
+			}
+		case 'A': // TAB
+			switch state {
+			case sT:
+				state = sA
+			default:
+				goto UNDONE_end
+			}
+		case 'P':
+			switch state {
+			case sS:
+				state = sP
+			default:
+				goto UNDONE_end
+			}
+		case 'K':
+			switch state {
+			case sB:
+				state = sK
+			default:
+				goto UNDONE_end
+			}
+		case '+':
+			switch state {
+			case sU:
+				state = smP
+			default:
+				goto UNDONE_end
+			}
+		case '`':
+			// for normal cases, unescape the character and append
+			switch string(literalBuffer) {
+			case "`TAB`":
+				return append(srcLiteral, '\t')
+			case "`BK`":
+				return append(srcLiteral, '`')
+			case "`SP`":
+				return append(srcLiteral, ' ')
+			case "`CR`":
+				return append(srcLiteral, '\r')
+			case "`LF`":
+				return append(srcLiteral, '\n')
+			case "`CRLF`":
+				return append(srcLiteral, []rune{'\r', '\n'}...)
+			default: // U+xxxx
+				if state == sHexNum {
+					if hexCount >= 1 && hexCount <= 8 {
+						hexStr := string(literalBuffer[3 : len(literalBuffer)-1])
+						hexNum, _ := strconv.ParseInt(hexStr, 16, 32)
+						return append(srcLiteral, rune(hexNum))
+					}
+				}
+				goto UNDONE_end
+			}
+
+		default:
+			goto UNDONE_end
+		}
+	}
+UNDONE_end:
+	// unescape the string fails, KEEP the original string to the final literal
+	return append(srcLiteral, literalBuffer...)
+}
+
+// // utils
 func isPureNumber(ch rune) bool {
 	return ch >= '0' && ch <= '9'
 }

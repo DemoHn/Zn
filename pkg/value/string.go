@@ -2,7 +2,6 @@ package value
 
 import (
 	"fmt"
-	"regexp"
 	"strconv"
 	"strings"
 	"unicode/utf8"
@@ -18,18 +17,8 @@ type String struct {
 	value string
 }
 
-// replace special chars from {/xx} placeholders
-var specialCharMap = map[string]string{
-	"`CR`":   "\r",
-	"`LF`":   "\n",
-	"`CRLF`": "\r\n",
-	"`TAB`":  "\t",
-	"`BK`":   "`",
-}
-
 func NewString(value string) *String {
-	v := replaceSpecialChars(value)
-	return &String{v}
+	return &String{value}
 }
 
 // String - display string value's string
@@ -40,23 +29,6 @@ func (s *String) String() string {
 // GetValues - alias of s.String()
 func (s *String) GetValue() string {
 	return s.value
-}
-
-// replaceSpecialChars: A{/CR}B -> A\nB
-func replaceSpecialChars(s string) string {
-	re := regexp.MustCompile("`(CR|LF|CRLF|TAB|BK|U\\+[0-9A-Fa-f]{1,8})`")
-
-	return re.ReplaceAllStringFunc(s, func(ss string) string {
-		// #1. check if matched string is a special char (exclude U+xxxx)
-		if res, ok := specialCharMap[ss]; ok {
-			return res
-		}
-
-		// #2. match U+xxxx
-		hexData, _ := strconv.ParseInt(ss[2:len(ss)-1], 16, 32)
-		hexData32 := int32(hexData)
-		return string([]rune{hexData32})
-	})
 }
 
 // GetProperty -
@@ -96,7 +68,7 @@ func (s *String) ExecMethod(c *r.Context, name string, values []r.Element) (r.El
 	return nil, zerr.MethodNotFound(name)
 }
 
-/////// getters, setters and methods
+// ///// getters, setters and methods
 // getters
 func strGetLength(s *String, c *r.Context) (r.Element, error) {
 	l := utf8.RuneCountInString(s.value)
