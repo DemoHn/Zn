@@ -390,12 +390,7 @@ func parseString(l *syntax.Lexer) (syntax.Token, error) {
 		ch := l.Next()
 		switch ch {
 		case syntax.RuneEOF:
-			return syntax.Token{
-				Type:     tkType,
-				Literal:  literal,
-				StartIdx: startIdx,
-				EndIdx:   l.GetCursor(),
-			}, nil
+			return syntax.Token{}, zerr.IncompleteString(l.GetCursor())
 		case syntax.RuneCR, syntax.RuneLF:
 			p := l.Peek()
 			if (ch == syntax.RuneCR && p == syntax.RuneLF) || (ch == syntax.RuneLF && p == syntax.RuneCR) {

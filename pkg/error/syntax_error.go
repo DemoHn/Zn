@@ -13,7 +13,7 @@ func (e *SyntaxError) Error() string {
 }
 
 const (
-	// 20-25
+	// 20-27
 	ErrInvalidSyntax           = 20
 	ErrUnexpectedIndent        = 21
 	ErrMustTypeID              = 22
@@ -21,6 +21,7 @@ const (
 	ErrInvalidIndentSpaceCount = 24
 	ErrInvalidChar             = 25
 	ErrEscapeStringFailed      = 26
+	ErrIncomleteString         = 27
 )
 
 // InvalidSyntax -
@@ -88,6 +89,14 @@ func EscapeStringFailed(startIdx int) *SyntaxError {
 	return &SyntaxError{
 		Code:    ErrEscapeStringFailed,
 		Message: "解析文本中的特殊字符时出现异常",
+		Cursor:  startIdx,
+	}
+}
+
+func IncompleteString(startIdx int) *SyntaxError {
+	return &SyntaxError{
+		Code:    ErrIncomleteString,
+		Message: "不完整的字符串",
 		Cursor:  startIdx,
 	}
 }
