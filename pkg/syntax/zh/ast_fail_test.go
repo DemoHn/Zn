@@ -165,7 +165,7 @@ code=20 cursor=4
 --------
 【 100，「正定」= 10 】
 --------
-code=20 cursor=6
+code=20 cursor=10
 `
 
 const funcDeclareCasesFAIL = `
@@ -180,17 +180,17 @@ code=21 cursor=9
 2. multiple 已知 blocks
 --------
 如何搞个大新闻？
-    已知A
-    已知B
+    输入A
+    输入B
 --------
 code=20 cursor=21
 ========
 3. more than one ref mark
 --------
 如何搞个大新闻？
-    已知A、&&B	
+	输入A、&&B	
 --------
-code=20 cursor=18
+code=20 cursor=14
 `
 
 const importStmtCasesFAIL = `

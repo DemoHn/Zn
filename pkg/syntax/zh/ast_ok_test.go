@@ -30,7 +30,7 @@ const logicExprCasesOK = `
 --------
 {A且B或C且D等于E且F设为100}等于0
 --------
-$PG($BK(
+$PG($X(I=() S=($BK(
 	$EQ(
 		L=($OR(
 				L=($AND(L=($ID(A)) R=($ID(B))))
@@ -49,14 +49,14 @@ $PG($BK(
 				))
 		))
 		R=($ID(0))
-	)
+	))) C=()
 ))
 ========
 2. A or B or C or D or E
 --------
 A或B或C或D或E
 --------
-$PG($BK(
+$PG($X(I=() S=($BK(
 	$OR(L=(
 		$OR(L=(
 			$OR(L=(
@@ -66,6 +66,7 @@ $PG($BK(
 			) R=($ID(C)))
 		) R=($ID(D)))
 	) R=($ID(E)))
+	)) C=()
 ))
 `
 
@@ -76,14 +77,15 @@ const whileLoopCasesOK = `
 每当1：
 	令A设为B
 --------
-$PG($BK(
+$PG($X(I=() S=($BK(
 	$WL(
 		expr=($ID(1))
 		block=($BK($VD($VP(
 				vars[]=($ID(A))
 				expr[]=($ID(B))
 		))))
-	)
+	)))
+	C=()
 ))
 
 ========
@@ -101,7 +103,7 @@ $PG($BK(
 
 M设为N
 --------
-$PG($BK(
+$PG($X(I=() S=($BK(
 	$WL(
 		expr=($ID(1))
 		block=($BK(
@@ -123,6 +125,7 @@ $PG($BK(
 	)
 
 	$VA(target=($ID(M)) assign=($ID(N)))
+	)) C=()
 ))
 `
 
@@ -132,22 +135,24 @@ const varDeclCasesOK = `
 --------
 令某变量设为100
 --------
-$PG($BK(
+$PG($X(I=() S=($BK(
 	$VD($VP(
 		vars[]=($ID(某变量))
 		expr[]=($ID(100))
-	))
+	))))
+	C=()
 ))
 ========
 1a. inline one var: =
 --------
 令某变量 = 100
 --------
-$PG($BK(
+$PG($X(I=() S=($BK(
 	$VD($VP(
 		vars[]=($ID(某变量))
 		expr[]=($ID(100))
-	))
+	))))
+	C=()
 ))
 
 ========
@@ -155,11 +160,12 @@ $PG($BK(
 --------
 令变量1、变量2设为100
 --------
-$PG($BK(
-	$VD($VP(
+$PG($X(I=() S=(
+	$BK($VD($VP(
 		vars[]=($ID(变量1) $ID(变量2))
 		expr[]=($ID(100))
-	))
+	))))
+	C=()
 ))
 
 ========
@@ -167,11 +173,12 @@ $PG($BK(
 --------
 令小A、小B、小C设为100
 --------
-$PG($BK(
-	$VD($VP(
+$PG($X(I=() S=(
+	$BK($VD($VP(
 		vars[]=($ID(小A) $ID(小B) $ID(小C))
 		expr[]=($ID(100))
-	))
+	))))
+	C=()
 ))
 
 ========
@@ -179,11 +186,12 @@ $PG($BK(
 --------
 令小A、` + "`" + `先令` + "`" + `设为200
 --------
-$PG($BK(
+$PG($X(I=() S=($BK(
 	$VD($VP(
 		vars[]=($ID(小A) $ID(先令))
 		expr[]=($ID(200))
-	))
+	))))
+	C=()
 ))
 
 ========
@@ -191,7 +199,7 @@ $PG($BK(
 --------
 令A设为B=C
 --------
-$PG($BK(
+$PG($X(I=() S=($BK(
 	$VD($VP(
 		vars[]=($ID(A))
 		expr[]=(
@@ -200,7 +208,8 @@ $PG($BK(
 				assign=($ID(C))
 			)
 		)
-	))
+	))))
+	C=()
 ))
 
 ========
@@ -214,7 +223,7 @@ $PG($BK(
 
 令G设为5
 --------
-$PG($BK(
+$PG($X(I=() S=($BK(
 	$VD(
 		$VP(vars[]=($ID(A))		expr[]=($ID(1)))
 		$VP(vars[]=($ID(B))		expr[]=($ID(2)))
@@ -224,7 +233,8 @@ $PG($BK(
 	$VD($VP(
 		vars[]=($ID(G))
 		expr[]=($ID(5))
-	))
+	))))
+	C=()
 ))
 
 ========
@@ -232,10 +242,11 @@ $PG($BK(
 --------
 令圆周率恒为3.1415926
 --------
-$PG($BK(
+$PG($X(I=() S=($BK(
 	$VD(
 		$VP(const vars[]=($ID(圆周率)) expr[]=($ID(3.1415926)))
-	)
+	)))
+	C=()
 ))
 
 ========
@@ -243,7 +254,7 @@ $PG($BK(
 --------
 令圆周率 =（新建数学：3.1415926）
 --------
-$PG($BK($VD($VP(vars[]=($ID(圆周率)) expr[]=($NEW(class=($ID(数学)) params=($ID(3.1415926))))))))
+$PG($X(I=() S=($BK($VD($VP(vars[]=($ID(圆周率)) expr[]=($NEW(class=($ID(数学)) params=($ID(3.1415926)))))))) C=()))
 ========
 9. block declaration - mixture of const,assign,newObj
 --------
@@ -253,21 +264,22 @@ $PG($BK($VD($VP(vars[]=($ID(圆周率)) expr[]=($NEW(class=($ID(数学)) params=
 	D、E、F恒为空
 	G恒为空
 --------
-$PG($BK($VD(
+$PG($X(I=() S=($BK($VD(
 	$VP(vars[]=($ID(高脚杯) $ID(小盅)) expr[]=(
 		$NEW(class=($ID(SKU)) params=($STR(玻璃制品) $ID(10) $ID(20) $ID(30))))
 	)
 	$VP(vars[]=($ID(A) $ID(B) $ID(C)) expr[]=($STR(Amazon)))
 	$VP(const vars[]=($ID(D) $ID(E) $ID(F)) expr[]=($ID(空)))
-	$VP(const vars[]=($ID(G)) expr[]=($ID(空)))))
-)
+	$VP(const vars[]=($ID(G)) expr[]=($ID(空))))))
+	C=()
+))
 
 ========
 10. block declaration - new object without params
 --------
 令A =（新建B）
 --------
-$PG($BK($VD($VP(vars[]=($ID(A)) expr[]=($NEW(class=($ID(B)) params=()))))))
+$PG($X(I=() S=($BK($VD($VP(vars[]=($ID(A)) expr[]=($NEW(class=($ID(B)) params=())))))) C=()))
 `
 const funcCallCasesOK = `
 ========
@@ -275,17 +287,18 @@ const funcCallCasesOK = `
 --------
 （显示当前时间）
 --------
-$PG($BK(
+$PG($X(I=() S=($BK(
 	$FN(name=($ID(显示当前时间)) params=())
+)) C=()
 ))
-
 ========
 2. success func call with no param (varquote)
 --------
 （` + "`" + `显示当前之时间` + "`" + `）
 --------
-$PG($BK(
+$PG($X(I=() S=($BK(
 	$FN(name=($ID(显示当前之时间)) params=())
+)) C=()
 ))
 
 ========
@@ -293,8 +306,9 @@ $PG($BK(
 --------
 （显示当前时间：「今天」）
 --------
-$PG($BK(
+$PG($X(I=() S=($BK(
 	$FN(name=($ID(显示当前时间)) params=($STR(今天)))
+)) C=()
 ))
 
 ========
@@ -302,8 +316,9 @@ $PG($BK(
 --------
 （显示当前时间：「今天」、「15:30」）
 --------
-$PG($BK(
+$PG($X(I=() S=($BK(
 	$FN(name=($ID(显示当前时间)) params=($STR(今天) $STR(15:30)))
+)) C=()
 ))
 
 ========
@@ -311,8 +326,9 @@ $PG($BK(
 --------
 （显示当前时间：「今天」、「15:30」、200、3000）
 --------
-$PG($BK(
+$PG($X(I=() S=($BK(
 	$FN(name=($ID(显示当前时间)) params=($STR(今天) $STR(15:30) $ID(200) $ID(3000)))
+)) C=()
 ))
 
 ========
@@ -320,12 +336,13 @@ $PG($BK(
 --------
 （显示当前时间：「今天」、「15:30」、（显示时刻））
 --------
-$PG($BK(
+$PG($X(I=() S=($BK(
 	$FN(name=($ID(显示当前时间)) params=(
 		$STR(今天)
 		$STR(15:30) 
 		$FN(name=($ID(显示时刻)) params=())
 	))
+)) C=()
 ))
 `
 
@@ -336,7 +353,7 @@ const branchStmtCasesOK = `
 如果真：
     （X+Y：20、30）
 --------
-$PG($BK(
+$PG($X(I=() S=($BK(
 	$IF(
 		ifExpr=($ID(真))
 		ifBlock=($BK(
@@ -346,6 +363,7 @@ $PG($BK(
 			)
 		))
 	)
+)) C=()
 ))
 
 ========
@@ -356,7 +374,7 @@ $PG($BK(
 否则：
     （X-Y：20、30）
 --------
-$PG($BK(
+$PG($X(I=() S=($BK(
 	$IF(
 		ifExpr=($ID(真))
 		ifBlock=($BK(			
@@ -372,6 +390,7 @@ $PG($BK(
 			)
 		))
 	)
+)) C=()
 ))
 
 ========
@@ -387,7 +406,7 @@ $PG($BK(
 如果C /= 真：
     （ASDF）
 --------
-$PG($BK(
+$PG($X(I=() S=($BK(
 	$IF(
 		ifExpr=($ID(真))
 		ifBlock=($BK(
@@ -423,6 +442,7 @@ $PG($BK(
 			$FN(name=($ID(ASDF)) params=())
 		))
 	)
+)) C=()
 ))
 
 ========
@@ -435,7 +455,7 @@ $PG($BK(
 否则：
     （X-Y：20、30）
 --------
-$PG($BK(
+$PG($X(I=() S=($BK(
 	$IF(
 		ifExpr=($ID(真))
 		ifBlock=($BK(			
@@ -460,7 +480,9 @@ $PG($BK(
 			)
 		))		
 	)
+)) C=()
 ))
+
 ========
 5. if block - 为 as compar instead of var assignment
 --------
@@ -469,7 +491,7 @@ $PG($BK(
 再如B == 200：
     （显示）
 --------
-$PG($BK(
+$PG($X(I=() S=($BK(
 	$IF(
 		ifExpr=($EQ(L=($ID(A)) R=($ID(100))))
 		ifBlock=($BK(			
@@ -488,6 +510,7 @@ $PG($BK(
 			)
 		))
 	)
+)) C=()
 ))
 `
 
@@ -497,21 +520,21 @@ const arrayListCasesOK = `
 --------
 【】
 --------
-$PG($BK($ARR()))
+$PG($X(I=() S=($BK($ARR())) C=()))
 
 ========
 2. empty hashmap
 --------
 【=】
 --------
-$PG($BK($HM()))
+$PG($X(I=() S=($BK($HM())) C=()))
 
 ========
 3. mixed string and decimal array
 --------
 【「MacBook Air 12"」，2080，3000】
 --------
-$PG($BK($ARR($STR(MacBook Air 12") $ID(2080) $ID(3000))))
+$PG($X(I=() S=($BK($ARR($STR(MacBook Air 12") $ID(2080) $ID(3000)))) C=()))
 
 ========
 4. array with newline
@@ -522,7 +545,7 @@ $PG($BK($ARR($STR(MacBook Air 12") $ID(2080) $ID(3000))))
     3000，
 】
 --------
-$PG($BK($ARR($STR(MacBook Air 12") $ID(2080) $ID(3000))))
+$PG($X(I=() S=($BK($ARR($STR(MacBook Air 12") $ID(2080) $ID(3000)))) C=()))
 
 ========
 5. array nest with array
@@ -533,11 +556,13 @@ $PG($BK($ARR($STR(MacBook Air 12") $ID(2080) $ID(3000))))
     【100，200，300】
 】
 --------
-$PG($BK($ARR(
+$PG($X(I=() S=($BK(
+	$ARR(
 	$STR(MacBook Air 12") 
 	$ID(2080) 
 	$ARR($ID(100) $ID(200) $ID(300))
-)))
+	))) C=()
+))
 
 ========
 6. array nest with array nest with array
@@ -552,11 +577,13 @@ $PG($BK($ARR(
     】
 】
 --------
-$PG($BK($ARR(
+$PG($X(I=() S=($BK(
+	$ARR(
 	$STR(MacBook Air 12") 
 	$ID(2080) 
 	$ARR($ID(100) $ID(200) $ID(300) $ARR($ID(10000)))
-)))
+	))) C=()
+))
 
 ========
 7. a simple hashmap
@@ -566,10 +593,12 @@ $PG($BK($ARR(
 		「语文」 = 90
 】
 --------
-$PG($BK($HM(
+$PG($X(I=() S=($BK(
+	$HM(
 	key[]=($STR(数学)) value[]=($ID(80)) 
 	key[]=($STR(语文)) value[]=($ID(90))
-)))
+	))) C=()
+))
 
 ========
 8. a hashmap nest with hashmap
@@ -583,14 +612,17 @@ $PG($BK($HM(
 		】
 】
 --------
-$PG($BK($HM(
+$PG($X(I=() S=($BK(
+	$HM(
 	key[]=($STR(数学)) value[]=($ID(80)) 
 	key[]=($STR(语文)) value[]=($HM(
 		key[]=($STR(阅读)) value[]=($ID(20))
 		key[]=($STR(听力)) value[]=($ID(30.5))
 		key[]=($STR(比例)) value[]=($ID(0.12345))
 	))
-)))
+	))) 
+	C=()
+))
 `
 
 const stmtLineBreakCasesOK = `
@@ -599,7 +631,7 @@ const stmtLineBreakCasesOK = `
 --------
 令香港记者设为记者名设为「张宝华」
 --------
-$PG($BK($VD($VP(vars[]=($ID(香港记者)) expr[]=($VA(target=($ID(记者名)) assign=($STR(张宝华))))))))
+$PG($X(I=() S=($BK($VD($VP(vars[]=($ID(香港记者)) expr[]=($VA(target=($ID(记者名)) assign=($STR(张宝华)))))))) C=()))
 
 ========
 2. a complete statement with comma list - 3 lines
@@ -608,7 +640,7 @@ $PG($BK($VD($VP(vars[]=($ID(香港记者)) expr[]=($VA(target=($ID(记者名)) a
     雪花、
                 墨水设为「黑」
 --------
-$PG($BK($VD($VP(vars[]=($ID(树叶) $ID(鲜花) $ID(雪花) $ID(墨水)) expr[]=($STR(黑))))))
+$PG($X(I=() S=($BK($VD($VP(vars[]=($ID(树叶) $ID(鲜花) $ID(雪花) $ID(墨水)) expr[]=($STR(黑)))))) C=()))
 
 ========
 3. nested function calls with multiple lines
@@ -617,7 +649,7 @@ $PG($BK($VD($VP(vars[]=($ID(树叶) $ID(鲜花) $ID(雪花) $ID(墨水)) expr[]=
     「1」、（调用参数：200、300、
         4000、5000））
 --------
-$PG($BK($FN(name=($ID(显示)) params=($STR(1) $FN(name=($ID(调用参数)) params=($ID(200) $ID(300) $ID(4000) $ID(5000)))))))
+$PG($X(I=() S=($BK($FN(name=($ID(显示)) params=($STR(1) $FN(name=($ID(调用参数)) params=($ID(200) $ID(300) $ID(4000) $ID(5000))))))) C=()))
 
 ========
 4. multi-line hashmap
@@ -628,7 +660,7 @@ $PG($BK($FN(name=($ID(显示)) params=($STR(1) $FN(name=($ID(调用参数)) para
 		3 = 「车」
 】
 --------
-$PG($BK($VD($VP(vars[]=($ID(对象表)) expr[]=($HM(key[]=($ID(1)) value[]=($STR(象)) key[]=($ID(2)) value[]=($STR(士)) key[]=($ID(3)) value[]=($STR(车))))))))
+$PG($X(I=() S=($BK($VD($VP(vars[]=($ID(对象表)) expr[]=($HM(key[]=($ID(1)) value[]=($STR(象)) key[]=($ID(2)) value[]=($STR(士)) key[]=($ID(3)) value[]=($STR(车)))))))) C=()))
 `
 
 const memberExprCasesOK = `
@@ -637,21 +669,23 @@ const memberExprCasesOK = `
 --------
 {5 + 8} * 3 - 7 / 4
 --------
-$PG($BK(
+$PG($X(I=() S=($BK(
 	$AR(type=(SUB) left=(
 		$AR(type=(MUL) left=(
 			$AR(type=(ADD) left=(
 				$ID(5)) right=($ID(8))
 			)) right=($ID(3)))
 		) right=($AR(type=(DIV) left=($ID(7)) right=($ID(4)))))
+)) C=()
 ))
 ========
 1. normal dot member
 --------
 天之涯
 --------
-$PG($BK(
+$PG($X(I=() S=($BK(
 	$MB(root=($ID(天)) type=(mID) object=($ID(涯)))
+)) C=()
 ))
 
 ========
@@ -659,7 +693,7 @@ $PG($BK(
 --------
 雪花之天涯之海角
 --------
-$PG($BK(
+$PG($X(I=() S=($BK(
 	$MB(
 		root=(
 			$MB(root=($ID(雪花)) type=(mID) object=($ID(天涯)))
@@ -667,6 +701,7 @@ $PG($BK(
 		type=(mID)
 		object=($ID(海角))
 	)
+)) C=()
 ))
 
 ========
@@ -674,8 +709,9 @@ $PG($BK(
 --------
 Array#123
 --------
-$PG($BK(
+$PG($X(I=() S=($BK(
 	$MB(root=($ID(Array)) type=(mIndex) object=($ID(123)))
+)) C=()
 ))
 
 ========
@@ -683,10 +719,11 @@ $PG($BK(
 --------
 Array#{天之涯}
 --------
-$PG($BK(
+$PG($X(I=() S=($BK(
 	$MB(root=($ID(Array)) type=(mIndex) object=(
 		$MB(root=($ID(天)) type=(mID) object=($ID(涯)))
 	))
+)) C=()
 ))
 
 ========
@@ -694,7 +731,7 @@ $PG($BK(
 --------
 Array#20#30#{QR}
 --------
-$PG($BK(
+$PG($X(I=() S=($BK(
 	$MB(
 		root=(
 			$MB(
@@ -712,6 +749,7 @@ $PG($BK(
 		type=(mIndex)
 		object=($ID(QR))
 	)
+)) C=()
 ))
 
 ========
@@ -719,7 +757,7 @@ $PG($BK(
 --------
 Array#10之首
 --------
-$PG($BK(
+$PG($X(I=() S=($BK(
 	$MB(
 		root=(
 			$MB(
@@ -731,6 +769,7 @@ $PG($BK(
 		type=(mID)
 		object=($ID(首))
 	)
+)) C=()
 ))
 
 ========
@@ -738,7 +777,7 @@ $PG($BK(
 --------
 其年龄设为20
 --------
-$PG($BK(
+$PG($X(I=() S=($BK(
 	$VA(
 		target=($MB(
 			rootProp
@@ -747,13 +786,14 @@ $PG($BK(
 		))		
 		assign=($ID(20))
 	)
+)) C=()
 ))
 ========
 10. mix rootProp and member
 --------
 其年龄之文本
 --------
-$PG($BK(
+$PG($X(I=() S=($BK(
 	$MB(
 		root=(
 			$MB(
@@ -765,6 +805,7 @@ $PG($BK(
 		type=(mID)
 		object=($ID(文本))
 	)
+)) C=()
 ))
 `
 
@@ -774,18 +815,14 @@ const importStmtCasesOK = `
 --------
 导入《对象》
 --------
-$PG($BK(
-	$IM(name=($STR(对象)) items=())	
-))
+$PG($IM(name=($STR(对象)) items=()))
 
 ========
 2. normal import with items
 --------
 导入《对象》的名称、内容
 --------
-$PG($BK(
-	$IM(name=($STR(对象)) items=($ID(名称) $ID(内容)))	
-))
+$PG($IM(name=($STR(对象)) items=($ID(名称) $ID(内容))))
 `
 
 const memberMethodStmtCasesOK = `
@@ -794,38 +831,42 @@ const memberMethodStmtCasesOK = `
 --------
 以A（运行方法）
 --------
-$PG($BK(
+$PG($X(I=() S=($BK(
 	$MMF(root=($ID(A)) chain=($FN(name=($ID(运行方法)) params=())))
+)) C=()
 ))
 ========
 2. normal member method expr with yield
 --------
 以A（运行方法），得到结果
 --------
-$PG($BK(
+$PG($X(I=() S=($BK(
 	$MMF(root=($ID(A)) chain=($FN(name=($ID(运行方法)) params=())) yield=($ID(结果)))
+)) C=()
 ))
 ========
 3. normal member method chain expr with yield
 --------
 以A（运行方法）、（方法2：A、B、C），得到结果
 --------
-$PG($BK(
+$PG($X(I=() S=($BK(
 	$MMF(root=($ID(A)) chain=(
 		$FN(name=($ID(运行方法)) params=())
 		$FN(name=($ID(方法2)) params=($ID(A) $ID(B) $ID(C)))
 	) yield=($ID(结果)))
+)) C=()
 ))
 ========
 4. normal member method chain expr w/o yield
 --------
 以A（运行方法）、（方法2：A、B、C）
 --------
-$PG($BK(
+$PG($X(I=() S=($BK(
 	$MMF(root=($ID(A)) chain=(
 		$FN(name=($ID(运行方法)) params=())
 		$FN(name=($ID(方法2)) params=($ID(A) $ID(B) $ID(C)))
 	))
+)) C=()
 ))
 ========
 5. normal member method chain more exprs
@@ -834,12 +875,13 @@ $PG($BK(
 	（方法2：A、B、C）、
 	（QAQ：1、3、5、7）
 --------
-$PG($BK(
+$PG($X(I=() S=($BK(
 	$MMF(root=($ID(A)) chain=(
 		$FN(name=($ID(运行方法)) params=())
 		$FN(name=($ID(方法2)) params=($ID(A) $ID(B) $ID(C)))
 		$FN(name=($ID(QAQ)) params=($ID(1) $ID(3) $ID(5) $ID(7)))
 	))
+)) C=()
 ))
 `
 
@@ -851,7 +893,7 @@ const iterateCasesOK = `
     令A设为值
     结束循环
 --------
-$PG($BK(
+$PG($X(I=() S=($BK(
 	$IT(
 		target=($ARR($ID(1) $ID(2) $ID(3)))
 		idxList=()
@@ -862,6 +904,7 @@ $PG($BK(
 			$BREAK
 		))
 	)
+)) C=()
 ))
 
 ========
@@ -870,7 +913,7 @@ $PG($BK(
 以K遍历代码：
     （显示：K）
 --------
-$PG($BK(
+$PG($X(I=() S=($BK(
 	$IT(
 		target=($ID(代码))
 		idxList=($ID(K))
@@ -878,6 +921,7 @@ $PG($BK(
 			$FN(name=($ID(显示)) params=($ID(K)))
 		))
 	)
+)) C=()
 ))
 ========
 3. lead two vars
@@ -889,7 +933,7 @@ $PG($BK(
 】：
 	（显示：K、V）
 --------
-$PG($BK(
+$PG($X(I=() S=($BK(
 	$IT(
 		target=($HM(
 			key[]=($STR(A)) value[]=($ID(1))
@@ -902,6 +946,7 @@ $PG($BK(
 			params=($ID(K) $ID(V))
 		)))
 	)
+)) C=()
 ))
 `
 
@@ -913,7 +958,7 @@ const classDeclareCasesOK = `
 	其名设为“小黄”
 	其品种设为“拉布拉多”
 --------
-$PG($BK(
+$PG($X(I=() S=($BK(
 	$CLS(
 		name=($ID(狗))
 		properties=(
@@ -923,6 +968,7 @@ $PG($BK(
 		methods=()
 		getters=()
 	)
+)) C=()
 ))
 
 ========
@@ -941,7 +987,7 @@ $PG($BK(
 	何为总和？
 		输出20
 --------
-$PG($BK(
+$PG($X(I=() S=($BK(
 	$CLS(
 		name=($ID(狗))
 		properties=(
@@ -950,29 +996,31 @@ $PG($BK(
 		)
 		methods=(
 			$FN(
+				type=FN
 				name=($ID(狂吠))
-				params=()				
-				blockTokens=($BK(
+				block=($X(I=() S=($BK(
 					$RT($STR(汪汪汪))
-				))
+				)) C=()))
 			)
 			$FN(
+				type=FN
 				name=($ID(添加年龄))
-				params=()				
-				blockTokens=($BK(
+				block=($X(I=() S=($BK(
 					$RT($ID(20))
-				))
+				)) C=()))
 			)
 		)
 		getters=(
-			$GT(
+			$FN(
+				type=GET
 				name=($ID(总和))
-				blockTokens=($BK(
+				block=($X(I=() S=($BK(
 					$RT($ID(20))
-				))
+				)) C=()))
 			)
 		)
 	)
+)) C=()
 ))
 ========
 4. class definition with comment
@@ -994,7 +1042,7 @@ $PG($BK(
 	何为总和？
 		输出20
 --------
-$PG($BK(
+$PG($X(I=() S=($BK(
 	$CLS(
 		name=($ID(狗))
 		properties=(
@@ -1003,29 +1051,31 @@ $PG($BK(
 		)
 		methods=(
 			$FN(
+				type=FN
 				name=($ID(狂吠))
-				params=()				
-				blockTokens=($BK(
+				block=($X(I=() S=($BK(
 					$RT($STR(汪汪汪))
-				))
+				)) C=()))
 			)
 			$FN(
+				type=FN
 				name=($ID(添加年龄))
-				params=()				
-				blockTokens=($BK(
+				block=($X(I=() S=($BK(
 					$RT($ID(20))
-				))
+				)) C=()))
 			)
 		)
 		getters=(
-			$GT(
+			$FN(
+				type=GET
 				name=($ID(总和))
-				blockTokens=($BK(
+				block=($X(I=() S=($BK(
 					$RT($ID(20))
-				))
+				)) C=()))
 			)
 		)
 	)
+)) C=()
 ))
 `
 
@@ -1036,14 +1086,17 @@ const functionDeclareCasesOK = `
 如何搞个大新闻？
 	1024
 --------
-$PG($BK(
+$PG($X(I=() S=($BK(
 	$FN(
+		type=FN
 		name=($ID(搞个大新闻))
-		params=()		
-		blockTokens=($BK(
-			$ID(1024)
+		block=($X(
+			I=()
+			S=($BK($ID(1024)))
+			C=()
 		))
-	)
+	)))
+	C=()
 ))
 ========
 2. with one param
@@ -1052,14 +1105,17 @@ $PG($BK(
 	输入变量1
 	1024
 --------
-$PG($BK(
+$PG($X(I=() S=($BK(
 	$FN(
+		type=FN
 		name=($ID(搞个大新闻))
-		params=($PM(id=($ID(变量1)) ref=(false)))		
-		blockTokens=($BK(
-			$ID(1024)
+		block=($X(
+			I=($ID(变量1))
+			S=($BK($ID(1024)))
+			C=()
 		))
-	)
+	)))
+	C=()
 ))
 ========
 3. with multiple params
@@ -1068,18 +1124,17 @@ $PG($BK(
 	输入A、B、` + "`" + `华为手机` + "`" + `
 	1024
 --------
-$PG($BK(
+$PG($X(I=() S=($BK(
 	$FN(
+		type=FN
 		name=($ID(搞个大新闻))
-		params=(
-			$PM(id=($ID(A)) ref=(false))
-			$PM(id=($ID(B)) ref=(false))
-			$PM(id=($ID(华为手机)) ref=(false))			
-		)		
-		blockTokens=($BK(
-			$ID(1024)
+		block=($X(
+			I=($ID(A) $ID(B) $ID(华为手机))
+			S=($BK($ID(1024)))
+			C=()
 		))
-	)
+	)))
+	C=()
 ))
 ========
 4. with catch block
@@ -1095,32 +1150,32 @@ $PG($BK(
 	拦截B异常：
 		输出566
 --------
-$PG($BK(
+$PG($X(I=() S=($BK(
 	$FN(
+		type=FN
 		name=($ID(搞个大新闻))
-		params=()
-		blockTokens=($BK(
+		block=($X(I=() S=(
+		$BK(
 			$IF(
 				ifExpr=($EQ(L=($ID(C)) R=($ID(空))))
 				ifBlock=($BK($VA(target=($ID(A)) assign=($AR(type=(MUL) left=($ID(A)) right=($ID(2))))) $RT($ID(1024))))
 				elseBlock=($BK($RT($ID(1024))))
 			)
-		))
-		catchBlocks=(			
-			class=($ID(A异常))
-			block=($BK(
-				$RT($ID(233))
-			))		
-			class=($ID(B异常))
-			block=($BK(
-				$RT($ID(566))
-			))			
 		)
-	)
+		) C=(
+			cls[]=($ID(A异常)) stmt[]=($BK(
+				$RT($ID(233))
+			))
+			cls[]=($ID(B异常)) stmt[]=($BK(
+				$RT($ID(566))
+			))
+		)))
+	)))
+	C=()
 ))
 `
 
-//////// BY FUNC ////////
+// ////// BY FUNC ////////
 // test ParseProgram() only
 const testProgramOKCases = `
 =========
@@ -1153,7 +1208,7 @@ const testExecBlockOKCases = `
 	输出456
 ---------
 $X(
-	I=($PM(id=($ID(A)) ref=(false)) $PM(id=($ID(B)) ref=(false)) $PM(id=($ID(C)) ref=(false))) 
+	I=($ID(A) $ID(B) $ID(C)) 
 	
 	S=($BK($VD($VP(vars[]=($ID(X)) expr[]=($AR(type=(ADD) left=($AR(type=(ADD) left=($ID(A)) right=($ID(B)))) right=($ID(C)))))))) 
 	
@@ -1169,7 +1224,7 @@ $X(
 233
 ---------
 $X(
-	I=($PM(id=($ID(A)) ref=(false)) $PM(id=($ID(B)) ref=(false)) $PM(id=($ID(C)) ref=(false))) 
+	I=($ID(A) $ID(B) $ID(C)) 
 	
 	S=($BK($ID(233))) 
 	
