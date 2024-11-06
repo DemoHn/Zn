@@ -62,3 +62,7 @@ func WriteDataToNamedPipe(pipeWriter *os.File, b []byte) error {
 	_, err := pipeWriter.Write(b)
 	return err
 }
+
+func CloseFD(f *os.File) {
+	syscall.CloseOnExec(int(f.Fd()))
+}

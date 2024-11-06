@@ -9,22 +9,16 @@ import (
 func StringifyAST(node Node) string {
 	switch v := node.(type) {
 	case *Program: // replace program in the future
-		importBlockStr := []string{}
+		blockStr := []string{}
 		for _, importBlock := range v.ImportBlock {
-			importBlockStr = append(importBlockStr, StringifyAST(importBlock))
+			blockStr = append(blockStr, StringifyAST(importBlock))
 		}
 
-		var importSS = ""
-		if len(importBlockStr) > 0 {
-			importSS = strings.Join(importBlockStr, " ") + " "
-		}
-		execBlockSS := ""
 		if v.ExecBlock != nil {
-			execBlockSS = StringifyAST(v.ExecBlock)
+			blockStr = append(blockStr, StringifyAST(v.ExecBlock))
 		}
-		return fmt.Sprintf("$PG(%s%s)",
-			importSS,
-			execBlockSS,
+		return fmt.Sprintf("$PG(%s)",
+			strings.Join(blockStr, " "),
 		)
 	case *ExecBlock:
 		// input block
@@ -218,8 +212,9 @@ func StringifyAST(node Node) string {
 		} else if v.DeclareType == DeclareTypeGetter {
 			fnTypeStr = "GET"
 		}
-		return fmt.Sprintf("$FN(type=%s block=(%s))",
+		return fmt.Sprintf("$FN(type=%s name=(%s) block=(%s))",
 			fnTypeStr,
+			StringifyAST(v.Name),
 			StringifyAST(v.ExecBlock))
 	case *StmtBlock:
 		var statements = []string{}

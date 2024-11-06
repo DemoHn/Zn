@@ -103,9 +103,9 @@ func (zns *ZnPMServer) Start(connUrl string, cfg ZnPMServerConfig) error {
 	return nil
 }
 
-////////////////////////////
-/////// MASTER logic ///////
-////////////////////////////
+// //////////////////////////
+// ///// MASTER logic ///////
+// //////////////////////////
 func (zns *ZnPMServer) StartMaster(connUrl string, cfg ZnPMServerConfig) error {
 	network, address, err := parseConnUrl(connUrl)
 	if err != nil {
@@ -170,7 +170,7 @@ func (zns *ZnPMServer) StartMaster(connUrl string, cfg ZnPMServerConfig) error {
 	return l.Close()
 }
 
-//// fork child processes
+// // fork child processes
 func (zns *ZnPMServer) spawnProcess(cfg ZnPMServerConfig, l *net.TCPListener, p *pipe) error {
 	// prepare net.Conn file to transfer to child processes
 	lf, err := l.File()
@@ -178,7 +178,7 @@ func (zns *ZnPMServer) spawnProcess(cfg ZnPMServerConfig, l *net.TCPListener, p 
 		return err
 	}
 	// close fd only effective on current process only
-	syscall.CloseOnExec(int(lf.Fd()))
+	CloseFD(lf)
 
 	// spawn new child processes
 	cmd := exec.Command(os.Args[0], "--child-worker")
@@ -319,7 +319,7 @@ func (zns *ZnPMServer) maintainChildState(cfg ZnPMServerConfig, ln *net.TCPListe
 /////// WORKER logic ///////
 ////////////////////////////
 
-//// USE ANOTHER PROCESS TO START!
+// // USE ANOTHER PROCESS TO START!
 func (zns *ZnPMServer) StartWorker() error {
 	pid := os.Getpid()
 	lf := os.NewFile(uintptr(3), fmt.Sprintf("listener-%d", pid))

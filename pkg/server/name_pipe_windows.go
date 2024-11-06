@@ -2,6 +2,7 @@ package server
 
 import (
 	"os"
+	"syscall"
 )
 
 const gPipeNameFmt = "/tmp/zinc-server-pipe-%s"
@@ -36,4 +37,8 @@ func OpenNamedPipeWriter(p *pipe) (*os.File, error) {
 
 func WriteDataToNamedPipe(pipeWriter *os.File, b []byte) error {
 	panic("Not Supported in Windows!")
+}
+
+func CloseFD(f *os.File) {
+	syscall.CloseOnExec(syscall.Handle(f.Fd()))
 }
