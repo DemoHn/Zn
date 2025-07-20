@@ -23,10 +23,10 @@ func ParseProgram(p *ParserZH) *syntax.Program {
 	var hState = stateImportBlock
 
 	parseItemListBlock(p, peekIndent, func() {
+		p.unsetStmtCompleteFlag()
 		switch hState {
 		case stateImportBlock:
 			if match, _ := p.tryConsume(TypeImportW); match {
-				p.unsetStmtCompleteFlag()
 				// parse import statement
 				stmt := ParseImportStmt(p)
 				program.ImportBlock = append(program.ImportBlock, stmt)
