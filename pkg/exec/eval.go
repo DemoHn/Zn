@@ -387,7 +387,7 @@ func evalConstructorDeclareStmt(upperCtx *r.Context, node *syntax.FunctionDeclar
 		}
 		return newObject, nil
 	}
-	cmodel.SetConstructorFunc(value.NewFunction(nil, constructorLogic))
+	cmodel.SetConstructor(constructorLogic)
 
 	return nil
 }
@@ -664,7 +664,7 @@ func evalIterateStmt(c *r.Context, node *syntax.IterateStmt) error {
 	return nil
 }
 
-//// execute expressions
+// // execute expressions
 func evalExpression(c *r.Context, expr syntax.Expression) (r.Element, error) {
 	switch e := expr.(type) {
 	case *syntax.VarAssignExpr:
@@ -1050,8 +1050,8 @@ func evalArithExpr(c *r.Context, expr *syntax.ArithExpr) (*value.Number, error) 
 
 // evalArithTypeModuloExpr - handle special case of ArithExpr where Type = ArithModulo (%)
 // A % B has two types:
-//   1. ArithModulo: [Number] % [Number] -> [Number] (e.g  5 % 2 = 1)
-//   2. String format: [String] % [Array] -> [String] (e.g. “{}-{}” % 【1、2】= “1-2”)
+//  1. ArithModulo: [Number] % [Number] -> [Number] (e.g  5 % 2 = 1)
+//  2. String format: [String] % [Array] -> [String] (e.g. “{}-{}” % 【1、2】= “1-2”)
 func evalArithTypeModuloExpr(c *r.Context, expr *syntax.ArithExpr) (r.Element, error) {
 	leftExpr, err := evalExpression(c, expr.LeftExpr)
 	if err != nil {
@@ -1282,7 +1282,7 @@ func getMemberExprIV(c *r.Context, expr *syntax.MemberExpr) (*value.IV, error) {
 	return nil, zerr.UnexpectedCase("根元素类型", fmt.Sprintf("%d", expr.RootType))
 }
 
-//// helpers
+// // helpers
 // exprsToValues - []syntax.Expression -> []eval.r.Value
 func exprsToValues(c *r.Context, exprs []syntax.Expression) ([]r.Element, error) {
 	params := []r.Element{}

@@ -62,7 +62,7 @@ func (cm *ClassModel) Construct(c *r.Context, params []r.Element) (r.Element, er
 	return cm.constructor(c, params)
 }
 
-////// GETTERS //////
+// //// GETTERS //////
 func (cm *ClassModel) GetName() string {
 	return cm.name
 }
@@ -82,11 +82,9 @@ func (cm *ClassModel) FindMethod(name string) (*Function, bool) {
 	return method, ok
 }
 
-////// SETTERS //////
-func (cm *ClassModel) SetConstructorFunc(fn *Function) *ClassModel {
-	cm.constructor = func(ctx *r.Context, params []r.Element) (r.Element, error) {
-		return fn.Exec(ctx, nil, params)
-	}
+// //// SETTERS //////
+func (cm *ClassModel) SetConstructor(fn FuncExecutor) *ClassModel {
+	cm.constructor = fn
 
 	return cm
 }
@@ -110,7 +108,7 @@ func (cm *ClassModel) DefineMethod(name string, methodFunc *Function) *ClassMode
 	return cm
 }
 
-//// impl methods as a "Element"
+// // impl methods as a "Element"
 // GetProperty - currently there's NO any property inside classRef Value
 func (cr *ClassModel) GetProperty(c *r.Context, name string) (r.Element, error) {
 	return nil, zerr.PropertyNotFound(name)

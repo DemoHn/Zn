@@ -10,8 +10,6 @@ import (
 	"github.com/DemoHn/Zn/pkg/value"
 )
 
-type funcExecutor = func(*r.Context, []r.Element) (r.Element, error)
-
 // global consts
 var (
 	ZnConstBoolTrue       = value.NewBool(true)
@@ -46,16 +44,16 @@ func init() {
 }
 
 func newExceptionModel() *value.ClassModel {
-	constructorFunc := value.NewFunction(nil, func(c *r.Context, values []r.Element) (r.Element, error) {
+	constructorFunc := func(c *r.Context, values []r.Element) (r.Element, error) {
 		if err := value.ValidateExactParams(values, "string"); err != nil {
 			return nil, err
 		}
 
 		message := values[0].(*value.String)
 		return value.NewException(message.String()), nil
-	})
+	}
 
-	return value.NewClassModel("异常", nil).SetConstructorFunc(constructorFunc)
+	return value.NewClassModel("异常", nil).SetConstructor(constructorFunc)
 }
 
 func newDisplayFunc() *value.Function {
