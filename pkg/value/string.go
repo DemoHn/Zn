@@ -10,8 +10,8 @@ import (
 	r "github.com/DemoHn/Zn/pkg/runtime"
 )
 
-type strGetterFunc func(*String, *r.Context) (r.Element, error)
-type strMethodFunc func(*String, *r.Context, []r.Element) (r.Element, error)
+type strGetterFunc func(*String) (r.Element, error)
+type strMethodFunc func(*String, []r.Element) (r.Element, error)
 
 type String struct {
 	value string
@@ -40,7 +40,7 @@ func (s *String) GetProperty(c *r.Context, name string) (r.Element, error) {
 		"字符组": strGetCharArray,
 	}
 	if fn, ok := strGetterMap[name]; ok {
-		return fn(s, c)
+		return fn(s)
 	}
 	return nil, zerr.PropertyNotFound(name)
 }
@@ -63,23 +63,23 @@ func (s *String) ExecMethod(c *r.Context, name string, values []r.Element) (r.El
 		"转换数值": strExecAtoi,
 	}
 	if fn, ok := strMethodMap[name]; ok {
-		return fn(s, c, values)
+		return fn(s, values)
 	}
 	return nil, zerr.MethodNotFound(name)
 }
 
 // ///// getters, setters and methods
 // getters
-func strGetLength(s *String, c *r.Context) (r.Element, error) {
+func strGetLength(s *String) (r.Element, error) {
 	l := utf8.RuneCountInString(s.value)
 	return NewNumber(float64(l)), nil
 }
 
-func strGetText(s *String, c *r.Context) (r.Element, error) {
+func strGetText(s *String) (r.Element, error) {
 	return NewString(s.value), nil
 }
 
-func strGetCharArray(s *String, c *r.Context) (r.Element, error) {
+func strGetCharArray(s *String) (r.Element, error) {
 	charArr := NewArray([]r.Element{})
 	v := s.value
 
@@ -93,7 +93,7 @@ func strGetCharArray(s *String, c *r.Context) (r.Element, error) {
 }
 
 // methods
-func strExecReplace(s *String, c *r.Context, values []r.Element) (r.Element, error) {
+func strExecReplace(s *String, values []r.Element) (r.Element, error) {
 	if err := ValidateExactParams(values, "string", "string"); err != nil {
 		return nil, err
 	}
@@ -104,7 +104,7 @@ func strExecReplace(s *String, c *r.Context, values []r.Element) (r.Element, err
 	return NewString(result), nil
 }
 
-func strExecSplit(s *String, c *r.Context, values []r.Element) (r.Element, error) {
+func strExecSplit(s *String, values []r.Element) (r.Element, error) {
 	if err := ValidateExactParams(values, "string"); err != nil {
 		return nil, err
 	}
@@ -119,7 +119,7 @@ func strExecSplit(s *String, c *r.Context, values []r.Element) (r.Element, error
 	return result, nil
 }
 
-func strExecMatch(s *String, c *r.Context, values []r.Element) (r.Element, error) {
+func strExecMatch(s *String, values []r.Element) (r.Element, error) {
 	if err := ValidateExactParams(values, "string"); err != nil {
 		return nil, err
 	}
@@ -129,7 +129,7 @@ func strExecMatch(s *String, c *r.Context, values []r.Element) (r.Element, error
 	return NewBool(result), nil
 }
 
-func strExecMatchStart(s *String, c *r.Context, values []r.Element) (r.Element, error) {
+func strExecMatchStart(s *String, values []r.Element) (r.Element, error) {
 	if err := ValidateExactParams(values, "string"); err != nil {
 		return nil, err
 	}
@@ -139,7 +139,7 @@ func strExecMatchStart(s *String, c *r.Context, values []r.Element) (r.Element, 
 	return NewBool(result), nil
 }
 
-func strExecMatchEnd(s *String, c *r.Context, values []r.Element) (r.Element, error) {
+func strExecMatchEnd(s *String, values []r.Element) (r.Element, error) {
 	if err := ValidateExactParams(values, "string"); err != nil {
 		return nil, err
 	}
@@ -149,7 +149,7 @@ func strExecMatchEnd(s *String, c *r.Context, values []r.Element) (r.Element, er
 	return NewBool(result), nil
 }
 
-func strExecJoin(s *String, c *r.Context, values []r.Element) (r.Element, error) {
+func strExecJoin(s *String, values []r.Element) (r.Element, error) {
 	if err := ValidateAllParams(values, "string"); err != nil {
 		return nil, err
 	}
@@ -162,7 +162,7 @@ func strExecJoin(s *String, c *r.Context, values []r.Element) (r.Element, error)
 }
 
 // format string, like python's "<format_string:%s>" % (str)
-func strExecFormat(s *String, c *r.Context, values []r.Element) (r.Element, error) {
+func strExecFormat(s *String, values []r.Element) (r.Element, error) {
 	if err := ValidateAllParams(values, "string"); err != nil {
 		return nil, err
 	}
@@ -182,7 +182,7 @@ func strExecFormat(s *String, c *r.Context, values []r.Element) (r.Element, erro
 	return NewString(result), nil
 }
 
-func strExecAtoi(s *String, c *r.Context, values []r.Element) (r.Element, error) {
+func strExecAtoi(s *String, values []r.Element) (r.Element, error) {
 	v := strings.Replace(s.value, "*^", "e", 1)
 	v = strings.Replace(v, "*10^", "e", 1)
 	s.value = v

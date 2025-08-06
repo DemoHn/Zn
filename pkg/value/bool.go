@@ -5,7 +5,7 @@ import (
 	r "github.com/DemoHn/Zn/pkg/runtime"
 )
 
-type boolGetterFunc func(*Bool, *r.Context) (r.Element, error)
+type boolGetterFunc func(*Bool) (r.Element, error)
 
 type Bool struct {
 	value bool
@@ -36,7 +36,7 @@ func (b *Bool) GetProperty(c *r.Context, name string) (r.Element, error) {
 		"文本": boolGetText,
 	}
 	if fn, ok := boolGetterMap[name]; ok {
-		return fn(b, c)
+		return fn(b)
 	}
 	return nil, zerr.PropertyNotFound(name)
 }
@@ -51,9 +51,9 @@ func (b *Bool) ExecMethod(c *r.Context, name string, values []r.Element) (r.Elem
 	return nil, zerr.MethodNotFound(name)
 }
 
-//// getters & setters & methods
+// getters & setters & methods
 // getters
 // get text representation of current Bool value
-func boolGetText(b *Bool, c *r.Context) (r.Element, error) {
+func boolGetText(b *Bool) (r.Element, error) {
 	return NewString(b.String()), nil
 }

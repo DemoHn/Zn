@@ -29,7 +29,7 @@ func TestString_StrExecAtoi(t *testing.T) {
 	}
 
 	for _, c := range cases {
-		result, err := strExecAtoi(NewString(c.input), nil, nil)
+		result, err := strExecAtoi(NewString(c.input), nil)
 		if c.hasError {
 			if err == nil {
 				t.Errorf("strExecAtoi('%s'): expect error, got result: '%f'", c.input, result.(*Number).GetValue())
