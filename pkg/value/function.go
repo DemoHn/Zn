@@ -13,15 +13,15 @@ type FuncExecutor = func(*r.Context, []r.Element) (r.Element, error)
 
 type Function struct {
 	name string
-	// outerScope - when compiling an "inner" function (i.e. a "child" function defined inside another "parent" function), we will copy the outer scope into the function to impl the Closure feature
-	outerScope   *r.Scope
+	// TODO: using upvalue to implement closure
+	context      *r.Context
 	logicHandler FuncExecutor
 }
 
-func NewFunction(outerScope *r.Scope, executor FuncExecutor) *Function {
+func NewFunction(context *r.Context, executor FuncExecutor) *Function {
 	return &Function{
 		name:         "",
-		outerScope:   outerScope,
+		context:      context,
 		logicHandler: executor,
 	}
 }
@@ -34,15 +34,6 @@ func (fn *Function) SetName(name string) *Function {
 // Exec - execute the Function Object - accepts input params, execute from closure executor and
 // yields final result
 func (fn *Function) Exec(c *r.Context, thisValue r.Element, params []r.Element) (r.Element, error) {
-	// init scope
-	module := c.GetCurrentModule()
-
-	// add the pre-defined closure scope to current module
-	if fn.outerScope != nil {
-		module.AddScope(fn.outerScope)
-		defer c.PopScope()
-	}
-
 	// create new scope for the function ITSELF
 	fnScope := c.PushScope()
 	defer c.PopScope()

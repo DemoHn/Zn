@@ -21,7 +21,7 @@ func compileFunction(upperCtx *r.Context, node *syntax.FunctionDeclareStmt) *val
 		return c.GetCurrentScope().GetReturnValue(), nil
 	}
 
-	return value.NewFunction(upperCtx.GetCurrentScope(), mainLogicHandler)
+	return value.NewFunction(upperCtx, mainLogicHandler)
 }
 
 // （显示：A、B、C），得到D

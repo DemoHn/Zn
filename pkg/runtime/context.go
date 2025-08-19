@@ -35,22 +35,25 @@ type CallInfo struct {
 	LastLineIdx int
 }
 
-/* ModuleCodeFinder - input module name, output its source code or return error. The example finder shows how to find source code from module name, where each module corresponds to a "<moduleName>.zn" text file on disk.
+/*
+	ModuleCodeFinder - input module name, output its source code or return error. The example finder shows how to find source code from module name, where each module corresponds to a "<moduleName>.zn" text file on disk.
 
 ```go
-func finder (name string) ([]rune, error) {
-	path := fmt.Sprintf("./%s.zn", name)
-	if _, err := os.Stat(path); errors.Is(err, os.ErrNotExist) {
-		return "", fmt.Errorf("source code of module '%s' not found", name)
+
+	func finder (name string) ([]rune, error) {
+		path := fmt.Sprintf("./%s.zn", name)
+		if _, err := os.Stat(path); errors.Is(err, os.ErrNotExist) {
+			return "", fmt.Errorf("source code of module '%s' not found", name)
+		}
+
+		in, err := io.NewFileStream(path)
+		if err != nil {
+			return err
+		}
+
+		return in.ReadAll()
 	}
 
-	in, err := io.NewFileStream(path)
-	if err != nil {
-		return err
-	}
-
-	return in.ReadAll()
-}
 ```
 */
 type ModuleCodeFinder func(isMainModule bool, moduleName string) ([]rune, error)
@@ -103,7 +106,7 @@ func (ctx *Context) GetVarInputs() map[string]Element {
 	return ctx.varInputs
 }
 
-//// setters
+// // setters
 func (ctx *Context) SetModuleCodeFinder(finder ModuleCodeFinder) {
 	ctx.moduleCodeFinder = finder
 }
@@ -112,7 +115,7 @@ func (ctx *Context) SetVarInputs(varInputs map[string]Element) {
 	ctx.varInputs = varInputs
 }
 
-//// scope operation
+// // scope operation
 func (ctx *Context) FindParentScope() *Scope {
 	module := ctx.GetCurrentModule()
 	if module != nil {
@@ -171,7 +174,7 @@ func (ctx *Context) PopCallStack() {
 	ctx.callStack = ctx.callStack[:stackLen-1]
 }
 
-//// enter & exist modules
+// // enter & exist modules
 func (ctx *Context) EnterModule(module *Module) {
 	// add require cache
 	ctx.moduleGraph.AddRequireCache(module)
