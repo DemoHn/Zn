@@ -53,14 +53,18 @@ func (s *String) SetProperty(c *r.Context, name string, value r.Element) error {
 // ExecMethod -
 func (s *String) ExecMethod(c *r.Context, name string, values []r.Element) (r.Element, error) {
 	strMethodMap := map[string]strMethodFunc{
-		"替换":   strExecReplace,
-		"分隔":   strExecSplit,
-		"匹配":   strExecMatch,
-		"匹配开头": strExecMatchStart,
-		"匹配结尾": strExecMatchEnd,
-		"拼接":   strExecJoin,
-		"格式化":  strExecFormat,
-		"转换数值": strExecAtoi,
+		"替换":     strExecReplace,
+		"分隔":     strExecSplit,
+		"匹配":     strExecMatch,
+		"匹配开头":   strExecMatchStart,
+		"匹配结尾":   strExecMatchEnd,
+		"取样":     strExecSlice,
+		"去除空格":   strExecStripWhitespaces,
+		"转小写-英文": strExecToLowerCase,
+		"转大写-英文": strExecToUpperCase,
+		"拼接":     strExecJoin,
+		"格式化":    strExecFormat,
+		"转换数值":   strExecAtoi,
 	}
 	if fn, ok := strMethodMap[name]; ok {
 		return fn(s, values)
@@ -147,6 +151,51 @@ func strExecMatchEnd(s *String, values []r.Element) (r.Element, error) {
 	result := strings.HasSuffix(s.value, substr)
 
 	return NewBool(result), nil
+}
+
+func strExecSlice(s *String, values []r.Element) (r.Element, error) {
+	if err := ValidateExactParams(values, "number", "number"); err != nil {
+		return nil, err
+	}
+	ss := s.GetValue()
+	startIdx := int(values[0].(*Number).GetValue())
+	endIdx := int(values[1].(*Number).GetValue())
+	if startIdx < 0 {
+		startIdx = len(ss) + startIdx + 1
+	}
+
+	if startIdx < 1 {
+		return nil, ThrowException("文本的起始索引需从1开始！")
+	}
+
+	if endIdx > len(ss) {
+		return nil, ThrowException("文本的结束索引不能超过其长度！")
+	}
+
+	if endIdx < 0 {
+		endIdx = len(ss) + endIdx + 1
+	}
+	if startIdx > endIdx {
+		return NewString(""), nil
+	}
+
+	subString := ss[startIdx-1 : endIdx]
+	return NewString(subString), nil
+}
+
+func strExecStripWhitespaces(s *String, value []r.Element) (r.Element, error) {
+	ss := strings.TrimSpace(s.value)
+	return NewString(ss), nil
+}
+
+func strExecToLowerCase(s *String, value []r.Element) (r.Element, error) {
+	ss := strings.ToLower(s.value)
+	return NewString(ss), nil
+}
+
+func strExecToUpperCase(s *String, value []r.Element) (r.Element, error) {
+	ss := strings.ToUpper(s.value)
+	return NewString(ss), nil
 }
 
 func strExecJoin(s *String, values []r.Element) (r.Element, error) {
