@@ -18,8 +18,8 @@ func EnterREPL() {
 	linerR := liner.NewLiner()
 	linerR.SetCtrlCAborts(true)
 
-	compiler := zinc.NewCompiler()
-	runContext := compiler.NewContext()
+	interpreter := zinc.NewInterpreter()
+	runContext := interpreter.NewContext()
 	// REPL loop
 	for {
 		text, err := linerR.Prompt("Zn> ")
@@ -41,7 +41,7 @@ func EnterREPL() {
 		}
 
 		varInput := map[string]r.Element{}
-		result, err := compiler.LoadScript([]rune(text)).ExecuteWithContext(runContext, varInput)
+		result, err := interpreter.LoadScript([]rune(text)).ExecuteWithContext(runContext, varInput)
 		if err != nil {
 			prettyPrintError(os.Stdout, err)
 		} else if result != nil {
@@ -52,8 +52,8 @@ func EnterREPL() {
 
 // ExecProgram - exec program from file directly
 func ExecProgram(file string) {
-	znCompiler := zinc.NewCompiler()
-	rtnValue, err := znCompiler.LoadFile(file).Execute(map[string]r.Element{})
+	znInterpreter := zinc.NewInterpreter()
+	rtnValue, err := znInterpreter.LoadFile(file).Execute(map[string]r.Element{})
 
 	if err != nil {
 		prettyPrintError(os.Stdout, err)
@@ -71,12 +71,13 @@ func ExecProgram(file string) {
 }
 
 // ShowVersion - show version
+
 func ShowVersion() {
-	znCompiler := zinc.NewCompiler()
-	fmt.Printf("Zn语言版本：%s\n", znCompiler.GetVersion())
+	znInterpreter := zinc.NewInterpreter()
+	fmt.Printf("Zn语言版本：%s\n", znInterpreter.GetVersion())
 }
 
-//// display helpers
+// // display helpers
 func prettyDisplayValue(v r.Element, w eio.Writer) {
 	var displayData = ""
 	var valStr = value.StringifyValue(v)

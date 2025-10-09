@@ -41,7 +41,9 @@ var NewZnNull = value.NewNull
 
 const ZINC_VERSION = "rev08"
 
-type ZnCompiler struct {
+// ZnInterpreter - MAIN CODE EXECUTION INSTANCE -
+// ONE INTERPRETER -> ONE VM
+type ZnInterpreter struct {
 	// version - compiler version
 	version string
 
@@ -50,25 +52,25 @@ type ZnCompiler struct {
 	moduleCodeFinder ModuleCodeFinder
 }
 
-// NewCompiler - new ZnCompiler object
-func NewCompiler() *ZnCompiler {
-	return &ZnCompiler{
+// NewInterpreter - new ZnInterpreter object
+func NewInterpreter() *ZnInterpreter {
+	return &ZnInterpreter{
 		version: ZINC_VERSION,
 	}
 }
 
 // GetVersion - get current compiler's version
-func (z *ZnCompiler) GetVersion() string {
+func (z *ZnInterpreter) GetVersion() string {
 	return z.version
 }
 
-func (z *ZnCompiler) NewContext() *runtime.Context {
+func (z *ZnInterpreter) NewContext() *runtime.Context {
 	return runtime.NewContext(exec.GlobalValues, runtime.NewMainModule(nil))
 }
 
 ///// load functions //////
 
-func (z *ZnCompiler) LoadScript(source []rune) *ZnCompiler {
+func (z *ZnInterpreter) LoadScript(source []rune) *ZnInterpreter {
 	// set moduleCodeFinder
 	z.moduleCodeFinder = func(isMainModule bool, moduleName string) ([]rune, error) {
 		// suppose the sourceCode is the mainModule ONLY
@@ -83,7 +85,7 @@ func (z *ZnCompiler) LoadScript(source []rune) *ZnCompiler {
 	return z
 }
 
-func (z *ZnCompiler) LoadFile(file string) *ZnCompiler {
+func (z *ZnInterpreter) LoadFile(file string) *ZnInterpreter {
 	// set moduleCodeFinder
 	z.moduleCodeFinder = func(isMainModule bool, moduleName string) ([]rune, error) {
 		// get dir & fileName -
@@ -121,12 +123,12 @@ func (z *ZnCompiler) LoadFile(file string) *ZnCompiler {
 	return z
 }
 
-func (z *ZnCompiler) Execute(varInput map[string]Element) (Element, error) {
+func (z *ZnInterpreter) Execute(varInput map[string]Element) (Element, error) {
 	runContext := z.NewContext()
 	return z.ExecuteWithContext(runContext, varInput)
 }
 
-func (z *ZnCompiler) ExecuteWithContext(ctx *runtime.Context, varInput map[string]Element) (Element, error) {
+func (z *ZnInterpreter) ExecuteWithContext(ctx *runtime.Context, varInput map[string]Element) (Element, error) {
 	// #1. get the main source
 	if z.moduleCodeFinder == nil {
 		return nil, fmt.Errorf("code script/file not loaded")
@@ -186,13 +188,13 @@ func (s *ZnServer) SetHandler(handler http.HandlerFunc) *ZnServer {
 }
 
 func (s *ZnServer) SetPlaygroundHandler() *ZnServer {
-	compiler := NewCompiler()
+	interpreter := NewInterpreter()
 	s.reqHandler = func(w http.ResponseWriter, r *http.Request) {
 		source, varInput, err := server.ReadRequestForPlayground(r)
 		if err != nil {
 			server.WriteResponseForPlayground(w, nil, err)
 		} else {
-			rtnValue, err := compiler.LoadScript(source).Execute(varInput)
+			rtnValue, err := interpreter.LoadScript(source).Execute(varInput)
 			server.WriteResponseForPlayground(w, rtnValue, err)
 		}
 	}
@@ -201,7 +203,7 @@ func (s *ZnServer) SetPlaygroundHandler() *ZnServer {
 }
 
 func (s *ZnServer) SetHTTPHandler(entryFile string) *ZnServer {
-	compiler := NewCompiler()
+	interpreter := NewInterpreter()
 	s.reqHandler = func(w http.ResponseWriter, r *http.Request) {
 		reqObj, err := server.ConstructHTTPRequestObject(r)
 		if err != nil {
@@ -213,7 +215,7 @@ func (s *ZnServer) SetHTTPHandler(entryFile string) *ZnServer {
 			"当前请求": reqObj,
 		}
 		// execute code
-		rtnValue, err := compiler.LoadFile(entryFile).Execute(varInput)
+		rtnValue, err := interpreter.LoadFile(entryFile).Execute(varInput)
 		server.SendHTTPResponse(rtnValue, err, w)
 	}
 	return s
@@ -225,7 +227,7 @@ func (s *ZnServer) SetPMServerConfig(cfg server.ZnPMServerConfig) *ZnServer {
 	return s
 }
 
-/// Launch - by default launch PMServer
+// / Launch - by default launch PMServer
 func (s *ZnServer) Launch(connUrl string) error {
 	return s.LaunchPMServer(connUrl)
 }
