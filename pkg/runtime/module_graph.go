@@ -1,6 +1,13 @@
 package runtime
 
+import "github.com/DemoHn/Zn/pkg/syntax"
+
 type ModuleGraph struct {
+	// moduleIDMap maps module name to moduleID (starts from 0, once import a new module, the index adds 1)
+	moduleIDMap map[string]int
+	// moduleIDCusor record the current moduleID, when import new module, the cursor will add 1.
+	moduleIDCusror int
+
 	// external modules (usually written in zinc)
 	externalDepGraph map[string][]string
 	// internal modules (usually standard libraray, plugin)
@@ -9,6 +16,16 @@ type ModuleGraph struct {
 	requireCache map[string]*Module
 	// There's ONLY one anonymousModule (aka. main module in playground & REPL executor) allowed in one context
 	anonymousModule *Module
+}
+
+type ModuleTMP struct {
+	name string
+	// program stores sourceLines & AST - usually for error displaying
+	program *syntax.Program
+	// exportValues - all classes and functions are exported for external
+	// imports - so here we insert all exportable values to this map after first scan
+	// note: all export values are constants.
+	exportValues map[string]Element
 }
 
 func NewModuleGraph() *ModuleGraph {

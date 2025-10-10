@@ -8,6 +8,8 @@ type VM struct {
 	globals map[string]Element
 	// module-level & scope-level local value stacks
 	// including global & local variables
+	// KEY: moduleID
+	// VALUE: the ScopeStack of corresponding module
 	valueStack map[int]ScopeStack
 
 	// callStack - store all call frames
@@ -15,15 +17,20 @@ type VM struct {
 	// csCursor - index of current callStack
 	csCursor int
 
-	// moduleGraph
-	moduleGraph *ModuleGraph
+	// modules - allocates modules by ID & stores export values
+	modules *ModuleGraph
 }
 
 type CallFrame struct {
 	moduleID    int
 	callType    uint8
-	currentLine int // current exec line in the module's programAST
+	currentLine int // current exec line in the module's source code
 	programAST  *syntax.Program
+	// for SCRIPT callFrame, thisValue = nil
+	// for FUCTION callFrame, thisValues depends on the function
+	// 	 - for method function, thisValue = [Object Instance]
+	//   - for direct function, thisValue = nil
+	thisValue Element
 }
 
 const (
