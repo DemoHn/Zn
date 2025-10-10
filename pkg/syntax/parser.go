@@ -42,6 +42,12 @@ func (p *Parser) Parse() (ast *Program, err error) {
 	return
 }
 
+// Compile - parse all tokens into syntax tree
+// TODO: In the future, we will support compiling to bytecode directly
+func (p *Parser) Compile() (ast *Program, err error) {
+	return p.Parse()
+}
+
 func (p *Parser) ParseVarInputs() (vdStmt *VarDeclareStmt, err error) {
 	// handle panics
 	defer func() {

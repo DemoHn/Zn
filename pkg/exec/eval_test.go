@@ -24,7 +24,7 @@ func setupStmtFromCode(text string) (syntax.Statement, error) {
 	in := io.NewByteStream([]byte(text))
 	source, _ := in.ReadAll()
 	p := syntax.NewParser(source, zh.NewParserZH())
-	program, pErr := p.Parse()
+	program, pErr := p.Compile()
 	if pErr != nil {
 		return nil, fmt.Errorf("syntax error on init:%v", pErr)
 	}

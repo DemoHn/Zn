@@ -229,7 +229,7 @@ func TestAST_FAIL(t *testing.T) {
 			source, _ := in.ReadAll()
 			p := syntax.NewParser(source, NewParserZH())
 
-			_, err := p.Parse()
+			_, err := p.Compile()
 
 			if err == nil {
 				t.Errorf("expect error, got no error found")

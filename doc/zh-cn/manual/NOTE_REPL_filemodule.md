@@ -14,3 +14,34 @@
     - 没有 rootDir，只有一个主模块
     - 第一次执行时读取程序，得到 lexer，再把 lexer 放进 Module 里面去初始化
     - 第二次执行时再得到一个新 lexer ，把当前 lexer 的
+
+
+### use zinc as Go Library
+
+```go
+package main
+import .../zinc 
+
+func main() {
+    interpreter := zinc.NewInterpreter()
+
+    // exec path 1 -> for code snippets (main module ONLY) & REPL
+    interpreter.ExecuteScript(script string, varInput map) -> (zinc.Element, error)
+
+    // exec path 2 -> exeucte file in local file system
+    interpreter.ExecuteFile(fileName string, varInput map) -> (zinc.Element, error)
+
+    // exec path 3 -> custom module finder & execute
+    interpreter.SetModuleFinder((moudleName string) -> string)
+    interpreter.Execute(varInput map) -> (zinc.Element, error)
+
+    //// if you want to run different modules many times, JUST
+    //// create a new interpreter!
+
+    interpreter2 := zinc.NewInterpreter()
+    interpreter2.ExecuteFile(fileName string) -> (zinc.Element, error)
+
+    ///// transform an element to a string for display usage 
+    zinc.ElementToString(elem Element) -> string
+}
+```

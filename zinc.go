@@ -54,6 +54,7 @@ type ZnInterpreter struct {
 
 // NewInterpreter - new ZnInterpreter object
 func NewInterpreter() *ZnInterpreter {
+	// vm = runtime.InitVM()
 	return &ZnInterpreter{
 		version: ZINC_VERSION,
 	}
@@ -128,7 +129,7 @@ func (z *ZnInterpreter) Execute(varInput map[string]Element) (Element, error) {
 	return z.ExecuteWithContext(runContext, varInput)
 }
 
-func (z *ZnInterpreter) ExecuteWithContext(ctx *runtime.Context, varInput map[string]Element) (Element, error) {
+func (z *ZnInterpreter) ExecuteWithContext(ctx *runtime.Context, varInputs runtime.ElementMap) (Element, error) {
 	// #1. get the main source
 	if z.moduleCodeFinder == nil {
 		return nil, fmt.Errorf("code script/file not loaded")
@@ -141,9 +142,10 @@ func (z *ZnInterpreter) ExecuteWithContext(ctx *runtime.Context, varInput map[st
 		return nil, err
 	}
 
-	// #3. parse the program
+	// #3. compile the program -
+	// currently from source code to AST, in the future, we will support compiling to bytecode
 	parser := syntax.NewParser(source, zh.NewParserZH())
-	program, err := parser.Parse()
+	program, err := parser.Compile()
 	if err != nil {
 		return nil, exec.WrapSyntaxError(parser, "", err)
 	}
@@ -151,10 +153,9 @@ func (z *ZnInterpreter) ExecuteWithContext(ctx *runtime.Context, varInput map[st
 	// set context
 	ctx.GetCurrentModule().SetSourceLines(program.Lines)
 	ctx.SetModuleCodeFinder(z.moduleCodeFinder)
-	ctx.SetVarInputs(varInput)
 
 	// #4. eval program
-	if err := exec.EvaluateProgram(ctx, program); err != nil {
+	if err := exec.EvaluateProgram(ctx, program, varInputs); err != nil {
 		return nil, exec.WrapRuntimeError(ctx, err)
 	}
 

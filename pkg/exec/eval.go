@@ -44,7 +44,7 @@ const (
 // If the program doesn't follow the order (e.g. the func declare block at the end of program),
 // it doesn't matter - we will order the statements in the program automatically before execution.
 // (This will not affect line numbers)
-func evalProgram(c *r.Context, program *syntax.Program) error {
+func evalProgram(c *r.Context, program *syntax.Program, varInputs r.ElementMap) error {
 	// 1. import libs
 	for _, importStmt := range program.ImportBlock {
 		if err := evalImportStmt(c, importStmt); err != nil {
@@ -53,8 +53,6 @@ func evalProgram(c *r.Context, program *syntax.Program) error {
 	}
 
 	if program.ExecBlock != nil {
-		varInputs := c.GetVarInputs()
-
 		// 2. do exec block -> load values from context.varInputs -> current scope
 		paramList := []r.Element{}
 		for _, inputV := range program.ExecBlock.InputBlock {
@@ -1210,7 +1208,7 @@ func execAnotherModule(c *r.Context, name string) (*r.Module, error) {
 		// #1. parse program
 		p := syntax.NewParser(source, zh.NewParserZH())
 
-		program, err := p.Parse()
+		program, err := p.Compile()
 		if err != nil {
 			// moduleName
 			return nil, WrapSyntaxError(p, name, err)
@@ -1222,7 +1220,7 @@ func execAnotherModule(c *r.Context, name string) (*r.Module, error) {
 		defer c.ExitModule()
 
 		// #3. eval program
-		if err := evalProgram(c, program); err != nil {
+		if err := evalProgram(c, program, nil); err != nil {
 			return nil, WrapRuntimeError(c, err)
 		}
 
