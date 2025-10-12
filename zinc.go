@@ -155,12 +155,13 @@ func (z *ZnInterpreter) ExecuteWithContext(ctx *runtime.Context, varInputs runti
 	ctx.SetModuleCodeFinder(z.moduleCodeFinder)
 
 	// #4. eval program
-	if err := exec.EvaluateProgram(ctx, program, varInputs); err != nil {
+	rtnValue, err := exec.EvaluateProgram(ctx, program, varInputs)
+	if err != nil {
 		return nil, exec.WrapRuntimeError(ctx, err)
 	}
 
 	// #5. get return value
-	return ctx.GetCurrentScope().GetReturnValue(), nil
+	return rtnValue, nil
 }
 
 type ZnServer struct {

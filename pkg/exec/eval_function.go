@@ -14,11 +14,7 @@ import (
 func compileFunction(upperCtx *r.Context, node *syntax.FunctionDeclareStmt) *value.Function {
 	var mainLogicHandler = func(c *r.Context, params []r.Element) (r.Element, error) {
 		// 2. do eval exec block
-		if err := evalExecBlock(c, node.ExecBlock, params); err != nil {
-			return nil, err
-		}
-
-		return c.GetCurrentScope().GetReturnValue(), nil
+		return evalExecBlock(c, node.ExecBlock, params)
 	}
 
 	return value.NewFunction(upperCtx, mainLogicHandler)

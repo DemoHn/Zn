@@ -8,8 +8,6 @@ type Scope struct {
 	symbolMap map[string]SymbolInfo
 	// thisValue - "this" variable of the scope
 	thisValue Element
-	// returnValue - return value of scope
-	returnValue Element
 }
 
 // SymbolInfo - a wrapper of symbol's value with additional properties.
@@ -46,16 +44,6 @@ func (sp *Scope) GetThisValue() Element {
 // SetThisValue -
 func (sp *Scope) SetThisValue(v Element) {
 	sp.thisValue = v
-}
-
-// GetReturnValue -
-func (sp *Scope) GetReturnValue() Element {
-	return sp.returnValue
-}
-
-// SetReturnValue -
-func (sp *Scope) SetReturnValue(v Element) {
-	sp.returnValue = v
 }
 
 func (sp *Scope) SetSymbolValue(name string, v Element, isConst bool, module *Module) {

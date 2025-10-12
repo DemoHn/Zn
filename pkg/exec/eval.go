@@ -44,11 +44,11 @@ const (
 // If the program doesn't follow the order (e.g. the func declare block at the end of program),
 // it doesn't matter - we will order the statements in the program automatically before execution.
 // (This will not affect line numbers)
-func evalProgram(c *r.Context, program *syntax.Program, varInputs r.ElementMap) error {
+func evalProgram(c *r.Context, program *syntax.Program, varInputs r.ElementMap) (r.Element, error) {
 	// 1. import libs
 	for _, importStmt := range program.ImportBlock {
 		if err := evalImportStmt(c, importStmt); err != nil {
-			return err
+			return nil, err
 		}
 	}
 
@@ -58,7 +58,7 @@ func evalProgram(c *r.Context, program *syntax.Program, varInputs r.ElementMap) 
 		for _, inputV := range program.ExecBlock.InputBlock {
 			inputName, err := MatchIDName(inputV)
 			if err != nil {
-				return err
+				return nil, err
 			}
 			inputNameStr := inputName.GetLiteral()
 
@@ -66,36 +66,37 @@ func evalProgram(c *r.Context, program *syntax.Program, varInputs r.ElementMap) 
 			if elem, ok := varInputs[inputNameStr]; ok {
 				paramList = append(paramList, elem)
 			} else {
-				return zerr.InputValueNotFound(inputNameStr)
+				return nil, zerr.InputValueNotFound(inputNameStr)
 			}
 		}
 		return evalExecBlock(c, program.ExecBlock, paramList)
 	}
 
-	return nil
+	return value.NewNull(), nil
 }
 
-func evalExecBlock(c *r.Context, execBlock *syntax.ExecBlock, params []r.Element) error {
+func evalExecBlock(c *r.Context, execBlock *syntax.ExecBlock, params []r.Element) (r.Element, error) {
 	// 1.1 check param length
 	inputParamNum := len(execBlock.InputBlock)
 	if len(params) != inputParamNum {
-		return zerr.MismatchParamLengthError(inputParamNum, len(params))
+		return nil, zerr.MismatchParamLengthError(inputParamNum, len(params))
 	}
 
 	for idx, param := range execBlock.InputBlock {
 		idTag, err := MatchIDName(param)
 		if err != nil {
-			return err
+			return nil, err
 		}
 
 		// set inputValue to current scope
 		if err := c.BindSymbolConst(idTag, params[idx]); err != nil {
-			return err
+			return nil, err
 		}
 	}
 
 	var errBlock error
-	errBlock = evalStmtBlock(c, execBlock.StmtBlock)
+	var rtnValue r.Element
+	rtnValue, errBlock = evalStmtBlock(c, execBlock.StmtBlock)
 
 	// extract & handle exception value (抛出)
 	if errBlock != nil {
@@ -104,21 +105,10 @@ func evalExecBlock(c *r.Context, execBlock *syntax.ExecBlock, params []r.Element
 			errBlock = handleExceptions(c, execBlock.CatchBlock, exception)
 		}
 	}
-
-	// extract & handle return value (输出)
-	if errBlock != nil {
-		rtnValue, err := extractSignalValue(errBlock, zerr.SigTypeReturn)
-		if err != nil {
-			return err
-		}
-		// set return value
-		c.GetCurrentScope().SetReturnValue(rtnValue)
-		return nil
-	}
-	return errBlock
+	return rtnValue, errBlock
 }
 
-func evalStmtBlock(c *r.Context, stmtBlock *syntax.StmtBlock) error {
+func evalStmtBlock(c *r.Context, stmtBlock *syntax.StmtBlock) (r.Element, error) {
 	classDefStmts := make([]syntax.Statement, 0)
 	funcDefStmts := make([]syntax.Statement, 0)
 	otherStmts := make([]syntax.Statement, 0)
@@ -141,13 +131,15 @@ func evalStmtBlock(c *r.Context, stmtBlock *syntax.StmtBlock) error {
 	allStmts = append(allStmts, funcDefStmts...)
 	allStmts = append(allStmts, otherStmts...)
 
+	var rtnValue r.Element
+	var err error
 	for _, stmt := range allStmts {
-		if err := evalStatement(c, stmt); err != nil {
-			return err
+		if rtnValue, err = evalStatement(c, stmt); err != nil {
+			return nil, err
 		}
 	}
 
-	return nil
+	return rtnValue, nil
 }
 
 func handleExceptions(c *r.Context, catchBlock []*syntax.CatchBlockPair, exception r.Element) error {
@@ -175,7 +167,8 @@ func handleExceptions(c *r.Context, catchBlock []*syntax.CatchBlockPair, excepti
 			newScope.SetThisValue(exception)
 
 			// do execution (with "this" value = exception value)
-			return evalStmtBlock(c, catchBlockItem.StmtBlock)
+			_, err := evalStmtBlock(c, catchBlockItem.StmtBlock)
+			return err
 		}
 	}
 
@@ -199,68 +192,42 @@ func handleExceptions(c *r.Context, catchBlock []*syntax.CatchBlockPair, excepti
 //// eval statements
 
 // EvalStatement - eval statement
-func evalStatement(c *r.Context, stmt syntax.Statement) error {
-	var returnValue r.Element
-	var sp = c.GetCurrentScope()
-
+func evalStatement(c *r.Context, stmt syntax.Statement) (r.Element, error) {
 	// set current line
 	c.SetCurrentLine(stmt.GetCurrentLine())
 
-	// set return value
-	defer func() {
-		var finalReturnValue r.Element = value.NewNull()
-		// set current return value
-		if returnValue != nil {
-			finalReturnValue = returnValue
-		}
-		sp.SetReturnValue(finalReturnValue)
-
-		// set parent return value
-		parentScope := c.FindParentScope()
-		if parentScope != nil {
-			parentScope.SetReturnValue(finalReturnValue)
-		}
-	}()
-
 	switch v := stmt.(type) {
 	case *syntax.VarDeclareStmt:
-		return evalVarDeclareStmt(c, v)
+		return value.NewNull(), evalVarDeclareStmt(c, v)
 	case *syntax.WhileLoopStmt:
-		return evalWhileLoopStmt(c, v)
+		return value.NewNull(), evalWhileLoopStmt(c, v)
 	case *syntax.BranchStmt:
-		return evalBranchStmt(c, v)
+		return value.NewNull(), evalBranchStmt(c, v)
 	case *syntax.EmptyStmt:
-		return nil
+		return value.NewNull(), nil
 	case *syntax.FunctionDeclareStmt:
 		if v.DeclareType == syntax.DeclareTypeConstructor {
-			return evalConstructorDeclareStmt(c, v)
+			return value.NewNull(), evalConstructorDeclareStmt(c, v)
 		} else {
-			return evalFunctionDeclareStmt(c, v)
+			return value.NewNull(), evalFunctionDeclareStmt(c, v)
 		}
 	case *syntax.ClassDeclareStmt:
-		return evalClassDeclareStmt(c, v)
+		return value.NewNull(), evalClassDeclareStmt(c, v)
 	case *syntax.IterateStmt:
-		return evalIterateStmt(c, v)
+		return value.NewNull(), evalIterateStmt(c, v)
 	case *syntax.FunctionReturnStmt:
-		val, err := evalExpression(c, v.ReturnExpr)
-		if err != nil {
-			return err
-		}
-		// send RETURN break
-		return zerr.NewReturnSignal(val)
+		return evalExpression(c, v.ReturnExpr)
 	case *syntax.ThrowExceptionStmt:
-		return evalThrowExceptionStmt(c, v)
+		return value.NewNull(), evalThrowExceptionStmt(c, v)
 	case *syntax.ContinueStmt:
 		// send continue signal
-		return zerr.NewContinueSignal()
+		return value.NewNull(), zerr.NewContinueSignal()
 	case *syntax.BreakStmt:
-		return zerr.NewBreakSignal()
+		return value.NewNull(), zerr.NewBreakSignal()
 	case syntax.Expression:
-		expr, err := evalExpression(c, v)
-		returnValue = expr
-		return err
+		return evalExpression(c, v)
 	default:
-		return zerr.UnexpectedCase("语句类型", fmt.Sprintf("%T", v))
+		return nil, zerr.UnexpectedCase("语句类型", fmt.Sprintf("%T", v))
 	}
 }
 
@@ -380,7 +347,7 @@ func evalConstructorDeclareStmt(upperCtx *r.Context, node *syntax.FunctionDeclar
 		// set "this" value
 		fnScope.SetThisValue(newObject)
 
-		if err := evalExecBlock(c, node.ExecBlock, elems); err != nil {
+		if _, err := evalExecBlock(c, node.ExecBlock, elems); err != nil {
 			return nil, err
 		}
 		return newObject, nil
@@ -492,7 +459,7 @@ func evalWhileLoopStmt(c *r.Context, node *syntax.WhileLoopStmt) error {
 			return nil
 		}
 		// #3. stmt block
-		if err := evalStmtBlock(c, node.LoopBlock); err != nil {
+		if _, err := evalStmtBlock(c, node.LoopBlock); err != nil {
 			if s, ok := err.(*zerr.Signal); ok {
 				if s.SigType == zerr.SigTypeContinue {
 					continue
@@ -523,7 +490,8 @@ func evalBranchStmt(c *r.Context, node *syntax.BranchStmt) error {
 
 	// exec if-branch
 	if vIfExpr.GetValue() {
-		return evalStmtBlock(c, node.IfTrueBlock)
+		_, err := evalStmtBlock(c, node.IfTrueBlock)
+		return err
 	}
 	// exec else-if branches
 	for idx, otherExpr := range node.OtherExprs {
@@ -537,12 +505,14 @@ func evalBranchStmt(c *r.Context, node *syntax.BranchStmt) error {
 		}
 		// exec else-if branch
 		if vOtherExprI.GetValue() {
-			return evalStmtBlock(c, node.OtherBlocks[idx])
+			_, err := evalStmtBlock(c, node.OtherBlocks[idx])
+			return err
 		}
 	}
 	// exec else branch if possible
 	if node.HasElse {
-		return evalStmtBlock(c, node.IfFalseBlock)
+		_, err := evalStmtBlock(c, node.IfFalseBlock)
+		return err
 	}
 	return nil
 }
@@ -579,7 +549,8 @@ func evalIterateStmt(c *r.Context, node *syntax.IterateStmt) error {
 				return err
 			}
 		}
-		return evalStmtBlock(c, node.IterateBlock)
+		_, err := evalStmtBlock(c, node.IterateBlock)
+		return err
 	}
 
 	// define indication variables as "currentKey" and "currentValue" under new iterScope
@@ -1220,7 +1191,7 @@ func execAnotherModule(c *r.Context, name string) (*r.Module, error) {
 		defer c.ExitModule()
 
 		// #3. eval program
-		if err := evalProgram(c, program, nil); err != nil {
+		if _, err := evalProgram(c, program, nil); err != nil {
 			return nil, WrapRuntimeError(c, err)
 		}
 

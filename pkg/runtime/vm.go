@@ -44,10 +44,10 @@ type ElementMap = map[string]Element
 
 func InitVM(globals map[string]Element) *VM {
 	return &VM{
-		globals:     globals,
-		valueStack:  map[int]ScopeStack{},
-		callStack:   []CallFrame{},
-		csCursor:    -1,
-		moduleGraph: nil,
+		globals:    globals,
+		valueStack: map[int]ScopeStack{},
+		callStack:  []CallFrame{},
+		csCursor:   -1,
+		modules:    nil,
 	}
 }
