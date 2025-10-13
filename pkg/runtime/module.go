@@ -109,8 +109,8 @@ func (m *Module) IsAnonymous() bool {
 	return m.anonymous
 }
 
-//// scopeStack operation
-////
+// // scopeStack operation
+// //
 func (m *Module) GetCurrentScope() *Scope {
 	stackLen := len(m.scopeStack)
 	if stackLen == 0 {
@@ -225,7 +225,7 @@ func (m *Module) BindImportSymbol(name string, value Element, refModule *Module)
 	return nil
 }
 
-//// imports & exports
+// // imports & exports
 func (m *Module) AddExportValue(name string, value Element) error {
 	if _, ok := m.exportValues[name]; ok {
 		return zerr.NameRedeclared(name)
