@@ -137,6 +137,7 @@ func (sp *Scope) GetValue(name string) Element {
 	return nil
 }
 
+// SetValue - set from existing symbol
 func (sp *Scope) SetValue(name string, value Element) error {
 	for i := sp.localCount - 1; i >= 0; i-- {
 		if sp.locals[i].name == name {
@@ -148,5 +149,45 @@ func (sp *Scope) SetValue(name string, value Element) error {
 			return nil
 		}
 	}
+	return zerr.NameNotDefined(name)
+}
+
+// DeclareValue
+func (sp *Scope) DeclareValue(name string, value Element) error {
+	return sp.declareValue(name, value, false)
+}
+
+func (sp *Scope) DeclareConstValue(name string, value Element) error {
+	return sp.declareValue(name, value, true)
+}
+
+// declareValue - add new symbol to scope
+func (sp *Scope) declareValue(name string, value Element, isConst bool) error {
+	for i := sp.localCount - 1; i >= 0; i-- {
+		if sp.locals[i].depth < sp.currentDepth {
+			break
+		}
+		if sp.locals[i].name == name {
+			// redeclaration in the same depth leval is not allowed
+			/*e.g.:
+			{
+				令 a = 1  // OK
+				令 a = 2  // ERROR
+			}
+			*/
+			if sp.locals[i].depth == sp.currentDepth {
+				return zerr.NameRedeclared(name)
+			}
+		}
+	}
+
+	// add new symbol
+	sp.locals = append(sp.locals[:sp.localCount], LocalSymbol{
+		name:    name,
+		depth:   sp.currentDepth,
+		isConst: false,
+	})
+	sp.values = append(sp.values[:sp.localCount], value)
+	sp.localCount++
 	return zerr.NameNotDefined(name)
 }

@@ -1,5 +1,9 @@
 package runtime
 
+import (
+	zerr "github.com/DemoHn/Zn/pkg/error"
+)
+
 type VM struct {
 	globals map[string]Element
 	// module-level & scope-level local value stacks
@@ -60,9 +64,54 @@ func (vm *VM) GetThisValue() Element {
 	return vm.getCurrentCallFrame().thisValue
 }
 
+func (vm *VM) BeginScope() {
+	scope := vm.getCurrentScope()
+	if scope != nil {
+		scope.BeginScope()
+	}
+}
+
+// EndScope - end current scope
+func (vm *VM) EndScope() {
+	scope := vm.getCurrentScope()
+	if scope != nil {
+		scope.EndScope()
+	}
+}
+
+func (vm *VM) FindElement(name *IDName) (Element, error) {
+	nameStr := name.GetLiteral()
+	// look for global values first
+	if elem, ok := vm.globals[nameStr]; ok {
+		return elem, nil
+	}
+	// then look for local values
+	elem := vm.getCurrentScope().GetValue(nameStr)
+	if elem == nil {
+		return nil, zerr.NameNotDefined(nameStr)
+	}
+	return elem, nil
+}
+
+// DeclareElement
+func (vm *VM) DeclareElement(name *IDName, elem Element) error {
+	scope := vm.getCurrentScope()
+	if scope == nil {
+		return zerr.NameNotDefined(name.GetLiteral())
+	}
+	return scope.DeclareValue(name.GetLiteral(), elem)
+}
+
 // // internal functions
 func (vm *VM) getCurrentCallFrame() *CallFrame {
 	return &vm.callStack[vm.csCount-1]
+}
+
+func (vm *VM) getCurrentScope() *Scope {
+	if scope, ok := vm.valueStack[vm.csModuleID]; ok {
+		return &scope
+	}
+	return nil
 }
 
 func (vm *VM) initValueStack(moduleID int) {

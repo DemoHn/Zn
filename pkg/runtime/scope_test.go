@@ -1,0 +1,43 @@
+package runtime
+
+import (
+	"testing"
+)
+
+type MockValue struct {
+	value int
+}
+
+// impl Element (in value.go) interface for MockValue
+func (m MockValue) GetProperty(c *Context, name string) (Element, error) {
+	return nil, nil
+}
+
+func (m MockValue) SetProperty(c *Context, name string, value Element) error {
+	return nil
+}
+
+func (m MockValue) ExecMethod(c *Context, name string, values []Element) (Element, error) {
+	return nil, nil
+}
+
+// test beginScope() -
+func TestScope_BeginScopeAndAddValue(t *testing.T) {
+	initScope := NewScope()
+	initScope.BeginScope()
+	initScope.AddValue("T1", MockValue{1.0})
+	initScope.AddValue("T2", MockValue{2.0})
+
+	// assert currentDepth = 1
+	if initScope.currentDepth != 1 {
+		t.Errorf("currentDepth = %d, want 1", initScope.currentDepth)
+	}
+	// assert localCount = 2
+	if initScope.localCount != 2 || len(initScope.locals) != 2 {
+		t.Errorf("localCount = %d, want 2", initScope.localCount)
+	}
+	// assert values to be Number(1.0) and Number(2.0)
+	if initScope.values[0].(MockValue).value != 1 || initScope.values[1].(MockValue).value != 2 {
+		t.Errorf("values = %v, want [1.0, 2.0]", initScope.values)
+	}
+}
