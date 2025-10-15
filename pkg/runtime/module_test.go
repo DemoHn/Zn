@@ -10,7 +10,7 @@ type testCase struct {
 	result bool
 }
 
-func TestCircularDependency_CoreBFS(t *testing.T) {
+func TestCircularDependency_CoreDFS(t *testing.T) {
 	cases := []testCase{
 		{
 			name: "standard chain: A->B B->C C->D",
@@ -89,9 +89,9 @@ func TestCircularDependency_CoreBFS(t *testing.T) {
 	for _, tt := range cases {
 		t.Run(tt.name, func(t *testing.T) {
 			moduleGraph := ModuleGraph{
-				externalDepGraph: tt.g,
+				graph: tt.g,
 			}
-			res := moduleGraph.checkCircularDepedencyBFS()
+			res := moduleGraph.checkCircularDepedencyDFS()
 			if tt.result != res {
 				t.Errorf("expected %v, got %v", tt.result, res)
 			}

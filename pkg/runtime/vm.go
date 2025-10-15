@@ -20,7 +20,9 @@ type VM struct {
 	csModuleID int
 
 	// modules - allocates modules by ID & stores export values
-	modules *ModuleGraph
+	modules []Module
+	// moduleGraph - record a module dependency graph to detect circular dependency
+	moduleGraph *ModuleGraph
 }
 
 type ElementMap = map[string]Element
@@ -31,8 +33,8 @@ func InitVM(globals map[string]Element) *VM {
 		valueStack: map[int]Scope{},
 		callStack:  []CallFrame{},
 		csCount:    0,
-		csModuleID: -1,
-		modules:    nil,
+		csModuleID: -1, // 0 for main module
+		modules:    []Module{},
 	}
 }
 
@@ -96,10 +98,36 @@ func (vm *VM) FindElement(name *IDName) (Element, error) {
 // DeclareElement
 func (vm *VM) DeclareElement(name *IDName, elem Element) error {
 	scope := vm.getCurrentScope()
+	nameStr := name.GetLiteral()
 	if scope == nil {
-		return zerr.NameNotDefined(name.GetLiteral())
+		return zerr.NameNotDefined(nameStr)
+	}
+	if _, inGlobals := vm.globals[nameStr]; inGlobals {
+		return zerr.NameRedeclared(nameStr)
 	}
 	return scope.DeclareValue(name.GetLiteral(), elem)
+}
+
+// DeclareConstElement -
+func (vm *VM) DeclareConstElement(name *IDName, elem Element) error {
+	scope := vm.getCurrentScope()
+	nameStr := name.GetLiteral()
+	if scope == nil {
+		return zerr.NameNotDefined(nameStr)
+	}
+	if _, inGlobals := vm.globals[nameStr]; inGlobals {
+		return zerr.NameRedeclared(nameStr)
+	}
+	return scope.DeclareConstValue(name.GetLiteral(), elem)
+}
+
+func (vm *VM) SetElement(name *IDName, elem Element) error {
+	scope := vm.getCurrentScope()
+	nameStr := name.GetLiteral()
+	if scope == nil {
+		return zerr.NameNotDefined(nameStr)
+	}
+	return scope.SetValue(nameStr, elem)
 }
 
 // // internal functions

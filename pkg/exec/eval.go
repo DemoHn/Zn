@@ -8,6 +8,7 @@ import (
 	"github.com/DemoHn/Zn/stdlib"
 
 	zerr "github.com/DemoHn/Zn/pkg/error"
+	"github.com/DemoHn/Zn/pkg/runtime"
 	r "github.com/DemoHn/Zn/pkg/runtime"
 	"github.com/DemoHn/Zn/pkg/syntax"
 	"github.com/DemoHn/Zn/pkg/syntax/zh"
@@ -44,10 +45,13 @@ const (
 // If the program doesn't follow the order (e.g. the func declare block at the end of program),
 // it doesn't matter - we will order the statements in the program automatically before execution.
 // (This will not affect line numbers)
-func evalProgram(c *r.Context, program *syntax.Program, varInputs r.ElementMap) (r.Element, error) {
+func evalProgram(vm *r.VM, program *syntax.Program, varInputs r.ElementMap) (r.Element, error) {
+	vm.PushCallFrame(runtime.NewScriptCallFrame(-1, program, nil))
+	defer vm.PopCallFrame()
+
 	// 1. import libs
 	for _, importStmt := range program.ImportBlock {
-		if err := evalImportStmt(c, importStmt); err != nil {
+		if err := evalImportStmt(vm, importStmt); err != nil {
 			return nil, err
 		}
 	}
@@ -69,13 +73,13 @@ func evalProgram(c *r.Context, program *syntax.Program, varInputs r.ElementMap) 
 				return nil, zerr.InputValueNotFound(inputNameStr)
 			}
 		}
-		return evalExecBlock(c, program.ExecBlock, paramList)
+		return evalExecBlock(vm, program.ExecBlock, paramList)
 	}
 
 	return value.NewNull(), nil
 }
 
-func evalExecBlock(c *r.Context, execBlock *syntax.ExecBlock, params []r.Element) (r.Element, error) {
+func evalExecBlock(vm *r.VM, execBlock *syntax.ExecBlock, params []r.Element) (r.Element, error) {
 	// 1.1 check param length
 	inputParamNum := len(execBlock.InputBlock)
 	if len(params) != inputParamNum {
@@ -89,26 +93,30 @@ func evalExecBlock(c *r.Context, execBlock *syntax.ExecBlock, params []r.Element
 		}
 
 		// set inputValue to current scope
-		if err := c.BindSymbolConst(idTag, params[idx]); err != nil {
+		if err := vm.DeclareElement(idTag, params[idx]); err != nil {
 			return nil, err
 		}
 	}
 
 	var errBlock error
 	var rtnValue r.Element
-	rtnValue, errBlock = evalStmtBlock(c, execBlock.StmtBlock)
+	rtnValue, errBlock = evalStmtBlock(vm, execBlock.StmtBlock)
 
 	// extract & handle exception value (抛出)
 	if errBlock != nil {
 		exception, realErr := extractSignalValue(errBlock, zerr.SigTypeException)
 		if realErr == nil {
-			errBlock = handleExceptions(c, execBlock.CatchBlock, exception)
+			errBlock = handleExceptions(vm, execBlock.CatchBlock, exception)
 		}
 	}
 	return rtnValue, errBlock
 }
 
-func evalStmtBlock(c *r.Context, stmtBlock *syntax.StmtBlock) (r.Element, error) {
+func evalStmtBlock(vm *r.VM, stmtBlock *syntax.StmtBlock) (r.Element, error) {
+	// create inner scope for if statement
+	vm.BeginScope()
+	defer vm.EndScope()
+
 	classDefStmts := make([]syntax.Statement, 0)
 	funcDefStmts := make([]syntax.Statement, 0)
 	otherStmts := make([]syntax.Statement, 0)
@@ -134,7 +142,7 @@ func evalStmtBlock(c *r.Context, stmtBlock *syntax.StmtBlock) (r.Element, error)
 	var rtnValue r.Element
 	var err error
 	for _, stmt := range allStmts {
-		if rtnValue, err = evalStatement(c, stmt); err != nil {
+		if rtnValue, err = evalStatement(vm, stmt); err != nil {
 			return nil, err
 		}
 	}
@@ -192,40 +200,40 @@ func handleExceptions(c *r.Context, catchBlock []*syntax.CatchBlockPair, excepti
 //// eval statements
 
 // EvalStatement - eval statement
-func evalStatement(c *r.Context, stmt syntax.Statement) (r.Element, error) {
+func evalStatement(vm *r.VM, stmt syntax.Statement) (r.Element, error) {
 	// set current line
-	c.SetCurrentLine(stmt.GetCurrentLine())
+	vm.SetCurrentLine(stmt.GetCurrentLine())
 
 	switch v := stmt.(type) {
 	case *syntax.VarDeclareStmt:
-		return value.NewNull(), evalVarDeclareStmt(c, v)
+		return value.NewNull(), evalVarDeclareStmt(vm, v)
 	case *syntax.WhileLoopStmt:
-		return value.NewNull(), evalWhileLoopStmt(c, v)
+		return value.NewNull(), evalWhileLoopStmt(vm, v)
 	case *syntax.BranchStmt:
-		return value.NewNull(), evalBranchStmt(c, v)
+		return value.NewNull(), evalBranchStmt(vm, v)
 	case *syntax.EmptyStmt:
 		return value.NewNull(), nil
 	case *syntax.FunctionDeclareStmt:
 		if v.DeclareType == syntax.DeclareTypeConstructor {
-			return value.NewNull(), evalConstructorDeclareStmt(c, v)
+			return value.NewNull(), evalConstructorDeclareStmt(vm, v)
 		} else {
-			return value.NewNull(), evalFunctionDeclareStmt(c, v)
+			return value.NewNull(), evalFunctionDeclareStmt(vm, v)
 		}
 	case *syntax.ClassDeclareStmt:
-		return value.NewNull(), evalClassDeclareStmt(c, v)
+		return value.NewNull(), evalClassDeclareStmt(vm, v)
 	case *syntax.IterateStmt:
-		return value.NewNull(), evalIterateStmt(c, v)
+		return value.NewNull(), evalIterateStmt(vm, v)
 	case *syntax.FunctionReturnStmt:
-		return evalExpression(c, v.ReturnExpr)
+		return evalExpression(vm, v.ReturnExpr)
 	case *syntax.ThrowExceptionStmt:
-		return value.NewNull(), evalThrowExceptionStmt(c, v)
+		return value.NewNull(), evalThrowExceptionStmt(vm, v)
 	case *syntax.ContinueStmt:
 		// send continue signal
 		return value.NewNull(), zerr.NewContinueSignal()
 	case *syntax.BreakStmt:
 		return value.NewNull(), zerr.NewBreakSignal()
 	case syntax.Expression:
-		return evalExpression(c, v)
+		return evalExpression(vm, v)
 	default:
 		return nil, zerr.UnexpectedCase("语句类型", fmt.Sprintf("%T", v))
 	}
@@ -359,13 +367,13 @@ func evalConstructorDeclareStmt(upperCtx *r.Context, node *syntax.FunctionDeclar
 
 // eval 创建XX：P1，P2，P3，...！
 // ensure VDAssignPair.Type MUST BE syntax.VDTypeObjNew
-func evalNewObject(c *r.Context, node *syntax.ObjNewExpr) (r.Element, error) {
+func evalNewObject(vm *r.VM, node *syntax.ObjNewExpr) (r.Element, error) {
 	classID, err := MatchIDName(node.ClassName)
 	if err != nil {
 		return nil, err
 	}
 	// get class definition
-	importVal, err := c.FindElement(classID)
+	importVal, err := vm.FindElement(classID)
 	if err != nil {
 		return nil, err
 	}
@@ -374,12 +382,12 @@ func evalNewObject(c *r.Context, node *syntax.ObjNewExpr) (r.Element, error) {
 		return nil, zerr.InvalidParamType("classRef")
 	}
 
-	cParams, err := exprsToValues(c, node.Params)
+	cParams, err := exprsToValues(vm, node.Params)
 	if err != nil {
 		return nil, err
 	}
 
-	return classRef.Construct(c, cParams)
+	return classRef.Construct(vm, cParams)
 }
 
 // eval 导入《模块A》
@@ -436,16 +444,12 @@ func evalImportStmt(c *r.Context, node *syntax.ImportStmt) error {
 }
 
 // evalWhileLoopStmt -
-func evalWhileLoopStmt(c *r.Context, node *syntax.WhileLoopStmt) error {
-	// create new scope
-	c.PushScope()
-	defer c.PopScope()
-
+func evalWhileLoopStmt(vm *r.VM, node *syntax.WhileLoopStmt) error {
 	// set context's current scope with new one
 
 	for {
 		// #1. first execute expr
-		trueExpr, err := evalExpression(c, node.TrueExpr)
+		trueExpr, err := evalExpression(vm, node.TrueExpr)
 		if err != nil {
 			return err
 		}
@@ -459,7 +463,7 @@ func evalWhileLoopStmt(c *r.Context, node *syntax.WhileLoopStmt) error {
 			return nil
 		}
 		// #3. stmt block
-		if _, err := evalStmtBlock(c, node.LoopBlock); err != nil {
+		if _, err := evalStmtBlock(vm, node.LoopBlock); err != nil {
 			if s, ok := err.(*zerr.Signal); ok {
 				if s.SigType == zerr.SigTypeContinue {
 					continue
@@ -473,13 +477,9 @@ func evalWhileLoopStmt(c *r.Context, node *syntax.WhileLoopStmt) error {
 	}
 }
 
-func evalBranchStmt(c *r.Context, node *syntax.BranchStmt) error {
-	// create inner scope for if statement
-	c.PushScope()
-	defer c.PopScope()
-
+func evalBranchStmt(vm *r.VM, node *syntax.BranchStmt) error {
 	// #1. condition header
-	ifExpr, err := evalExpression(c, node.IfTrueExpr)
+	ifExpr, err := evalExpression(vm, node.IfTrueExpr)
 	if err != nil {
 		return err
 	}
@@ -490,12 +490,13 @@ func evalBranchStmt(c *r.Context, node *syntax.BranchStmt) error {
 
 	// exec if-branch
 	if vIfExpr.GetValue() {
-		_, err := evalStmtBlock(c, node.IfTrueBlock)
+		// create inner scope for if statement
+		_, err := evalStmtBlock(vm, node.IfTrueBlock)
 		return err
 	}
 	// exec else-if branches
 	for idx, otherExpr := range node.OtherExprs {
-		otherExprI, err := evalExpression(c, otherExpr)
+		otherExprI, err := evalExpression(vm, otherExpr)
 		if err != nil {
 			return err
 		}
@@ -505,22 +506,20 @@ func evalBranchStmt(c *r.Context, node *syntax.BranchStmt) error {
 		}
 		// exec else-if branch
 		if vOtherExprI.GetValue() {
-			_, err := evalStmtBlock(c, node.OtherBlocks[idx])
+			// create inner scope for if statement
+			_, err := evalStmtBlock(vm, node.OtherBlocks[idx])
 			return err
 		}
 	}
 	// exec else branch if possible
 	if node.HasElse {
-		_, err := evalStmtBlock(c, node.IfFalseBlock)
+		_, err := evalStmtBlock(vm, node.IfFalseBlock)
 		return err
 	}
 	return nil
 }
 
-func evalIterateStmt(c *r.Context, node *syntax.IterateStmt) error {
-	c.PushScope()
-	defer c.PopScope()
-
+func evalIterateStmt(vm *r.VM, node *syntax.IterateStmt) error {
 	// pre-defined key, value variable name
 	var keySlot, valueSlot *r.IDName
 	var matchErr error
@@ -528,7 +527,7 @@ func evalIterateStmt(c *r.Context, node *syntax.IterateStmt) error {
 
 	// 以A，B遍历C： D
 	// execute expr: C
-	targetExpr, err := evalExpression(c, node.IterateExpr)
+	targetExpr, err := evalExpression(vm, node.IterateExpr)
 	if err != nil {
 		return err
 	}
@@ -538,18 +537,18 @@ func evalIterateStmt(c *r.Context, node *syntax.IterateStmt) error {
 	execIterationBlockFn := func(key r.Element, v r.Element) error {
 		// set pre-defined value
 		if nameLen == 1 {
-			if err := c.SetSymbol(valueSlot, v); err != nil {
+			if err := vm.DeclareElement(valueSlot, v); err != nil {
 				return err
 			}
 		} else if nameLen == 2 {
-			if err := c.SetSymbol(keySlot, key); err != nil {
+			if err := vm.DeclareElement(keySlot, key); err != nil {
 				return err
 			}
-			if err := c.SetSymbol(valueSlot, v); err != nil {
+			if err := vm.DeclareElement(valueSlot, v); err != nil {
 				return err
 			}
 		}
-		_, err := evalStmtBlock(c, node.IterateBlock)
+		_, err := evalStmtBlock(vm, node.IterateBlock)
 		return err
 	}
 
@@ -566,7 +565,7 @@ func evalIterateStmt(c *r.Context, node *syntax.IterateStmt) error {
 		}
 
 		// init valueSlot as Null
-		if err := c.BindSymbol(valueSlot, value.NewNull()); err != nil {
+		if err := vm.SetElement(valueSlot, value.NewNull()); err != nil {
 			return err
 		}
 	case 2:
@@ -580,10 +579,10 @@ func evalIterateStmt(c *r.Context, node *syntax.IterateStmt) error {
 		}
 
 		// init symbol value as Null
-		if err := c.BindSymbol(keySlot, value.NewNull()); err != nil {
+		if err := vm.SetElement(keySlot, value.NewNull()); err != nil {
 			return err
 		}
-		if err := c.BindSymbol(valueSlot, value.NewNull()); err != nil {
+		if err := vm.SetElement(valueSlot, value.NewNull()); err != nil {
 			return err
 		}
 	default:
@@ -634,34 +633,34 @@ func evalIterateStmt(c *r.Context, node *syntax.IterateStmt) error {
 }
 
 // // execute expressions
-func evalExpression(c *r.Context, expr syntax.Expression) (r.Element, error) {
+func evalExpression(vm *r.VM, expr syntax.Expression) (r.Element, error) {
 	switch e := expr.(type) {
 	case *syntax.VarAssignExpr:
-		return evalVarAssignExpr(c, e)
+		return evalVarAssignExpr(vm, e)
 	case *syntax.LogicExpr:
 		if e.Type == syntax.LogicAND || e.Type == syntax.LogicOR {
-			return evalLogicCombiner(c, e)
+			return evalLogicCombiner(vm, e)
 		}
-		return evalLogicComparator(c, e)
+		return evalLogicComparator(vm, e)
 	case *syntax.ArithExpr:
 		if e.Type == syntax.ArithModulo {
-			return evalArithTypeModuloExpr(c, e)
+			return evalArithTypeModuloExpr(vm, e)
 		}
-		return evalArithExpr(c, e)
+		return evalArithExpr(vm, e)
 	case *syntax.MemberExpr:
-		iv, err := getMemberExprIV(c, e)
+		iv, err := getMemberExprIV(vm, e)
 		if err != nil {
 			return nil, err
 		}
-		return iv.ReduceRHS(c)
+		return iv.ReduceRHS(vm)
 	case *syntax.String, *syntax.ID, *syntax.ArrayExpr, *syntax.HashMapExpr:
-		return evalPrimeExpr(c, e)
+		return evalPrimeExpr(vm, e)
 	case *syntax.FuncCallExpr:
-		return evalFunctionCall(c, e)
+		return evalFunctionCall(vm, e)
 	case *syntax.MemberMethodExpr:
-		return evalMemberMethodExpr(c, e)
+		return evalMemberMethodExpr(vm, e)
 	case *syntax.ObjNewExpr:
-		return evalNewObject(c, e)
+		return evalNewObject(vm, e)
 	default:
 		return nil, zerr.InvalidExprType()
 	}
@@ -670,9 +669,9 @@ func evalExpression(c *r.Context, expr syntax.Expression) (r.Element, error) {
 //// checkout eval_function.go for evalFunctionCall()
 
 // 以 A （执行：B、C、D）
-func evalMemberMethodExpr(c *r.Context, expr *syntax.MemberMethodExpr) (r.Element, error) {
+func evalMemberMethodExpr(vm *r.VM, expr *syntax.MemberMethodExpr) (r.Element, error) {
 	// 1. parse root expr
-	rootExpr, err := evalExpression(c, expr.Root)
+	rootExpr, err := evalExpression(vm, expr.Root)
 	if err != nil {
 		return nil, err
 	}
@@ -687,12 +686,12 @@ func evalMemberMethodExpr(c *r.Context, expr *syntax.MemberMethodExpr) (r.Elemen
 		}
 
 		// exec params
-		params, err := exprsToValues(c, methodExpr.Params)
+		params, err := exprsToValues(vm, methodExpr.Params)
 		if err != nil {
 			return nil, err
 		}
 
-		v, err := execMethodFunction(c, vlast, funcName, params)
+		v, err := execMethodFunction(vm, vlast, funcName, params)
 		if err != nil {
 			return nil, err
 		}
@@ -707,7 +706,7 @@ func evalMemberMethodExpr(c *r.Context, expr *syntax.MemberMethodExpr) (r.Elemen
 		}
 
 		// bind yield result
-		if err := c.BindSymbolDecl(vtag, vlast, false); err != nil {
+		if err := vm.BindSymbolDecl(vtag, vlast, false); err != nil {
 			return nil, err
 		}
 	}
@@ -718,10 +717,10 @@ func evalMemberMethodExpr(c *r.Context, expr *syntax.MemberMethodExpr) (r.Elemen
 // evaluate logic combination expressions
 // such as A 且 B
 // or A 或 B
-func evalLogicCombiner(c *r.Context, expr *syntax.LogicExpr) (*value.Bool, error) {
+func evalLogicCombiner(vm *r.VM, expr *syntax.LogicExpr) (*value.Bool, error) {
 	logicType := expr.Type
 	// #1. eval left
-	left, err := evalExpression(c, expr.LeftExpr)
+	left, err := evalExpression(vm, expr.LeftExpr)
 	if err != nil {
 		return nil, err
 	}
@@ -743,7 +742,7 @@ func evalLogicCombiner(c *r.Context, expr *syntax.LogicExpr) (*value.Bool, error
 		return value.NewBool(true), nil
 	}
 	// #4. eval right
-	right, err := evalExpression(c, expr.RightExpr)
+	right, err := evalExpression(vm, expr.RightExpr)
 	if err != nil {
 		return nil, err
 	}
@@ -761,13 +760,13 @@ func evalLogicCombiner(c *r.Context, expr *syntax.LogicExpr) (*value.Bool, error
 }
 
 // 抛出XX异常：“xxx”！
-func evalThrowExceptionStmt(c *r.Context, node *syntax.ThrowExceptionStmt) error {
+func evalThrowExceptionStmt(vm *r.VM, node *syntax.ThrowExceptionStmt) error {
 	// profoundly return an ERROR to terminate the execution flow
 	expClassID, err := MatchIDName(node.ExceptionClass)
 	if err != nil {
 		return err
 	}
-	expClassModel, err := c.FindElement(expClassID)
+	expClassModel, err := vm.FindElement(expClassID)
 	if err != nil {
 		return err
 	}
@@ -779,7 +778,7 @@ func evalThrowExceptionStmt(c *r.Context, node *syntax.ThrowExceptionStmt) error
 	// exec expressions, similiar to "新建XX" statement
 	var exprs []r.Element
 	for _, param := range node.Params {
-		exprI, err := evalExpression(c, param)
+		exprI, err := evalExpression(vm, param)
 		if err != nil {
 			return err
 		}
@@ -787,7 +786,7 @@ func evalThrowExceptionStmt(c *r.Context, node *syntax.ThrowExceptionStmt) error
 	}
 
 	// build exception value!
-	exceptionObj, err := cmodel.Construct(c, exprs)
+	exceptionObj, err := cmodel.Construct(vm, exprs)
 	if err != nil {
 		return err
 	}
@@ -796,15 +795,15 @@ func evalThrowExceptionStmt(c *r.Context, node *syntax.ThrowExceptionStmt) error
 
 // evaluate logic comparator
 // ensure both expressions are comparable
-func evalLogicComparator(c *r.Context, expr *syntax.LogicExpr) (*value.Bool, error) {
+func evalLogicComparator(vm *r.VM, expr *syntax.LogicExpr) (*value.Bool, error) {
 	logicType := expr.Type
 	// #1. eval left
-	left, err := evalExpression(c, expr.LeftExpr)
+	left, err := evalExpression(vm, expr.LeftExpr)
 	if err != nil {
 		return nil, err
 	}
 	// #2. eval right
-	right, err := evalExpression(c, expr.RightExpr)
+	right, err := evalExpression(vm, expr.RightExpr)
 	if err != nil {
 		return nil, err
 	}
@@ -970,9 +969,9 @@ func compareLogicGTE(left r.Element, right r.Element) (bool, error) {
 	return false, zerr.InvalidCompareLType("number")
 }
 
-func evalArithExpr(c *r.Context, expr *syntax.ArithExpr) (*value.Number, error) {
+func evalArithExpr(vm *r.VM, expr *syntax.ArithExpr) (*value.Number, error) {
 	// exec left Expr
-	leftExpr, err := evalExpression(c, expr.LeftExpr)
+	leftExpr, err := evalExpression(vm, expr.LeftExpr)
 	if err != nil {
 		return nil, err
 	}
@@ -982,7 +981,7 @@ func evalArithExpr(c *r.Context, expr *syntax.ArithExpr) (*value.Number, error) 
 		return nil, zerr.InvalidExprType("number")
 	}
 	// exec right expr
-	rightExpr, err := evalExpression(c, expr.RightExpr)
+	rightExpr, err := evalExpression(vm, expr.RightExpr)
 	if err != nil {
 		return nil, err
 	}
@@ -1021,13 +1020,13 @@ func evalArithExpr(c *r.Context, expr *syntax.ArithExpr) (*value.Number, error) 
 // A % B has two types:
 //  1. ArithModulo: [Number] % [Number] -> [Number] (e.g  5 % 2 = 1)
 //  2. String format: [String] % [Array] -> [String] (e.g. “{}-{}” % 【1、2】= “1-2”)
-func evalArithTypeModuloExpr(c *r.Context, expr *syntax.ArithExpr) (r.Element, error) {
-	leftExpr, err := evalExpression(c, expr.LeftExpr)
+func evalArithTypeModuloExpr(vm *r.VM, expr *syntax.ArithExpr) (r.Element, error) {
+	leftExpr, err := evalExpression(vm, expr.LeftExpr)
 	if err != nil {
 		return nil, err
 	}
 
-	rightExpr, err := evalExpression(c, expr.RightExpr)
+	rightExpr, err := evalExpression(vm, expr.RightExpr)
 	if err != nil {
 		return nil, err
 	}
@@ -1064,7 +1063,7 @@ func evalArithTypeModuloExpr(c *r.Context, expr *syntax.ArithExpr) (r.Element, e
 }
 
 // eval prime expr
-func evalPrimeExpr(c *r.Context, expr syntax.Expression) (r.Element, error) {
+func evalPrimeExpr(vm *r.VM, expr syntax.Expression) (r.Element, error) {
 	switch e := expr.(type) {
 	case *syntax.String:
 		return value.NewString(e.GetLiteral()), nil
@@ -1075,7 +1074,7 @@ func evalPrimeExpr(c *r.Context, expr syntax.Expression) (r.Element, error) {
 		}
 		switch t := idValue.(type) {
 		case *r.IDName:
-			return c.FindElement(t)
+			return vm.FindElement(t)
 		case *r.IDNumber:
 			return value.NewNumber(t.GetValue()), nil
 		default:
@@ -1085,7 +1084,7 @@ func evalPrimeExpr(c *r.Context, expr syntax.Expression) (r.Element, error) {
 	case *syntax.ArrayExpr:
 		var znObjs []r.Element
 		for _, item := range e.Items {
-			expr, err := evalExpression(c, item)
+			expr, err := evalExpression(vm, item)
 			if err != nil {
 				return nil, err
 			}
@@ -1120,7 +1119,7 @@ func evalPrimeExpr(c *r.Context, expr syntax.Expression) (r.Element, error) {
 				return nil, zerr.InvalidExprType("string", "number", "id")
 			}
 
-			exprVal, err := evalExpression(c, item.Value)
+			exprVal, err := evalExpression(vm, item.Value)
 			if err != nil {
 				return nil, err
 			}
@@ -1136,9 +1135,9 @@ func evalPrimeExpr(c *r.Context, expr syntax.Expression) (r.Element, error) {
 }
 
 // eval variable assign
-func evalVarAssignExpr(c *r.Context, expr *syntax.VarAssignExpr) (r.Element, error) {
+func evalVarAssignExpr(vm *r.VM, expr *syntax.VarAssignExpr) (r.Element, error) {
 	// Right Side
-	vr, err := evalExpression(c, expr.AssignExpr)
+	vr, err := evalExpression(vm, expr.AssignExpr)
 	if err != nil {
 		return nil, err
 	}
@@ -1152,15 +1151,15 @@ func evalVarAssignExpr(c *r.Context, expr *syntax.VarAssignExpr) (r.Element, err
 		if err != nil {
 			return nil, err
 		}
-		err2 := c.SetSymbol(vtag, vr)
+		err2 := vm.SetElement(vtag, vr)
 		return vr, err2
 	case *syntax.MemberExpr:
 		if v.MemberType == syntax.MemberID || v.MemberType == syntax.MemberIndex {
-			iv, err := getMemberExprIV(c, v)
+			iv, err := getMemberExprIV(vm, v)
 			if err != nil {
 				return nil, err
 			}
-			return vr, iv.ReduceLHS(c, vr)
+			return vr, iv.ReduceLHS(vm, vr)
 		}
 		return nil, zerr.UnexpectedAssign()
 	default:
@@ -1201,16 +1200,16 @@ func execAnotherModule(c *r.Context, name string) (*r.Module, error) {
 	return nil, nil
 }
 
-func getMemberExprIV(c *r.Context, expr *syntax.MemberExpr) (*value.IV, error) {
+func getMemberExprIV(vm *r.VM, expr *syntax.MemberExpr) (*value.IV, error) {
 	switch expr.RootType {
 	case syntax.RootTypeProp: // 其 XX
-		thisValue := c.GetThisValue()
+		thisValue := vm.GetThisValue()
 		if thisValue == nil {
 			return nil, zerr.ThisValueNotFound()
 		}
 		return value.NewMemberIV(thisValue, expr.MemberID.GetLiteral()), nil
 	case syntax.RootTypeExpr: // A 之 B
-		valRoot, err := evalExpression(c, expr.Root)
+		valRoot, err := evalExpression(vm, expr.Root)
 		if err != nil {
 			return nil, err
 		}
@@ -1218,7 +1217,7 @@ func getMemberExprIV(c *r.Context, expr *syntax.MemberExpr) (*value.IV, error) {
 		case syntax.MemberID: // A 之 B
 			return value.NewMemberIV(valRoot, expr.MemberID.GetLiteral()), nil
 		case syntax.MemberIndex: // A # 0
-			idx, err := evalExpression(c, expr.MemberIndex)
+			idx, err := evalExpression(vm, expr.MemberIndex)
 			if err != nil {
 				return nil, err
 			}
@@ -1253,10 +1252,10 @@ func getMemberExprIV(c *r.Context, expr *syntax.MemberExpr) (*value.IV, error) {
 
 // // helpers
 // exprsToValues - []syntax.Expression -> []eval.r.Value
-func exprsToValues(c *r.Context, exprs []syntax.Expression) ([]r.Element, error) {
+func exprsToValues(vm *r.VM, exprs []syntax.Expression) ([]r.Element, error) {
 	params := []r.Element{}
 	for _, paramExpr := range exprs {
-		pval, err := evalExpression(c, paramExpr)
+		pval, err := evalExpression(vm, paramExpr)
 		if err != nil {
 			return nil, err
 		}

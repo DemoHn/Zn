@@ -41,3 +41,22 @@ func TestScope_BeginScopeAndAddValue(t *testing.T) {
 		t.Errorf("values = %v, want [1.0, 2.0]", initScope.values)
 	}
 }
+
+// test declareValue() -
+func TestScope_DeclareValue(t *testing.T) {
+	initScope := NewScope()
+	initScope.BeginScope()
+	initScope.DeclareValue("T1", MockValue{1.0})
+	initScope.DeclareValue("T2", MockValue{2.0})
+	initScope.BeginScope()
+	initScope.DeclareValue("T1", MockValue{3.0})
+
+	// assert currentDepth = 2
+	if initScope.currentDepth != 2 {
+		t.Errorf("currentDepth = %d, want 2", initScope.currentDepth)
+	}
+	// assert localCount = 2
+	if initScope.localCount != 3 || len(initScope.locals) != 3 {
+		t.Errorf("localCount = %d, want 3", initScope.localCount)
+	}
+}

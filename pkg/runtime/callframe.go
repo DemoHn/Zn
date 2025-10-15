@@ -43,6 +43,6 @@ func (cf *CallFrame) GetCurrentLine() int {
 	return cf.currentLine
 }
 
-func (CallFrame *CallFrame) SetCurrentLine(line int) {
-	CallFrame.currentLine = line
+func (cf *CallFrame) SetCurrentLine(line int) {
+	cf.currentLine = line
 }

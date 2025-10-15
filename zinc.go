@@ -65,10 +65,6 @@ func (z *ZnInterpreter) GetVersion() string {
 	return z.version
 }
 
-func (z *ZnInterpreter) NewContext() *runtime.Context {
-	return runtime.NewContext(exec.GlobalValues, runtime.NewMainModule(nil))
-}
-
 ///// load functions //////
 
 func (z *ZnInterpreter) LoadScript(source []rune) *ZnInterpreter {
@@ -124,12 +120,7 @@ func (z *ZnInterpreter) LoadFile(file string) *ZnInterpreter {
 	return z
 }
 
-func (z *ZnInterpreter) Execute(varInput map[string]Element) (Element, error) {
-	runContext := z.NewContext()
-	return z.ExecuteWithContext(runContext, varInput)
-}
-
-func (z *ZnInterpreter) ExecuteWithContext(ctx *runtime.Context, varInputs runtime.ElementMap) (Element, error) {
+func (z *ZnInterpreter) Execute(varInputs runtime.ElementMap) (Element, error) {
 	// #1. get the main source
 	if z.moduleCodeFinder == nil {
 		return nil, fmt.Errorf("code script/file not loaded")
@@ -150,14 +141,11 @@ func (z *ZnInterpreter) ExecuteWithContext(ctx *runtime.Context, varInputs runti
 		return nil, exec.WrapSyntaxError(parser, "", err)
 	}
 
-	// set context
-	ctx.GetCurrentModule().SetSourceLines(program.Lines)
-	ctx.SetModuleCodeFinder(z.moduleCodeFinder)
-
+	vm := runtime.InitVM(exec.GlobalValues)
 	// #4. eval program
-	rtnValue, err := exec.EvaluateProgram(ctx, program, varInputs)
+	rtnValue, err := exec.EvaluateProgram(vm, program, varInputs)
 	if err != nil {
-		return nil, exec.WrapRuntimeError(ctx, err)
+		return nil, exec.WrapRuntimeError(vm, err)
 	}
 
 	// #5. get return value

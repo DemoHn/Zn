@@ -108,26 +108,6 @@ func (sp *Scope) EndScope() {
 	}
 }
 
-func (sp *Scope) AddValue(name string, value Element) {
-	sp.locals = append(sp.locals, LocalSymbol{
-		name:    name,
-		depth:   sp.currentDepth,
-		isConst: false,
-	})
-
-	sp.values = append(sp.values, value)
-}
-
-func (sp *Scope) AddConstValue(name string, value Element) {
-	sp.locals = append(sp.locals, LocalSymbol{
-		name:    name,
-		depth:   sp.currentDepth,
-		isConst: true,
-	})
-
-	sp.values = append(sp.values, value)
-}
-
 func (sp *Scope) GetValue(name string) Element {
 	for i := sp.localCount - 1; i >= 0; i-- {
 		if sp.locals[i].name == name {
