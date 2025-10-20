@@ -9,19 +9,16 @@ const (
 	EVConstThisVariableName = "此"
 )
 
-type FuncExecutor = func(*r.Context, []r.Element) (r.Element, error)
+type FuncExecutor = func([]r.Element) (r.Element, error)
 
 type Function struct {
-	name string
-	// TODO: using upvalue to implement closure
-	context      *r.Context
+	name         string
 	logicHandler FuncExecutor
 }
 
-func NewFunction(context *r.Context, executor FuncExecutor) *Function {
+func NewFunction(executor FuncExecutor) *Function {
 	return &Function{
 		name:         "",
-		context:      context,
 		logicHandler: executor,
 	}
 }
@@ -50,7 +47,7 @@ func (fn *Function) Exec(c *r.Context, thisValue r.Element, params []r.Element) 
 	}
 
 	fnLogiHandler := fn.logicHandler
-	return fnLogiHandler(c, params)
+	return fnLogiHandler(params)
 }
 
 // impl Value interface

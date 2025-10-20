@@ -1,28 +1,30 @@
 package runtime
 
-import "github.com/DemoHn/Zn/pkg/syntax"
+import (
+	zerr "github.com/DemoHn/Zn/pkg/error"
+	"github.com/DemoHn/Zn/pkg/syntax"
+)
 
 type ModuleGraph struct {
 	graph [][2]int // array of [startModuleID, importModuleID]
 }
 
 type Module struct {
-	/*
-		for example:
-
-		导入“文件夹-XX-YY”
-		(YY#某方法：xxx、yyy、zzz)
-
-		where "文件夹-XX-YY" is the fullName, and "YY" is the short name for reference
-	*/
-	shortName string
-	fullName  string
+	fullName string
 	// program stores sourceLines & AST - usually for error displaying
 	program *syntax.Program
 	// exportValues - all classes and functions are exported for external
 	// imports - so here we insert all exportable values to this map after first scan
 	// note: all export values are constants.
 	exportValues map[string]Element
+}
+
+func (m *Module) AddExportValue(name string, value Element) error {
+	if _, ok := m.exportValues[name]; ok {
+		return zerr.NameRedeclared(name)
+	}
+	m.exportValues[name] = value
+	return nil
 }
 
 func NewModuleGraph() *ModuleGraph {

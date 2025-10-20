@@ -18,6 +18,7 @@ import (
 const (
 	EVConstExceptionClassName       = "异常"
 	EVConstExceptionContentProperty = "内容"
+	MODULE_NAME_MAIN                = "主模块"
 )
 
 // eval.go evaluates program from generated AST tree with specific scopes
@@ -80,6 +81,9 @@ func evalProgram(vm *r.VM, program *syntax.Program, varInputs r.ElementMap) (r.E
 }
 
 func evalExecBlock(vm *r.VM, execBlock *syntax.ExecBlock, params []r.Element) (r.Element, error) {
+	vm.BeginScope()
+	defer vm.EndScope()
+
 	// 1.1 check param length
 	inputParamNum := len(execBlock.InputBlock)
 	if len(params) != inputParamNum {
@@ -100,6 +104,8 @@ func evalExecBlock(vm *r.VM, execBlock *syntax.ExecBlock, params []r.Element) (r
 
 	var errBlock error
 	var rtnValue r.Element
+
+	// different from evalPureStmtBlock, we still use the same scope, NO NEW SCOPE CREATED!
 	rtnValue, errBlock = evalStmtBlock(vm, execBlock.StmtBlock)
 
 	// extract & handle exception value (抛出)
@@ -113,10 +119,6 @@ func evalExecBlock(vm *r.VM, execBlock *syntax.ExecBlock, params []r.Element) (r
 }
 
 func evalStmtBlock(vm *r.VM, stmtBlock *syntax.StmtBlock) (r.Element, error) {
-	// create inner scope for if statement
-	vm.BeginScope()
-	defer vm.EndScope()
-
 	classDefStmts := make([]syntax.Statement, 0)
 	funcDefStmts := make([]syntax.Statement, 0)
 	otherStmts := make([]syntax.Statement, 0)
@@ -150,7 +152,28 @@ func evalStmtBlock(vm *r.VM, stmtBlock *syntax.StmtBlock) (r.Element, error) {
 	return rtnValue, nil
 }
 
-func handleExceptions(c *r.Context, catchBlock []*syntax.CatchBlockPair, exception r.Element) error {
+// evalPureStmtBlock - evaluate statement block without classDef/funcDef/import statements
+func evalPureStmtBlock(vm *r.VM, stmtBlock *syntax.StmtBlock) (r.Element, error) {
+	vm.BeginScope()
+	defer vm.EndScope()
+
+	var rtnValue r.Element
+	var err error
+
+	for _, stmt := range stmtBlock.Children {
+		switch stmt.(type) {
+		case *syntax.ClassDeclareStmt:
+		case *syntax.FunctionDeclareStmt:
+		default:
+			if rtnValue, err = evalStatement(vm, stmt); err != nil {
+				return nil, err
+			}
+		}
+	}
+	return rtnValue, err
+}
+
+func handleExceptions(vm *r.VM, catchBlock []*syntax.CatchBlockPair, exception r.Element) error {
 	// by default, we use "异常" to match *value.Exception type exceptions
 	var objClassName = ""
 	switch v := exception.(type) {
@@ -169,13 +192,13 @@ func handleExceptions(c *r.Context, catchBlock []*syntax.CatchBlockPair, excepti
 
 		// if exception block matches exception className
 		if objClassName != "" && classID.GetLiteral() == objClassName {
-			newScope := c.PushScope()
-			defer c.PopScope()
+			newScope := vm.PushScope()
+			defer vm.PopScope()
 
 			newScope.SetThisValue(exception)
 
 			// do execution (with "this" value = exception value)
-			_, err := evalStmtBlock(c, catchBlockItem.StmtBlock)
+			_, err := evalPureStmtBlock(vm, catchBlockItem.StmtBlock)
 			return err
 		}
 	}
@@ -187,7 +210,7 @@ func handleExceptions(c *r.Context, catchBlock []*syntax.CatchBlockPair, excepti
 	} else {
 		// other custom exception class
 		finalStr := ""
-		s, _ := exception.GetProperty(c, EVConstExceptionContentProperty)
+		s, _ := exception.GetProperty(vm, EVConstExceptionContentProperty)
 		if s != nil {
 			if ss, ok := s.(*value.String); ok {
 				finalStr = ss.GetValue()
@@ -274,25 +297,22 @@ func evalVarDeclareStmt(c *r.Context, node *syntax.VarDeclareStmt) error {
 }
 
 // 定义XX
-func evalClassDeclareStmt(c *r.Context, node *syntax.ClassDeclareStmt) error {
-	module := c.GetCurrentModule()
+func evalClassDeclareStmt(vm *r.VM, node *syntax.ClassDeclareStmt) error {
+	module := vm.GetCurrentModule()
 
 	className, err := MatchIDName(node.ClassName)
 	if err != nil {
 		return err
 	}
 
-	if c.FindParentScope() != nil {
-		return zerr.ClassNotOnRoot(className.GetLiteral())
-	}
 	// bind classRef
-	classRef, err := compileClass(c, className, node)
+	classRef, err := compileClass(vm, className, node)
 	if err != nil {
 		return err
 	}
 
 	// add symbol to current scope first
-	if err := c.BindSymbolConst(className, classRef); err != nil {
+	if err := vm.DeclareConstElement(className, classRef); err != nil {
 		return err
 	}
 
@@ -304,24 +324,26 @@ func evalClassDeclareStmt(c *r.Context, node *syntax.ClassDeclareStmt) error {
 }
 
 // 如何XX？
-func evalFunctionDeclareStmt(c *r.Context, node *syntax.FunctionDeclareStmt) error {
-	module := c.GetCurrentModule()
+func evalFunctionDeclareStmt(vm *r.VM, node *syntax.FunctionDeclareStmt) error {
+	module := vm.GetCurrentModule()
 
 	// declare as normal function
 	vtag, err := MatchIDName(node.Name)
 	if err != nil {
 		return err
 	}
-	fn := compileFunction(c, node)
+	fn := compileFunction(vm, node)
 
 	// add symbol to current scope first
-	if err := c.BindSymbol(vtag, fn); err != nil {
+	if err := vm.DeclareElement(vtag, fn); err != nil {
 		return err
 	}
 
 	// then add symbol to export value
-	if err := module.AddExportValue(vtag.GetLiteral(), fn); err != nil {
-		return err
+	if module != nil {
+		if err := module.AddExportValue(vtag.GetLiteral(), fn); err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -463,7 +485,7 @@ func evalWhileLoopStmt(vm *r.VM, node *syntax.WhileLoopStmt) error {
 			return nil
 		}
 		// #3. stmt block
-		if _, err := evalStmtBlock(vm, node.LoopBlock); err != nil {
+		if _, err := evalPureStmtBlock(vm, node.LoopBlock); err != nil {
 			if s, ok := err.(*zerr.Signal); ok {
 				if s.SigType == zerr.SigTypeContinue {
 					continue
@@ -491,7 +513,7 @@ func evalBranchStmt(vm *r.VM, node *syntax.BranchStmt) error {
 	// exec if-branch
 	if vIfExpr.GetValue() {
 		// create inner scope for if statement
-		_, err := evalStmtBlock(vm, node.IfTrueBlock)
+		_, err := evalPureStmtBlock(vm, node.IfTrueBlock)
 		return err
 	}
 	// exec else-if branches
@@ -507,19 +529,22 @@ func evalBranchStmt(vm *r.VM, node *syntax.BranchStmt) error {
 		// exec else-if branch
 		if vOtherExprI.GetValue() {
 			// create inner scope for if statement
-			_, err := evalStmtBlock(vm, node.OtherBlocks[idx])
+			_, err := evalPureStmtBlock(vm, node.OtherBlocks[idx])
 			return err
 		}
 	}
 	// exec else branch if possible
 	if node.HasElse {
-		_, err := evalStmtBlock(vm, node.IfFalseBlock)
+		_, err := evalPureStmtBlock(vm, node.IfFalseBlock)
 		return err
 	}
 	return nil
 }
 
 func evalIterateStmt(vm *r.VM, node *syntax.IterateStmt) error {
+	vm.BeginScope()
+	defer vm.EndScope()
+
 	// pre-defined key, value variable name
 	var keySlot, valueSlot *r.IDName
 	var matchErr error
@@ -537,18 +562,18 @@ func evalIterateStmt(vm *r.VM, node *syntax.IterateStmt) error {
 	execIterationBlockFn := func(key r.Element, v r.Element) error {
 		// set pre-defined value
 		if nameLen == 1 {
-			if err := vm.DeclareElement(valueSlot, v); err != nil {
+			if err := vm.SetElement(valueSlot, v); err != nil {
 				return err
 			}
 		} else if nameLen == 2 {
-			if err := vm.DeclareElement(keySlot, key); err != nil {
+			if err := vm.SetElement(keySlot, key); err != nil {
 				return err
 			}
-			if err := vm.DeclareElement(valueSlot, v); err != nil {
+			if err := vm.SetElement(valueSlot, v); err != nil {
 				return err
 			}
 		}
-		_, err := evalStmtBlock(vm, node.IterateBlock)
+		_, err := evalPureStmtBlock(vm, node.IterateBlock)
 		return err
 	}
 
@@ -565,7 +590,7 @@ func evalIterateStmt(vm *r.VM, node *syntax.IterateStmt) error {
 		}
 
 		// init valueSlot as Null
-		if err := vm.SetElement(valueSlot, value.NewNull()); err != nil {
+		if err := vm.DeclareElement(valueSlot, value.NewNull()); err != nil {
 			return err
 		}
 	case 2:
@@ -579,10 +604,10 @@ func evalIterateStmt(vm *r.VM, node *syntax.IterateStmt) error {
 		}
 
 		// init symbol value as Null
-		if err := vm.SetElement(keySlot, value.NewNull()); err != nil {
+		if err := vm.DeclareElement(keySlot, value.NewNull()); err != nil {
 			return err
 		}
-		if err := vm.SetElement(valueSlot, value.NewNull()); err != nil {
+		if err := vm.DeclareElement(valueSlot, value.NewNull()); err != nil {
 			return err
 		}
 	default:
@@ -1168,8 +1193,8 @@ func evalVarAssignExpr(vm *r.VM, expr *syntax.VarAssignExpr) (r.Element, error) 
 }
 
 // execAnotherModule - load source code of the module, parse the coe, execute the program, and build depCache!
-func execAnotherModule(c *r.Context, name string) (*r.Module, error) {
-	if finder := c.GetModuleCodeFinder(); finder != nil {
+func execAnotherModule(vm *r.VM, name string) (*r.Module, error) {
+	if finder := vm.GetModuleCodeFinder(); finder != nil {
 		source, err := finder(false, name)
 		if err != nil {
 			return nil, zerr.ModuleNotFound(name)
@@ -1185,13 +1210,13 @@ func execAnotherModule(c *r.Context, name string) (*r.Module, error) {
 		}
 
 		// #2. create module & enter module
-		newModule := r.NewModule(name, program.Lines)
-		c.EnterModule(newModule)
-		defer c.ExitModule()
+		moduleID := vm.AllocateModule(name, program)
+		vm.PushCallFrame(moduleID, r.CALL_TYPE_SCRIPT)
+		defer vm.PopCallFrame()
 
 		// #3. eval program
-		if _, err := evalProgram(c, program, nil); err != nil {
-			return nil, WrapRuntimeError(c, err)
+		if _, err := evalProgram(vm, program, nil); err != nil {
+			return nil, WrapRuntimeError(vm, err)
 		}
 
 		return newModule, nil

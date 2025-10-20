@@ -11,17 +11,17 @@ import (
 
 // compileFunction - create a Function object (with default param handler logic)
 // from Zn code (*syntax.BlockStmt). It's the constructor of 如何XX or (anoymous function in the future)
-func compileFunction(upperCtx *r.Context, node *syntax.FunctionDeclareStmt) *value.Function {
-	var mainLogicHandler = func(c *r.Context, params []r.Element) (r.Element, error) {
+func compileFunction(vm *r.VM, node *syntax.FunctionDeclareStmt) *value.Function {
+	var mainLogicHandler = func(params []r.Element) (r.Element, error) {
 		// 2. do eval exec block
-		return evalExecBlock(c, node.ExecBlock, params)
+		return evalExecBlock(vm, node.ExecBlock, params)
 	}
 
-	return value.NewFunction(upperCtx, mainLogicHandler)
+	return value.NewFunction(mainLogicHandler)
 }
 
 // （显示：A、B、C），得到D
-func evalFunctionCall(c *r.Context, expr *syntax.FuncCallExpr) (r.Element, error) {
+func evalFunctionCall(vm *r.VM, expr *syntax.FuncCallExpr) (r.Element, error) {
 	// match & get funcName
 	funcName, err := MatchIDName(expr.FuncName)
 	if err != nil {
@@ -29,12 +29,12 @@ func evalFunctionCall(c *r.Context, expr *syntax.FuncCallExpr) (r.Element, error
 	}
 
 	// exec params
-	params, err := exprsToValues(c, expr.Params)
+	params, err := exprsToValues(vm, expr.Params)
 	if err != nil {
 		return nil, err
 	}
 
-	resultVal, err := execDirectFunction(c, funcName, params)
+	resultVal, err := execDirectFunction(vm, funcName, params)
 	if err != nil {
 		return nil, err
 	}
@@ -48,7 +48,7 @@ func evalFunctionCall(c *r.Context, expr *syntax.FuncCallExpr) (r.Element, error
 			return nil, err
 		}
 		// bind yield result
-		if err := c.BindScopeSymbolDecl(c.GetCurrentScope(), ytag, resultVal); err != nil {
+		if err := vm.DeclareConstElement(ytag, resultVal); err != nil {
 			return nil, err
 		}
 	}
@@ -87,26 +87,20 @@ func execMethodFunction(c *r.Context, root r.Element, funcName *r.IDName, params
 
 // direct function: defined as standalone function instead of the method of
 // a model
-func execDirectFunction(c *r.Context, funcName *r.IDName, params []r.Element) (r.Element, error) {
-	sym, err := c.FindSymbol(funcName)
+func execDirectFunction(vm *r.VM, funcName *r.IDName, params []r.Element) (r.Element, error) {
+	elem, err := vm.FindElement(funcName)
 	if err != nil {
 		return nil, err
 	}
-	if sym.GetModule() != nil {
-		// push callInfo
-		c.PushCallStack()
-		c.SetCurrentRefModule(sym.GetModule())
-	}
+	// pushCallFrame
+	vm.PushCallFrame(vm.GetCurrentModuleID(), r.CALL_TYPE_FUNCTION)
+	defer vm.PopCallFrame()
 
 	// assert value is function type
-	fn, ok := sym.GetValue().(*value.Function)
+	fn, ok := elem.(*value.Function)
 	if !ok {
 		return nil, zerr.InvalidFuncVariable(funcName.GetLiteral())
 	}
 
-	elem, err := fn.Exec(c, nil, params)
-	if err == nil {
-		c.PopCallStack()
-	}
-	return elem, err
+	return fn.Exec(vm, nil, params)
 }

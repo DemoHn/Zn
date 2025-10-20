@@ -3,8 +3,9 @@ package runtime
 import "github.com/DemoHn/Zn/pkg/syntax"
 
 const (
-	CALL_TYPE_SCRIPT   uint8 = 1
-	CALL_TYPE_FUNCTION uint8 = 2
+	CALL_TYPE_SCRIPT          uint8 = 1
+	CALL_TYPE_FUNCTION        uint8 = 2
+	CALL_TYPE_EXCEPTION_BLOCK uint8 = 3
 )
 
 type CallFrame struct {

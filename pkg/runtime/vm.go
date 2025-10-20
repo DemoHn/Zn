@@ -2,6 +2,7 @@ package runtime
 
 import (
 	zerr "github.com/DemoHn/Zn/pkg/error"
+	"github.com/DemoHn/Zn/pkg/syntax"
 )
 
 type VM struct {
@@ -38,13 +39,36 @@ func InitVM(globals map[string]Element) *VM {
 	}
 }
 
+// AllocateModule - create empty module information
+func (vm *VM) AllocateModule(name string, program *syntax.Program) int {
+	module := Module{
+		fullName:     name,
+		program:      program,
+		exportValues: map[string]Element{},
+	}
+
+	vm.modules = append(vm.modules, module)
+	vm.csModuleID = len(vm.modules) - 1
+
+	return vm.csModuleID
+}
+
 // PushCallFrame - push a call frame onto the call stack
 // and update the current call stack cursor accordingly.
-func (vm *VM) PushCallFrame(callFrame *CallFrame) {
-	vm.callStack = append(vm.callStack, *callFrame)
-	vm.csCount += 1
-	vm.csModuleID = callFrame.moduleID
-	vm.initValueStack(vm.csModuleID)
+func (vm *VM) PushCallFrame(moduleID int, callType uint8) {
+	if moduleID > 0 && moduleID < len(vm.modules) {
+		callFrame := CallFrame{
+			moduleID:    moduleID,
+			callType:    callType,
+			currentLine: 0,
+			programAST:  vm.modules[moduleID].program,
+		}
+
+		vm.callStack = append(vm.callStack, callFrame)
+		vm.csCount += 1
+		vm.csModuleID = callFrame.moduleID
+		vm.initValueStack(vm.csModuleID)
+	} // else - error
 }
 
 func (vm *VM) PopCallFrame() *CallFrame {
@@ -56,6 +80,13 @@ func (vm *VM) PopCallFrame() *CallFrame {
 	currentCF := &vm.callStack[vm.csCount-1]
 	vm.csModuleID = currentCF.moduleID
 	return currentCF
+}
+
+func (vm *VM) GetCurrentModule() *Module {
+	if vm.csModuleID >= 0 && vm.csModuleID < len(vm.modules) {
+		return &vm.modules[vm.csModuleID]
+	}
+	return nil
 }
 
 func (vm *VM) GetCurrentCallFrame() *CallFrame {
@@ -78,6 +109,18 @@ func (vm *VM) EndScope() {
 	scope := vm.getCurrentScope()
 	if scope != nil {
 		scope.EndScope()
+	}
+}
+
+func (vm *VM) GetCurrentModuleID() int {
+	return vm.csModuleID
+}
+
+// SetCurrentLine
+func (vm *VM) SetCurrentLine(line int) {
+	frame := vm.getCurrentCallFrame()
+	if frame != nil {
+		frame.SetCurrentLine(line)
 	}
 }
 
