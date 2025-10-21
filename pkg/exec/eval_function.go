@@ -93,8 +93,7 @@ func execDirectFunction(vm *r.VM, funcName *r.IDName, params []r.Element) (r.Ele
 		return nil, err
 	}
 	// pushCallFrame
-	vm.PushCallFrame(vm.GetCurrentModuleID(), r.CALL_TYPE_FUNCTION)
-	defer vm.PopCallFrame()
+	vm.PushCallFrame(xxxxx, r.CALL_TYPE_FUNCTION)
 
 	// assert value is function type
 	fn, ok := elem.(*value.Function)
@@ -102,5 +101,10 @@ func execDirectFunction(vm *r.VM, funcName *r.IDName, params []r.Element) (r.Ele
 		return nil, zerr.InvalidFuncVariable(funcName.GetLiteral())
 	}
 
-	return fn.Exec(vm, nil, params)
+	if elem, err := fn.Exec(vm, nil, params); err != nil {
+		return nil, err
+	} else {
+		vm.PopCallFrame()
+		return elem, nil
+	}
 }

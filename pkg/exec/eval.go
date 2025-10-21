@@ -18,6 +18,7 @@ import (
 const (
 	EVConstExceptionClassName       = "异常"
 	EVConstExceptionContentProperty = "内容"
+	EVConstThisVariableName         = "此"
 	MODULE_NAME_MAIN                = "主模块"
 )
 
@@ -34,6 +35,19 @@ const (
 // `evalXXXXStmt` will change the value of its corresponding scope; However, `evalXXXXExpr` will export
 // a r.Value object and mostly won't change scope values (but searching a variable from scope is frequently used)
 
+func EvalMainModule(vm *r.VM, program *syntax.Program, varInputs r.ElementMap) (r.Element, error) {
+	// allocate module first
+	moduleID := vm.AllocateModule(MODULE_NAME_MAIN, program)
+	vm.PushCallFrame(runtime.NewScriptCallFrame(moduleID, program))
+
+	elem, err := evalProgram(vm, program, varInputs)
+	// pop current callframe only there is no ERROR
+	if err == nil {
+		vm.PopCallFrame()
+	}
+	return elem, err
+}
+
 // evalProgram - eval the statements of the program with the following order:
 //
 // 1. IMPORT statement(s) - `导入《文件》`
@@ -47,9 +61,6 @@ const (
 // it doesn't matter - we will order the statements in the program automatically before execution.
 // (This will not affect line numbers)
 func evalProgram(vm *r.VM, program *syntax.Program, varInputs r.ElementMap) (r.Element, error) {
-	vm.PushCallFrame(runtime.NewScriptCallFrame(-1, program, nil))
-	defer vm.PopCallFrame()
-
 	// 1. import libs
 	for _, importStmt := range program.ImportBlock {
 		if err := evalImportStmt(vm, importStmt); err != nil {
@@ -83,6 +94,14 @@ func evalProgram(vm *r.VM, program *syntax.Program, varInputs r.ElementMap) (r.E
 func evalExecBlock(vm *r.VM, execBlock *syntax.ExecBlock, params []r.Element) (r.Element, error) {
 	vm.BeginScope()
 	defer vm.EndScope()
+
+	// 1.0 inject 此 value from callFrame's context (for method functions ONLY)
+	if vm.GetCurrentCallFrame() != nil && vm.GetCurrentCallFrame().IsScriptCallFrame() {
+		thisValue := vm.GetThisValue()
+		if thisValue != nil {
+			vm.DeclareElement(r.NewIDName(EVConstThisVariableName), thisValue)
+		}
+	}
 
 	// 1.1 check param length
 	inputParamNum := len(execBlock.InputBlock)
@@ -413,14 +432,14 @@ func evalNewObject(vm *r.VM, node *syntax.ObjNewExpr) (r.Element, error) {
 }
 
 // eval 导入《模块A》
-func evalImportStmt(c *r.Context, node *syntax.ImportStmt) error {
+func evalImportStmt(vm *r.VM, node *syntax.ImportStmt) error {
 	libName := node.ImportName.GetLiteral()
 
 	var extModule *r.Module
 	if node.ImportLibType == syntax.LibTypeStd {
 		var err error
 		// check if the dependency is valid (i.e. not import itself/no duplicate import)
-		if err := c.CheckDepedency(libName, true); err != nil {
+		if err := vm.CheckDepedency(libName, true); err != nil {
 			return err
 		}
 		extModule, err = stdlib.FindModule(libName)
@@ -429,12 +448,12 @@ func evalImportStmt(c *r.Context, node *syntax.ImportStmt) error {
 		}
 	} else if node.ImportLibType == syntax.LibTypeCustom {
 		// check if the dependency is valid (i.e. not import itself/no duplicate import/no circular dependency)
-		if err := c.CheckDepedency(libName, false); err != nil {
+		if err := vm.CheckDepedency(libName, false); err != nil {
 			return err
 		}
 		// execute custom module first (in order to get all importable elements)
-		if extModule = c.FindModuleCache(libName); extModule == nil {
-			newModule, err := execAnotherModule(c, libName)
+		if extModule = vm.FindModuleCache(libName); extModule == nil {
+			newModule, err := execAnotherModule(vm, libName)
 			if err != nil {
 				return err
 			}
@@ -446,7 +465,7 @@ func evalImportStmt(c *r.Context, node *syntax.ImportStmt) error {
 		// import all symbols to current module's importRefs
 		if len(node.ImportItems) == 0 {
 			for name, val := range extModule.GetAllExportValues() {
-				if err := c.BindImportSymbol(name, val, extModule); err != nil {
+				if err := vm.BindImportSymbol(name, val, extModule); err != nil {
 					return err
 				}
 			}
@@ -455,7 +474,7 @@ func evalImportStmt(c *r.Context, node *syntax.ImportStmt) error {
 			for _, id := range node.ImportItems {
 				name := id.GetLiteral()
 				if val, err2 := extModule.GetExportValue(name); err2 == nil {
-					if err := c.BindImportSymbol(name, val, extModule); err != nil {
+					if err := vm.BindImportSymbol(name, val, extModule); err != nil {
 						return err
 					}
 				}
@@ -1211,7 +1230,8 @@ func execAnotherModule(vm *r.VM, name string) (*r.Module, error) {
 
 		// #2. create module & enter module
 		moduleID := vm.AllocateModule(name, program)
-		vm.PushCallFrame(moduleID, r.CALL_TYPE_SCRIPT)
+		callFrame := runtime.NewScriptCallFrame(moduleID, program)
+		vm.PushCallFrame(callFrame)
 		defer vm.PopCallFrame()
 
 		// #3. eval program
@@ -1301,5 +1321,3 @@ func extractSignalValue(err error, sigType uint8) (r.Element, error) {
 	}
 	return nil, err
 }
-
-var EvaluateProgram = evalProgram

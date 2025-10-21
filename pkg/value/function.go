@@ -31,23 +31,8 @@ func (fn *Function) SetName(name string) *Function {
 // Exec - execute the Function Object - accepts input params, execute from closure executor and
 // yields final result
 func (fn *Function) Exec(c *r.Context, thisValue r.Element, params []r.Element) (r.Element, error) {
-	// create new scope for the function ITSELF
-	fnScope := c.PushScope()
-	defer c.PopScope()
-
-	if thisValue != nil {
-		// set thisValue of current scope
-		fnScope.SetThisValue(thisValue)
-
-		// add a const variable "此" to represent "$this"
-		// usage: 以此（调用某方法：XX、YY）
-		if err := c.BindSymbolConst(r.NewIDName(EVConstThisVariableName), thisValue); err != nil {
-			return nil, err
-		}
-	}
-
-	fnLogiHandler := fn.logicHandler
-	return fnLogiHandler(params)
+	fnLogicHandler := fn.logicHandler
+	return fnLogicHandler(params)
 }
 
 // impl Value interface

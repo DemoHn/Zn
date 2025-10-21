@@ -8,6 +8,10 @@ type Scope struct {
 	localCount   int
 	currentDepth int
 	values       []Element
+	// valueID -> moduleID - since external value from other modules
+	// is defined first and no chance to be poped from 'locals', we
+	// can add externalRefs to record
+	externalRefs map[int]int
 }
 
 type LocalSymbol struct {
@@ -22,6 +26,7 @@ func NewScope() Scope {
 		localCount:   0,
 		currentDepth: 0,
 		values:       []Element{},
+		externalRefs: map[int]int{},
 	}
 }
 
@@ -69,6 +74,16 @@ func (sp *Scope) DeclareValue(name string, value Element) error {
 
 func (sp *Scope) DeclareConstValue(name string, value Element) error {
 	return sp.declareValue(name, value, true)
+}
+
+func (sp *Scope) DeclareExternalValue(name string, value Element, moduleID int) error {
+	err := sp.declareValue(name, value, true)
+	if err != nil {
+		return err
+	}
+	// add external ref
+	sp.externalRefs[sp.localCount-1] = moduleID
+	return nil
 }
 
 // declareValue - add new symbol to scope

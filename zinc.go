@@ -143,7 +143,7 @@ func (z *ZnInterpreter) Execute(varInputs runtime.ElementMap) (Element, error) {
 
 	vm := runtime.InitVM(exec.GlobalValues)
 	// #4. eval program
-	rtnValue, err := exec.EvaluateProgram(vm, program, varInputs)
+	rtnValue, err := exec.EvalMainModule(vm, program, varInputs)
 	if err != nil {
 		return nil, exec.WrapRuntimeError(vm, err)
 	}

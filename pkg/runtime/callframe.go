@@ -20,13 +20,14 @@ type CallFrame struct {
 	thisValue Element
 }
 
-func NewScriptCallFrame(moduleID int, programAST *syntax.Program, thisValue Element) *CallFrame {
+func NewScriptCallFrame(moduleID int, programAST *syntax.Program) *CallFrame {
 	return &CallFrame{
 		moduleID:    moduleID,
 		callType:    CALL_TYPE_SCRIPT,
 		currentLine: 0,
 		programAST:  programAST,
-		thisValue:   thisValue,
+		// thisValue is valid only for CALL_TYPE_FUNCTION
+		thisValue: nil,
 	}
 }
 
@@ -46,4 +47,12 @@ func (cf *CallFrame) GetCurrentLine() int {
 
 func (cf *CallFrame) SetCurrentLine(line int) {
 	cf.currentLine = line
+}
+
+func (cf *CallFrame) IsFunctionCallFrame() bool {
+	return cf.callType == CALL_TYPE_FUNCTION
+}
+
+func (cf *CallFrame) IsScriptCallFrame() bool {
+	return cf.callType == CALL_TYPE_SCRIPT
 }

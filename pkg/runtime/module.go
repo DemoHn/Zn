@@ -16,7 +16,7 @@ type Module struct {
 	// exportValues - all classes and functions are exported for external
 	// imports - so here we insert all exportable values to this map after first scan
 	// note: all export values are constants.
-	exportValues map[string]Element
+	exportValues ElementMap
 }
 
 func (m *Module) AddExportValue(name string, value Element) error {
@@ -25,6 +25,18 @@ func (m *Module) AddExportValue(name string, value Element) error {
 	}
 	m.exportValues[name] = value
 	return nil
+}
+
+func (m *Module) GetExportValue(name string) (Element, error) {
+	if elem, ok := m.exportValues[name]; ok {
+		return elem, nil
+	} else {
+		return nil, zerr.NameNotDefined(name)
+	}
+}
+
+func (m *Module) GetAllExportValues() ElementMap {
+	return m.exportValues
 }
 
 func NewModuleGraph() *ModuleGraph {

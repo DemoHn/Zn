@@ -55,20 +55,11 @@ func (vm *VM) AllocateModule(name string, program *syntax.Program) int {
 
 // PushCallFrame - push a call frame onto the call stack
 // and update the current call stack cursor accordingly.
-func (vm *VM) PushCallFrame(moduleID int, callType uint8) {
-	if moduleID > 0 && moduleID < len(vm.modules) {
-		callFrame := CallFrame{
-			moduleID:    moduleID,
-			callType:    callType,
-			currentLine: 0,
-			programAST:  vm.modules[moduleID].program,
-		}
-
-		vm.callStack = append(vm.callStack, callFrame)
-		vm.csCount += 1
-		vm.csModuleID = callFrame.moduleID
-		vm.initValueStack(vm.csModuleID)
-	} // else - error
+func (vm *VM) PushCallFrame(callFrame *CallFrame) {
+	vm.callStack = append(vm.callStack, *callFrame)
+	vm.csCount += 1
+	vm.csModuleID = callFrame.moduleID
+	vm.initValueStack(vm.csModuleID)
 }
 
 func (vm *VM) PopCallFrame() *CallFrame {
@@ -94,7 +85,11 @@ func (vm *VM) GetCurrentCallFrame() *CallFrame {
 }
 
 func (vm *VM) GetThisValue() Element {
-	return vm.getCurrentCallFrame().thisValue
+	callFrame := vm.getCurrentCallFrame()
+	if callFrame != nil {
+		return callFrame.thisValue
+	}
+	return nil
 }
 
 func (vm *VM) BeginScope() {

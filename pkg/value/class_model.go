@@ -44,7 +44,7 @@ func NewClassModel(name string, refModule *r.Module) *ClassModel {
 		refModule:    refModule,
 	}
 
-	defaultConstructor := func(*r.Context, []r.Element) (r.Element, error) {
+	defaultConstructor := func([]r.Element) (r.Element, error) {
 		var initProps = map[string]r.Element{}
 		return NewObject(model, initProps), nil
 	}
@@ -59,7 +59,7 @@ func (cm *ClassModel) Construct(c *r.Context, params []r.Element) (r.Element, er
 	c.PushScope()
 	defer c.PopScope()
 
-	return cm.constructor(c, params)
+	return cm.constructor(params)
 }
 
 // //// GETTERS //////
