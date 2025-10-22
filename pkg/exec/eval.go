@@ -211,13 +211,13 @@ func handleExceptions(vm *r.VM, catchBlock []*syntax.CatchBlockPair, exception r
 
 		// if exception block matches exception className
 		if objClassName != "" && classID.GetLiteral() == objClassName {
-			newScope := vm.PushScope()
-			defer vm.PopScope()
-
-			newScope.SetThisValue(exception)
-
+			expCallFrame := runtime.NewExceptionCallFrame(vm.GetCurrentModule(), exception)
+			vm.PushCallFrame(expCallFrame)
 			// do execution (with "this" value = exception value)
 			_, err := evalPureStmtBlock(vm, catchBlockItem.StmtBlock)
+			if err == nil {
+				vm.PopCallFrame()
+			}
 			return err
 		}
 	}
@@ -835,7 +835,7 @@ func evalThrowExceptionStmt(vm *r.VM, node *syntax.ThrowExceptionStmt) error {
 	}
 
 	// build exception value!
-	exceptionObj, err := cmodel.Construct(vm, exprs)
+	exceptionObj, err := cmodel.Construct(exprs)
 	if err != nil {
 		return err
 	}
@@ -1216,7 +1216,7 @@ func evalVarAssignExpr(vm *r.VM, expr *syntax.VarAssignExpr) (r.Element, error) 
 	}
 }
 
-// execAnotherModule - load source code of the module, parse the coe, execute the program, and build depCache!
+// execAnotherModule - load source code of the module, parse the code, execute the program, and build depCache!
 func execAnotherModule(vm *r.VM, name string) (*r.Module, error) {
 	if finder := vm.GetModuleCodeFinder(); finder != nil {
 		source, err := finder(false, name)

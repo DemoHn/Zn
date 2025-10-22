@@ -62,8 +62,10 @@ func execMethodFunction(vm *r.VM, root r.Element, funcName *r.IDName, params []r
 
 	if robj, ok := root.(*value.Object); ok {
 		pushCallstack = true
-
+		fnCallFrame := r.NewFunctionCallFrame(robj.GetRefModule(), robj)
+		vm.PushCallFrame(fnCallFrame)
 	}
+
 	// exec method
 	elem, err := root.ExecMethod(funcName.GetLiteral(), params)
 	// pop callInfo only when function execution succeed

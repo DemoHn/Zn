@@ -39,6 +39,15 @@ func NewFunctionCallFrame(module *Module, thisValue Element) *CallFrame {
 	}
 }
 
+func NewExceptionCallFrame(module *Module, thisValue Element) *CallFrame {
+	return &CallFrame{
+		callType:    CALL_TYPE_EXCEPTION_BLOCK,
+		currentLine: 0,
+		programAST:  module.program,
+		thisValue:   thisValue,
+	}
+}
+
 func (cf *CallFrame) GetCurrentLine() int {
 	return cf.currentLine
 }

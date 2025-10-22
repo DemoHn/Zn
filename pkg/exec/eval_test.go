@@ -12,10 +12,7 @@ import (
 )
 
 func setupMockContext() *runtime.VM {
-	// init an empty context with init module
-	// in this case, the initModule's name = main, lexer = nil (i.e no source code context)
-	initModule := runtime.NewModule("main", nil)
-	return runtime.NewContext(globalValues, initModule)
+	return runtime.InitVM(globalValues)
 }
 
 // a helper function to digest statement object from source code
@@ -38,9 +35,9 @@ func setupStmtFromCode(text string) (syntax.Statement, error) {
 	}
 }
 
-func injectValuesToRootScope(c *runtime.VM, nameMap map[string]runtime.Element) {
+func injectValuesToRootScope(vm *runtime.VM, nameMap map[string]runtime.Element) {
 	for k, v := range nameMap {
-		c.BindSymbolDecl(runtime.NewIDName(k), v, false)
+		vm.DeclareElement(runtime.NewIDName(k), v)
 	}
 }
 

@@ -48,7 +48,13 @@ func (vm *VM) AllocateModule(name string, program *syntax.Program) *Module {
 	}
 
 	vm.modules = append(vm.modules, module)
-	vm.csModuleID = len(vm.modules) - 1
+	extModuleID := len(vm.modules) - 1
+	// current module -> new module
+	// add dependency automatically
+	if extModuleID > 0 {
+		vm.moduleGraph.AddDependency(vm.csModuleID, extModuleID)
+	}
+	vm.csModuleID = extModuleID
 
 	return &module
 }
