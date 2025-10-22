@@ -25,11 +25,11 @@ const (
 // eval.go evaluates program from generated AST tree with specific scopes
 // common signature of eval functions:
 //
-// evalXXXXStmt(c *r.Context, node Node) error
+// evalXXXXStmt(vm *r.VM, node Node) error
 //
 // or
 //
-// evalXXXXExpr(c *r.Context, node Node) (r.Value, error)
+// evalXXXXExpr(vm *r.VM, node Node) (r.Value, error)
 //
 // NOTICE:
 // `evalXXXXStmt` will change the value of its corresponding scope; However, `evalXXXXExpr` will export
@@ -229,7 +229,7 @@ func handleExceptions(vm *r.VM, catchBlock []*syntax.CatchBlockPair, exception r
 	} else {
 		// other custom exception class
 		finalStr := ""
-		s, _ := exception.GetProperty(vm, EVConstExceptionContentProperty)
+		s, _ := exception.GetProperty(EVConstExceptionContentProperty)
 		if s != nil {
 			if ss, ok := s.(*value.String); ok {
 				finalStr = ss.GetValue()
@@ -285,11 +285,11 @@ func evalStatement(vm *r.VM, stmt syntax.Statement) (r.Element, error) {
 // 1. A，B 设为 C
 // 2. A，B 成为 X：P1，P2，...
 // 3. A，B 恒为 C
-func evalVarDeclareStmt(c *r.Context, node *syntax.VarDeclareStmt) error {
+func evalVarDeclareStmt(vm *r.VM, node *syntax.VarDeclareStmt) error {
 	for _, vpair := range node.AssignPair {
 		switch vpair.Type {
 		case syntax.VDTypeAssign, syntax.VDTypeAssignConst: // 为，恒为
-			obj, err := evalExpression(c, vpair.AssignExpr)
+			obj, err := evalExpression(vm, vpair.AssignExpr)
 			if err != nil {
 				return err
 			}
@@ -306,7 +306,13 @@ func evalVarDeclareStmt(c *r.Context, node *syntax.VarDeclareStmt) error {
 				}
 
 				obj = value.DuplicateValue(obj)
-				if err := c.BindSymbolDecl(vtag, obj, isConst); err != nil {
+				var err2 error
+				if isConst {
+					err2 = vm.DeclareConstElement(vtag, obj)
+				} else {
+					err2 = vm.DeclareElement(vtag, obj)
+				}
+				if err2 != nil {
 					return err
 				}
 			}
@@ -368,14 +374,14 @@ func evalFunctionDeclareStmt(vm *r.VM, node *syntax.FunctionDeclareStmt) error {
 }
 
 // 如何新建XX？
-func evalConstructorDeclareStmt(upperCtx *r.Context, node *syntax.FunctionDeclareStmt) error {
+func evalConstructorDeclareStmt(vm *r.VM, node *syntax.FunctionDeclareStmt) error {
 	// 1. check if class type is valid
 	className, err := MatchIDName(node.Name)
 	if err != nil {
 		return err
 	}
 	// 2. find class model
-	classModel, err := upperCtx.FindElement(className)
+	classModel, module, err := vm.FindElementWithModule(className)
 	if err != nil {
 		return err
 	}
@@ -388,17 +394,16 @@ func evalConstructorDeclareStmt(upperCtx *r.Context, node *syntax.FunctionDeclar
 	//// there are some different Factors from normal method function:
 	// 1. no outerScope (clousure scope)
 	// 2. no 此 const variable inside the fn scope
-	constructorLogic := func(c *r.Context, elems []r.Element) (r.Element, error) {
-		fnScope := c.PushScope()
-		defer c.PopScope()
-
+	constructorLogic := func(elems []r.Element) (r.Element, error) {
 		newObject := value.NewObject(cmodel, map[string]r.Element{})
 		// set "this" value
-		fnScope.SetThisValue(newObject)
+		vm.PushCallFrame(runtime.NewFunctionCallFrame(module, newObject))
 
-		if _, err := evalExecBlock(c, node.ExecBlock, elems); err != nil {
+		if _, err := evalExecBlock(vm, node.ExecBlock, elems); err != nil {
 			return nil, err
 		}
+
+		vm.PopCallFrame()
 		return newObject, nil
 	}
 	cmodel.SetConstructor(constructorLogic)
@@ -428,7 +433,7 @@ func evalNewObject(vm *r.VM, node *syntax.ObjNewExpr) (r.Element, error) {
 		return nil, err
 	}
 
-	return classRef.Construct(vm, cParams)
+	return classRef.Construct(cParams)
 }
 
 // eval 导入《模块A》
@@ -465,7 +470,7 @@ func evalImportStmt(vm *r.VM, node *syntax.ImportStmt) error {
 		// import all symbols to current module's importRefs
 		if len(node.ImportItems) == 0 {
 			for name, val := range extModule.GetAllExportValues() {
-				if err := vm.BindImportSymbol(name, val, extModule); err != nil {
+				if err := vm.DeclareElement(runtime.NewIDName(name), val); err != nil {
 					return err
 				}
 			}
@@ -474,7 +479,7 @@ func evalImportStmt(vm *r.VM, node *syntax.ImportStmt) error {
 			for _, id := range node.ImportItems {
 				name := id.GetLiteral()
 				if val, err2 := extModule.GetExportValue(name); err2 == nil {
-					if err := vm.BindImportSymbol(name, val, extModule); err != nil {
+					if err := vm.DeclareConstElement(runtime.NewIDName(name), val); err != nil {
 						return err
 					}
 				}
@@ -696,7 +701,7 @@ func evalExpression(vm *r.VM, expr syntax.Expression) (r.Element, error) {
 		if err != nil {
 			return nil, err
 		}
-		return iv.ReduceRHS(vm)
+		return iv.ReduceRHS()
 	case *syntax.String, *syntax.ID, *syntax.ArrayExpr, *syntax.HashMapExpr:
 		return evalPrimeExpr(vm, e)
 	case *syntax.FuncCallExpr:
@@ -1203,7 +1208,7 @@ func evalVarAssignExpr(vm *r.VM, expr *syntax.VarAssignExpr) (r.Element, error) 
 			if err != nil {
 				return nil, err
 			}
-			return vr, iv.ReduceLHS(vm, vr)
+			return vr, iv.ReduceLHS(vr)
 		}
 		return nil, zerr.UnexpectedAssign()
 	default:

@@ -19,7 +19,6 @@ func EnterREPL() {
 	linerR.SetCtrlCAborts(true)
 
 	interpreter := zinc.NewInterpreter()
-	runContext := interpreter.NewContext()
 	// REPL loop
 	for {
 		text, err := linerR.Prompt("Zn> ")
@@ -41,7 +40,7 @@ func EnterREPL() {
 		}
 
 		varInput := map[string]r.Element{}
-		result, err := interpreter.LoadScript([]rune(text)).ExecuteWithContext(runContext, varInput)
+		result, err := interpreter.LoadScript([]rune(text)).Execute(varInput)
 		if err != nil {
 			prettyPrintError(os.Stdout, err)
 		} else if result != nil {

@@ -13,8 +13,9 @@ import (
 // before the main program starts. We name the predefined value map as "variable inputs" ("varInputs")
 //
 // The grammer of one "varInput" is a simplified version of the "varDeclareStmt", that is:
-//   a. ‹symbol› = ‹value›   /  ‹symbol› 设为 ‹value›
-//   b. ‹symbol› 成为 ‹type›：‹param1›、‹param2› ...
+//
+//	a. ‹symbol› = ‹value›   /  ‹symbol› 设为 ‹value›
+//	b. ‹symbol› 成为 ‹type›：‹param1›、‹param2› ...
 //
 // for example:
 //
@@ -48,13 +49,13 @@ func ExecVarInputs(source string) (map[string]r.Element, error) {
 // 2. 恒为 is same as 为 (since all predefined inputs are consts)
 // 3. 成为 is NOT supported (since currently we have no way to fetch object class before actual code starts)
 func evalVarInputStmt(node *syntax.VarDeclareStmt) (map[string]r.Element, error) {
-	blankCtx := r.NewContext(globalValues, r.NewMainModule(nil))
+	vm := r.InitVM(globalValues)
 	varInputMap := make(map[string]r.Element)
 
 	for _, vpair := range node.AssignPair {
 		switch vpair.Type {
 		case syntax.VDTypeAssign, syntax.VDTypeAssignConst:
-			obj, err := evalPrimeExpr(blankCtx, vpair.AssignExpr)
+			obj, err := evalPrimeExpr(vm, vpair.AssignExpr)
 			if err != nil {
 				return nil, err
 			}

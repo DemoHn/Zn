@@ -7,14 +7,14 @@ import (
 )
 
 // compileClass -
-func compileClass(upperCtx *r.Context, classID *r.IDName, classNode *syntax.ClassDeclareStmt) (*value.ClassModel, error) {
+func compileClass(vm *r.VM, classID *r.IDName, classNode *syntax.ClassDeclareStmt) (*value.ClassModel, error) {
 	className := classID.GetLiteral()
-	ref := value.NewClassModel(className, upperCtx.GetCurrentModule())
+	ref := value.NewClassModel(className, vm.GetCurrentModule())
 
 	// init prop list and its default value
 	for _, propPair := range classNode.PropertyList {
 		propID := propPair.PropertyID.GetLiteral()
-		element, err := evalExpression(upperCtx, propPair.InitValue)
+		element, err := evalExpression(vm, propPair.InitValue)
 		if err != nil {
 			return nil, err
 		}
@@ -25,13 +25,13 @@ func compileClass(upperCtx *r.Context, classID *r.IDName, classNode *syntax.Clas
 	// add getters
 	for _, gNode := range classNode.GetterList {
 		getterTag := gNode.Name.GetLiteral()
-		ref.DefineCompProperty(getterTag, compileFunction(upperCtx, gNode))
+		ref.DefineCompProperty(getterTag, compileFunction(vm, gNode))
 	}
 
 	// add methods
 	for _, mNode := range classNode.MethodList {
 		mTag := mNode.Name.GetLiteral()
-		ref.DefineMethod(mTag, compileFunction(upperCtx, mNode))
+		ref.DefineMethod(mTag, compileFunction(vm, mNode))
 	}
 
 	return ref, nil

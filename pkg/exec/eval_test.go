@@ -11,7 +11,7 @@ import (
 	"github.com/DemoHn/Zn/pkg/value"
 )
 
-func setupMockContext() *runtime.Context {
+func setupMockContext() *runtime.VM {
 	// init an empty context with init module
 	// in this case, the initModule's name = main, lexer = nil (i.e no source code context)
 	initModule := runtime.NewModule("main", nil)
@@ -38,7 +38,7 @@ func setupStmtFromCode(text string) (syntax.Statement, error) {
 	}
 }
 
-func injectValuesToRootScope(c *runtime.Context, nameMap map[string]runtime.Element) {
+func injectValuesToRootScope(c *runtime.VM, nameMap map[string]runtime.Element) {
 	for k, v := range nameMap {
 		c.BindSymbolDecl(runtime.NewIDName(k), v, false)
 	}
@@ -49,7 +49,7 @@ func TestEvalWhileLoopStmt_OKCases(t *testing.T) {
 		name        string
 		code        string
 		initValue   map[string]runtime.Element
-		expectLogic func(*runtime.Context, *testing.T)
+		expectLogic func(*runtime.VM, *testing.T)
 	}{
 		{
 			name: "loop with multiple conditions",
@@ -58,9 +58,9 @@ func TestEvalWhileLoopStmt_OKCases(t *testing.T) {
 				"A": value.NewNumber(1),
 				"B": value.NewNumber(10),
 			},
-			expectLogic: func(ctx *runtime.Context, t *testing.T) {
-				symA, _ := ctx.FindElement(runtime.NewIDName("A"))
-				symB, _ := ctx.FindElement(runtime.NewIDName("B"))
+			expectLogic: func(vm *runtime.VM, t *testing.T) {
+				symA, _ := vm.FindElement(runtime.NewIDName("A"))
+				symB, _ := vm.FindElement(runtime.NewIDName("B"))
 				assertA := 5
 				assertB := 6
 				if symA.(*value.Number).GetValue() != float64(assertA) {
@@ -82,9 +82,9 @@ func TestEvalWhileLoopStmt_OKCases(t *testing.T) {
 				"A": value.NewNumber(0),
 				"B": value.NewNumber(0),
 			},
-			expectLogic: func(ctx *runtime.Context, t *testing.T) {
-				symA, _ := ctx.FindElement(runtime.NewIDName("A"))
-				symB, _ := ctx.FindElement(runtime.NewIDName("B"))
+			expectLogic: func(vm *runtime.VM, t *testing.T) {
+				symA, _ := vm.FindElement(runtime.NewIDName("A"))
+				symB, _ := vm.FindElement(runtime.NewIDName("B"))
 				assertA := 3
 				assertB := 3
 				if symA.(*value.Number).GetValue() != float64(assertA) {
@@ -101,8 +101,8 @@ func TestEvalWhileLoopStmt_OKCases(t *testing.T) {
 			initValue: map[string]runtime.Element{
 				"A": value.NewNumber(1),
 			},
-			expectLogic: func(ctx *runtime.Context, t *testing.T) {
-				sym, _ := ctx.FindElement(runtime.NewIDName("A"))
+			expectLogic: func(vm *runtime.VM, t *testing.T) {
+				sym, _ := vm.FindElement(runtime.NewIDName("A"))
 				assertA := 1
 				if sym.(*value.Number).GetValue() != float64(assertA) {
 					t.Errorf("expect A (in root scope) = %f, got %f", float64(assertA), sym.(*value.Number).GetValue())
@@ -116,8 +116,8 @@ func TestEvalWhileLoopStmt_OKCases(t *testing.T) {
 				"A": value.NewNumber(1),
 				"B": value.NewNumber(10),
 			},
-			expectLogic: func(ctx *runtime.Context, t *testing.T) {
-				sym, _ := ctx.FindElement(runtime.NewIDName("B"))
+			expectLogic: func(vm *runtime.VM, t *testing.T) {
+				sym, _ := vm.FindElement(runtime.NewIDName("B"))
 				assertB := 50
 				if sym.(*value.Number).GetValue() != float64(assertB) {
 					t.Errorf("expect B (in root scope) = %f, got %f", sym.(*value.Number).GetValue(), float64(assertB))
@@ -131,8 +131,8 @@ func TestEvalWhileLoopStmt_OKCases(t *testing.T) {
 				"A":  value.NewNumber(1),
 				"计数": value.NewNumber(0),
 			},
-			expectLogic: func(ctx *runtime.Context, t *testing.T) {
-				sym, _ := ctx.FindElement(runtime.NewIDName("计数"))
+			expectLogic: func(vm *runtime.VM, t *testing.T) {
+				sym, _ := vm.FindElement(runtime.NewIDName("计数"))
 				assertB := 3
 				if sym.(*value.Number).GetValue() != float64(assertB) {
 					t.Errorf("expect B (in root scope) = %f, got %f", float64(assertB), sym.(*value.Number).GetValue())
@@ -153,8 +153,8 @@ func TestEvalWhileLoopStmt_OKCases(t *testing.T) {
 				"A":  value.NewNumber(1),
 				"计数": value.NewNumber(0),
 			},
-			expectLogic: func(ctx *runtime.Context, t *testing.T) {
-				sym, _ := ctx.FindElement(runtime.NewIDName("计数"))
+			expectLogic: func(vm *runtime.VM, t *testing.T) {
+				sym, _ := vm.FindElement(runtime.NewIDName("计数"))
 				assertB := 3
 				if sym.(*value.Number).GetValue() != float64(assertB) {
 					t.Errorf("expect B (in root scope) = %f, got %f", float64(assertB), sym.(*value.Number).GetValue())
@@ -168,8 +168,8 @@ func TestEvalWhileLoopStmt_OKCases(t *testing.T) {
 				"A":  value.NewNumber(1),
 				"计数": value.NewNumber(0),
 			},
-			expectLogic: func(ctx *runtime.Context, t *testing.T) {
-				sym, _ := ctx.FindElement(runtime.NewIDName("计数"))
+			expectLogic: func(vm *runtime.VM, t *testing.T) {
+				sym, _ := vm.FindElement(runtime.NewIDName("计数"))
 				assertB := 2
 				if sym.(*value.Number).GetValue() != float64(assertB) {
 					t.Errorf("expect B (in root scope) = %f, got %f", float64(assertB), sym.(*value.Number).GetValue())
@@ -193,8 +193,8 @@ func TestEvalWhileLoopStmt_OKCases(t *testing.T) {
 				"B": value.NewNumber(0),
 				"S": value.NewNumber(0),
 			},
-			expectLogic: func(ctx *runtime.Context, t *testing.T) {
-				sym, _ := ctx.FindElement(runtime.NewIDName("S"))
+			expectLogic: func(vm *runtime.VM, t *testing.T) {
+				sym, _ := vm.FindElement(runtime.NewIDName("S"))
 				assertB := 20 /* loop for 4 * 5 = 20 times*/
 				if sym.(*value.Number).GetValue() != float64(assertB) {
 					t.Errorf("expect B (in root scope) = %f, got %f", float64(assertB), sym.(*value.Number).GetValue())
@@ -205,9 +205,9 @@ func TestEvalWhileLoopStmt_OKCases(t *testing.T) {
 
 	for _, tt := range cases {
 		t.Run(tt.name, func(t *testing.T) {
-			ctx := setupMockContext()
+			vm := setupMockContext()
 
-			injectValuesToRootScope(ctx, tt.initValue)
+			injectValuesToRootScope(vm, tt.initValue)
 
 			ss, err := setupStmtFromCode(tt.code)
 			if err != nil {
@@ -216,12 +216,12 @@ func TestEvalWhileLoopStmt_OKCases(t *testing.T) {
 			}
 
 			// run the core function: evalWhileLoopStmt
-			if err := evalWhileLoopStmt(ctx, ss.(*syntax.WhileLoopStmt)); err != nil {
+			if err := evalWhileLoopStmt(vm, ss.(*syntax.WhileLoopStmt)); err != nil {
 				t.Errorf("expect OK, but got error: %v", err)
 				return
 			}
 
-			tt.expectLogic(ctx, t)
+			tt.expectLogic(vm, t)
 		})
 	}
 }

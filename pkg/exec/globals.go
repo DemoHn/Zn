@@ -44,7 +44,7 @@ func init() {
 }
 
 func newExceptionModel() *value.ClassModel {
-	constructorFunc := func(c *r.Context, values []r.Element) (r.Element, error) {
+	constructorFunc := func(values []r.Element) (r.Element, error) {
 		if err := value.ValidateExactParams(values, "string"); err != nil {
 			return nil, err
 		}
@@ -57,7 +57,7 @@ func newExceptionModel() *value.ClassModel {
 }
 
 func newDisplayFunc() *value.Function {
-	displayExecutor := func(c *r.Context, params []r.Element) (r.Element, error) {
+	displayExecutor := func(params []r.Element) (r.Element, error) {
 		// display format string
 		var items = []string{}
 		for _, param := range params {
@@ -68,13 +68,13 @@ func newDisplayFunc() *value.Function {
 		return value.NewNull(), nil
 	}
 
-	return value.NewFunction(nil, displayExecutor)
+	return value.NewFunction(displayExecutor)
 }
 
 func newGetRandomFloatFunc() *value.Function {
-	getRandomFloatExecutor := func(c *r.Context, params []r.Element) (r.Element, error) {
+	getRandomFloatExecutor := func(params []r.Element) (r.Element, error) {
 		return value.NewNumber(rand.Float64()), nil
 	}
 
-	return value.NewFunction(nil, getRandomFloatExecutor)
+	return value.NewFunction(getRandomFloatExecutor)
 }

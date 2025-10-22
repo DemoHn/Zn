@@ -6,7 +6,7 @@ import (
 	"github.com/DemoHn/Zn/pkg/value"
 )
 
-type funcExecutor = func(*r.Context, []r.Element) (r.Element, error)
+type funcExecutor = func([]r.Element) (r.Element, error)
 
 var stdlibMap = map[string]*r.Module{}
 

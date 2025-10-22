@@ -9,15 +9,15 @@ type MockValue struct {
 }
 
 // impl Element (in value.go) interface for MockValue
-func (m MockValue) GetProperty(c *Context, name string) (Element, error) {
+func (m MockValue) GetProperty(name string) (Element, error) {
 	return nil, nil
 }
 
-func (m MockValue) SetProperty(c *Context, name string, value Element) error {
+func (m MockValue) SetProperty(name string, value Element) error {
 	return nil
 }
 
-func (m MockValue) ExecMethod(c *Context, name string, values []Element) (Element, error) {
+func (m MockValue) ExecMethod(name string, values []Element) (Element, error) {
 	return nil, nil
 }
 
@@ -25,8 +25,8 @@ func (m MockValue) ExecMethod(c *Context, name string, values []Element) (Elemen
 func TestScope_BeginScopeAndAddValue(t *testing.T) {
 	initScope := NewScope()
 	initScope.BeginScope()
-	initScope.AddValue("T1", MockValue{1.0})
-	initScope.AddValue("T2", MockValue{2.0})
+	initScope.DeclareValue("T1", MockValue{1.0})
+	initScope.DeclareValue("T2", MockValue{2.0})
 
 	// assert currentDepth = 1
 	if initScope.currentDepth != 1 {

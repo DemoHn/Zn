@@ -88,13 +88,13 @@ func (iv *IV) ReduceLHS(input r.Element) error {
 		hm.AppendKVPair(KVPair{iv.member, input})
 		return nil
 	case IVTypeMember:
-		return iv.root.SetProperty(c, iv.member, input)
+		return iv.root.SetProperty(iv.member, input)
 	}
 	return zerr.UnexpectedCase("IVReduceType", fmt.Sprintf("%d", iv.reduceType))
 }
 
 // ReduceRHS -
-func (iv *IV) ReduceRHS(c *r.Context) (r.Element, error) {
+func (iv *IV) ReduceRHS() (r.Element, error) {
 	switch iv.reduceType {
 	case IVTypeArray:
 		arr, ok := iv.root.(*Array)
@@ -120,7 +120,7 @@ func (iv *IV) ReduceRHS(c *r.Context) (r.Element, error) {
 		}
 		return result, nil
 	case IVTypeMember:
-		return iv.root.GetProperty(c, iv.member)
+		return iv.root.GetProperty(iv.member)
 	}
 	return nil, zerr.UnexpectedCase("IVReduceType", fmt.Sprintf("%d", iv.reduceType))
 }

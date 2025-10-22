@@ -56,9 +56,6 @@ func NewClassModel(name string, refModule *r.Module) *ClassModel {
 
 // Construct - yield new instance of this class
 func (cm *ClassModel) Construct(params []r.Element) (r.Element, error) {
-	c.PushScope()
-	defer c.PopScope()
-
 	return cm.constructor(params)
 }
 
