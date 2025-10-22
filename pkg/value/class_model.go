@@ -55,7 +55,7 @@ func NewClassModel(name string, refModule *r.Module) *ClassModel {
 }
 
 // Construct - yield new instance of this class
-func (cm *ClassModel) Construct(c *r.Context, params []r.Element) (r.Element, error) {
+func (cm *ClassModel) Construct(params []r.Element) (r.Element, error) {
 	c.PushScope()
 	defer c.PopScope()
 
@@ -110,14 +110,14 @@ func (cm *ClassModel) DefineMethod(name string, methodFunc *Function) *ClassMode
 
 // // impl methods as a "Element"
 // GetProperty - currently there's NO any property inside classRef Value
-func (cr *ClassModel) GetProperty(c *r.Context, name string) (r.Element, error) {
+func (cr *ClassModel) GetProperty(name string) (r.Element, error) {
 	return nil, zerr.PropertyNotFound(name)
 }
 
-func (cr *ClassModel) SetProperty(c *r.Context, name string, value r.Element) error {
+func (cr *ClassModel) SetProperty(name string, value r.Element) error {
 	return zerr.PropertyNotFound(name)
 }
 
-func (cr *ClassModel) ExecMethod(c *r.Context, name string, values []r.Element) (r.Element, error) {
+func (cr *ClassModel) ExecMethod(name string, values []r.Element) (r.Element, error) {
 	return nil, zerr.MethodNotFound(name)
 }

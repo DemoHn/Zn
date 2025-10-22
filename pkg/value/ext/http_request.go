@@ -24,7 +24,7 @@ func NewHTTPRequest(req *http.Request) *HTTPRequest {
 }
 
 // GetProperty - get property of HTTPRequest
-func (h *HTTPRequest) GetProperty(c *r.Context, name string) (r.Element, error) {
+func (h *HTTPRequest) GetProperty(name string) (r.Element, error) {
 	httpRequestGetterMap := map[string]httpRequestGetterFunc{
 		"路径":   httpRequestGetPath,
 		"方法":   httpRequestGetMethod,
@@ -84,12 +84,12 @@ func httpRequestGetQueryParams(h *HTTPRequest, c *r.Context) (r.Element, error) 
 }
 
 // SetProperty - set property of HTTPRequest
-func (h *HTTPRequest) SetProperty(c *r.Context, name string, value r.Element) error {
+func (h *HTTPRequest) SetProperty(name string, value r.Element) error {
 	return zerr.PropertyNotFound(name)
 }
 
 // ExecMethod - execute method of HTTPRequest
-func (h *HTTPRequest) ExecMethod(c *r.Context, name string, values []r.Element) (r.Element, error) {
+func (h *HTTPRequest) ExecMethod(name string, values []r.Element) (r.Element, error) {
 	methodMap := map[string]httpRequestMethodFunc{
 		"读取内容": httpRequestExecReadBody,
 	}
@@ -100,7 +100,7 @@ func (h *HTTPRequest) ExecMethod(c *r.Context, name string, values []r.Element) 
 	return nil, zerr.MethodNotFound(name)
 }
 
-func httpRequestExecReadBody(h *HTTPRequest, c *r.Context, values []r.Element) (r.Element, error) {
+func httpRequestExecReadBody(h *HTTPRequest, values []r.Element) (r.Element, error) {
 	// impl GetBody function here
 	body, err := ioutil.ReadAll(h.request.Body)
 	if err != nil {

@@ -24,16 +24,16 @@ func (gv *GoValue) GetValue() interface{} {
 }
 
 // GetProperty -
-func (gv *GoValue) GetProperty(c *r.Context, name string) (r.Element, error) {
+func (gv *GoValue) GetProperty(name string) (r.Element, error) {
 	return nil, zerr.PropertyNotFound(name)
 }
 
 // SetProperty -
-func (gv *GoValue) SetProperty(c *r.Context, name string, value r.Element) error {
+func (gv *GoValue) SetProperty(name string, value r.Element) error {
 	return zerr.PropertyNotFound(name)
 }
 
 // ExecMethod -
-func (gv *GoValue) ExecMethod(c *r.Context, name string, values []r.Element) (r.Element, error) {
+func (gv *GoValue) ExecMethod(name string, values []r.Element) (r.Element, error) {
 	return nil, zerr.MethodNotFound(name)
 }

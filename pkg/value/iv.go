@@ -16,8 +16,8 @@ const (
 
 // IV stands for Intermediate r.Value, which is a compound state of an expression.
 // There're two elements inside an IV:
-//   1. Root - root is a r.Value Object from which can set/get members.
-//   2. Member - a string / int that represents for the "key" of root object
+//  1. Root - root is a r.Value Object from which can set/get members.
+//  2. Member - a string / int that represents for the "key" of root object
 //
 // IV could be reduced, either yields a result or the member value be chaned.
 // When IV on Left-Hand Side (LHS), e.g. A之B = 1, it could be reduced by ReduceLHS(), where memeber is updated;
@@ -63,7 +63,7 @@ func NewHashMapIV(root r.Element, member string) *IV {
 
 // ReduceLHS - Reduce IV to value when IV on left-hand side
 // usually for setters
-func (iv *IV) ReduceLHS(c *r.Context, input r.Element) error {
+func (iv *IV) ReduceLHS(input r.Element) error {
 	switch iv.reduceType {
 	case IVTypeArray:
 		arr, ok := iv.root.(*Array)

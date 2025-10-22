@@ -15,7 +15,7 @@ var jsonModuleName = "JSON"
 var jsonModule = r.NewInternalModule(jsonModuleName)
 
 // parseJsonFunc - 解析JSON
-func parseJsonFunc(c *r.Context, values []r.Element) (r.Element, error) {
+func parseJsonFunc(values []r.Element) (r.Element, error) {
 	// validate string ONLY
 	if err := value.ValidateExactParams(values, "string"); err != nil {
 		return nil, err
@@ -33,7 +33,7 @@ func parseJsonFunc(c *r.Context, values []r.Element) (r.Element, error) {
 }
 
 // generateJsonFunc - 生成JSON
-func generateJsonFunc(c *r.Context, values []r.Element) (r.Element, error) {
+func generateJsonFunc(values []r.Element) (r.Element, error) {
 	if err := value.ValidateExactParams(values, "hashmap"); err != nil {
 		return nil, err
 	}

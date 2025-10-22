@@ -40,7 +40,7 @@ func InitVM(globals map[string]Element) *VM {
 }
 
 // AllocateModule - create empty module information
-func (vm *VM) AllocateModule(name string, program *syntax.Program) int {
+func (vm *VM) AllocateModule(name string, program *syntax.Program) *Module {
 	module := Module{
 		fullName:     name,
 		program:      program,
@@ -50,7 +50,7 @@ func (vm *VM) AllocateModule(name string, program *syntax.Program) int {
 	vm.modules = append(vm.modules, module)
 	vm.csModuleID = len(vm.modules) - 1
 
-	return vm.csModuleID
+	return &module
 }
 
 // PushCallFrame - push a call frame onto the call stack
@@ -133,6 +133,25 @@ func (vm *VM) FindElement(name *IDName) (Element, error) {
 	return elem, nil
 }
 
+func (vm *VM) FindElementWithModule(name *IDName) (Element, *Module, error) {
+	nameStr := name.GetLiteral()
+	// look for global values first
+	if elem, ok := vm.globals[nameStr]; ok {
+		return elem, vm.getModuleByID(vm.csModuleID), nil
+	}
+	// then look for local values
+	elem, moduleID := vm.getCurrentScope().GetValueWithModuleID(nameStr)
+	if elem == nil {
+		return nil, nil, zerr.NameNotDefined(nameStr)
+	}
+
+	extModuleID := vm.csModuleID
+	if moduleID >= 0 {
+		extModuleID = moduleID
+	}
+	return elem, vm.getModuleByID(extModuleID), nil
+}
+
 // DeclareElement
 func (vm *VM) DeclareElement(name *IDName, elem Element) error {
 	scope := vm.getCurrentScope()
@@ -176,6 +195,13 @@ func (vm *VM) getCurrentCallFrame() *CallFrame {
 func (vm *VM) getCurrentScope() *Scope {
 	if scope, ok := vm.valueStack[vm.csModuleID]; ok {
 		return &scope
+	}
+	return nil
+}
+
+func (vm *VM) getModuleByID(moduleID int) *Module {
+	if moduleID >= 0 && moduleID < len(vm.modules) {
+		return &vm.modules[moduleID]
 	}
 	return nil
 }

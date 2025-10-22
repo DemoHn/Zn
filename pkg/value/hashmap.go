@@ -63,7 +63,7 @@ func (hm *HashMap) AppendKVPair(pair KVPair) {
 }
 
 // GetProperty -
-func (hm *HashMap) GetProperty(c *r.Context, name string) (r.Element, error) {
+func (hm *HashMap) GetProperty(name string) (r.Element, error) {
 	hmGetterMap := map[string]hmGetterFunc{
 		"数目":   hmGetLength,
 		"长度":   hmGetLength,
@@ -77,12 +77,12 @@ func (hm *HashMap) GetProperty(c *r.Context, name string) (r.Element, error) {
 }
 
 // SetProperty -
-func (hm *HashMap) SetProperty(c *r.Context, name string, value r.Element) error {
+func (hm *HashMap) SetProperty(name string, value r.Element) error {
 	return zerr.PropertyNotFound(name)
 }
 
 // ExecMethod -
-func (hm *HashMap) ExecMethod(c *r.Context, name string, values []r.Element) (r.Element, error) {
+func (hm *HashMap) ExecMethod(name string, values []r.Element) (r.Element, error) {
 	hmMethodMap := map[string]hmMethodFunc{
 		"读取": hmExecGet,
 		"写入": hmExecSet,

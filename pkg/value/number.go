@@ -45,7 +45,7 @@ func (n *Number) GetValue() float64 {
 }
 
 // GetProperty -
-func (n *Number) GetProperty(c *r.Context, name string) (r.Element, error) {
+func (n *Number) GetProperty(name string) (r.Element, error) {
 	numGetterMap := map[string]numGetterFunc{
 		"文本":  numGetText,
 		"平方":  numGetSquare,
@@ -59,12 +59,12 @@ func (n *Number) GetProperty(c *r.Context, name string) (r.Element, error) {
 }
 
 // SetProperty -
-func (n *Number) SetProperty(c *r.Context, name string, value r.Element) error {
+func (n *Number) SetProperty(name string, value r.Element) error {
 	return zerr.PropertyNotFound(name)
 }
 
 // ExecMethod -
-func (n *Number) ExecMethod(c *r.Context, name string, values []r.Element) (r.Element, error) {
+func (n *Number) ExecMethod(name string, values []r.Element) (r.Element, error) {
 	numMethodMap := map[string]numMethodFunc{
 		"加":    numExecAdd,
 		"减":    numExecSub,

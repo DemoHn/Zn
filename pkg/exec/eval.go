@@ -37,8 +37,8 @@ const (
 
 func EvalMainModule(vm *r.VM, program *syntax.Program, varInputs r.ElementMap) (r.Element, error) {
 	// allocate module first
-	moduleID := vm.AllocateModule(MODULE_NAME_MAIN, program)
-	vm.PushCallFrame(runtime.NewScriptCallFrame(moduleID, program))
+	module := vm.AllocateModule(MODULE_NAME_MAIN, program)
+	vm.PushCallFrame(runtime.NewScriptCallFrame(module))
 
 	elem, err := evalProgram(vm, program, varInputs)
 	// pop current callframe only there is no ERROR
@@ -96,10 +96,10 @@ func evalExecBlock(vm *r.VM, execBlock *syntax.ExecBlock, params []r.Element) (r
 	defer vm.EndScope()
 
 	// 1.0 inject 此 value from callFrame's context (for method functions ONLY)
-	if vm.GetCurrentCallFrame() != nil && vm.GetCurrentCallFrame().IsScriptCallFrame() {
+	if vm.GetCurrentCallFrame() != nil && vm.GetCurrentCallFrame().IsFunctionCallFrame() {
 		thisValue := vm.GetThisValue()
 		if thisValue != nil {
-			vm.DeclareElement(r.NewIDName(EVConstThisVariableName), thisValue)
+			vm.DeclareConstElement(r.NewIDName(EVConstThisVariableName), thisValue)
 		}
 	}
 
@@ -750,7 +750,7 @@ func evalMemberMethodExpr(vm *r.VM, expr *syntax.MemberMethodExpr) (r.Element, e
 		}
 
 		// bind yield result
-		if err := vm.BindSymbolDecl(vtag, vlast, false); err != nil {
+		if err := vm.DeclareElement(vtag, vlast); err != nil {
 			return nil, err
 		}
 	}
@@ -1229,8 +1229,8 @@ func execAnotherModule(vm *r.VM, name string) (*r.Module, error) {
 		}
 
 		// #2. create module & enter module
-		moduleID := vm.AllocateModule(name, program)
-		callFrame := runtime.NewScriptCallFrame(moduleID, program)
+		module := vm.AllocateModule(name, program)
+		callFrame := runtime.NewScriptCallFrame(module)
 		vm.PushCallFrame(callFrame)
 		defer vm.PopCallFrame()
 

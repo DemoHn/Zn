@@ -20,23 +20,21 @@ type CallFrame struct {
 	thisValue Element
 }
 
-func NewScriptCallFrame(moduleID int, programAST *syntax.Program) *CallFrame {
+func NewScriptCallFrame(module *Module) *CallFrame {
 	return &CallFrame{
-		moduleID:    moduleID,
 		callType:    CALL_TYPE_SCRIPT,
 		currentLine: 0,
-		programAST:  programAST,
+		programAST:  module.program,
 		// thisValue is valid only for CALL_TYPE_FUNCTION
 		thisValue: nil,
 	}
 }
 
-func NewFunctionCallFrame(moduleID int, programAST *syntax.Program, thisValue Element) *CallFrame {
+func NewFunctionCallFrame(module *Module, thisValue Element) *CallFrame {
 	return &CallFrame{
-		moduleID:    moduleID,
 		callType:    CALL_TYPE_FUNCTION,
 		currentLine: 0,
-		programAST:  programAST,
+		programAST:  module.program,
 		thisValue:   thisValue,
 	}
 }

@@ -8,7 +8,7 @@ type Scope struct {
 	localCount   int
 	currentDepth int
 	values       []Element
-	// valueID -> moduleID - since external value from other modules
+	// symbolID -> moduleID - since external value from other modules
 	// is defined first and no chance to be poped from 'locals', we
 	// can add externalRefs to record
 	externalRefs map[int]int
@@ -44,12 +44,25 @@ func (sp *Scope) EndScope() {
 }
 
 func (sp *Scope) GetValue(name string) Element {
-	for i := sp.localCount - 1; i >= 0; i-- {
-		if sp.locals[i].name == name {
-			return sp.values[i]
-		}
+	symbolID := sp.getSymbolID(name)
+	if symbolID >= 0 && symbolID < len(sp.values) {
+		return sp.values[symbolID]
 	}
 	return nil
+}
+
+// when value is external, return the moduleID;if not found in external module, return -1
+func (sp *Scope) GetValueWithModuleID(name string) (Element, int) {
+	symbolID := sp.getSymbolID(name)
+	if symbolID >= 0 && symbolID < len(sp.values) {
+		extModuleID, ok := sp.externalRefs[symbolID]
+		if ok {
+			return sp.values[symbolID], extModuleID
+		} else {
+			return sp.values[symbolID], -1
+		}
+	}
+	return nil, -1
 }
 
 // SetValue - set from existing symbol
@@ -84,6 +97,17 @@ func (sp *Scope) DeclareExternalValue(name string, value Element, moduleID int) 
 	// add external ref
 	sp.externalRefs[sp.localCount-1] = moduleID
 	return nil
+}
+
+// getSymbolID - get the latest symbolID that matches the name
+// when not found, return -1
+func (sp *Scope) getSymbolID(name string) int {
+	for i := sp.localCount - 1; i >= 0; i-- {
+		if sp.locals[i].name == name {
+			return i
+		}
+	}
+	return -1
 }
 
 // declareValue - add new symbol to scope

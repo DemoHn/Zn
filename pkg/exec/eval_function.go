@@ -57,30 +57,18 @@ func evalFunctionCall(vm *r.VM, expr *syntax.FuncCallExpr) (r.Element, error) {
 	return resultVal, nil
 }
 
-func execMethodFunction(c *r.Context, root r.Element, funcName *r.IDName, params []r.Element) (r.Element, error) {
+func execMethodFunction(vm *r.VM, root r.Element, funcName *r.IDName, params []r.Element) (r.Element, error) {
 	pushCallstack := false
 
 	if robj, ok := root.(*value.Object); ok {
 		pushCallstack = true
-		refModule := robj.GetRefModule()
 
-		if refModule != nil {
-			// append callInfo
-			c.PushCallStack()
-			c.SetCurrentRefModule(refModule)
-		}
 	}
-
-	// create a new scope to denote a new 'thisValue'
-	newScope := c.PushScope()
-	defer c.PopScope()
-
-	newScope.SetThisValue(root)
 	// exec method
-	elem, err := root.ExecMethod(c, funcName.GetLiteral(), params)
+	elem, err := root.ExecMethod(funcName.GetLiteral(), params)
 	// pop callInfo only when function execution succeed
 	if err == nil && pushCallstack {
-		c.PopCallStack()
+		vm.PopCallFrame()
 	}
 	return elem, err
 }
@@ -88,12 +76,13 @@ func execMethodFunction(c *r.Context, root r.Element, funcName *r.IDName, params
 // direct function: defined as standalone function instead of the method of
 // a model
 func execDirectFunction(vm *r.VM, funcName *r.IDName, params []r.Element) (r.Element, error) {
-	elem, err := vm.FindElement(funcName)
+	elem, module, err := vm.FindElementWithModule(funcName)
 	if err != nil {
 		return nil, err
 	}
 	// pushCallFrame
-	vm.PushCallFrame(xxxxx, r.CALL_TYPE_FUNCTION)
+	fnCallFrame := r.NewFunctionCallFrame(module, nil)
+	vm.PushCallFrame(fnCallFrame)
 
 	// assert value is function type
 	fn, ok := elem.(*value.Function)
@@ -101,7 +90,7 @@ func execDirectFunction(vm *r.VM, funcName *r.IDName, params []r.Element) (r.Ele
 		return nil, zerr.InvalidFuncVariable(funcName.GetLiteral())
 	}
 
-	if elem, err := fn.Exec(vm, nil, params); err != nil {
+	if elem, err := fn.Exec(nil, params); err != nil {
 		return nil, err
 	} else {
 		vm.PopCallFrame()

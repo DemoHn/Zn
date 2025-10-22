@@ -37,7 +37,7 @@ func (ar *Array) AppendValue(value r.Element) {
 }
 
 // GetProperty -
-func (ar *Array) GetProperty(c *r.Context, name string) (r.Element, error) {
+func (ar *Array) GetProperty(name string) (r.Element, error) {
 	arrayGetterMap := map[string]arrayGetterFunc{
 		"文本": arrayGetText,
 		"首项": arrayGetFirstItem,
@@ -54,7 +54,7 @@ func (ar *Array) GetProperty(c *r.Context, name string) (r.Element, error) {
 }
 
 // SetProperty -
-func (ar *Array) SetProperty(c *r.Context, name string, value r.Element) error {
+func (ar *Array) SetProperty(name string, value r.Element) error {
 	arraySetterMap := map[string]arraySetterFunc{
 		"首项": arraySetFirstItem,
 		"末项": arraySetLastItem,
@@ -67,7 +67,7 @@ func (ar *Array) SetProperty(c *r.Context, name string, value r.Element) error {
 }
 
 // ExecMethod -
-func (ar *Array) ExecMethod(c *r.Context, name string, values []r.Element) (r.Element, error) {
+func (ar *Array) ExecMethod(name string, values []r.Element) (r.Element, error) {
 	arrayMethodMap := map[string]arrayMethodFunc{
 		"新增": arrayExecInsert,
 		"添加": arrayExecInsert,

@@ -12,7 +12,7 @@ import (
 var fileModuleName = "文件"
 var fileModule = r.NewInternalModule(fileModuleName)
 
-func readTextFromFileFunc(c *r.Context, values []r.Element) (r.Element, error) {
+func readTextFromFileFunc(values []r.Element) (r.Element, error) {
 	// validate one param: string ONLY
 	if err := value.ValidateExactParams(values, "string"); err != nil {
 		return nil, err
@@ -31,7 +31,7 @@ func readTextFromFileFunc(c *r.Context, values []r.Element) (r.Element, error) {
 	return value.NewString(string(data)), nil
 }
 
-func writeTextFromFileFunc(c *r.Context, values []r.Element) (r.Element, error) {
+func writeTextFromFileFunc(values []r.Element) (r.Element, error) {
 	// validate one param: string ONLY
 	if err := value.ValidateExactParams(values, "string", "string"); err != nil {
 		return nil, err
@@ -46,7 +46,7 @@ func writeTextFromFileFunc(c *r.Context, values []r.Element) (r.Element, error) 
 	return nil, nil
 }
 
-func readDirFunc(c *r.Context, values []r.Element) (r.Element, error) {
+func readDirFunc(values []r.Element) (r.Element, error) {
 	// validate one param: string ONLY
 	if err := value.ValidateExactParams(values, "string"); err != nil {
 		return nil, err

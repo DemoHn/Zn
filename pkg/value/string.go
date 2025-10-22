@@ -32,7 +32,7 @@ func (s *String) GetValue() string {
 }
 
 // GetProperty -
-func (s *String) GetProperty(c *r.Context, name string) (r.Element, error) {
+func (s *String) GetProperty(name string) (r.Element, error) {
 	strGetterMap := map[string]strGetterFunc{
 		"长度":  strGetLength,
 		"字数":  strGetLength,
@@ -46,12 +46,12 @@ func (s *String) GetProperty(c *r.Context, name string) (r.Element, error) {
 }
 
 // SetProperty -
-func (s *String) SetProperty(c *r.Context, name string, value r.Element) error {
+func (s *String) SetProperty(name string, value r.Element) error {
 	return zerr.PropertyNotFound(name)
 }
 
 // ExecMethod -
-func (s *String) ExecMethod(c *r.Context, name string, values []r.Element) (r.Element, error) {
+func (s *String) ExecMethod(name string, values []r.Element) (r.Element, error) {
 	strMethodMap := map[string]strMethodFunc{
 		"替换":     strExecReplace,
 		"分隔":     strExecSplit,
