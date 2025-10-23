@@ -436,8 +436,15 @@ func evalNewObject(vm *r.VM, node *syntax.ObjNewExpr) (r.Element, error) {
 	return classRef.Construct(cParams)
 }
 
-// eval 导入《模块A》
 func evalImportStmt(vm *r.VM, node *syntax.ImportStmt) error {
+	extLibName := node.ImportName.GetLiteral()
+	// NOTE: we need a implemention to parse libName first - then there's a custom code loader to
+	// get the program
+	// e.g. 导入“@某标准库-某模块A-某模块B” -> [<isStd=1>, "某标准库", "某模块A", "某模块B"]
+}
+
+// eval 导入《模块A》
+func evalImportStmt__OLD(vm *r.VM, node *syntax.ImportStmt) error {
 	libName := node.ImportName.GetLiteral()
 
 	var extModule *r.Module
@@ -470,7 +477,7 @@ func evalImportStmt(vm *r.VM, node *syntax.ImportStmt) error {
 		// import all symbols to current module's importRefs
 		if len(node.ImportItems) == 0 {
 			for name, val := range extModule.GetAllExportValues() {
-				if err := vm.DeclareElement(runtime.NewIDName(name), val); err != nil {
+				if err := vm.DeclareConstElement(runtime.NewIDName(name), val); err != nil {
 					return err
 				}
 			}

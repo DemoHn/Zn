@@ -20,8 +20,6 @@ import (
 )
 
 type Element = runtime.Element
-type Context = runtime.Context
-type ModuleCodeFinder = runtime.ModuleCodeFinder
 
 type ZnNumber = value.Number
 type ZnString = value.String
