@@ -9,7 +9,7 @@ import (
 )
 
 var httpModuleName = "HTTP"
-var httpModule = r.NewInternalModule(httpModuleName)
+var httpModule = r.NewSTDModule(httpModuleName)
 
 // HTTP响应类型
 var httpResponseClass = value.NewClassModel("HTTP响应", httpModule).

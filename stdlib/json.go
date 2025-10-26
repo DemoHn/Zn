@@ -12,7 +12,7 @@ import (
 )
 
 var jsonModuleName = "JSON"
-var jsonModule = r.NewInternalModule(jsonModuleName)
+var jsonModule = r.NewSTDModule(jsonModuleName)
 
 // parseJsonFunc - 解析JSON
 func parseJsonFunc(values []r.Element) (r.Element, error) {

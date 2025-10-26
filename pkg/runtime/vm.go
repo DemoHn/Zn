@@ -24,39 +24,59 @@ type VM struct {
 	modules []Module
 	// moduleGraph - record a module dependency graph to detect circular dependency
 	moduleGraph *ModuleGraph
+
+	// moduleCodeFinder - HOWTO get the source code of a module
+	moduleCodeFinder ModuleCodeFinder
 }
 
 type ElementMap = map[string]Element
 
 func InitVM(globals map[string]Element) *VM {
 	return &VM{
-		globals:    globals,
-		valueStack: map[int]Scope{},
-		callStack:  []CallFrame{},
-		csCount:    0,
-		csModuleID: -1, // 0 for main module
-		modules:    []Module{},
+		globals:          globals,
+		valueStack:       map[int]Scope{},
+		callStack:        []CallFrame{},
+		csCount:          0,
+		csModuleID:       -1, // 0 for main module
+		modules:          []Module{},
+		moduleCodeFinder: nil,
 	}
+}
+
+func (vm *VM) GetModuleCodeFinder() ModuleCodeFinder {
+	return vm.moduleCodeFinder
+}
+
+func (vm *VM) SetModuleCodeFinder(moduleCodeFinder ModuleCodeFinder) {
+	vm.moduleCodeFinder = moduleCodeFinder
 }
 
 // AllocateModule - create empty module information
 func (vm *VM) AllocateModule(name string, program *syntax.Program) *Module {
-	module := Module{
-		fullName:     name,
-		program:      program,
-		exportValues: map[string]Element{},
-	}
-
-	vm.modules = append(vm.modules, module)
-	extModuleID := len(vm.modules) - 1
-	// current module -> new module
-	// add dependency automatically
-	if extModuleID > 0 {
-		vm.moduleGraph.AddDependency(vm.csModuleID, extModuleID)
-	}
+	extModuleID := vm.moduleGraph.AddModule(vm.csModuleID, name, program)
 	vm.csModuleID = extModuleID
 
-	return &module
+	return vm.moduleGraph.GetModuleByID(extModuleID)
+}
+
+func (vm *VM) FindModuleByName(name string) *Module {
+	moduleID, exists := vm.moduleGraph.GetIDFromName(name)
+	if !exists {
+		return nil
+	}
+	return vm.moduleGraph.GetModuleByID(moduleID)
+}
+
+func (vm *VM) CheckDepedency(name string) error {
+	moduleID, exists := vm.moduleGraph.GetIDFromName(name)
+	if exists {
+		// check circular dependency
+		if vm.moduleGraph.CheckCircularDepedency(vm.csModuleID, moduleID) {
+			return zerr.ModuleCircularDependency()
+		}
+	}
+	// no existing module found - no dependency problem will be found
+	return nil
 }
 
 // PushCallFrame - push a call frame onto the call stack
@@ -80,10 +100,7 @@ func (vm *VM) PopCallFrame() *CallFrame {
 }
 
 func (vm *VM) GetCurrentModule() *Module {
-	if vm.csModuleID >= 0 && vm.csModuleID < len(vm.modules) {
-		return &vm.modules[vm.csModuleID]
-	}
-	return nil
+	return vm.moduleGraph.GetModuleByID(vm.csModuleID)
 }
 
 func (vm *VM) GetCurrentCallFrame() *CallFrame {
@@ -143,7 +160,7 @@ func (vm *VM) FindElementWithModule(name *IDName) (Element, *Module, error) {
 	nameStr := name.GetLiteral()
 	// look for global values first
 	if elem, ok := vm.globals[nameStr]; ok {
-		return elem, vm.getModuleByID(vm.csModuleID), nil
+		return elem, vm.moduleGraph.GetModuleByID(vm.csModuleID), nil
 	}
 	// then look for local values
 	elem, moduleID := vm.getCurrentScope().GetValueWithModuleID(nameStr)
@@ -155,7 +172,7 @@ func (vm *VM) FindElementWithModule(name *IDName) (Element, *Module, error) {
 	if moduleID >= 0 {
 		extModuleID = moduleID
 	}
-	return elem, vm.getModuleByID(extModuleID), nil
+	return elem, vm.moduleGraph.GetModuleByID(extModuleID), nil
 }
 
 // DeclareElement
@@ -201,13 +218,6 @@ func (vm *VM) getCurrentCallFrame() *CallFrame {
 func (vm *VM) getCurrentScope() *Scope {
 	if scope, ok := vm.valueStack[vm.csModuleID]; ok {
 		return &scope
-	}
-	return nil
-}
-
-func (vm *VM) getModuleByID(moduleID int) *Module {
-	if moduleID >= 0 && moduleID < len(vm.modules) {
-		return &vm.modules[moduleID]
 	}
 	return nil
 }

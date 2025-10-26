@@ -7,7 +7,6 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"strings"
 
 	zerr "github.com/DemoHn/Zn/pkg/error"
 	"github.com/DemoHn/Zn/pkg/exec"
@@ -47,7 +46,7 @@ type ZnInterpreter struct {
 
 	// moduleCodeFinder - given a module name, the finder function aims to find it's corresponding source code for further execution - whatever from filesystem, DB, network, etc.
 	// by default, the value is nil, that means the finder could not found any module code at all!
-	moduleCodeFinder ModuleCodeFinder
+	moduleCodeFinder runtime.ModuleCodeFinder
 }
 
 // NewInterpreter - new ZnInterpreter object
@@ -67,13 +66,16 @@ func (z *ZnInterpreter) GetVersion() string {
 
 func (z *ZnInterpreter) LoadScript(source []rune) *ZnInterpreter {
 	// set moduleCodeFinder
-	z.moduleCodeFinder = func(isMainModule bool, moduleName string) ([]rune, error) {
+	z.moduleCodeFinder = func(isMain bool, info runtime.LibNameInfo) ([]rune, error) {
 		// suppose the sourceCode is the mainModule ONLY
-		if isMainModule {
+		if isMain {
 			return source, nil
 		} else {
-			// thus there's no code for other modules!
-			return []rune{}, nil
+			if info.LibType == runtime.LIB_TYPE_STD {
+				return []rune{}, nil // return empty source for STD modules
+			}
+			// other cases, return error directly!
+			return nil, zerr.NewErrorSLOT("在脚本模式下，不支持导入其他模块！")
 		}
 	}
 
@@ -82,7 +84,7 @@ func (z *ZnInterpreter) LoadScript(source []rune) *ZnInterpreter {
 
 func (z *ZnInterpreter) LoadFile(file string) *ZnInterpreter {
 	// set moduleCodeFinder
-	z.moduleCodeFinder = func(isMainModule bool, moduleName string) ([]rune, error) {
+	z.moduleCodeFinder = func(isMain bool, info runtime.LibNameInfo) ([]rune, error) {
 		// get dir & fileName -
 		// e.g. when exec "/home/user/xxxx/module/a.zn":
 		//  - dir=/home/user/xxxx/module
@@ -92,17 +94,23 @@ func (z *ZnInterpreter) LoadFile(file string) *ZnInterpreter {
 
 		var moduleFullPath string
 
-		if isMainModule {
+		if isMain {
 			// denote the loaded file as *mainModule*
 			moduleFullPath = path.Join(rootDir, fileName)
 		} else {
-			dirs := strings.Split(moduleName, "-")
-			// add .zn for last item
-			dirs[len(dirs)-1] = dirs[len(dirs)-1] + ".zn"
+			switch info.LibType {
+			case runtime.LIB_TYPE_STD:
+				return []rune{}, nil // return empty source for STD modules
+			case runtime.LIB_TYPE_VENDOR:
+			case runtime.LIB_TYPE_CUSTOM:
+				dirs := info.LibPath
+				// add .zn for last item
+				dirs[len(dirs)-1] = dirs[len(dirs)-1] + ".zn"
 
-			moduleFullPath = filepath.Join(rootDir, filepath.Join(dirs...))
-			if _, err := os.Stat(moduleFullPath); errors.Is(err, os.ErrNotExist) {
-				return nil, zerr.ModuleNotFound(moduleName)
+				moduleFullPath = filepath.Join(rootDir, filepath.Join(dirs...))
+				if _, err := os.Stat(moduleFullPath); errors.Is(err, os.ErrNotExist) {
+					return nil, zerr.ModuleNotFound(info.OriginalName)
+				}
 			}
 		}
 
@@ -126,7 +134,11 @@ func (z *ZnInterpreter) Execute(varInputs runtime.ElementMap) (Element, error) {
 
 	finder := z.moduleCodeFinder
 	// #2. load main module
-	source, err := finder(true, "")
+	source, err := finder(true, runtime.LibNameInfo{
+		OriginalName: "",
+		LibType:      runtime.LIB_TYPE_CUSTOM,
+		LibPath:      []string{},
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -140,6 +152,7 @@ func (z *ZnInterpreter) Execute(varInputs runtime.ElementMap) (Element, error) {
 	}
 
 	vm := runtime.InitVM(exec.GlobalValues)
+	vm.SetModuleCodeFinder(finder)
 	// #4. eval program
 	rtnValue, err := exec.EvalMainModule(vm, program, varInputs)
 	if err != nil {

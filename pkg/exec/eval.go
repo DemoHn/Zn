@@ -438,9 +438,42 @@ func evalNewObject(vm *r.VM, node *syntax.ObjNewExpr) (r.Element, error) {
 
 func evalImportStmt(vm *r.VM, node *syntax.ImportStmt) error {
 	extLibName := node.ImportName.GetLiteral()
+
+	var extModule *r.Module
+	nameInfo := r.ParseLibName(extLibName)
+	switch nameInfo.LibType {
+	case r.LIB_TYPE_STD:
+		var err error
+		var dupModule *r.Module
+		extModule = vm.AllocateModule(extLibName, nil)
+		dupModule, err = stdlib.FindModule(extLibName)
+		if err != nil {
+			return err
+		}
+		// duplicate export values into current module
+		// TODO: refactor stdlib module management
+		for k, v := range dupModule.GetAllExportValues() {
+			extModule.AddExportValue(k, v)
+		}
+		return nil
+	case r.LIB_TYPE_VENDOR:
+	case r.LIB_TYPE_CUSTOM:
+		if extModule = vm.FindModuleByName(extLibName); extModule == nil {
+			newModule, err := execAnotherModule(vm, extLibName)
+			if err != nil {
+				return err
+			}
+			extModule = newModule
+		}
+		// check circular dependency
+		if err2 := vm.CheckDepedency(extLibName); err2 != nil {
+			return err2
+		}
+	}
 	// NOTE: we need a implemention to parse libName first - then there's a custom code loader to
 	// get the program
 	// e.g. 导入“@某标准库-某模块A-某模块B” -> [<isStd=1>, "某标准库", "某模块A", "某模块B"]
+	return nil
 }
 
 // eval 导入《模块A》
@@ -1225,33 +1258,40 @@ func evalVarAssignExpr(vm *r.VM, expr *syntax.VarAssignExpr) (r.Element, error) 
 
 // execAnotherModule - load source code of the module, parse the code, execute the program, and build depCache!
 func execAnotherModule(vm *r.VM, name string) (*r.Module, error) {
-	if finder := vm.GetModuleCodeFinder(); finder != nil {
-		source, err := finder(false, name)
-		if err != nil {
-			return nil, zerr.ModuleNotFound(name)
+	libInfo := r.ParseLibName(name)
+	switch libInfo.LibType {
+	case r.LIB_TYPE_STD:
+		return stdlib.FindModule(name[1:])
+	case r.LIB_TYPE_VENDOR:
+	case r.LIB_TYPE_CUSTOM:
+		if finder := vm.GetModuleCodeFinder(); finder != nil {
+			source, err := finder(false, libInfo)
+			if err != nil {
+				return nil, zerr.ModuleNotFound(name)
+			}
+
+			// #1. parse program
+			p := syntax.NewParser(source, zh.NewParserZH())
+
+			program, err := p.Compile()
+			if err != nil {
+				// moduleName
+				return nil, WrapSyntaxError(p, name, err)
+			}
+
+			// #2. allocate new module
+			module := vm.AllocateModule(name, program)
+			callFrame := runtime.NewScriptCallFrame(module)
+			vm.PushCallFrame(callFrame)
+			defer vm.PopCallFrame()
+
+			// #3. eval program
+			if _, err := evalProgram(vm, program, nil); err != nil {
+				return nil, WrapRuntimeError(vm, err)
+			}
+
+			return module, nil
 		}
-
-		// #1. parse program
-		p := syntax.NewParser(source, zh.NewParserZH())
-
-		program, err := p.Compile()
-		if err != nil {
-			// moduleName
-			return nil, WrapSyntaxError(p, name, err)
-		}
-
-		// #2. create module & enter module
-		module := vm.AllocateModule(name, program)
-		callFrame := runtime.NewScriptCallFrame(module)
-		vm.PushCallFrame(callFrame)
-		defer vm.PopCallFrame()
-
-		// #3. eval program
-		if _, err := evalProgram(vm, program, nil); err != nil {
-			return nil, WrapRuntimeError(vm, err)
-		}
-
-		return newModule, nil
 	}
 	// no finder defined, return nil directly (no throw error)
 	return nil, nil
