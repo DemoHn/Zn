@@ -1,6 +1,8 @@
 package runtime
 
-import "testing"
+import (
+	"testing"
+)
 
 type graph = map[string][]string
 
@@ -89,7 +91,7 @@ func TestCircularDependency_CoreDFS(t *testing.T) {
 	for _, tt := range cases {
 		t.Run(tt.name, func(t *testing.T) {
 			moduleGraph := ModuleGraph{
-				graph: tt.g,
+				graph: transformGraph(tt.g),
 			}
 			res := moduleGraph.checkCircularDepedencyDFS()
 			if tt.result != res {
@@ -97,4 +99,34 @@ func TestCircularDependency_CoreDFS(t *testing.T) {
 			}
 		})
 	}
+}
+
+// NEW FUNCTION: transform grpah into []int[2]
+func transformGraph(g graph) [][2]int {
+	idx := 0
+	nameMap := map[string]int{}
+
+	for k, v := range g {
+		for _, dep := range v {
+			if _, exists := nameMap[dep]; !exists {
+				nameMap[dep] = idx
+				idx += 1
+			}
+
+		}
+
+		if _, exists := nameMap[k]; !exists {
+			nameMap[k] = idx
+			idx += 1
+		}
+	}
+
+	// then map with id
+	res := [][2]int{}
+	for k, v := range g {
+		for _, dep := range v {
+			res[nameMap[k]] = [2]int{nameMap[k], nameMap[dep]}
+		}
+	}
+	return res
 }

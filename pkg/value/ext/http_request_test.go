@@ -5,9 +5,6 @@ import (
 	"strings"
 	"testing"
 
-	"fmt"
-
-	r "github.com/DemoHn/Zn/pkg/runtime"
 	"github.com/DemoHn/Zn/pkg/value"
 )
 
@@ -19,7 +16,6 @@ func TestHTTPRequest_GetProperty(t *testing.T) {
 	}
 
 	httpRequest := NewHTTPRequest(req)
-	ctx := r.NewContext(map[string]r.Element{}, r.NewMainModule(nil))
 
 	tests := []struct {
 		propertyName string
@@ -31,7 +27,7 @@ func TestHTTPRequest_GetProperty(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.propertyName, func(t *testing.T) {
-			prop, err := httpRequest.GetProperty(ctx, tt.propertyName)
+			prop, err := httpRequest.GetProperty(tt.propertyName)
 			if err != nil {
 				t.Fatalf("Failed to get property: %v", err)
 			}
@@ -53,9 +49,8 @@ func TestHTTPRequest_GetHeaders(t *testing.T) {
 	req.Header.Add("x-lowercase-header", "lowercase-value")
 
 	httpRequest := NewHTTPRequest(req)
-	ctx := r.NewContext(map[string]r.Element{}, r.NewMainModule(nil))
 
-	prop, err := httpRequest.GetProperty(ctx, "头部")
+	prop, err := httpRequest.GetProperty("头部")
 	if err != nil {
 		t.Fatalf("Failed to get headers: %v", err)
 	}
@@ -82,9 +77,8 @@ func TestHTTPRequest_GetQueryParams(t *testing.T) {
 	}
 
 	httpRequest := NewHTTPRequest(req)
-	ctx := r.NewContext(map[string]r.Element{}, r.NewMainModule(nil))
 
-	prop, err := httpRequest.GetProperty(ctx, "查询参数")
+	prop, err := httpRequest.GetProperty("查询参数")
 	if err != nil {
 		t.Fatalf("Failed to get query parameters: %v", err)
 	}
@@ -106,9 +100,8 @@ func TestHTTPRequest_GetQueryParams_Array(t *testing.T) {
 	}
 
 	httpRequest := NewHTTPRequest(req)
-	ctx := r.NewContext(map[string]r.Element{}, r.NewMainModule(nil))
 
-	prop, err := httpRequest.GetProperty(ctx, "查询参数")
+	prop, err := httpRequest.GetProperty("查询参数")
 	if err != nil {
 		t.Fatalf("Failed to get query parameters: %v", err)
 	}
@@ -139,14 +132,13 @@ func TestHTTPRequest_ReadBody(t *testing.T) {
 	}
 
 	httpRequest := NewHTTPRequest(req)
-	ctx := r.NewContext(map[string]r.Element{}, r.NewMainModule(nil))
 
-	result, err := httpRequest.ExecMethod(ctx, "读取内容", nil)
+	result, err := httpRequest.ExecMethod("读取内容", nil)
 	if err != nil {
 		t.Fatalf("Failed to read body: %v", err)
 	}
 
-	if value.StringifyValue(result) != fmt.Sprintf("%s", body) {
+	if value.StringifyValue(result) != body {
 		t.Errorf("Expected body to be '%s', but got '%s'", body, value.StringifyValue(result))
 	}
 }
@@ -160,9 +152,8 @@ func TestHTTPRequest_ReadBody_JSON(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 
 	httpRequest := NewHTTPRequest(req)
-	ctx := r.NewContext(map[string]r.Element{}, r.NewMainModule(nil))
 
-	result, err := httpRequest.ExecMethod(ctx, "读取内容", nil)
+	result, err := httpRequest.ExecMethod("读取内容", nil)
 	if err != nil {
 		t.Fatalf("Failed to read body: %v", err)
 	}

@@ -56,6 +56,17 @@ func (cf *CallFrame) SetCurrentLine(line int) {
 	cf.currentLine = line
 }
 
+func (cf *CallFrame) GetSourceTextLine(line int) string {
+	if line < 0 || line >= len(cf.programAST.Lines) {
+		return ""
+	}
+	return string(cf.programAST.Lines[line].LineText)
+}
+
+func (cf *CallFrame) GetModuleID() int {
+	return cf.moduleID
+}
+
 func (cf *CallFrame) IsFunctionCallFrame() bool {
 	return cf.callType == CALL_TYPE_FUNCTION
 }

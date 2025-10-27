@@ -64,35 +64,18 @@ func (sw *SyntaxErrorWrapper) Error() string {
 }
 
 type RuntimeErrorWrapper struct {
-	traceback []r.CallInfo
-	err       error
+	vm  *r.VM
+	err error
 }
 
-func WrapRuntimeError(c *r.Context, err error) error {
+func WrapRuntimeError(vm *r.VM, err error) error {
 	switch serr := err.(type) {
 	case *RuntimeErrorWrapper, *SyntaxErrorWrapper:
 		return serr
 	default:
-
-		traceback := c.GetCallStack()
-
-		addCurrentInfo := true
-		if len(traceback) > 0 {
-			lastItem := traceback[len(traceback)-1]
-			currentModule := c.GetCurrentModule()
-
-			if lastItem.Module == currentModule && lastItem.LastLineIdx == c.GetCurrentLine() {
-				addCurrentInfo = false
-			}
-		}
-		// add current module & lineIdx to traceback as direct error locations
-		if addCurrentInfo {
-			c.PushCallStack()
-		}
-
 		return &RuntimeErrorWrapper{
-			traceback: c.GetCallStack(),
-			err:       err,
+			vm:  vm,
+			err: err,
 		}
 	}
 }
@@ -106,22 +89,27 @@ func (rw *RuntimeErrorWrapper) Error() string {
 		code = werr.Code
 	}
 
-	if len(rw.traceback) > 0 {
+	callStack := rw.vm.GetCallStack()
+	if len(callStack) > 0 {
 		// append head lines
-		headTrace := rw.traceback[0]
-		errLines = append(errLines, fmtErrorLocationHeadLine(headTrace.Module.GetName(), headTrace.LastLineIdx+1))
+		headTrace := callStack[0]
+		moduleID := headTrace.GetModuleID()
+		module := rw.vm.GetModule(moduleID)
+		errLines = append(errLines, fmtErrorLocationHeadLine(module.GetName(), headTrace.GetCurrentLine()+1))
 
 		// get line text
-		if lineText := headTrace.GetSourceTextLine(headTrace.LastLineIdx); lineText != "" {
+		if lineText := headTrace.GetSourceTextLine(headTrace.GetCurrentLine()); lineText != "" {
 			errLines = append(errLines, fmtErrorSourceTextLine(lineText))
 		}
 
 		// append body
-		for _, tr := range rw.traceback[1:] {
-			if tr.Module != nil {
-				errLines = append(errLines, fmtErrorLocationBodyLine(tr.Module.GetName(), tr.LastLineIdx+1))
+		for _, tr := range callStack[1:] {
+			moduleID := tr.GetModuleID()
+			trModule := rw.vm.GetModule(moduleID)
+			if trModule != nil {
+				errLines = append(errLines, fmtErrorLocationBodyLine(trModule.GetName(), tr.GetCurrentLine()+1))
 				// get line text
-				if lineText := tr.GetSourceTextLine(tr.LastLineIdx); lineText != "" {
+				if lineText := tr.GetSourceTextLine(tr.GetCurrentLine()); lineText != "" {
 					errLines = append(errLines, fmtErrorSourceTextLine(lineText))
 				}
 			}
@@ -187,8 +175,9 @@ func fmtErrorLocationBodyLine(moduleName string, lineNum int) string {
 // cursorIdx: global index inside the source text from denoted lexer
 // if withCursorMark == false, hide the "^" mark that indicates the specific location where error occurs.
 // e.g.:
-//     如果代码不为空：
-//        ^
+//
+//	如果代码不为空：
+//	   ^
 func fmtErrorSourceLineWithParser(p *syntax.Parser, cursorIdx int, withCursorMark bool) string {
 	startIdx := cursorIdx
 	endIdx := startIdx
@@ -232,7 +221,8 @@ func fmtErrorSourceLineWithParser(p *syntax.Parser, cursorIdx int, withCursorMar
 // cursorIdx: global index inside the source text from denoted lexer
 // if withCursorMark == false, hide the "^" mark that indicates the specific location where error occurs.
 // e.g.:
-//     如果代码不为空：
+//
+//	如果代码不为空：
 func fmtErrorSourceTextLine(lineText string) string {
 	return fmt.Sprintf("    %s", lineText)
 }

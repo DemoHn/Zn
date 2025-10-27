@@ -8,7 +8,6 @@ import (
 	"github.com/DemoHn/Zn/stdlib"
 
 	zerr "github.com/DemoHn/Zn/pkg/error"
-	"github.com/DemoHn/Zn/pkg/runtime"
 	r "github.com/DemoHn/Zn/pkg/runtime"
 	"github.com/DemoHn/Zn/pkg/syntax"
 	"github.com/DemoHn/Zn/pkg/syntax/zh"
@@ -38,7 +37,7 @@ const (
 func EvalMainModule(vm *r.VM, program *syntax.Program, varInputs r.ElementMap) (r.Element, error) {
 	// allocate module first
 	module := vm.AllocateModule(MODULE_NAME_MAIN, program)
-	vm.PushCallFrame(runtime.NewScriptCallFrame(module))
+	vm.PushCallFrame(r.NewScriptCallFrame(module))
 
 	elem, err := evalProgram(vm, program, varInputs)
 	// pop current callframe only there is no ERROR
@@ -211,7 +210,7 @@ func handleExceptions(vm *r.VM, catchBlock []*syntax.CatchBlockPair, exception r
 
 		// if exception block matches exception className
 		if objClassName != "" && classID.GetLiteral() == objClassName {
-			expCallFrame := runtime.NewExceptionCallFrame(vm.GetCurrentModule(), exception)
+			expCallFrame := r.NewExceptionCallFrame(vm.GetCurrentModule(), exception)
 			vm.PushCallFrame(expCallFrame)
 			// do execution (with "this" value = exception value)
 			_, err := evalPureStmtBlock(vm, catchBlockItem.StmtBlock)
@@ -397,7 +396,7 @@ func evalConstructorDeclareStmt(vm *r.VM, node *syntax.FunctionDeclareStmt) erro
 	constructorLogic := func(elems []r.Element) (r.Element, error) {
 		newObject := value.NewObject(cmodel, map[string]r.Element{})
 		// set "this" value
-		vm.PushCallFrame(runtime.NewFunctionCallFrame(module, newObject))
+		vm.PushCallFrame(r.NewFunctionCallFrame(module, newObject))
 
 		if _, err := evalExecBlock(vm, node.ExecBlock, elems); err != nil {
 			return nil, err
@@ -459,11 +458,10 @@ func evalImportStmt(vm *r.VM, node *syntax.ImportStmt) error {
 	case r.LIB_TYPE_VENDOR:
 	case r.LIB_TYPE_CUSTOM:
 		if extModule = vm.FindModuleByName(extLibName); extModule == nil {
-			newModule, err := execAnotherModule(vm, extLibName)
+			_, err := execAnotherModule(vm, extLibName)
 			if err != nil {
 				return err
 			}
-			extModule = newModule
 		}
 		// check circular dependency
 		if err2 := vm.CheckDepedency(extLibName); err2 != nil {
@@ -473,59 +471,6 @@ func evalImportStmt(vm *r.VM, node *syntax.ImportStmt) error {
 	// NOTE: we need a implemention to parse libName first - then there's a custom code loader to
 	// get the program
 	// e.g. 导入“@某标准库-某模块A-某模块B” -> [<isStd=1>, "某标准库", "某模块A", "某模块B"]
-	return nil
-}
-
-// eval 导入《模块A》
-func evalImportStmt__OLD(vm *r.VM, node *syntax.ImportStmt) error {
-	libName := node.ImportName.GetLiteral()
-
-	var extModule *r.Module
-	if node.ImportLibType == syntax.LibTypeStd {
-		var err error
-		// check if the dependency is valid (i.e. not import itself/no duplicate import)
-		if err := vm.CheckDepedency(libName, true); err != nil {
-			return err
-		}
-		extModule, err = stdlib.FindModule(libName)
-		if err != nil {
-			return err
-		}
-	} else if node.ImportLibType == syntax.LibTypeCustom {
-		// check if the dependency is valid (i.e. not import itself/no duplicate import/no circular dependency)
-		if err := vm.CheckDepedency(libName, false); err != nil {
-			return err
-		}
-		// execute custom module first (in order to get all importable elements)
-		if extModule = vm.FindModuleCache(libName); extModule == nil {
-			newModule, err := execAnotherModule(vm, libName)
-			if err != nil {
-				return err
-			}
-			extModule = newModule
-		}
-	}
-
-	if extModule != nil {
-		// import all symbols to current module's importRefs
-		if len(node.ImportItems) == 0 {
-			for name, val := range extModule.GetAllExportValues() {
-				if err := vm.DeclareConstElement(runtime.NewIDName(name), val); err != nil {
-					return err
-				}
-			}
-		} else {
-			// import selected symbols
-			for _, id := range node.ImportItems {
-				name := id.GetLiteral()
-				if val, err2 := extModule.GetExportValue(name); err2 == nil {
-					if err := vm.DeclareConstElement(runtime.NewIDName(name), val); err != nil {
-						return err
-					}
-				}
-			}
-		}
-	}
 	return nil
 }
 
@@ -1281,7 +1226,7 @@ func execAnotherModule(vm *r.VM, name string) (*r.Module, error) {
 
 			// #2. allocate new module
 			module := vm.AllocateModule(name, program)
-			callFrame := runtime.NewScriptCallFrame(module)
+			callFrame := r.NewScriptCallFrame(module)
 			vm.PushCallFrame(callFrame)
 			defer vm.PopCallFrame()
 

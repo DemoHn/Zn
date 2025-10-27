@@ -20,8 +20,6 @@ type VM struct {
 	// csModuleID - index of current module (the moduleID at the top of callStack)
 	csModuleID int
 
-	// modules - allocates modules by ID & stores export values
-	modules []Module
 	// moduleGraph - record a module dependency graph to detect circular dependency
 	moduleGraph *ModuleGraph
 
@@ -38,7 +36,6 @@ func InitVM(globals map[string]Element) *VM {
 		callStack:        []CallFrame{},
 		csCount:          0,
 		csModuleID:       -1, // 0 for main module
-		modules:          []Module{},
 		moduleCodeFinder: nil,
 	}
 }
@@ -64,6 +61,10 @@ func (vm *VM) FindModuleByName(name string) *Module {
 	if !exists {
 		return nil
 	}
+	return vm.moduleGraph.GetModuleByID(moduleID)
+}
+
+func (vm *VM) GetModule(moduleID int) *Module {
 	return vm.moduleGraph.GetModuleByID(moduleID)
 }
 
@@ -97,6 +98,10 @@ func (vm *VM) PopCallFrame() *CallFrame {
 	currentCF := &vm.callStack[vm.csCount-1]
 	vm.csModuleID = currentCF.moduleID
 	return currentCF
+}
+
+func (vm *VM) GetCallStack() []CallFrame {
+	return vm.callStack[:vm.csCount]
 }
 
 func (vm *VM) GetCurrentModule() *Module {
