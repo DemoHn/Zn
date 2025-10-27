@@ -14,7 +14,7 @@ type VM struct {
 	valueStack map[int]*Scope
 
 	// callStack - store all call frames
-	callStack []CallFrame
+	callStack []*CallFrame
 	// csCount - length of callStack
 	csCount int
 	// csModuleID - index of current module (the moduleID at the top of callStack)
@@ -33,7 +33,7 @@ func InitVM(globals map[string]Element) *VM {
 	return &VM{
 		globals:          globals,
 		valueStack:       map[int]*Scope{},
-		callStack:        []CallFrame{},
+		callStack:        []*CallFrame{},
 		csCount:          0,
 		csModuleID:       -1, // 0 for main module
 		moduleCodeFinder: nil,
@@ -84,24 +84,17 @@ func (vm *VM) CheckDepedency(name string) error {
 // PushCallFrame - push a call frame onto the call stack
 // and update the current call stack cursor accordingly.
 func (vm *VM) PushCallFrame(callFrame *CallFrame) {
-	vm.callStack = append(vm.callStack, *callFrame)
+	vm.callStack = append(vm.callStack, callFrame)
 	vm.csCount += 1
 	vm.csModuleID = callFrame.moduleID
 	vm.initValueStack(vm.csModuleID)
 }
 
-func (vm *VM) PopCallFrame() *CallFrame {
-	if vm.csCount < 0 {
-		return nil
-	}
+func (vm *VM) PopCallFrame() {
 	vm.csCount -= 1
-
-	currentCF := &vm.callStack[vm.csCount-1]
-	vm.csModuleID = currentCF.moduleID
-	return currentCF
 }
 
-func (vm *VM) GetCallStack() []CallFrame {
+func (vm *VM) GetCallStack() []*CallFrame {
 	return vm.callStack[:vm.csCount]
 }
 
@@ -222,7 +215,7 @@ func (vm *VM) SetElement(name *IDName, elem Element) error {
 
 // // internal functions
 func (vm *VM) getCurrentCallFrame() *CallFrame {
-	return &vm.callStack[vm.csCount-1]
+	return vm.callStack[vm.csCount-1]
 }
 
 func (vm *VM) getCurrentScope() *Scope {
