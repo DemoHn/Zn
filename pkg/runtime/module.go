@@ -119,39 +119,44 @@ func (g *ModuleGraph) CheckCircularDepedency(srcModuleID int, depModuleID int) b
 }
 
 func (g *ModuleGraph) checkCircularDepedencyDFS() bool {
-	// detectCircularDependencyDFS
-	// same as "find the loop in a directed graph"
-	visited := make([]bool, len(g.graph))
-	var dfs func(int) bool
-	dfs = func(node int) bool {
-		if visited[node] {
-			return true
+	// Build adjacency list
+	adj := make(map[int][]int)
+	for _, e := range g.graph {
+		u, v := e[0], e[1]
+		adj[u] = append(adj[u], v)
+		// Make sure v also exists in map (even if it has no outgoing edges)
+		if _, ok := adj[v]; !ok {
+			adj[v] = []int{}
 		}
-		visited[node] = true
-		for _, neighbor := range g.getNeighbors(node) {
-			if dfs(neighbor) {
+	}
+
+	// 0 = unvisited, 1 = visiting, 2 = done
+	color := make(map[int]int)
+
+	var dfs func(int) bool
+	dfs = func(u int) bool {
+		color[u] = 1
+		for _, v := range adj[u] {
+			if color[v] == 1 {
+				// found a back edge
+				return true
+			}
+			if color[v] == 0 && dfs(v) {
 				return true
 			}
 		}
+		color[u] = 2
 		return false
 	}
 
-	for i := range visited {
-		if dfs(i) {
-			return true
+	for node := range adj {
+		if color[node] == 0 {
+			if dfs(node) {
+				return true
+			}
 		}
 	}
 	return false
-}
-
-func (g *ModuleGraph) getNeighbors(node int) []int {
-	neighbors := []int{}
-	for _, edge := range g.graph {
-		if edge[0] == node {
-			neighbors = append(neighbors, edge[1])
-		}
-	}
-	return neighbors
 }
 
 // parseLibName - parse libName into LibNameInfo
