@@ -11,7 +11,7 @@ type VM struct {
 	// including global & local variables
 	// KEY: moduleID
 	// VALUE: the ScopeStack of corresponding module
-	valueStack map[int]Scope
+	valueStack map[int]*Scope
 
 	// callStack - store all call frames
 	callStack []CallFrame
@@ -32,11 +32,12 @@ type ElementMap = map[string]Element
 func InitVM(globals map[string]Element) *VM {
 	return &VM{
 		globals:          globals,
-		valueStack:       map[int]Scope{},
+		valueStack:       map[int]*Scope{},
 		callStack:        []CallFrame{},
 		csCount:          0,
 		csModuleID:       -1, // 0 for main module
 		moduleCodeFinder: nil,
+		moduleGraph:      NewModuleGraph(),
 	}
 }
 
@@ -139,6 +140,10 @@ func (vm *VM) GetCurrentModuleID() int {
 	return vm.csModuleID
 }
 
+func (vm *VM) GetCurrentScope() *Scope {
+	return vm.getCurrentScope()
+}
+
 // SetCurrentLine
 func (vm *VM) SetCurrentLine(line int) {
 	frame := vm.getCurrentCallFrame()
@@ -222,7 +227,7 @@ func (vm *VM) getCurrentCallFrame() *CallFrame {
 
 func (vm *VM) getCurrentScope() *Scope {
 	if scope, ok := vm.valueStack[vm.csModuleID]; ok {
-		return &scope
+		return scope
 	}
 	return nil
 }

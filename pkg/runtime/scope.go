@@ -1,6 +1,8 @@
 package runtime
 
-import zerr "github.com/DemoHn/Zn/pkg/error"
+import (
+	zerr "github.com/DemoHn/Zn/pkg/error"
+)
 
 // Scope represents a local namespace (aka. environment) of current execution
 type Scope struct {
@@ -20,8 +22,8 @@ type LocalSymbol struct {
 	isConst bool
 }
 
-func NewScope() Scope {
-	return Scope{
+func NewScope() *Scope {
+	return &Scope{
 		locals:       []LocalSymbol{},
 		localCount:   0,
 		currentDepth: 0,
@@ -134,9 +136,10 @@ func (sp *Scope) declareValue(name string, value Element, isConst bool) error {
 	sp.locals = append(sp.locals[:sp.localCount], LocalSymbol{
 		name:    name,
 		depth:   sp.currentDepth,
-		isConst: false,
+		isConst: isConst,
 	})
 	sp.values = append(sp.values[:sp.localCount], value)
 	sp.localCount++
-	return zerr.NameNotDefined(name)
+
+	return nil
 }

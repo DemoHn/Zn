@@ -1,7 +1,6 @@
 package runtime
 
 import (
-	"fmt"
 	"testing"
 )
 
@@ -129,6 +128,5 @@ func transformGraph(g graph) [][2]int {
 			res = append(res, [2]int{nameMap[k], nameMap[dep]})
 		}
 	}
-	fmt.Println(res)
 	return res
 }

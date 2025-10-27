@@ -155,7 +155,7 @@ func DisplayError(err error) string {
 // fmtErrorLocationHeadLine -
 // e.g. 在「example」模块中，位于第 12 行发生异常：
 func fmtErrorLocationHeadLine(moduleName string, lineNum int) string {
-	if moduleName == "" {
+	if moduleName == MODULE_NAME_MAIN {
 		return fmt.Sprintf("在主模块中，位于第 %d 行发生异常：", lineNum)
 	}
 	return fmt.Sprintf("在模块“%s”中，位于第 %d 行发生异常：", moduleName, lineNum)
@@ -164,7 +164,7 @@ func fmtErrorLocationHeadLine(moduleName string, lineNum int) string {
 // fmtErrorLocationBodyLine -
 // e.g. 来自「example2」模块，第 12 行：
 func fmtErrorLocationBodyLine(moduleName string, lineNum int) string {
-	if moduleName == "" {
+	if moduleName == MODULE_NAME_MAIN {
 		return fmt.Sprintf("来自主模块，第 %d 行：", lineNum)
 	}
 

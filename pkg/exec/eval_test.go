@@ -12,7 +12,10 @@ import (
 )
 
 func setupMockContext() *runtime.VM {
-	return runtime.InitVM(globalValues)
+	vm := runtime.InitVM(globalValues)
+	module := vm.AllocateModule(MODULE_NAME_MAIN, nil)
+	vm.PushCallFrame(runtime.NewScriptCallFrame(module))
+	return vm
 }
 
 // a helper function to digest statement object from source code
@@ -37,7 +40,9 @@ func setupStmtFromCode(text string) (syntax.Statement, error) {
 
 func injectValuesToRootScope(vm *runtime.VM, nameMap map[string]runtime.Element) {
 	for k, v := range nameMap {
-		vm.DeclareElement(runtime.NewIDName(k), v)
+		if err := vm.DeclareElement(runtime.NewIDName(k), v); err != nil {
+			panic(err)
+		}
 	}
 }
 
@@ -203,7 +208,6 @@ func TestEvalWhileLoopStmt_OKCases(t *testing.T) {
 	for _, tt := range cases {
 		t.Run(tt.name, func(t *testing.T) {
 			vm := setupMockContext()
-
 			injectValuesToRootScope(vm, tt.initValue)
 
 			ss, err := setupStmtFromCode(tt.code)

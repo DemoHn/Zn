@@ -8,7 +8,7 @@ import (
 )
 
 type ModuleGraph struct {
-	modules       []Module
+	modules       []*Module
 	graph         [][2]int // array of [startModuleID, importModuleID]
 	moduleNameMap map[string]int
 }
@@ -74,7 +74,7 @@ func NewSTDModule(name string) *Module {
 
 func NewModuleGraph() *ModuleGraph {
 	return &ModuleGraph{
-		modules:       []Module{},
+		modules:       []*Module{},
 		graph:         [][2]int{},
 		moduleNameMap: map[string]int{},
 	}
@@ -85,7 +85,7 @@ func NewModuleGraph() *ModuleGraph {
 // name: added module name
 // program: parsed program
 func (g *ModuleGraph) AddModule(srcModuleID int, name string, program *syntax.Program) int {
-	g.modules = append(g.modules, Module{
+	g.modules = append(g.modules, &Module{
 		fullName:     name,
 		program:      program,
 		exportValues: map[string]Element{},
@@ -104,7 +104,7 @@ func (g *ModuleGraph) AddDependency(srcModuleID int, name string, depModuleID in
 
 func (g *ModuleGraph) GetModuleByID(moduleID int) *Module {
 	if moduleID >= 0 && moduleID < len(g.modules) {
-		return &(g.modules[moduleID])
+		return g.modules[moduleID]
 	}
 	return nil
 }
