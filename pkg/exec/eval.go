@@ -442,24 +442,21 @@ func evalImportStmt(vm *r.VM, node *syntax.ImportStmt) error {
 	nameInfo := r.ParseLibName(extLibName)
 	switch nameInfo.LibType {
 	case r.LIB_TYPE_STD:
-		var err error
-		var dupModule *r.Module
 		extModule = vm.AllocateModule(extLibName, nil)
-		dupModule, err = stdlib.FindModule(extLibName)
+		library, err := stdlib.FindLibrary(extLibName)
 		if err != nil {
 			return err
 		}
 		// duplicate export values into current module
 		// TODO: refactor stdlib module management
-		for k, v := range dupModule.GetAllExportValues() {
+		for k, v := range library.ExportValues {
 			extModule.AddExportValue(k, v)
 		}
 		return nil
 	case r.LIB_TYPE_VENDOR:
 	case r.LIB_TYPE_CUSTOM:
 		if extModule = vm.FindModuleByName(extLibName); extModule == nil {
-			_, err := execAnotherModule(vm, extLibName)
-			if err != nil {
+			if err := execAnotherModule(vm, nameInfo); err != nil {
 				return err
 			}
 		}
@@ -1202,44 +1199,38 @@ func evalVarAssignExpr(vm *r.VM, expr *syntax.VarAssignExpr) (r.Element, error) 
 }
 
 // execAnotherModule - load source code of the module, parse the code, execute the program, and build depCache!
-func execAnotherModule(vm *r.VM, name string) (*r.Module, error) {
-	libInfo := r.ParseLibName(name)
-	switch libInfo.LibType {
-	case r.LIB_TYPE_STD:
-		return stdlib.FindModule(name[1:])
-	case r.LIB_TYPE_VENDOR:
-	case r.LIB_TYPE_CUSTOM:
-		if finder := vm.GetModuleCodeFinder(); finder != nil {
-			source, err := finder(false, libInfo)
-			if err != nil {
-				return nil, zerr.ModuleNotFound(name)
-			}
-
-			// #1. parse program
-			p := syntax.NewParser(source, zh.NewParserZH())
-
-			program, err := p.Compile()
-			if err != nil {
-				// moduleName
-				return nil, WrapSyntaxError(p, name, err)
-			}
-
-			// #2. allocate new module
-			module := vm.AllocateModule(name, program)
-			callFrame := r.NewScriptCallFrame(module)
-			vm.PushCallFrame(callFrame)
-			defer vm.PopCallFrame()
-
-			// #3. eval program
-			if _, err := evalProgram(vm, program, nil); err != nil {
-				return nil, WrapRuntimeError(vm, err)
-			}
-
-			return module, nil
+func execAnotherModule(vm *r.VM, libInfo r.LibNameInfo) error {
+	name := libInfo.OriginalName
+	if finder := vm.GetModuleCodeFinder(); finder != nil {
+		source, err := finder(false, libInfo)
+		if err != nil {
+			return zerr.ModuleNotFound(name)
 		}
+
+		// #1. parse program
+		p := syntax.NewParser(source, zh.NewParserZH())
+
+		program, err := p.Compile()
+		if err != nil {
+			// moduleName
+			return WrapSyntaxError(p, name, err)
+		}
+
+		// #2. allocate new module
+		module := vm.AllocateModule(name, program)
+		callFrame := r.NewScriptCallFrame(module)
+		vm.PushCallFrame(callFrame)
+		defer vm.PopCallFrame()
+
+		// #3. eval program
+		if _, err := evalProgram(vm, program, nil); err != nil {
+			return WrapRuntimeError(vm, err)
+		}
+
+		return nil
 	}
-	// no finder defined, return nil directly (no throw error)
-	return nil, nil
+
+	return nil
 }
 
 func getMemberExprIV(vm *r.VM, expr *syntax.MemberExpr) (*value.IV, error) {

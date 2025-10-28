@@ -9,10 +9,10 @@ import (
 )
 
 var httpModuleName = "HTTP"
-var httpModule = r.NewSTDModule(httpModuleName)
+var httpLIB = NewLibrary(httpModuleName)
 
 // HTTP响应类型
-var httpResponseClass = value.NewClassModel("HTTP响应", httpModule).
+var httpResponseClass = value.NewClassModel("HTTP响应", nil).
 	DefineProperty("代码", value.NewNumber(200)).
 	DefineProperty("内容", value.NewString(""))
 
@@ -51,9 +51,9 @@ func sendHTTPRequestFunc(values []r.Element) (r.Element, error) {
 
 func init() {
 	// 注册 HTTP响应 类型
-	RegisterClassForModule(httpModule, "HTTP响应", httpResponseClass)
+	RegisterClassForLibrary(httpLIB, "HTTP响应", httpResponseClass)
 	// 注册 发送HTTP请求 方法
-	RegisterFunctionForModule(httpModule, "发送HTTP请求", sendHTTPRequestFunc)
+	RegisterFunctionForLibrary(httpLIB, "发送HTTP请求", sendHTTPRequestFunc)
 	// 注册模块
-	RegisterModule(httpModuleName, httpModule)
+	RegisterLibrary(httpLIB)
 }

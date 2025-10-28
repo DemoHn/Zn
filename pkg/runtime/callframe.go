@@ -9,7 +9,7 @@ const (
 )
 
 type CallFrame struct {
-	moduleID    int
+	module      *Module
 	callType    uint8
 	currentLine int // current exec line in the module's source code
 	programAST  *syntax.Program
@@ -22,6 +22,7 @@ type CallFrame struct {
 
 func NewScriptCallFrame(module *Module) *CallFrame {
 	return &CallFrame{
+		module:      module,
 		callType:    CALL_TYPE_SCRIPT,
 		currentLine: 0,
 		programAST:  module.program,
@@ -32,6 +33,7 @@ func NewScriptCallFrame(module *Module) *CallFrame {
 
 func NewFunctionCallFrame(module *Module, thisValue Element) *CallFrame {
 	return &CallFrame{
+		module:      module,
 		callType:    CALL_TYPE_FUNCTION,
 		currentLine: 0,
 		programAST:  module.program,
@@ -41,6 +43,7 @@ func NewFunctionCallFrame(module *Module, thisValue Element) *CallFrame {
 
 func NewExceptionCallFrame(module *Module, thisValue Element) *CallFrame {
 	return &CallFrame{
+		module:      module,
 		callType:    CALL_TYPE_EXCEPTION_BLOCK,
 		currentLine: 0,
 		programAST:  module.program,
@@ -63,8 +66,8 @@ func (cf *CallFrame) GetSourceTextLine(line int) string {
 	return string(cf.programAST.Lines[line].LineText)
 }
 
-func (cf *CallFrame) GetModuleID() int {
-	return cf.moduleID
+func (cf *CallFrame) GetModule() *Module {
+	return cf.module
 }
 
 func (cf *CallFrame) IsFunctionCallFrame() bool {

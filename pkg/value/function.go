@@ -5,14 +5,12 @@ import (
 	r "github.com/DemoHn/Zn/pkg/runtime"
 )
 
-type FuncExecutor = func([]r.Element) (r.Element, error)
-
 type Function struct {
 	name         string
-	logicHandler FuncExecutor
+	logicHandler r.FuncExecutor
 }
 
-func NewFunction(executor FuncExecutor) *Function {
+func NewFunction(executor r.FuncExecutor) *Function {
 	return &Function{
 		name:         "",
 		logicHandler: executor,

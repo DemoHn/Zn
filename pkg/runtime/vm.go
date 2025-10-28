@@ -86,7 +86,7 @@ func (vm *VM) CheckDepedency(name string) error {
 func (vm *VM) PushCallFrame(callFrame *CallFrame) {
 	vm.callStack = append(vm.callStack, callFrame)
 	vm.csCount += 1
-	vm.csModuleID = callFrame.moduleID
+	vm.csModuleID = callFrame.module.GetID()
 	vm.initValueStack(vm.csModuleID)
 }
 

@@ -13,3 +13,5 @@ type Element interface {
 	SetProperty(string, Element) error
 	ExecMethod(string, []Element) (Element, error)
 }
+
+type FuncExecutor = func([]Element) (Element, error)

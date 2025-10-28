@@ -16,7 +16,7 @@ type ClassModel struct {
 
 	// Constructor defines default logic (mostly for initialization) when a new instance
 	// is created by "x 成为 C：P，Q，R"
-	constructor FuncExecutor
+	constructor r.FuncExecutor
 
 	// PropList defines all property name & default value of the class, each property CANNOT be appended or removed
 	propList map[string]r.Element
@@ -80,7 +80,7 @@ func (cm *ClassModel) FindMethod(name string) (*Function, bool) {
 }
 
 // //// SETTERS //////
-func (cm *ClassModel) SetConstructor(fn FuncExecutor) *ClassModel {
+func (cm *ClassModel) SetConstructor(fn r.FuncExecutor) *ClassModel {
 	cm.constructor = fn
 
 	return cm

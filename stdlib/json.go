@@ -12,7 +12,7 @@ import (
 )
 
 var jsonModuleName = "JSON"
-var jsonModule = r.NewSTDModule(jsonModuleName)
+var jsonLIB = NewLibrary(jsonModuleName)
 
 // parseJsonFunc - 解析JSON
 func parseJsonFunc(values []r.Element) (r.Element, error) {
@@ -115,8 +115,8 @@ func buildPlainStrItem(item r.Element) interface{} {
 
 func init() {
 	// register functions
-	RegisterFunctionForModule(jsonModule, "解析JSON", parseJsonFunc)
-	RegisterFunctionForModule(jsonModule, "生成JSON", generateJsonFunc)
+	RegisterFunctionForLibrary(jsonLIB, "解析JSON", parseJsonFunc)
+	RegisterFunctionForLibrary(jsonLIB, "生成JSON", generateJsonFunc)
 
-	RegisterModule(jsonModuleName, jsonModule)
+	RegisterLibrary(jsonLIB)
 }

@@ -14,6 +14,7 @@ type ModuleGraph struct {
 }
 
 type Module struct {
+	id       int
 	fullName string
 	// program stores sourceLines & AST - usually for error displaying
 	program *syntax.Program
@@ -52,6 +53,10 @@ func (m *Module) AddExportValue(name string, value Element) error {
 	return nil
 }
 
+func (m *Module) GetID() int {
+	return m.id
+}
+
 func (m *Module) GetExportValue(name string) (Element, error) {
 	if elem, ok := m.exportValues[name]; ok {
 		return elem, nil
@@ -62,14 +67,6 @@ func (m *Module) GetExportValue(name string) (Element, error) {
 
 func (m *Module) GetAllExportValues() ElementMap {
 	return m.exportValues
-}
-
-func NewSTDModule(name string) *Module {
-	return &Module{
-		fullName:     name,
-		program:      nil, // STD module uses internal code
-		exportValues: map[string]Element{},
-	}
 }
 
 func NewModuleGraph() *ModuleGraph {
@@ -85,13 +82,14 @@ func NewModuleGraph() *ModuleGraph {
 // name: added module name
 // program: parsed program
 func (g *ModuleGraph) AddModule(srcModuleID int, name string, program *syntax.Program) int {
+	extModuleID := len(g.modules)
 	g.modules = append(g.modules, &Module{
+		id:           extModuleID,
 		fullName:     name,
 		program:      program,
 		exportValues: map[string]Element{},
 	})
 
-	extModuleID := len(g.modules) - 1
 	g.graph = append(g.graph, [2]int{srcModuleID, extModuleID})
 	g.moduleNameMap[name] = extModuleID
 	return extModuleID
