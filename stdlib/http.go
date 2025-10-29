@@ -12,7 +12,7 @@ var httpModuleName = "HTTP"
 var httpLIB = NewLibrary(httpModuleName)
 
 // HTTP响应类型
-var httpResponseClass = value.NewClassModel("HTTP响应", nil).
+var httpResponseClass = value.NewClassModel("HTTP响应").
 	DefineProperty("代码", value.NewNumber(200)).
 	DefineProperty("内容", value.NewString(""))
 

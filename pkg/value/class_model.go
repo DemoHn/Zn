@@ -28,20 +28,16 @@ type ClassModel struct {
 
 	// methodList - stores all available methods definition of class
 	methodList map[string]*Function
-
-	// refModule: record current module
-	refModule *r.Module
 }
 
 // NewClassModel - create new empty r.ClassRef
-func NewClassModel(name string, refModule *r.Module) *ClassModel {
+func NewClassModel(name string) *ClassModel {
 	model := &ClassModel{
 		name:         name,
 		constructor:  nil,
 		propList:     map[string]r.Element{},
 		compPropList: map[string]*Function{},
 		methodList:   map[string]*Function{},
-		refModule:    refModule,
 	}
 
 	defaultConstructor := func([]r.Element) (r.Element, error) {

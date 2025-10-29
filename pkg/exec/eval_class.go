@@ -9,7 +9,7 @@ import (
 // compileClass -
 func compileClass(vm *r.VM, classID *r.IDName, classNode *syntax.ClassDeclareStmt) (*value.ClassModel, error) {
 	className := classID.GetLiteral()
-	ref := value.NewClassModel(className, vm.GetCurrentModule())
+	ref := value.NewClassModel(className)
 
 	// init prop list and its default value
 	for _, propPair := range classNode.PropertyList {

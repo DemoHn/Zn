@@ -30,10 +30,6 @@ func NewObject(model *ClassModel, initProps map[string]r.Element) *Object {
 	}
 }
 
-func (zo *Object) GetRefModule() *r.Module {
-	return zo.model.refModule
-}
-
 // get object name
 func (zo *Object) GetObjectName() string {
 	return zo.model.GetName()

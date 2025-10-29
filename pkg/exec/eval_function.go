@@ -58,20 +58,22 @@ func evalFunctionCall(vm *r.VM, expr *syntax.FuncCallExpr) (r.Element, error) {
 }
 
 func execMethodFunction(vm *r.VM, root r.Element, funcName *r.IDName, params []r.Element) (r.Element, error) {
-	pushCallstack := false
-
+	refModule := vm.GetCurrentModule()
 	if robj, ok := root.(*value.Object); ok {
-		pushCallstack = true
-		fnCallFrame := r.NewFunctionCallFrame(robj.GetRefModule(), robj)
-		vm.PushCallFrame(fnCallFrame)
+		_, refModuleX, err := vm.FindElementWithModule(r.NewIDName(robj.GetObjectName()))
+		if err != nil {
+			return nil, err
+		}
+		refModule = refModuleX
 	}
+	fnCallFrame := r.NewFunctionCallFrame(refModule, root)
+	vm.PushCallFrame(fnCallFrame)
 
-	// exec method
 	elem, err := root.ExecMethod(funcName.GetLiteral(), params)
-	// pop callInfo only when function execution succeed
-	if err == nil && pushCallstack {
+	if err == nil {
 		vm.PopCallFrame()
 	}
+
 	return elem, err
 }
 

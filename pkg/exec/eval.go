@@ -468,6 +468,27 @@ func evalImportStmt(vm *r.VM, node *syntax.ImportStmt) error {
 	// NOTE: we need a implemention to parse libName first - then there's a custom code loader to
 	// get the program
 	// e.g. 导入“@某标准库-某模块A-某模块B” -> [<isStd=1>, "某标准库", "某模块A", "某模块B"]
+	if extModule != nil {
+		// import all symbols to current module's importRefs
+		if len(node.ImportItems) == 0 {
+			for name, val := range extModule.GetAllExportValues() {
+				if err := vm.DeclareExternalElement(r.NewIDName(name), val, extModule); err != nil {
+					return err
+				}
+			}
+		} else {
+			// import selected symbols
+			for _, id := range node.ImportItems {
+				name := id.GetLiteral()
+				if val, err2 := extModule.GetExportValue(name); err2 == nil {
+					if err := vm.DeclareExternalElement(r.NewIDName(name), val, extModule); err != nil {
+						return err
+					}
+				}
+			}
+		}
+	}
+
 	return nil
 }
 

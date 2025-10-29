@@ -204,6 +204,18 @@ func (vm *VM) DeclareConstElement(name *IDName, elem Element) error {
 	return scope.DeclareConstValue(name.GetLiteral(), elem)
 }
 
+func (vm *VM) DeclareExternalElement(name *IDName, elem Element, module *Module) error {
+	scope := vm.getCurrentScope()
+	nameStr := name.GetLiteral()
+	if scope == nil {
+		return zerr.NameNotDefined(nameStr)
+	}
+	if _, inGlobals := vm.globals[nameStr]; inGlobals {
+		return zerr.NameRedeclared(nameStr)
+	}
+	return scope.DeclareExternalValue(name.GetLiteral(), elem, module.GetID())
+}
+
 func (vm *VM) SetElement(name *IDName, elem Element) error {
 	scope := vm.getCurrentScope()
 	nameStr := name.GetLiteral()
