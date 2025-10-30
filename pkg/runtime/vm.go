@@ -133,10 +133,6 @@ func (vm *VM) GetCurrentModuleID() int {
 	return vm.csModuleID
 }
 
-func (vm *VM) GetCurrentScope() *Scope {
-	return vm.getCurrentScope()
-}
-
 // SetCurrentLine
 func (vm *VM) SetCurrentLine(line int) {
 	frame := vm.getCurrentCallFrame()
@@ -172,6 +168,7 @@ func (vm *VM) FindElementWithModule(name *IDName) (Element, *Module, error) {
 	}
 
 	extModuleID := vm.csModuleID
+	// when moduleID is not -1, it means the value is external
 	if moduleID >= 0 {
 		extModuleID = moduleID
 	}

@@ -140,3 +140,93 @@ values = aa,bb,ff
 `
 	assertSnapshot(t, initScope, scopeSnapshot)
 }
+
+func TestScope_SetScopeValue(t *testing.T) {
+	initScope := NewScope()
+
+	// Step1: declare value
+	// depth=1
+	initScope.BeginScope()
+	initScope.DeclareValue("T1", MockValue{"aa"})
+	initScope.DeclareValue("T2", MockValue{"bb"})
+
+	// assert snapshot first
+	scopeSnapshot := `
+locals = T1,1,false;T2,1,false
+localCount = 2
+currentDepth = 1
+values = aa,bb
+`
+	assertSnapshot(t, initScope, scopeSnapshot)
+
+	// Step2: set value to cc
+	initScope.SetValue("T1", MockValue{"cc"})
+
+	// snapshot
+	scopeSnapshot = `
+locals = T1,1,false;T2,1,false
+localCount = 2
+currentDepth = 1
+values = cc,bb
+`
+	// Step3: add new scope
+	initScope.BeginScope()
+	initScope.DeclareValue("T3", MockValue{"dd"})
+	// another T2, same name but different depth
+	initScope.DeclareValue("T2", MockValue{"ee"})
+
+	// only the latter T2's value will be updated
+	initScope.SetValue("T2", MockValue{"ff"})
+
+	scopeSnapshot = `
+locals = T1,1,false;T2,1,false;T3,2,false;T2,2,false
+localCount = 4
+currentDepth = 2
+values = cc,bb,dd,ff
+`
+	assertSnapshot(t, initScope, scopeSnapshot)
+}
+
+func TestScope_SetConstValue_SHDFAIL(t *testing.T) {
+	initScope := NewScope()
+	initScope.BeginScope()
+	initScope.DeclareValue("T1", MockValue{"aa"})
+	initScope.DeclareConstValue("T2", MockValue{"bb"})
+	// initScope.SetValue("T1", MockValue{"bb"})
+
+	scopeSnapshot := `
+locals = T1,1,false;T2,1,true
+localCount = 2
+currentDepth = 1
+values = aa,bb`
+	assertSnapshot(t, initScope, scopeSnapshot)
+
+	// Step2: try to set a const value - SHDFAIL
+	err := initScope.SetValue("T2", MockValue{"cc"})
+	if err == nil {
+		t.Errorf("SetValue should fail, but no error returned")
+	}
+}
+
+func TestScope_RedeclareValue_SHDFAIL(t *testing.T) {
+	initScope := NewScope()
+	initScope.BeginScope()
+	initScope.DeclareValue("T1", MockValue{"aa"})
+	initScope.BeginScope()
+	// another scope
+	initScope.DeclareValue("T1", MockValue{"bb"})
+
+	scopeSnapshot := `
+locals = T1,1,false;T1,2,false
+localCount = 2
+currentDepth = 2
+values = aa,bb
+`
+	assertSnapshot(t, initScope, scopeSnapshot)
+
+	// Step2: try to redeclare a value - SHDFAIL
+	err := initScope.DeclareValue("T1", MockValue{"cc"})
+	if err == nil {
+		t.Errorf("DeclareValue should fail, but no error returned")
+	}
+}
