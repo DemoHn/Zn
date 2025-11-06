@@ -148,7 +148,7 @@ func (z *ZnInterpreter) Execute(varInputs runtime.ElementMap) (Element, error) {
 	parser := syntax.NewParser(source, zh.NewParserZH())
 	program, err := parser.Compile()
 	if err != nil {
-		return nil, exec.WrapSyntaxError(parser, "", err)
+		return nil, exec.WrapSyntaxError(parser, exec.MODULE_NAME_MAIN, err)
 	}
 
 	vm := runtime.InitVM(exec.GlobalValues)

@@ -145,12 +145,17 @@ func evalStmtBlock(vm *r.VM, stmtBlock *syntax.StmtBlock) (r.Element, error) {
 				return nil, err
 			}
 		case *syntax.FunctionDeclareStmt:
-			if err := evalFunctionDeclareStmt(vm, v); err != nil {
-				return nil, err
+			if v.DeclareType == syntax.DeclareTypeConstructor {
+				if err := evalConstructorDeclareStmt(vm, v); err != nil {
+					return nil, err
+				}
+			} else {
+				if err := evalFunctionDeclareStmt(vm, v); err != nil {
+					return nil, err
+				}
 			}
 		}
 	}
-
 	return evalPureStmtBlock(vm, stmtBlock)
 }
 
@@ -353,7 +358,7 @@ func evalFunctionDeclareStmt(vm *r.VM, node *syntax.FunctionDeclareStmt) error {
 	fn := compileFunction(vm, node)
 
 	// add symbol to current scope first
-	if err := vm.DeclareElement(vtag, fn); err != nil {
+	if err := vm.DeclareConstElement(vtag, fn); err != nil {
 		return err
 	}
 
@@ -442,7 +447,6 @@ func evalImportStmt(vm *r.VM, node *syntax.ImportStmt) error {
 			return err
 		}
 		// duplicate export values into current module
-		// TODO: refactor stdlib module management
 		for k, v := range library.ExportValues {
 			extModule.AddExportValue(k, v)
 		}
