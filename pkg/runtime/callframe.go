@@ -18,6 +18,9 @@ type CallFrame struct {
 	// 	 - for method function, thisValue = [Object Instance]
 	//   - for direct function, thisValue = nil
 	thisValue Element
+
+	// if returnValue is not nil, it will be returned to the caller
+	returnValue Element
 }
 
 func NewScriptCallFrame(module *Module) *CallFrame {
@@ -27,7 +30,8 @@ func NewScriptCallFrame(module *Module) *CallFrame {
 		currentLine: 0,
 		programAST:  module.program,
 		// thisValue is valid only for CALL_TYPE_FUNCTION
-		thisValue: nil,
+		thisValue:   nil,
+		returnValue: nil,
 	}
 }
 

@@ -137,37 +137,21 @@ func evalExecBlock(vm *r.VM, execBlock *syntax.ExecBlock, params []r.Element) (r
 }
 
 func evalStmtBlock(vm *r.VM, stmtBlock *syntax.StmtBlock) (r.Element, error) {
-	classDefStmts := make([]syntax.Statement, 0)
-	funcDefStmts := make([]syntax.Statement, 0)
-	otherStmts := make([]syntax.Statement, 0)
-
-	allStmts := make([]syntax.Statement, 0)
-
 	for _, stmtX := range stmtBlock.Children {
 		switch v := stmtX.(type) {
 		case *syntax.ClassDeclareStmt:
-			classDefStmts = append(classDefStmts, v)
+			// declare class
+			if err := evalClassDeclareStmt(vm, v); err != nil {
+				return nil, err
+			}
 		case *syntax.FunctionDeclareStmt:
-			funcDefStmts = append(funcDefStmts, v)
-		default:
-			otherStmts = append(otherStmts, v)
+			if err := evalFunctionDeclareStmt(vm, v); err != nil {
+				return nil, err
+			}
 		}
 	}
 
-	// reorder the statements
-	allStmts = append(allStmts, classDefStmts...)
-	allStmts = append(allStmts, funcDefStmts...)
-	allStmts = append(allStmts, otherStmts...)
-
-	var rtnValue r.Element
-	var err error
-	for _, stmt := range allStmts {
-		if rtnValue, err = evalStatement(vm, stmt); err != nil {
-			return nil, err
-		}
-	}
-
-	return rtnValue, nil
+	return evalPureStmtBlock(vm, stmtBlock)
 }
 
 // evalPureStmtBlock - evaluate statement block without classDef/funcDef/import statements
@@ -186,6 +170,10 @@ func evalPureStmtBlock(vm *r.VM, stmtBlock *syntax.StmtBlock) (r.Element, error)
 			if rtnValue, err = evalStatement(vm, stmt); err != nil {
 				return nil, err
 			}
+		}
+		// if return value is not nil, stop exeucting following statements
+		if rtnValue := vm.GetReturnValue(); rtnValue != nil {
+			return rtnValue, nil
 		}
 	}
 	return rtnValue, err
@@ -265,7 +253,13 @@ func evalStatement(vm *r.VM, stmt syntax.Statement) (r.Element, error) {
 	case *syntax.IterateStmt:
 		return value.NewNull(), evalIterateStmt(vm, v)
 	case *syntax.FunctionReturnStmt:
-		return evalExpression(vm, v.ReturnExpr)
+		rtnValue, err := evalExpression(vm, v.ReturnExpr)
+		if err != nil {
+			return nil, err
+		}
+		// set return value on current frame
+		vm.SetReturnValue(rtnValue)
+		return rtnValue, nil
 	case *syntax.ThrowExceptionStmt:
 		return value.NewNull(), evalThrowExceptionStmt(vm, v)
 	case *syntax.ContinueStmt:

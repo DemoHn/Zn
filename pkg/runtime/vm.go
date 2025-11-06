@@ -92,6 +92,7 @@ func (vm *VM) PushCallFrame(callFrame *CallFrame) {
 
 func (vm *VM) PopCallFrame() {
 	vm.csCount -= 1
+	vm.callStack = vm.callStack[:vm.csCount]
 }
 
 func (vm *VM) GetCallStack() []*CallFrame {
@@ -114,6 +115,21 @@ func (vm *VM) GetThisValue() Element {
 	return nil
 }
 
+func (vm *VM) GetReturnValue() Element {
+	callFrame := vm.getCurrentCallFrame()
+	if callFrame != nil {
+		return callFrame.returnValue
+	}
+	return nil
+}
+
+func (vm *VM) SetReturnValue(value Element) {
+	callFrame := vm.getCurrentCallFrame()
+	if callFrame != nil {
+		callFrame.returnValue = value
+	}
+}
+
 func (vm *VM) BeginScope() {
 	scope := vm.getCurrentScope()
 	if scope != nil {
@@ -127,10 +143,6 @@ func (vm *VM) EndScope() {
 	if scope != nil {
 		scope.EndScope()
 	}
-}
-
-func (vm *VM) GetCurrentModuleID() int {
-	return vm.csModuleID
 }
 
 // SetCurrentLine
