@@ -46,13 +46,7 @@ func (zo *Object) GetProperty(name string) (r.Element, error) {
 	if prop, ok := zo.propList[name]; ok {
 		return prop, nil
 	}
-	// look up computed properties
-	cprop, ok2 := zo.model.FindCompProp(name)
-	if !ok2 {
-		return nil, zerr.PropertyNotFound(name)
-	}
-	// execute computed props to get property result
-	return cprop.Exec(zo, []r.Element{})
+	return nil, zerr.PropertyNotFound(name)
 }
 
 // SetProperty -
@@ -60,11 +54,6 @@ func (zo *Object) SetProperty(name string, value r.Element) error {
 	if _, ok := zo.propList[name]; ok {
 		zo.propList[name] = value
 		return nil
-	}
-	// execute computed properties
-	if cprop, ok2 := zo.model.FindCompProp(name); ok2 {
-		_, err := cprop.Exec(zo, []r.Element{})
-		return err
 	}
 	return zerr.PropertyNotFound(name)
 }
