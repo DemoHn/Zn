@@ -81,3 +81,7 @@ func (cf *CallFrame) IsFunctionCallFrame() bool {
 func (cf *CallFrame) IsScriptCallFrame() bool {
 	return cf.callType == CALL_TYPE_SCRIPT
 }
+
+func (cf *CallFrame) IsExceptionCallFrame() bool {
+	return cf.callType == CALL_TYPE_EXCEPTION_BLOCK
+}

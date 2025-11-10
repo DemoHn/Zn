@@ -446,17 +446,19 @@ func evalImportStmt(vm *r.VM, node *syntax.ImportStmt) error {
 		if err != nil {
 			return err
 		}
-		// duplicate export values into current module
+		// duplicate export values into module
 		for k, v := range library.ExportValues {
 			extModule.AddExportValue(k, v)
 		}
-		return nil
+		// Continue to import logic below instead of returning
 	case r.LIB_TYPE_VENDOR:
 	case r.LIB_TYPE_CUSTOM:
 		if extModule = vm.FindModuleByName(extLibName); extModule == nil {
 			if err := execAnotherModule(vm, nameInfo); err != nil {
 				return err
 			}
+			// After executing the module, find it again to get the module object
+			extModule = vm.FindModuleByName(extLibName)
 		}
 		// check circular dependency
 		if err2 := vm.CheckDepedency(extLibName); err2 != nil {

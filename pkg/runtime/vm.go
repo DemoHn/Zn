@@ -93,6 +93,12 @@ func (vm *VM) PushCallFrame(callFrame *CallFrame) {
 func (vm *VM) PopCallFrame() {
 	vm.csCount -= 1
 	vm.callStack = vm.callStack[:vm.csCount]
+	// get last one
+	if vm.csCount == 0 {
+		vm.csModuleID = -1
+	} else {
+		vm.csModuleID = vm.callStack[vm.csCount-1].module.GetID()
+	}
 }
 
 func (vm *VM) GetCallStack() []*CallFrame {
