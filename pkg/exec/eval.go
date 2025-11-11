@@ -94,6 +94,7 @@ func evalExecBlock(vm *r.VM, execBlock *syntax.ExecBlock, params []r.Element) (r
 	vm.BeginScope()
 	defer vm.EndScope()
 
+	blockModule := vm.GetCurrentModule()
 	// 1.0 inject 此 value from callFrame's context (for method functions ONLY)
 	if vm.GetCurrentCallFrame() != nil && vm.GetCurrentCallFrame().IsFunctionCallFrame() {
 		thisValue := vm.GetThisValue()
@@ -124,7 +125,7 @@ func evalExecBlock(vm *r.VM, execBlock *syntax.ExecBlock, params []r.Element) (r
 	rtnValue, stmtBlockErr := evalStmtBlock(vm, execBlock.StmtBlock)
 
 	if stmtBlockErr != nil {
-		return handleExceptionSignal(vm, execBlock.CatchBlock, stmtBlockErr)
+		return handleExceptionSignal(vm, blockModule, execBlock.CatchBlock, stmtBlockErr)
 	}
 
 	return rtnValue, stmtBlockErr
@@ -178,7 +179,7 @@ func evalPureStmtBlock(vm *r.VM, stmtBlock *syntax.StmtBlock) (r.Element, error)
 	return rtnValue, err
 }
 
-func handleExceptionSignal(vm *r.VM, catchBlock []*syntax.CatchBlockPair, blockErr error) (r.Element, error) {
+func handleExceptionSignal(vm *r.VM, blockModule *r.Module, catchBlock []*syntax.CatchBlockPair, blockErr error) (r.Element, error) {
 	// try to find if the blockErr is an exception signal
 	exception, realErr := extractSignalValue(blockErr, zerr.SigTypeException)
 
@@ -205,7 +206,7 @@ func handleExceptionSignal(vm *r.VM, catchBlock []*syntax.CatchBlockPair, blockE
 
 		// if exception block matches exception className
 		if objClassName != "" && classID.GetLiteral() == objClassName {
-			expCallFrame := r.NewExceptionCallFrame(vm.GetCurrentModule(), exception)
+			expCallFrame := r.NewExceptionCallFrame(blockModule, exception)
 			vm.PushCallFrame(expCallFrame)
 			// do execution (with "this" value = exception value)
 			_, err := evalPureStmtBlock(vm, catchBlockItem.StmtBlock)
