@@ -51,6 +51,11 @@ func (vm *VM) SetModuleCodeFinder(moduleCodeFinder ModuleCodeFinder) {
 
 // AllocateModule - create empty module information
 func (vm *VM) AllocateModule(name string, program *syntax.Program) *Module {
+	// if module already exists, return it directly
+	if extModule := vm.FindModuleByName(name); extModule != nil {
+		return extModule
+	}
+	// else, add new module
 	extModuleID := vm.moduleGraph.AddModule(vm.csModuleID, name, program)
 	vm.csModuleID = extModuleID
 

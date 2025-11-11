@@ -120,20 +120,14 @@ func evalExecBlock(vm *r.VM, execBlock *syntax.ExecBlock, params []r.Element) (r
 		}
 	}
 
-	var errBlock error
-	var rtnValue r.Element
-
 	// different from evalPureStmtBlock, we still use the same scope, NO NEW SCOPE CREATED!
-	rtnValue, errBlock = evalStmtBlock(vm, execBlock.StmtBlock)
+	rtnValue, stmtBlockErr := evalStmtBlock(vm, execBlock.StmtBlock)
 
-	// extract & handle exception value (抛出)
-	if errBlock != nil {
-		exception, realErr := extractSignalValue(errBlock, zerr.SigTypeException)
-		if realErr == nil {
-			errBlock = handleExceptions(vm, execBlock.CatchBlock, exception)
-		}
+	if stmtBlockErr != nil {
+		return handleExceptionSignal(vm, execBlock.CatchBlock, stmtBlockErr)
 	}
-	return rtnValue, errBlock
+
+	return rtnValue, stmtBlockErr
 }
 
 func evalStmtBlock(vm *r.VM, stmtBlock *syntax.StmtBlock) (r.Element, error) {
@@ -184,7 +178,15 @@ func evalPureStmtBlock(vm *r.VM, stmtBlock *syntax.StmtBlock) (r.Element, error)
 	return rtnValue, err
 }
 
-func handleExceptions(vm *r.VM, catchBlock []*syntax.CatchBlockPair, exception r.Element) error {
+func handleExceptionSignal(vm *r.VM, catchBlock []*syntax.CatchBlockPair, blockErr error) (r.Element, error) {
+	// try to find if the blockErr is an exception signal
+	exception, realErr := extractSignalValue(blockErr, zerr.SigTypeException)
+
+	// so, if the blockErr is not an exception signal, return it directly
+	if realErr != nil {
+		return nil, realErr
+	}
+
 	// by default, we use "异常" to match *value.Exception type exceptions
 	var objClassName = ""
 	switch v := exception.(type) {
@@ -198,7 +200,7 @@ func handleExceptions(vm *r.VM, catchBlock []*syntax.CatchBlockPair, exception r
 	for _, catchBlockItem := range catchBlock {
 		classID, err := MatchIDName(catchBlockItem.ExceptionClass)
 		if err != nil {
-			return err
+			return nil, err
 		}
 
 		// if exception block matches exception className
@@ -208,27 +210,18 @@ func handleExceptions(vm *r.VM, catchBlock []*syntax.CatchBlockPair, exception r
 			// do execution (with "this" value = exception value)
 			_, err := evalPureStmtBlock(vm, catchBlockItem.StmtBlock)
 			if err == nil {
+				// get return value from exception block
+				rtnValue := vm.GetReturnValue()
 				vm.PopCallFrame()
+
+				return rtnValue, nil
 			}
-			return err
+			return nil, err
 		}
 	}
 
 	// no handle block catches this error, then throw it anyway
-	// for default *value.Exception class
-	if objE, ok := exception.(*value.Exception); ok {
-		return objE
-	} else {
-		// other custom exception class
-		finalStr := ""
-		s, _ := exception.GetProperty(EVConstExceptionContentProperty)
-		if s != nil {
-			if ss, ok := s.(*value.String); ok {
-				finalStr = ss.GetValue()
-			}
-		}
-		return value.NewException(finalStr)
-	}
+	return nil, blockErr
 }
 
 //// eval statements
@@ -454,11 +447,12 @@ func evalImportStmt(vm *r.VM, node *syntax.ImportStmt) error {
 	case r.LIB_TYPE_VENDOR:
 	case r.LIB_TYPE_CUSTOM:
 		if extModule = vm.FindModuleByName(extLibName); extModule == nil {
-			if err := execAnotherModule(vm, nameInfo); err != nil {
+			newModule, err := execAnotherModule(vm, nameInfo)
+			if err != nil {
 				return err
 			}
 			// After executing the module, find it again to get the module object
-			extModule = vm.FindModuleByName(extLibName)
+			extModule = newModule
 		}
 		// check circular dependency
 		if err2 := vm.CheckDepedency(extLibName); err2 != nil {
@@ -1220,12 +1214,12 @@ func evalVarAssignExpr(vm *r.VM, expr *syntax.VarAssignExpr) (r.Element, error) 
 }
 
 // execAnotherModule - load source code of the module, parse the code, execute the program, and build depCache!
-func execAnotherModule(vm *r.VM, libInfo r.LibNameInfo) error {
+func execAnotherModule(vm *r.VM, libInfo r.LibNameInfo) (*r.Module, error) {
 	name := libInfo.OriginalName
 	if finder := vm.GetModuleCodeFinder(); finder != nil {
 		source, err := finder(false, libInfo)
 		if err != nil {
-			return zerr.ModuleNotFound(name)
+			return nil, zerr.ModuleNotFound(name)
 		}
 
 		// #1. parse program
@@ -1234,24 +1228,24 @@ func execAnotherModule(vm *r.VM, libInfo r.LibNameInfo) error {
 		program, err := p.Compile()
 		if err != nil {
 			// moduleName
-			return WrapSyntaxError(p, name, err)
+			return nil, WrapSyntaxError(p, name, err)
 		}
 
 		// #2. allocate new module
 		module := vm.AllocateModule(name, program)
 		callFrame := r.NewScriptCallFrame(module)
 		vm.PushCallFrame(callFrame)
-		defer vm.PopCallFrame()
 
 		// #3. eval program
 		if _, err := evalProgram(vm, program, nil); err != nil {
-			return WrapRuntimeError(vm, err)
+			return nil, WrapRuntimeError(vm, err)
 		}
 
-		return nil
+		vm.PopCallFrame()
+		return module, nil
 	}
 
-	return nil
+	return nil, zerr.NewErrorSLOT("moduleCodeFinder 未设置")
 }
 
 func getMemberExprIV(vm *r.VM, expr *syntax.MemberExpr) (*value.IV, error) {

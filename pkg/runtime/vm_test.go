@@ -30,7 +30,7 @@ var mockProgram = &syntax.Program{
 	},
 }
 
-func TestAllocateModule(t *testing.T) {
+func TestAllocateModule_ModuleGraph(t *testing.T) {
 	vm := InitVM(globalValues)
 	// allocate main module
 	module := vm.AllocateModule("main", mockProgram)
@@ -43,6 +43,17 @@ func TestAllocateModule(t *testing.T) {
 	assert.Equal(t, vm.FindModuleByName("MA"), module2)
 
 	// assert module graph
-	expectedGraph := [][2]int{{-1, 0}, {0, 1}}
+	expectedGraph := [][2]int{{0, 1}}
 	assert.Equal(t, expectedGraph, vm.moduleGraph.graph)
+
+	// enter module2
+	vm.PushCallFrame(NewScriptCallFrame(module2))
+
+	// allocate another module 3
+	module3 := vm.AllocateModule("MB", mockProgram)
+	assert.Equal(t, module3.GetID(), 2)
+	assert.Equal(t, vm.FindModuleByName("MB"), module3)
+
+	expectedGraph2 := [][2]int{{0, 1}, {1, 2}}
+	assert.Equal(t, expectedGraph2, vm.moduleGraph.graph)
 }
