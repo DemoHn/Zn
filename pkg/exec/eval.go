@@ -864,10 +864,10 @@ func evalLogicComparator(vm *r.VM, expr *syntax.LogicExpr) (*value.Bool, error) 
 	case syntax.LogicXNEQ:
 		cmpRes, cmpErr = compareLogicXEQ(left, right)
 		cmpRes = !cmpRes // reverse result
-	case syntax.LogicEQ: // logicEQ, only used in Number
-		cmpRes, cmpErr = compareLogicEQ(left, right)
+	case syntax.LogicEQ:
+		cmpRes, cmpErr = compareLogicXEQ(left, right)
 	case syntax.LogicNEQ:
-		cmpRes, cmpErr = compareLogicEQ(left, right)
+		cmpRes, cmpErr = compareLogicXEQ(left, right)
 		cmpRes = !cmpRes // reverse result
 	case syntax.LogicGT:
 		cmpRes, cmpErr = compareLogicGT(left, right)
