@@ -19,6 +19,7 @@ import (
 )
 
 type Element = runtime.Element
+type ElementMap = runtime.ElementMap
 
 type ZnNumber = value.Number
 type ZnString = value.String
@@ -161,6 +162,10 @@ func (z *ZnInterpreter) Execute(varInputs runtime.ElementMap) (Element, error) {
 
 	// #5. get return value
 	return rtnValue, nil
+}
+
+func (z *ZnInterpreter) ExecuteVarInputText(exprStr string) (ElementMap, error) {
+	return exec.ExecVarInputText(exprStr)
 }
 
 type ZnServer struct {
