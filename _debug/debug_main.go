@@ -6,7 +6,7 @@ import (
 	zinc "github.com/DemoHn/Zn"
 )
 
-const TARGET_FILE = "./draft/test.zn"
+const TARGET_FILE = "./draft/proj1/计算税收.zn"
 
 func main() {
 	znt := zinc.NewInterpreter()

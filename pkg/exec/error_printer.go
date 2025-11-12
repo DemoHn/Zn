@@ -1,12 +1,14 @@
 package exec
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
 	zerr "github.com/DemoHn/Zn/pkg/error"
 	r "github.com/DemoHn/Zn/pkg/runtime"
 	"github.com/DemoHn/Zn/pkg/syntax"
+	"github.com/DemoHn/Zn/pkg/value"
 )
 
 type ExtraInfo struct {
@@ -70,12 +72,38 @@ type RuntimeErrorWrapper struct {
 
 func WrapRuntimeError(vm *r.VM, err error) error {
 	switch serr := err.(type) {
+	// DO NOT wrap a wrapped error
 	case *RuntimeErrorWrapper, *SyntaxErrorWrapper:
 		return serr
 	default:
+		exception, realErr := extractSignalValue(err, zerr.SigTypeException)
+		if realErr == nil {
+
+			// read exception content
+			errContent := ""
+			// build an error from exception value
+			// for default *value.Exception class
+			if objE, ok := exception.(*value.Exception); ok {
+				errContent = objE.Error()
+			} else {
+				// other custom exception class
+				s, _ := exception.GetProperty(EVConstExceptionContentProperty)
+				if s != nil {
+					if ss, ok := s.(*value.String); ok {
+						errContent = ss.GetValue()
+					}
+				}
+			}
+
+			return &RuntimeErrorWrapper{
+				vm:  vm,
+				err: errors.New(errContent),
+			}
+		}
+
 		return &RuntimeErrorWrapper{
 			vm:  vm,
-			err: err,
+			err: realErr,
 		}
 	}
 }

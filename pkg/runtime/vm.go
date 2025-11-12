@@ -51,6 +51,11 @@ func (vm *VM) SetModuleCodeFinder(moduleCodeFinder ModuleCodeFinder) {
 
 // AllocateModule - create empty module information
 func (vm *VM) AllocateModule(name string, program *syntax.Program) *Module {
+	// if module already exists, return it directly
+	if extModule := vm.FindModuleByName(name); extModule != nil {
+		return extModule
+	}
+	// else, add new module
 	extModuleID := vm.moduleGraph.AddModule(vm.csModuleID, name, program)
 	vm.csModuleID = extModuleID
 
@@ -93,6 +98,12 @@ func (vm *VM) PushCallFrame(callFrame *CallFrame) {
 func (vm *VM) PopCallFrame() {
 	vm.csCount -= 1
 	vm.callStack = vm.callStack[:vm.csCount]
+	// get last one
+	if vm.csCount == 0 {
+		vm.csModuleID = -1
+	} else {
+		vm.csModuleID = vm.callStack[vm.csCount-1].module.GetID()
+	}
 }
 
 func (vm *VM) GetCallStack() []*CallFrame {

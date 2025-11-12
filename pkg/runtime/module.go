@@ -82,6 +82,7 @@ func NewModuleGraph() *ModuleGraph {
 // name: added module name
 // program: parsed program
 func (g *ModuleGraph) AddModule(srcModuleID int, name string, program *syntax.Program) int {
+	// allocate new module ID
 	extModuleID := len(g.modules)
 	g.modules = append(g.modules, &Module{
 		id:           extModuleID,
@@ -90,7 +91,12 @@ func (g *ModuleGraph) AddModule(srcModuleID int, name string, program *syntax.Pr
 		exportValues: map[string]Element{},
 	})
 
-	g.graph = append(g.graph, [2]int{srcModuleID, extModuleID})
+	// add dependency rationship only if srcModuleID is valid (> 0)
+	// when srcModuleID is -1, it means the added module is MAIN_MODULE
+	// and it should not have any dependency
+	if srcModuleID >= 0 {
+		g.graph = append(g.graph, [2]int{srcModuleID, extModuleID})
+	}
 	g.moduleNameMap[name] = extModuleID
 	return extModuleID
 }
