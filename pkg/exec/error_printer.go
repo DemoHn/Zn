@@ -1,12 +1,14 @@
 package exec
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
 	zerr "github.com/DemoHn/Zn/pkg/error"
 	r "github.com/DemoHn/Zn/pkg/runtime"
 	"github.com/DemoHn/Zn/pkg/syntax"
+	"github.com/DemoHn/Zn/pkg/value"
 )
 
 type ExtraInfo struct {
@@ -49,7 +51,7 @@ func (sw *SyntaxErrorWrapper) Error() string {
 			code = serr.Code
 			lineIdx := sw.parser.FindLineIdx(serr.Cursor, 0)
 			// add line 1
-			errLines = append(errLines, fmtErrorLocationHeadLine(sw.moduleName, lineIdx+1))
+			errLines = append(errLines, fmtErrorLocationHeadLine(false, sw.moduleName, lineIdx+1))
 			// add line 2
 			errLines = append(errLines, fmtErrorSourceLineWithParser(sw.parser, serr.Cursor, true))
 		}
@@ -64,35 +66,44 @@ func (sw *SyntaxErrorWrapper) Error() string {
 }
 
 type RuntimeErrorWrapper struct {
-	traceback []r.CallInfo
-	err       error
+	vm  *r.VM
+	err error
 }
 
-func WrapRuntimeError(c *r.Context, err error) error {
+func WrapRuntimeError(vm *r.VM, err error) error {
 	switch serr := err.(type) {
+	// DO NOT wrap a wrapped error
 	case *RuntimeErrorWrapper, *SyntaxErrorWrapper:
 		return serr
 	default:
+		exception, realErr := extractSignalValue(err, zerr.SigTypeException)
+		if realErr == nil {
 
-		traceback := c.GetCallStack()
-
-		addCurrentInfo := true
-		if len(traceback) > 0 {
-			lastItem := traceback[len(traceback)-1]
-			currentModule := c.GetCurrentModule()
-
-			if lastItem.Module == currentModule && lastItem.LastLineIdx == c.GetCurrentLine() {
-				addCurrentInfo = false
+			// read exception content
+			errContent := ""
+			// build an error from exception value
+			// for default *value.Exception class
+			if objE, ok := exception.(*value.Exception); ok {
+				errContent = objE.Error()
+			} else {
+				// other custom exception class
+				s, _ := exception.GetProperty(EVConstExceptionContentProperty)
+				if s != nil {
+					if ss, ok := s.(*value.String); ok {
+						errContent = ss.GetValue()
+					}
+				}
 			}
-		}
-		// add current module & lineIdx to traceback as direct error locations
-		if addCurrentInfo {
-			c.PushCallStack()
+
+			return &RuntimeErrorWrapper{
+				vm:  vm,
+				err: errors.New(errContent),
+			}
 		}
 
 		return &RuntimeErrorWrapper{
-			traceback: c.GetCallStack(),
-			err:       err,
+			vm:  vm,
+			err: realErr,
 		}
 	}
 }
@@ -106,23 +117,32 @@ func (rw *RuntimeErrorWrapper) Error() string {
 		code = werr.Code
 	}
 
-	if len(rw.traceback) > 0 {
+	callStack := rw.vm.GetCallStack()
+	if len(callStack) > 0 {
 		// append head lines
-		headTrace := rw.traceback[0]
-		errLines = append(errLines, fmtErrorLocationHeadLine(headTrace.Module.GetName(), headTrace.LastLineIdx+1))
+		headTrace := callStack[0]
+		module := headTrace.GetModule()
+		isNativeModule := module.GetID() == r.NATIVE_CODE_MODULE_ID
+		errLines = append(errLines, fmtErrorLocationHeadLine(isNativeModule, module.GetName(), headTrace.GetCurrentLine()+1))
 
 		// get line text
-		if lineText := headTrace.GetSourceTextLine(headTrace.LastLineIdx); lineText != "" {
-			errLines = append(errLines, fmtErrorSourceTextLine(lineText))
+		if !isNativeModule {
+			if lineText := headTrace.GetSourceTextLine(headTrace.GetCurrentLine()); lineText != "" {
+				errLines = append(errLines, fmtErrorSourceTextLine(lineText))
+			}
 		}
 
 		// append body
-		for _, tr := range rw.traceback[1:] {
-			if tr.Module != nil {
-				errLines = append(errLines, fmtErrorLocationBodyLine(tr.Module.GetName(), tr.LastLineIdx+1))
+		for _, tr := range callStack[1:] {
+			trModule := tr.GetModule()
+			isNativeModule = trModule.GetID() == r.NATIVE_CODE_MODULE_ID
+			if trModule != nil {
+				errLines = append(errLines, fmtErrorLocationBodyLine(isNativeModule, trModule.GetName(), tr.GetCurrentLine()+1))
 				// get line text
-				if lineText := tr.GetSourceTextLine(tr.LastLineIdx); lineText != "" {
-					errLines = append(errLines, fmtErrorSourceTextLine(lineText))
+				if !isNativeModule {
+					if lineText := tr.GetSourceTextLine(tr.GetCurrentLine()); lineText != "" {
+						errLines = append(errLines, fmtErrorSourceTextLine(lineText))
+					}
 				}
 			}
 		}
@@ -166,8 +186,11 @@ func DisplayError(err error) string {
 
 // fmtErrorLocationHeadLine -
 // e.g. 在「example」模块中，位于第 12 行发生异常：
-func fmtErrorLocationHeadLine(moduleName string, lineNum int) string {
-	if moduleName == "" {
+func fmtErrorLocationHeadLine(isNativeModule bool, moduleName string, lineNum int) string {
+	if isNativeModule {
+		return "在 <内置模块> 中发生异常：\n    [ --内部程序-- ]"
+	}
+	if moduleName == MODULE_NAME_MAIN {
 		return fmt.Sprintf("在主模块中，位于第 %d 行发生异常：", lineNum)
 	}
 	return fmt.Sprintf("在模块“%s”中，位于第 %d 行发生异常：", moduleName, lineNum)
@@ -175,8 +198,11 @@ func fmtErrorLocationHeadLine(moduleName string, lineNum int) string {
 
 // fmtErrorLocationBodyLine -
 // e.g. 来自「example2」模块，第 12 行：
-func fmtErrorLocationBodyLine(moduleName string, lineNum int) string {
-	if moduleName == "" {
+func fmtErrorLocationBodyLine(isNativeModule bool, moduleName string, lineNum int) string {
+	if isNativeModule {
+		return "来自 <内置模块>：\n    [ --内部程序-- ]"
+	}
+	if moduleName == MODULE_NAME_MAIN {
 		return fmt.Sprintf("来自主模块，第 %d 行：", lineNum)
 	}
 
@@ -187,8 +213,9 @@ func fmtErrorLocationBodyLine(moduleName string, lineNum int) string {
 // cursorIdx: global index inside the source text from denoted lexer
 // if withCursorMark == false, hide the "^" mark that indicates the specific location where error occurs.
 // e.g.:
-//     如果代码不为空：
-//        ^
+//
+//	如果代码不为空：
+//	   ^
 func fmtErrorSourceLineWithParser(p *syntax.Parser, cursorIdx int, withCursorMark bool) string {
 	startIdx := cursorIdx
 	endIdx := startIdx
@@ -232,7 +259,8 @@ func fmtErrorSourceLineWithParser(p *syntax.Parser, cursorIdx int, withCursorMar
 // cursorIdx: global index inside the source text from denoted lexer
 // if withCursorMark == false, hide the "^" mark that indicates the specific location where error occurs.
 // e.g.:
-//     如果代码不为空：
+//
+//	如果代码不为空：
 func fmtErrorSourceTextLine(lineText string) string {
 	return fmt.Sprintf("    %s", lineText)
 }
@@ -246,7 +274,7 @@ func fmtErrorMessageLine(code int, errName string, errMessage string) string {
 	if code != 0 {
 		fmtCode = fmt.Sprintf("[%d]", code)
 	}
-	return fmt.Sprintf("%s%s：%s\n", errName, fmtCode, errMessage)
+	return fmt.Sprintf("\n%s%s：%s\n", errName, fmtCode, errMessage)
 }
 
 func calcCursorOffset(text string, col int) int {

@@ -9,15 +9,15 @@ import (
 )
 
 var httpModuleName = "HTTP"
-var httpModule = r.NewInternalModule(httpModuleName)
+var httpLIB = NewLibrary(httpModuleName)
 
 // HTTP响应类型
-var httpResponseClass = value.NewClassModel("HTTP响应", httpModule).
+var httpResponseClass = value.NewClassModel("HTTP响应").
 	DefineProperty("代码", value.NewNumber(200)).
 	DefineProperty("内容", value.NewString(""))
 
 // 发送HTTP请求方法
-func sendHTTPRequestFunc(c *r.Context, values []r.Element) (r.Element, error) {
+func sendHTTPRequestFunc(values []r.Element) (r.Element, error) {
 	if err := value.ValidateExactParams(values, "string", "string"); err != nil {
 		return nil, err
 	}
@@ -43,7 +43,7 @@ func sendHTTPRequestFunc(c *r.Context, values []r.Element) (r.Element, error) {
 
 	// 构造 HTTP响应 对象
 	initProps := map[string]r.Element{
-		"代码":  value.NewNumber(float64(resp.StatusCode)),
+		"代码": value.NewNumber(float64(resp.StatusCode)),
 		"内容": value.NewString(string(body)),
 	}
 	return value.NewObject(httpResponseClass, initProps), nil
@@ -51,9 +51,9 @@ func sendHTTPRequestFunc(c *r.Context, values []r.Element) (r.Element, error) {
 
 func init() {
 	// 注册 HTTP响应 类型
-	RegisterClassForModule(httpModule, "HTTP响应", httpResponseClass)
+	RegisterClassForLibrary(httpLIB, "HTTP响应", httpResponseClass)
 	// 注册 发送HTTP请求 方法
-	RegisterFunctionForModule(httpModule, "发送HTTP请求", sendHTTPRequestFunc)
+	RegisterFunctionForLibrary(httpLIB, "发送HTTP请求", sendHTTPRequestFunc)
 	// 注册模块
-	RegisterModule(httpModuleName, httpModule)
-} 
+	RegisterLibrary(httpLIB)
+}

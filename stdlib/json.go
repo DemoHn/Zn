@@ -12,10 +12,10 @@ import (
 )
 
 var jsonModuleName = "JSON"
-var jsonModule = r.NewInternalModule(jsonModuleName)
+var jsonLIB = NewLibrary(jsonModuleName)
 
 // parseJsonFunc - 解析JSON
-func parseJsonFunc(c *r.Context, values []r.Element) (r.Element, error) {
+func parseJsonFunc(values []r.Element) (r.Element, error) {
 	// validate string ONLY
 	if err := value.ValidateExactParams(values, "string"); err != nil {
 		return nil, err
@@ -33,7 +33,7 @@ func parseJsonFunc(c *r.Context, values []r.Element) (r.Element, error) {
 }
 
 // generateJsonFunc - 生成JSON
-func generateJsonFunc(c *r.Context, values []r.Element) (r.Element, error) {
+func generateJsonFunc(values []r.Element) (r.Element, error) {
 	if err := value.ValidateExactParams(values, "hashmap"); err != nil {
 		return nil, err
 	}
@@ -115,8 +115,8 @@ func buildPlainStrItem(item r.Element) interface{} {
 
 func init() {
 	// register functions
-	RegisterFunctionForModule(jsonModule, "解析JSON", parseJsonFunc)
-	RegisterFunctionForModule(jsonModule, "生成JSON", generateJsonFunc)
+	RegisterFunctionForLibrary(jsonLIB, "解析JSON", parseJsonFunc)
+	RegisterFunctionForLibrary(jsonLIB, "生成JSON", generateJsonFunc)
 
-	RegisterModule(jsonModuleName, jsonModule)
+	RegisterLibrary(jsonLIB)
 }

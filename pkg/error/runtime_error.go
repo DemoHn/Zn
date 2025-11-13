@@ -35,6 +35,7 @@ const (
 	ErrImportSameModule         = 61
 	ErrDuplicateModule          = 62
 	ErrModuleCircularDependency = 63
+	ErrLibraryNotFound          = 64
 	// internal error
 	ErrUnexpectedCase           = 70
 	ErrUnexpectedEmptyExecLogic = 71
@@ -198,6 +199,14 @@ func ModuleNotFound(name string) *RuntimeError {
 	return &RuntimeError{
 		Code:    ErrModuleNotFound,
 		Message: fmt.Sprintf("未找到「%s」模块", name),
+		Extra:   name,
+	}
+}
+
+func LibraryNotFound(name string) *RuntimeError {
+	return &RuntimeError{
+		Code:    ErrLibraryNotFound,
+		Message: fmt.Sprintf("未找到「%s」库", name),
 		Extra:   name,
 	}
 }
@@ -396,7 +405,7 @@ func InputValueNotFound(tag string) *RuntimeError {
 	}
 }
 
-//// SLOT
+// // SLOT
 func NewErrorSLOT(info string) error {
 	return fmt.Errorf(info)
 }

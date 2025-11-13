@@ -19,7 +19,6 @@ func EnterREPL() {
 	linerR.SetCtrlCAborts(true)
 
 	interpreter := zinc.NewInterpreter()
-	runContext := interpreter.NewContext()
 	// REPL loop
 	for {
 		text, err := linerR.Prompt("Zn> ")
@@ -41,7 +40,7 @@ func EnterREPL() {
 		}
 
 		varInput := map[string]r.Element{}
-		result, err := interpreter.LoadScript([]rune(text)).ExecuteWithContext(runContext, varInput)
+		result, err := interpreter.LoadScript([]rune(text)).Execute(varInput)
 		if err != nil {
 			prettyPrintError(os.Stdout, err)
 		} else if result != nil {
@@ -51,9 +50,15 @@ func EnterREPL() {
 }
 
 // ExecProgram - exec program from file directly
-func ExecProgram(file string) {
+func ExecProgram(file string, varInputBlock string) {
 	znInterpreter := zinc.NewInterpreter()
-	rtnValue, err := znInterpreter.LoadFile(file).Execute(map[string]r.Element{})
+	inputMap, err := znInterpreter.ExecuteVarInputText(varInputBlock)
+	if err != nil {
+		prettyPrintError(os.Stdout, err)
+		return
+	}
+
+	rtnValue, err := znInterpreter.LoadFile(file).Execute(inputMap)
 
 	if err != nil {
 		prettyPrintError(os.Stdout, err)

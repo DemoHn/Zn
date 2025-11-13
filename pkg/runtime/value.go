@@ -9,7 +9,9 @@ package runtime
 // 2. SetProperty - set the value of some property
 // 3. ExecMethod - execute one method from method list
 type Element interface {
-	GetProperty(*Context, string) (Element, error)
-	SetProperty(*Context, string, Element) error
-	ExecMethod(*Context, string, []Element) (Element, error)
+	GetProperty(string) (Element, error)
+	SetProperty(string, Element) error
+	ExecMethod(string, []Element) (Element, error)
 }
+
+type FuncExecutor = func([]Element) (Element, error)

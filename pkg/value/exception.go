@@ -18,7 +18,7 @@ func (e *Exception) Error() string {
 }
 
 // GetProperty -
-func (e *Exception) GetProperty(c *r.Context, name string) (r.Element, error) {
+func (e *Exception) GetProperty(name string) (r.Element, error) {
 	if name == "内容" {
 		return NewString(e.Message), nil
 	}
@@ -26,11 +26,11 @@ func (e *Exception) GetProperty(c *r.Context, name string) (r.Element, error) {
 }
 
 // SetProperty -
-func (e *Exception) SetProperty(c *r.Context, name string, value r.Element) error {
+func (e *Exception) SetProperty(name string, value r.Element) error {
 	return zerr.PropertyNotFound(name)
 }
 
 // ExecMethod -
-func (e *Exception) ExecMethod(c *r.Context, name string, values []r.Element) (r.Element, error) {
+func (e *Exception) ExecMethod(name string, values []r.Element) (r.Element, error) {
 	return nil, zerr.MethodNotFound(name)
 }

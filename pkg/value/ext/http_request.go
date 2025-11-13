@@ -11,8 +11,8 @@ import (
 	"github.com/DemoHn/Zn/pkg/value"
 )
 
-type httpRequestGetterFunc func(*HTTPRequest, *r.Context) (r.Element, error)
-type httpRequestMethodFunc func(*HTTPRequest, *r.Context, []r.Element) (r.Element, error)
+type httpRequestGetterFunc func(*HTTPRequest) (r.Element, error)
+type httpRequestMethodFunc func(*HTTPRequest, []r.Element) (r.Element, error)
 
 type HTTPRequest struct {
 	request *http.Request
@@ -24,7 +24,7 @@ func NewHTTPRequest(req *http.Request) *HTTPRequest {
 }
 
 // GetProperty - get property of HTTPRequest
-func (h *HTTPRequest) GetProperty(c *r.Context, name string) (r.Element, error) {
+func (h *HTTPRequest) GetProperty(name string) (r.Element, error) {
 	httpRequestGetterMap := map[string]httpRequestGetterFunc{
 		"路径":   httpRequestGetPath,
 		"方法":   httpRequestGetMethod,
@@ -33,20 +33,20 @@ func (h *HTTPRequest) GetProperty(c *r.Context, name string) (r.Element, error) 
 	}
 
 	if fn, ok := httpRequestGetterMap[name]; ok {
-		return fn(h, c)
+		return fn(h)
 	}
 	return nil, zerr.PropertyNotFound(name)
 }
 
-func httpRequestGetPath(h *HTTPRequest, c *r.Context) (r.Element, error) {
+func httpRequestGetPath(h *HTTPRequest) (r.Element, error) {
 	return value.NewString(h.request.URL.Path), nil
 }
 
-func httpRequestGetMethod(h *HTTPRequest, c *r.Context) (r.Element, error) {
+func httpRequestGetMethod(h *HTTPRequest) (r.Element, error) {
 	return value.NewString(h.request.Method), nil
 }
 
-func httpRequestGetHeaders(h *HTTPRequest, c *r.Context) (r.Element, error) {
+func httpRequestGetHeaders(h *HTTPRequest) (r.Element, error) {
 	queryPair := []value.KVPair{}
 	for k, v := range h.request.Header {
 		if len(v) > 0 {
@@ -59,7 +59,7 @@ func httpRequestGetHeaders(h *HTTPRequest, c *r.Context) (r.Element, error) {
 	return value.NewHashMap(queryPair), nil
 }
 
-func httpRequestGetQueryParams(h *HTTPRequest, c *r.Context) (r.Element, error) {
+func httpRequestGetQueryParams(h *HTTPRequest) (r.Element, error) {
 	queryPair := []value.KVPair{}
 	for k, v := range h.request.URL.Query() {
 		if len(v) > 0 {
@@ -84,23 +84,23 @@ func httpRequestGetQueryParams(h *HTTPRequest, c *r.Context) (r.Element, error) 
 }
 
 // SetProperty - set property of HTTPRequest
-func (h *HTTPRequest) SetProperty(c *r.Context, name string, value r.Element) error {
+func (h *HTTPRequest) SetProperty(name string, value r.Element) error {
 	return zerr.PropertyNotFound(name)
 }
 
 // ExecMethod - execute method of HTTPRequest
-func (h *HTTPRequest) ExecMethod(c *r.Context, name string, values []r.Element) (r.Element, error) {
+func (h *HTTPRequest) ExecMethod(name string, values []r.Element) (r.Element, error) {
 	methodMap := map[string]httpRequestMethodFunc{
 		"读取内容": httpRequestExecReadBody,
 	}
 
 	if method, ok := methodMap[name]; ok {
-		return method(h, c, values)
+		return method(h, values)
 	}
 	return nil, zerr.MethodNotFound(name)
 }
 
-func httpRequestExecReadBody(h *HTTPRequest, c *r.Context, values []r.Element) (r.Element, error) {
+func httpRequestExecReadBody(h *HTTPRequest, values []r.Element) (r.Element, error) {
 	// impl GetBody function here
 	body, err := ioutil.ReadAll(h.request.Body)
 	if err != nil {

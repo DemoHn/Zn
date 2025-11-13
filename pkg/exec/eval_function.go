@@ -11,21 +11,17 @@ import (
 
 // compileFunction - create a Function object (with default param handler logic)
 // from Zn code (*syntax.BlockStmt). It's the constructor of 如何XX or (anoymous function in the future)
-func compileFunction(upperCtx *r.Context, node *syntax.FunctionDeclareStmt) *value.Function {
-	var mainLogicHandler = func(c *r.Context, params []r.Element) (r.Element, error) {
+func compileFunction(vm *r.VM, node *syntax.FunctionDeclareStmt) *value.Function {
+	var mainLogicHandler = func(params []r.Element) (r.Element, error) {
 		// 2. do eval exec block
-		if err := evalExecBlock(c, node.ExecBlock, params); err != nil {
-			return nil, err
-		}
-
-		return c.GetCurrentScope().GetReturnValue(), nil
+		return evalExecBlock(vm, node.ExecBlock, params)
 	}
 
-	return value.NewFunction(upperCtx, mainLogicHandler)
+	return value.NewFunction(mainLogicHandler)
 }
 
 // （显示：A、B、C），得到D
-func evalFunctionCall(c *r.Context, expr *syntax.FuncCallExpr) (r.Element, error) {
+func evalFunctionCall(vm *r.VM, expr *syntax.FuncCallExpr) (r.Element, error) {
 	// match & get funcName
 	funcName, err := MatchIDName(expr.FuncName)
 	if err != nil {
@@ -33,12 +29,12 @@ func evalFunctionCall(c *r.Context, expr *syntax.FuncCallExpr) (r.Element, error
 	}
 
 	// exec params
-	params, err := exprsToValues(c, expr.Params)
+	params, err := exprsToValues(vm, expr.Params)
 	if err != nil {
 		return nil, err
 	}
 
-	resultVal, err := execDirectFunction(c, funcName, params)
+	resultVal, err := execDirectFunction(vm, funcName, params)
 	if err != nil {
 		return nil, err
 	}
@@ -52,7 +48,7 @@ func evalFunctionCall(c *r.Context, expr *syntax.FuncCallExpr) (r.Element, error
 			return nil, err
 		}
 		// bind yield result
-		if err := c.BindScopeSymbolDecl(c.GetCurrentScope(), ytag, resultVal); err != nil {
+		if err := vm.DeclareConstElement(ytag, resultVal); err != nil {
 			return nil, err
 		}
 	}
@@ -61,56 +57,51 @@ func evalFunctionCall(c *r.Context, expr *syntax.FuncCallExpr) (r.Element, error
 	return resultVal, nil
 }
 
-func execMethodFunction(c *r.Context, root r.Element, funcName *r.IDName, params []r.Element) (r.Element, error) {
-	pushCallstack := false
-
-	if robj, ok := root.(*value.Object); ok {
-		pushCallstack = true
-		refModule := robj.GetRefModule()
-
-		if refModule != nil {
-			// append callInfo
-			c.PushCallStack()
-			c.SetCurrentRefModule(refModule)
+func execMethodFunction(vm *r.VM, root r.Element, funcName *r.IDName, params []r.Element) (r.Element, error) {
+	switch robj := root.(type) {
+	case *value.Object:
+		_, refModule, err := vm.FindElementWithModule(r.NewIDName(robj.GetObjectName()))
+		if err != nil {
+			return nil, err
 		}
+		fnCallFrame := r.NewFunctionCallFrame(refModule, root)
+		vm.PushCallFrame(fnCallFrame)
+	default:
+		// for other types, we suppose it is from native code -
+		// usually for internal types like Number, String, Boolean, etc.
+		fnCallFrame := r.NewFunctionCallFrame(r.NativeCodeModule, root)
+		vm.PushCallFrame(fnCallFrame)
 	}
 
-	// create a new scope to denote a new 'thisValue'
-	newScope := c.PushScope()
-	defer c.PopScope()
-
-	newScope.SetThisValue(root)
-	// exec method
-	elem, err := root.ExecMethod(c, funcName.GetLiteral(), params)
-	// pop callInfo only when function execution succeed
-	if err == nil && pushCallstack {
-		c.PopCallStack()
+	elem, err := root.ExecMethod(funcName.GetLiteral(), params)
+	if err == nil {
+		vm.PopCallFrame()
 	}
+
 	return elem, err
 }
 
 // direct function: defined as standalone function instead of the method of
 // a model
-func execDirectFunction(c *r.Context, funcName *r.IDName, params []r.Element) (r.Element, error) {
-	sym, err := c.FindSymbol(funcName)
+func execDirectFunction(vm *r.VM, funcName *r.IDName, params []r.Element) (r.Element, error) {
+	elem, module, err := vm.FindElementWithModule(funcName)
 	if err != nil {
 		return nil, err
 	}
-	if sym.GetModule() != nil {
-		// push callInfo
-		c.PushCallStack()
-		c.SetCurrentRefModule(sym.GetModule())
-	}
+	// pushCallFrame
+	fnCallFrame := r.NewFunctionCallFrame(module, nil)
+	vm.PushCallFrame(fnCallFrame)
 
 	// assert value is function type
-	fn, ok := sym.GetValue().(*value.Function)
+	fn, ok := elem.(*value.Function)
 	if !ok {
 		return nil, zerr.InvalidFuncVariable(funcName.GetLiteral())
 	}
 
-	elem, err := fn.Exec(c, nil, params)
-	if err == nil {
-		c.PopCallStack()
+	if elem, err := fn.Exec(nil, params); err != nil {
+		return nil, err
+	} else {
+		vm.PopCallFrame()
+		return elem, nil
 	}
-	return elem, err
 }

@@ -16,7 +16,7 @@ type ClassModel struct {
 
 	// Constructor defines default logic (mostly for initialization) when a new instance
 	// is created by "x 成为 C：P，Q，R"
-	constructor FuncExecutor
+	constructor r.FuncExecutor
 
 	// PropList defines all property name & default value of the class, each property CANNOT be appended or removed
 	propList map[string]r.Element
@@ -28,23 +28,19 @@ type ClassModel struct {
 
 	// methodList - stores all available methods definition of class
 	methodList map[string]*Function
-
-	// refModule: record current module
-	refModule *r.Module
 }
 
 // NewClassModel - create new empty r.ClassRef
-func NewClassModel(name string, refModule *r.Module) *ClassModel {
+func NewClassModel(name string) *ClassModel {
 	model := &ClassModel{
 		name:         name,
 		constructor:  nil,
 		propList:     map[string]r.Element{},
 		compPropList: map[string]*Function{},
 		methodList:   map[string]*Function{},
-		refModule:    refModule,
 	}
 
-	defaultConstructor := func(*r.Context, []r.Element) (r.Element, error) {
+	defaultConstructor := func([]r.Element) (r.Element, error) {
 		var initProps = map[string]r.Element{}
 		return NewObject(model, initProps), nil
 	}
@@ -55,11 +51,8 @@ func NewClassModel(name string, refModule *r.Module) *ClassModel {
 }
 
 // Construct - yield new instance of this class
-func (cm *ClassModel) Construct(c *r.Context, params []r.Element) (r.Element, error) {
-	c.PushScope()
-	defer c.PopScope()
-
-	return cm.constructor(c, params)
+func (cm *ClassModel) Construct(params []r.Element) (r.Element, error) {
+	return cm.constructor(params)
 }
 
 // //// GETTERS //////
@@ -83,7 +76,7 @@ func (cm *ClassModel) FindMethod(name string) (*Function, bool) {
 }
 
 // //// SETTERS //////
-func (cm *ClassModel) SetConstructor(fn FuncExecutor) *ClassModel {
+func (cm *ClassModel) SetConstructor(fn r.FuncExecutor) *ClassModel {
 	cm.constructor = fn
 
 	return cm
@@ -110,14 +103,14 @@ func (cm *ClassModel) DefineMethod(name string, methodFunc *Function) *ClassMode
 
 // // impl methods as a "Element"
 // GetProperty - currently there's NO any property inside classRef Value
-func (cr *ClassModel) GetProperty(c *r.Context, name string) (r.Element, error) {
+func (cr *ClassModel) GetProperty(name string) (r.Element, error) {
 	return nil, zerr.PropertyNotFound(name)
 }
 
-func (cr *ClassModel) SetProperty(c *r.Context, name string, value r.Element) error {
+func (cr *ClassModel) SetProperty(name string, value r.Element) error {
 	return zerr.PropertyNotFound(name)
 }
 
-func (cr *ClassModel) ExecMethod(c *r.Context, name string, values []r.Element) (r.Element, error) {
+func (cr *ClassModel) ExecMethod(name string, values []r.Element) (r.Element, error) {
 	return nil, zerr.MethodNotFound(name)
 }

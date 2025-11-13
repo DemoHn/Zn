@@ -1,248 +1,206 @@
 package runtime
 
 import (
+	"strings"
+
 	zerr "github.com/DemoHn/Zn/pkg/error"
 	"github.com/DemoHn/Zn/pkg/syntax"
 )
 
+type ModuleGraph struct {
+	modules       []*Module
+	graph         [][2]int // array of [startModuleID, importModuleID]
+	moduleNameMap map[string]int
+}
+
 type Module struct {
-	// name - module name (when anonymous = false, it should be non-empty)
-	name string
-	// anonymous - when anonymous = true, the module has no name
-	// but one context only allow ONE anonymous module
-	anonymous bool
-	// internal = true for internal modules (e.g. standard library, plugins)  these are imported via 《 》mark instead of “ ” mark. usually there's no source code in zinc (logics are written in Golang la...) so `module.lexer` = nil
-	internal bool
-
-	// sourceLines - source code lines for source tracing & error printing
-	// for internal modules, this value is nil (NOT EMPTY SLICE)
-	sourceLines []syntax.LineInfo
-
-	/* scopeStack - the call stack of execution scope
-	   the stack looks like the following diagram:
-
-	   +----------+
-	N  | current  |
-	   +----------+
-	   | parent1  |
-	   +----------+
-	   | parent2  |
-	   +----------+
-	   |   ...    |
-	   +----------+
-	0  |  root    |
-	   +----------+
-
-	- push child scope when executing child block (e.g. 如何、每当)
-	- pop the top scope when exiting child block.
-
-	- The ROOT scope of module is `scopeStack[0]`
-	- The parent scope of `scopeStack[N]` is `scopeStack[N-1]`
-	- The child scope of `scopeStack[N]` is `scopeStack[N+1]`
-	*/
-	scopeStack []*Scope
+	id       int
+	fullName string
+	// program stores sourceLines & AST - usually for error displaying
+	program *syntax.Program
 	// exportValues - all classes and functions are exported for external
 	// imports - so here we insert all exportable values to this map after first scan
 	// note: all export values are constants.
-	exportValues map[string]Element
+	exportValues ElementMap
 }
 
-func NewModule(name string, sourceLines []syntax.LineInfo) *Module {
-	return &Module{
-		name:        name,
-		anonymous:   false,
-		internal:    false,
-		sourceLines: sourceLines,
-		// init root scope to ensure scopeStack NOT empty
-		scopeStack:   []*Scope{NewScope(nil)},
-		exportValues: map[string]Element{},
-	}
+type LibNameInfo struct {
+	// libName original string
+	OriginalName string
+	// parsed libType
+	LibType uint8
+	// separate full libstring to subPath e.g.: "A-B-C" -> []string{"A", "B", "C"}
+	LibPath []string
 }
 
-// every code start from mainModule, then from mainModule import other
-// named modules
-func NewMainModule(sourceLines []syntax.LineInfo) *Module {
-	return &Module{
-		name:        "",
-		anonymous:   true,
-		sourceLines: sourceLines,
-		// init root scope to ensure scopeStack NOT empty
-		scopeStack:   []*Scope{NewScope(nil)},
-		exportValues: map[string]Element{},
-	}
-}
+const (
+	LIB_TYPE_STD    = 1
+	LIB_TYPE_VENDOR = 2
+	LIB_TYPE_CUSTOM = 3
 
-// called
-func NewInternalModule(name string) *Module {
-	return &Module{
-		name:        name,
-		anonymous:   false,
-		internal:    true,
-		sourceLines: nil,
-		// init root scope to ensure scopeStack NOT empty
-		scopeStack:   []*Scope{NewScope(nil)},
-		exportValues: map[string]Element{},
-	}
-}
+	NATIVE_CODE_MODULE_ID = -1
+	MAIN_MODULE_ID        = 0
+)
 
-func (m *Module) GetName() string {
-	return m.name
-}
+type ModuleCodeFinder func(isMain bool, info LibNameInfo) ([]rune, error)
 
-func (m *Module) SetSourceLines(sourceLines []syntax.LineInfo) {
-	m.sourceLines = sourceLines
-}
+// NativeCodeModule is a virtual 'module' for [[native code]] - no program AST, id = -1
+// the module is initialized automatically on init() function
+var NativeCodeModule *Module
 
-func (m *Module) GetSourceTextLine(lineIdx int) string {
-	if m.sourceLines == nil {
-		return ""
-	}
-
-	if lineIdx >= len(m.sourceLines) || lineIdx < 0 {
-		return ""
-	}
-
-	return string(m.sourceLines[lineIdx].LineText)
-}
-
-func (m *Module) IsAnonymous() bool {
-	return m.anonymous
-}
-
-//// scopeStack operation
-////
-func (m *Module) GetCurrentScope() *Scope {
-	stackLen := len(m.scopeStack)
-	if stackLen == 0 {
-		return nil
-	}
-
-	return m.scopeStack[stackLen-1]
-}
-
-func (m *Module) PushScope() *Scope {
-	sp := m.GetCurrentScope()
-	if sp == nil {
-		return nil
-	}
-
-	childScope := NewScope(sp.thisValue)
-	// push scope into ScopeStack
-	m.scopeStack = append(m.scopeStack, childScope)
-
-	return m.GetCurrentScope()
-}
-
-func (m *Module) AddScope(scope *Scope) {
-	m.scopeStack = append(m.scopeStack, scope)
-}
-
-func (m *Module) PopScope() {
-	stackLen := len(m.scopeStack)
-	if stackLen == 0 {
-		return
-	}
-
-	// pop last (current) scope
-	m.scopeStack = m.scopeStack[:stackLen-1]
-}
-
-// FindScopeValue - find symbol in the context from the latest scope
-// up to its first one
-func (m *Module) FindScopeValue(name string) (Element, error) {
-	// iterate from last to very first
-	for cursor := len(m.scopeStack) - 1; cursor >= 0; cursor-- {
-		sp := m.scopeStack[cursor]
-		if ok, val := sp.GetSymbolValue(name); ok {
-			return val, nil
-		}
-	}
-
-	return nil, zerr.NameNotDefined(name)
-}
-
-// FindScopeValue - find symbol in the context from the latest scope
-// up to its first one
-func (m *Module) FindScopeSymbol(name string) (SymbolInfo, error) {
-	// iterate from last to very first
-	for cursor := len(m.scopeStack) - 1; cursor >= 0; cursor-- {
-		sp := m.scopeStack[cursor]
-		if ok, sym := sp.GetSymbol(name); ok {
-			return sym, nil
-		}
-	}
-
-	return SymbolInfo{}, zerr.NameNotDefined(name)
-}
-
-// SetScopeValue - set value of an existing symbol (whatever in current scope or root scope la..)
-// there, the process includes 3 steps:
-// 1. find the symbol in scope stack
-// 2. set new value of the symbol
-// 3. if no symbol found, throw error directly
-func (m *Module) SetScopeValue(name string, value Element) error {
-	// iterate from last to very first
-	for cursor := len(m.scopeStack) - 1; cursor >= 0; cursor-- {
-		sp := m.scopeStack[cursor]
-		if ok, sym := sp.GetSymbol(name); ok {
-			if sym.isConst {
-				return zerr.AssignToConstant()
-			}
-			sp.SetSymbolValue(name, value, false, sym.module)
-			return nil
-		}
-	}
-	return zerr.NameNotDefined(name)
-}
-
-// BindSymbol - bind a non-const value on current scope - however, if the same symbol has bound, then an error occurs.
-func (m *Module) BindSymbol(name string, value Element, isConst bool, rebindCheck bool) error {
-	if sp := m.GetCurrentScope(); sp != nil {
-		// bind value on current scope
-		if rebindCheck {
-			if ok, _ := sp.GetSymbol(name); ok {
-				return zerr.NameRedeclared(name)
-			}
-		}
-
-		// set value
-		sp.SetSymbolValue(name, value, isConst, m)
-	}
-	return nil
-}
-
-// BindImportSymbol - bind a non-const value on current scope from another module. by default, if the same symbol has bound, then an error occurs.
-func (m *Module) BindImportSymbol(name string, value Element, refModule *Module) error {
-	if sp := m.GetCurrentScope(); sp != nil {
-		// flushing is NOT allowed
-		if ok, _ := sp.GetSymbol(name); ok {
-			return zerr.NameRedeclared(name)
-		}
-
-		// set value
-		sp.SetSymbolValue(name, value, true, refModule)
-	}
-	return nil
-}
-
-//// imports & exports
 func (m *Module) AddExportValue(name string, value Element) error {
 	if _, ok := m.exportValues[name]; ok {
 		return zerr.NameRedeclared(name)
 	}
-
 	m.exportValues[name] = value
 	return nil
 }
 
-func (m *Module) GetAllExportValues() map[string]Element {
-	return m.exportValues
+func (m *Module) GetID() int {
+	return m.id
+}
+
+func (m *Module) GetName() string {
+	return m.fullName
 }
 
 func (m *Module) GetExportValue(name string) (Element, error) {
-	if v, ok := m.exportValues[name]; ok {
-		return v, nil
+	if elem, ok := m.exportValues[name]; ok {
+		return elem, nil
+	} else {
+		return nil, zerr.NameNotDefined(name)
+	}
+}
+
+func (m *Module) GetAllExportValues() ElementMap {
+	return m.exportValues
+}
+
+func NewModuleGraph() *ModuleGraph {
+	return &ModuleGraph{
+		modules:       []*Module{},
+		graph:         [][2]int{},
+		moduleNameMap: map[string]int{},
+	}
+}
+
+// AddModule - create empty module information
+// srcModuleID: moduleID of current module
+// name: added module name
+// program: parsed program
+func (g *ModuleGraph) AddModule(srcModuleID int, name string, program *syntax.Program) int {
+	// allocate new module ID
+	extModuleID := len(g.modules)
+	if len(g.modules) == 0 {
+		extModuleID = MAIN_MODULE_ID
+	}
+	g.modules = append(g.modules, &Module{
+		id:           extModuleID,
+		fullName:     name,
+		program:      program,
+		exportValues: map[string]Element{},
+	})
+
+	// add dependency rationship only if srcModuleID is valid (> 0)
+	// when srcModuleID is -1, it means the added module is MAIN_MODULE
+	// and it should not have any dependency
+	if srcModuleID >= 0 {
+		g.graph = append(g.graph, [2]int{srcModuleID, extModuleID})
+	}
+	g.moduleNameMap[name] = extModuleID
+	return extModuleID
+}
+
+func (g *ModuleGraph) AddDependency(srcModuleID int, name string, depModuleID int) {
+	g.graph = append(g.graph, [2]int{srcModuleID, depModuleID})
+	g.moduleNameMap[name] = depModuleID
+}
+
+func (g *ModuleGraph) GetModuleByID(moduleID int) *Module {
+	if moduleID >= 0 && moduleID < len(g.modules) {
+		return g.modules[moduleID]
+	}
+	return nil
+}
+
+func (g *ModuleGraph) GetIDFromName(name string) (int, bool) {
+	moduleID, ok := g.moduleNameMap[name]
+	return moduleID, ok
+}
+
+func (g *ModuleGraph) CheckCircularDepedency(srcModuleID int, depModuleID int) bool {
+	return g.checkCircularDepedencyDFS()
+}
+
+func (g *ModuleGraph) checkCircularDepedencyDFS() bool {
+	// Build adjacency list
+	adj := make(map[int][]int)
+	for _, e := range g.graph {
+		u, v := e[0], e[1]
+		adj[u] = append(adj[u], v)
+		// Make sure v also exists in map (even if it has no outgoing edges)
+		if _, ok := adj[v]; !ok {
+			adj[v] = []int{}
+		}
 	}
 
-	return nil, zerr.NameNotDefined(name)
+	// 0 = unvisited, 1 = visiting, 2 = done
+	color := make(map[int]int)
+
+	var dfs func(int) bool
+	dfs = func(u int) bool {
+		color[u] = 1
+		for _, v := range adj[u] {
+			if color[v] == 1 {
+				// found a back edge
+				return true
+			}
+			if color[v] == 0 && dfs(v) {
+				return true
+			}
+		}
+		color[u] = 2
+		return false
+	}
+
+	for node := range adj {
+		if color[node] == 0 {
+			if dfs(node) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// parseLibName - parse libName into LibNameInfo
+// libName - string to be parsed, e.g. "A-B-C"
+// return LibNameInfo object with originalName and libType set to 0 (LIB_TYPE_STD) and libPath set to empty slice
+// LibNameInfo fields:
+// originalName - original string passed to parseLibName
+// libType - parsed libType (LIB_TYPE_STD, LIB_TYPE_VENDOR, LIB_TYPE_CUSTOM)
+// libPath - separate full libstring to subPath, e.g. "A-B-C" -> []string{"A", "B", "C"}
+func ParseLibName(libName string) LibNameInfo {
+	if strings.HasPrefix(libName, "@") {
+		return LibNameInfo{
+			OriginalName: libName,
+			LibType:      LIB_TYPE_STD,
+			LibPath:      strings.Split(libName[1:], "-"),
+		}
+	}
+
+	return LibNameInfo{
+		OriginalName: libName,
+		LibType:      LIB_TYPE_CUSTOM,
+		LibPath:      strings.Split(libName, "-"),
+	}
+}
+
+func init() {
+	NativeCodeModule = &Module{
+		id:           NATIVE_CODE_MODULE_ID,
+		fullName:     "<内部模块>",
+		program:      nil,
+		exportValues: map[string]Element{},
+	}
 }

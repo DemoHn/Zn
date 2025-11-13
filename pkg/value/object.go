@@ -30,17 +30,13 @@ func NewObject(model *ClassModel, initProps map[string]r.Element) *Object {
 	}
 }
 
-func (zo *Object) GetRefModule() *r.Module {
-	return zo.model.refModule
-}
-
 // get object name
 func (zo *Object) GetObjectName() string {
 	return zo.model.GetName()
 }
 
 // GetProperty -
-func (zo *Object) GetProperty(c *r.Context, name string) (r.Element, error) {
+func (zo *Object) GetProperty(name string) (r.Element, error) {
 	// internal properties
 	switch name {
 	case "自身":
@@ -50,33 +46,22 @@ func (zo *Object) GetProperty(c *r.Context, name string) (r.Element, error) {
 	if prop, ok := zo.propList[name]; ok {
 		return prop, nil
 	}
-	// look up computed properties
-	cprop, ok2 := zo.model.FindCompProp(name)
-	if !ok2 {
-		return nil, zerr.PropertyNotFound(name)
-	}
-	// execute computed props to get property result
-	return cprop.Exec(c, zo, []r.Element{})
+	return nil, zerr.PropertyNotFound(name)
 }
 
 // SetProperty -
-func (zo *Object) SetProperty(c *r.Context, name string, value r.Element) error {
+func (zo *Object) SetProperty(name string, value r.Element) error {
 	if _, ok := zo.propList[name]; ok {
 		zo.propList[name] = value
 		return nil
-	}
-	// execute computed properties
-	if cprop, ok2 := zo.model.FindCompProp(name); ok2 {
-		_, err := cprop.Exec(c, zo, []r.Element{})
-		return err
 	}
 	return zerr.PropertyNotFound(name)
 }
 
 // ExecMethod -
-func (zo *Object) ExecMethod(c *r.Context, name string, values []r.Element) (r.Element, error) {
+func (zo *Object) ExecMethod(name string, values []r.Element) (r.Element, error) {
 	if method, ok := zo.model.FindMethod(name); ok {
-		return method.Exec(c, zo, values)
+		return method.Exec(zo, values)
 	}
 	return nil, zerr.MethodNotFound(name)
 }

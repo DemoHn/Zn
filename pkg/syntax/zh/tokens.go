@@ -10,15 +10,24 @@ import (
 // // 1. punctuations
 const (
 	Comma             rune = 0xFF0C // ，
+	Comma_EN          rune = 0x002C // en ,
 	PauseComma        rune = 0x3001 // 、
 	Colon             rune = 0xFF1A // ：
+	Colon_EN          rune = 0x003A // en :
 	Semicolon         rune = 0xFF1B // ；
+	Semicolon_EN      rune = 0x003B // en ;
 	QuestionMark      rune = 0xFF1F // ？
+	QuestionMark_EN   rune = 0x003F // en ?
 	BangMark          rune = 0xFF01 // ！
+	BangMark_EN       rune = 0x0021 // en !
 	LeftBracket       rune = 0x3010 // 【
+	LeftBracket_EN    rune = 0x005B // en [
 	RightBracket      rune = 0x3011 // 】
-	LeftParen         rune = 0xFF08 // （
+	RightBracket_EN   rune = 0x005D // en ]
+	LeftParen         rune = 0xFF08 //（
+	LeftParen_EN      rune = 0x0028 //  en (
 	RightParen        rune = 0xFF09 // ）
+	RightParen_EN     rune = 0x0029 // en )
 	LeftCurlyBracket  rune = 0x007B // {
 	RightCurlyBracket rune = 0x007D // }
 )
@@ -118,15 +127,24 @@ const (
 
 var markPunctuations = []rune{
 	Comma,
+	Comma_EN,
 	PauseComma,
 	Colon,
+	Colon_EN,
 	Semicolon,
+	Semicolon_EN,
 	QuestionMark,
+	QuestionMark_EN,
 	BangMark,
+	BangMark_EN,
 	LeftBracket,
+	LeftBracket_EN,
 	RightBracket,
+	RightBracket_EN,
 	LeftParen,
+	LeftParen_EN,
 	RightParen,
+	RightParen_EN,
 	LeftCurlyBracket,
 	RightCurlyBracket,
 }
@@ -236,15 +254,24 @@ func parsePunctuations(l *syntax.Lexer) (syntax.Token, error) {
 
 	punctuationTypeMap := map[rune]uint8{
 		Comma:             TypeCommaSep,
+		Comma_EN:          TypeCommaSep,
 		PauseComma:        TypePauseCommaSep,
 		Colon:             TypeFuncCall,
+		Colon_EN:          TypeFuncCall,
 		Semicolon:         TypeStmtSep,
+		Semicolon_EN:      TypeStmtSep,
 		QuestionMark:      TypeFuncDeclare,
+		QuestionMark_EN:   TypeFuncDeclare,
 		BangMark:          TypeExceptionT,
+		BangMark_EN:       TypeExceptionT,
 		LeftBracket:       TypeArrayQuoteL,
+		LeftBracket_EN:    TypeArrayQuoteL,
 		RightBracket:      TypeArrayQuoteR,
+		RightBracket_EN:   TypeArrayQuoteR,
 		LeftParen:         TypeFuncQuoteL,
+		LeftParen_EN:      TypeFuncQuoteL,
 		RightParen:        TypeFuncQuoteR,
+		RightParen_EN:     TypeFuncQuoteR,
 		LeftCurlyBracket:  TypeStmtQuoteL,
 		RightCurlyBracket: TypeStmtQuoteR,
 	}

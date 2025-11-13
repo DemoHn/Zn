@@ -31,7 +31,7 @@ func (b *Bool) GetValue() bool {
 }
 
 // GetProperty -
-func (b *Bool) GetProperty(c *r.Context, name string) (r.Element, error) {
+func (b *Bool) GetProperty(name string) (r.Element, error) {
 	boolGetterMap := map[string]boolGetterFunc{
 		"文本": boolGetText,
 	}
@@ -42,12 +42,12 @@ func (b *Bool) GetProperty(c *r.Context, name string) (r.Element, error) {
 }
 
 // SetProperty -
-func (b *Bool) SetProperty(c *r.Context, name string, value r.Element) error {
+func (b *Bool) SetProperty(name string, value r.Element) error {
 	return zerr.PropertyNotFound(name)
 }
 
 // ExecMethod -
-func (b *Bool) ExecMethod(c *r.Context, name string, values []r.Element) (r.Element, error) {
+func (b *Bool) ExecMethod(name string, values []r.Element) (r.Element, error) {
 	return nil, zerr.MethodNotFound(name)
 }
 
