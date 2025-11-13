@@ -11,6 +11,11 @@ import (
 )
 
 func evalVarAssignBlockText(vm *r.VM, blockText string) (r.ElementMap, error) {
+	// #0. for empty string, skip parsing directly
+	if len(blockText) == 0 {
+		return r.ElementMap{}, nil
+	}
+
 	// #1. convert blockText into rune slice
 	in := io.NewByteStream([]byte(blockText))
 
@@ -112,11 +117,14 @@ func assertASTIsVarAssignBlock(ast *syntax.Program) ([]*syntax.VarAssignExpr, bo
 
 	resultExprs := make([]*syntax.VarAssignExpr, 0)
 	for _, stmt := range ast.ExecBlock.StmtBlock.Children {
-		varAssignExpr, ok := stmt.(*syntax.VarAssignExpr)
-		if !ok {
+		switch expr := stmt.(type) {
+		case *syntax.VarAssignExpr:
+			resultExprs = append(resultExprs, expr)
+		case *syntax.EmptyStmt:
+			continue
+		default:
 			return nil, false
 		}
-		resultExprs = append(resultExprs, varAssignExpr)
 	}
 
 	return resultExprs, true

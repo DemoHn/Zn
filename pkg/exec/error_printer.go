@@ -51,7 +51,7 @@ func (sw *SyntaxErrorWrapper) Error() string {
 			code = serr.Code
 			lineIdx := sw.parser.FindLineIdx(serr.Cursor, 0)
 			// add line 1
-			errLines = append(errLines, fmtErrorLocationHeadLine(sw.moduleName, lineIdx+1))
+			errLines = append(errLines, fmtErrorLocationHeadLine(false, sw.moduleName, lineIdx+1))
 			// add line 2
 			errLines = append(errLines, fmtErrorSourceLineWithParser(sw.parser, serr.Cursor, true))
 		}
@@ -122,21 +122,27 @@ func (rw *RuntimeErrorWrapper) Error() string {
 		// append head lines
 		headTrace := callStack[0]
 		module := headTrace.GetModule()
-		errLines = append(errLines, fmtErrorLocationHeadLine(module.GetName(), headTrace.GetCurrentLine()+1))
+		isNativeModule := module.GetID() == r.NATIVE_CODE_MODULE_ID
+		errLines = append(errLines, fmtErrorLocationHeadLine(isNativeModule, module.GetName(), headTrace.GetCurrentLine()+1))
 
 		// get line text
-		if lineText := headTrace.GetSourceTextLine(headTrace.GetCurrentLine()); lineText != "" {
-			errLines = append(errLines, fmtErrorSourceTextLine(lineText))
+		if !isNativeModule {
+			if lineText := headTrace.GetSourceTextLine(headTrace.GetCurrentLine()); lineText != "" {
+				errLines = append(errLines, fmtErrorSourceTextLine(lineText))
+			}
 		}
 
 		// append body
 		for _, tr := range callStack[1:] {
 			trModule := tr.GetModule()
+			isNativeModule = trModule.GetID() == r.NATIVE_CODE_MODULE_ID
 			if trModule != nil {
-				errLines = append(errLines, fmtErrorLocationBodyLine(trModule.GetName(), tr.GetCurrentLine()+1))
+				errLines = append(errLines, fmtErrorLocationBodyLine(isNativeModule, trModule.GetName(), tr.GetCurrentLine()+1))
 				// get line text
-				if lineText := tr.GetSourceTextLine(tr.GetCurrentLine()); lineText != "" {
-					errLines = append(errLines, fmtErrorSourceTextLine(lineText))
+				if !isNativeModule {
+					if lineText := tr.GetSourceTextLine(tr.GetCurrentLine()); lineText != "" {
+						errLines = append(errLines, fmtErrorSourceTextLine(lineText))
+					}
 				}
 			}
 		}
@@ -180,7 +186,10 @@ func DisplayError(err error) string {
 
 // fmtErrorLocationHeadLine -
 // e.g. 在「example」模块中，位于第 12 行发生异常：
-func fmtErrorLocationHeadLine(moduleName string, lineNum int) string {
+func fmtErrorLocationHeadLine(isNativeModule bool, moduleName string, lineNum int) string {
+	if isNativeModule {
+		return "在 <内置模块> 中发生异常：\n    [ --内部程序-- ]"
+	}
 	if moduleName == MODULE_NAME_MAIN {
 		return fmt.Sprintf("在主模块中，位于第 %d 行发生异常：", lineNum)
 	}
@@ -189,7 +198,10 @@ func fmtErrorLocationHeadLine(moduleName string, lineNum int) string {
 
 // fmtErrorLocationBodyLine -
 // e.g. 来自「example2」模块，第 12 行：
-func fmtErrorLocationBodyLine(moduleName string, lineNum int) string {
+func fmtErrorLocationBodyLine(isNativeModule bool, moduleName string, lineNum int) string {
+	if isNativeModule {
+		return "来自 <内置模块>：\n    [ --内部程序-- ]"
+	}
 	if moduleName == MODULE_NAME_MAIN {
 		return fmt.Sprintf("来自主模块，第 %d 行：", lineNum)
 	}
@@ -262,7 +274,7 @@ func fmtErrorMessageLine(code int, errName string, errMessage string) string {
 	if code != 0 {
 		fmtCode = fmt.Sprintf("[%d]", code)
 	}
-	return fmt.Sprintf("%s%s：%s\n", errName, fmtCode, errMessage)
+	return fmt.Sprintf("\n%s%s：%s\n", errName, fmtCode, errMessage)
 }
 
 func calcCursorOffset(text string, col int) int {

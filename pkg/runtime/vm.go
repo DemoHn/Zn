@@ -70,10 +70,6 @@ func (vm *VM) FindModuleByName(name string) *Module {
 	return vm.moduleGraph.GetModuleByID(moduleID)
 }
 
-func (vm *VM) GetModule(moduleID int) *Module {
-	return vm.moduleGraph.GetModuleByID(moduleID)
-}
-
 func (vm *VM) CheckDepedency(name string) error {
 	moduleID, exists := vm.moduleGraph.GetIDFromName(name)
 	if exists {
@@ -182,7 +178,7 @@ func (vm *VM) FindElementWithModule(name *IDName) (Element, *Module, error) {
 	nameStr := name.GetLiteral()
 	// look for global values first
 	if elem, ok := vm.globals[nameStr]; ok {
-		return elem, vm.moduleGraph.GetModuleByID(vm.csModuleID), nil
+		return elem, NativeCodeModule, nil
 	}
 	// then look for local values
 	elem, moduleID := vm.getCurrentScope().GetValueWithModuleID(nameStr)

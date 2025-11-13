@@ -58,16 +58,20 @@ func evalFunctionCall(vm *r.VM, expr *syntax.FuncCallExpr) (r.Element, error) {
 }
 
 func execMethodFunction(vm *r.VM, root r.Element, funcName *r.IDName, params []r.Element) (r.Element, error) {
-	refModule := vm.GetCurrentModule()
-	if robj, ok := root.(*value.Object); ok {
-		_, refModuleX, err := vm.FindElementWithModule(r.NewIDName(robj.GetObjectName()))
+	switch robj := root.(type) {
+	case *value.Object:
+		_, refModule, err := vm.FindElementWithModule(r.NewIDName(robj.GetObjectName()))
 		if err != nil {
 			return nil, err
 		}
-		refModule = refModuleX
+		fnCallFrame := r.NewFunctionCallFrame(refModule, root)
+		vm.PushCallFrame(fnCallFrame)
+	default:
+		// for other types, we suppose it is from native code -
+		// usually for internal types like Number, String, Boolean, etc.
+		fnCallFrame := r.NewFunctionCallFrame(r.NativeCodeModule, root)
+		vm.PushCallFrame(fnCallFrame)
 	}
-	fnCallFrame := r.NewFunctionCallFrame(refModule, root)
-	vm.PushCallFrame(fnCallFrame)
 
 	elem, err := root.ExecMethod(funcName.GetLiteral(), params)
 	if err == nil {
