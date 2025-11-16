@@ -12,7 +12,7 @@ import (
 // compileFunction - create a Function object (with default param handler logic)
 // from Zn code (*syntax.BlockStmt). It's the constructor of 如何XX or (anoymous function in the future)
 func compileFunction(vm *r.VM, node *syntax.FunctionDeclareStmt) *value.Function {
-	var mainLogicHandler = func(params []r.Element) (r.Element, error) {
+	var mainLogicHandler = func(receiver r.Element, params []r.Element) (r.Element, error) {
 		// 2. do eval exec block
 		return evalExecBlock(vm, node.ExecBlock, params)
 	}

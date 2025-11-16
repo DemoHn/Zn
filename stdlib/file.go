@@ -1,7 +1,7 @@
 package stdlib
 
 import (
-	"io/ioutil"
+	"io"
 	"os"
 
 	"github.com/DemoHn/Zn/pkg/value"
@@ -12,7 +12,7 @@ import (
 var fileModuleName = "文件"
 var fileLIB = NewLibrary(fileModuleName)
 
-func readTextFromFileFunc(values []r.Element) (r.Element, error) {
+func readTextFromFileFunc(receiver r.Element, values []r.Element) (r.Element, error) {
 	// validate one param: string ONLY
 	if err := value.ValidateExactParams(values, "string"); err != nil {
 		return nil, err
@@ -24,14 +24,14 @@ func readTextFromFileFunc(values []r.Element) (r.Element, error) {
 		return nil, value.ThrowException("打开文件失败：" + err.Error())
 	}
 	defer file.Close()
-	data, err := ioutil.ReadAll(file)
+	data, err := io.ReadAll(file)
 	if err != nil {
 		return nil, value.ThrowException("读取文件失败：" + err.Error())
 	}
 	return value.NewString(string(data)), nil
 }
 
-func writeTextFromFileFunc(values []r.Element) (r.Element, error) {
+func writeTextFromFileFunc(receiver r.Element, values []r.Element) (r.Element, error) {
 	// validate one param: string ONLY
 	if err := value.ValidateExactParams(values, "string", "string"); err != nil {
 		return nil, err
@@ -39,14 +39,14 @@ func writeTextFromFileFunc(values []r.Element) (r.Element, error) {
 	fileName := values[0].(*value.String)
 	content := values[1].(*value.String)
 
-	err := ioutil.WriteFile(fileName.String(), []byte(content.String()), 0644)
+	err := os.WriteFile(fileName.String(), []byte(content.String()), 0644)
 	if err != nil {
 		return nil, value.ThrowException("写入文件失败：" + err.Error())
 	}
 	return nil, nil
 }
 
-func readDirFunc(values []r.Element) (r.Element, error) {
+func readDirFunc(receiver r.Element, values []r.Element) (r.Element, error) {
 	// validate one param: string ONLY
 	if err := value.ValidateExactParams(values, "string"); err != nil {
 		return nil, err

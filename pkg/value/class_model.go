@@ -5,8 +5,6 @@ import (
 	r "github.com/DemoHn/Zn/pkg/runtime"
 )
 
-type GoValueFunc = func() interface{}
-
 // ClassModel - aka. Class Definition Reference
 // It defines the structure of a class, including compPropList, methodList and propList.
 // All instances created from this class MUST inherits from those configurations.
@@ -15,7 +13,7 @@ type ClassModel struct {
 	name string
 
 	// Constructor defines default logic (mostly for initialization) when a new instance
-	// is created by "x 成为 C：P，Q，R"
+	// is created by "x = (新建C：P，Q，R)"
 	constructor r.FuncExecutor
 
 	// PropList defines all property name & default value of the class, each property CANNOT be appended or removed
@@ -40,19 +38,18 @@ func NewClassModel(name string) *ClassModel {
 		methodList:   map[string]*Function{},
 	}
 
-	defaultConstructor := func([]r.Element) (r.Element, error) {
-		var initProps = map[string]r.Element{}
-		return NewObject(model, initProps), nil
+	// set default constructor - NO ACTION AT ALL
+	model.constructor = func(r.Element, []r.Element) (r.Element, error) {
+		return nil, nil
 	}
-
-	// set default constructor
-	model.constructor = defaultConstructor
 	return model
 }
 
 // Construct - yield new instance of this class
 func (cm *ClassModel) Construct(params []r.Element) (r.Element, error) {
-	return cm.constructor(params)
+	// initialize a new object - an instance of class with no props set
+	instance := NewObject(cm, r.ElementMap{})
+	return cm.constructor(instance, params)
 }
 
 // //// GETTERS //////

@@ -26,7 +26,7 @@ func (fn *Function) SetName(name string) *Function {
 // yields final result
 func (fn *Function) Exec(thisValue r.Element, params []r.Element) (r.Element, error) {
 	fnLogicHandler := fn.logicHandler
-	return fnLogicHandler(params)
+	return fnLogicHandler(thisValue, params)
 }
 
 // impl Value interface

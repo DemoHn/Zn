@@ -11,17 +11,28 @@ import (
 	"github.com/DemoHn/Zn/pkg/value"
 )
 
-var jsonModuleName = "JSON"
-var jsonLIB = NewLibrary(jsonModuleName)
+/*
+
+testing...
+如何解析JSON？
+	输入文本
+
+	输出[[ parseJson $1 ]]
+
+	拦截异常：
+	    xxxx
+*/
 
 // parseJsonFunc - 解析JSON
-func parseJsonFunc(values []r.Element) (r.Element, error) {
+func parseJsonFunc(receiver r.Element, values []r.Element) (r.Element, error) {
 	// validate string ONLY
 	if err := value.ValidateExactParams(values, "string"); err != nil {
 		return nil, err
 	}
-	v := values[0].(*value.String)
-	vd := []byte(v.String())
+	// get exact type of params
+	p1 := values[0].(*value.String)
+
+	vd := []byte(p1.String())
 
 	result := map[string]interface{}{}
 	// core logic (via Go's stdlib)
@@ -33,7 +44,7 @@ func parseJsonFunc(values []r.Element) (r.Element, error) {
 }
 
 // generateJsonFunc - 生成JSON
-func generateJsonFunc(values []r.Element) (r.Element, error) {
+func generateJsonFunc(receiver r.Element, values []r.Element) (r.Element, error) {
 	if err := value.ValidateExactParams(values, "hashmap"); err != nil {
 		return nil, err
 	}
@@ -114,9 +125,12 @@ func buildPlainStrItem(item r.Element) interface{} {
 }
 
 func init() {
-	// register functions
-	RegisterFunctionForLibrary(jsonLIB, "解析JSON", parseJsonFunc)
-	RegisterFunctionForLibrary(jsonLIB, "生成JSON", generateJsonFunc)
+	var STDLIB_JSON_NAME = "JSON"
+	var JSON_LIB = NewLibrary(STDLIB_JSON_NAME)
 
-	RegisterLibrary(jsonLIB)
+	// register functions
+	RegisterFunctionForLibrary(JSON_LIB, "解析JSON", parseJsonFunc)
+	RegisterFunctionForLibrary(JSON_LIB, "生成JSON", generateJsonFunc)
+
+	RegisterLibrary(JSON_LIB)
 }
