@@ -17,6 +17,7 @@ import (
 	"github.com/DemoHn/Zn/pkg/syntax/zh"
 	"github.com/DemoHn/Zn/pkg/value"
 
+	// stdlibs
 	libFile "github.com/DemoHn/Zn/stdlib/file"
 	libHttp "github.com/DemoHn/Zn/stdlib/http"
 	libJson "github.com/DemoHn/Zn/stdlib/json"
@@ -60,15 +61,15 @@ type ZnInterpreter struct {
 	// by default, the value is nil, that means the finder could not found any module code at all!
 	moduleCodeFinder runtime.ModuleCodeFinder
 
-	extLibs []*Library
+	externalLibs []*Library
 }
 
 // NewInterpreter - new ZnInterpreter object
 func NewInterpreter() *ZnInterpreter {
 	// vm = runtime.InitVM()
 	return &ZnInterpreter{
-		version: ZINC_VERSION,
-		extLibs: StandardLibs,
+		version:      ZINC_VERSION,
+		externalLibs: StandardLibs,
 	}
 }
 
@@ -168,6 +169,7 @@ func (z *ZnInterpreter) Execute(varInputs runtime.ElementMap) (Element, error) {
 
 	vm := runtime.InitVM(exec.GlobalValues)
 	vm.SetModuleCodeFinder(finder)
+	vm.LoadExternalLibs(z.externalLibs)
 	// #4. eval program
 	rtnValue, err := exec.EvalMainModule(vm, program, varInputs)
 	if err != nil {

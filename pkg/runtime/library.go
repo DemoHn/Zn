@@ -20,6 +20,14 @@ func NewLibrary(name string) *Library {
 	}
 }
 
+func (l *Library) GetName() string {
+	return l.name
+}
+
+func (l *Library) GetAllExportValues() map[string]ExportableElement {
+	return l.exportValues
+}
+
 func (l *Library) RegisterClass(name string, ref ExportableElement) *Library {
 	l.addExportValue(name, ref)
 	return l

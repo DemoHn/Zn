@@ -7,6 +7,9 @@ import (
 
 type VM struct {
 	globals map[string]Element
+
+	externalLibs map[string]*Library
+
 	// module-level & scope-level local value stacks
 	// including global & local variables
 	// KEY: moduleID
@@ -32,6 +35,7 @@ type ElementMap = map[string]Element
 func InitVM(globals map[string]Element) *VM {
 	return &VM{
 		globals:          globals,
+		externalLibs:     map[string]*Library{},
 		valueStack:       map[int]*Scope{},
 		callStack:        []*CallFrame{},
 		csCount:          0,
@@ -47,6 +51,19 @@ func (vm *VM) GetModuleCodeFinder() ModuleCodeFinder {
 
 func (vm *VM) SetModuleCodeFinder(moduleCodeFinder ModuleCodeFinder) {
 	vm.moduleCodeFinder = moduleCodeFinder
+}
+
+func (vm *VM) LoadExternalLibs(libs []*Library) {
+	for _, lib := range libs {
+		vm.externalLibs[lib.GetName()] = lib
+	}
+}
+
+func (vm *VM) FindLibrary(name string) (*Library, error) {
+	if library, ok := vm.externalLibs[name]; ok {
+		return library, nil
+	}
+	return nil, zerr.LibraryNotFound(name)
 }
 
 // AllocateModule - create empty module information

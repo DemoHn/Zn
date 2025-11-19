@@ -5,8 +5,6 @@ import (
 	"math"
 	"strings"
 
-	"github.com/DemoHn/Zn/stdlib"
-
 	zerr "github.com/DemoHn/Zn/pkg/error"
 	r "github.com/DemoHn/Zn/pkg/runtime"
 	"github.com/DemoHn/Zn/pkg/syntax"
@@ -435,7 +433,7 @@ func evalImportStmt(vm *r.VM, node *syntax.ImportStmt) error {
 	switch nameInfo.LibType {
 	case r.LIB_TYPE_STD:
 		extModule = vm.AllocateModule(extLibName, nil)
-		library, err := stdlib.FindLibrary(extLibName)
+		library, err := vm.FindLibrary(extLibName)
 		if err != nil {
 			return err
 		}
@@ -443,7 +441,7 @@ func evalImportStmt(vm *r.VM, node *syntax.ImportStmt) error {
 		vm.PushCallFrame(r.NewScriptCallFrame(extModule))
 
 		// duplicate export values into module
-		for k, v := range library.ExportValues {
+		for k, v := range library.GetAllExportValues() {
 			extModule.AddExportValue(k, v)
 		}
 		vm.PopCallFrame()

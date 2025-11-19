@@ -74,7 +74,7 @@ var CLASS_HttpRequest = value.NewClassModel("HTTP请求").
 	其内容 = “”
 */
 var CLASS_HttpResposne = value.NewClassModel("HTTP响应").
-	DefineProperty("代码", value.NewNumber(200)).
+	DefineProperty("状态码", value.NewNumber(200)).
 	DefineProperty("头部", value.NewEmptyHashMap()).
 	DefineProperty("内容", value.NewString(""))
 
@@ -88,21 +88,20 @@ func FN_sendHTTPRequest(receiver r.Element, values []r.Element) (r.Element, erro
 	method := values[0].(*value.String).GetValue()
 	url := values[1].(*value.String).GetValue()
 
-	req, err := nHTTP.NewRequest(method, url, nil)
+	req, err := buildHttpRequest(
+		url,
+		method,
+		make(map[string]string),
+		UQueryParams{isJSON: false, queryString: ""},
+		UBody{isJSON: false, bodyString: ""},
+	)
 	if err != nil {
-		return nil, value.ThrowException("创建HTTP请求失败：" + err.Error())
+		return nil, value.ThrowException(err.Error())
 	}
 
-	client := &nHTTP.Client{}
-	resp, err := client.Do(req)
+	resp, body, err := sendHttpRequest(req, true, 30)
 	if err != nil {
-		return nil, value.ThrowException("发送HTTP请求失败：" + err.Error())
-	}
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, value.ThrowException("读取HTTP响应内容失败：" + err.Error())
+		return nil, value.ThrowException(err.Error())
 	}
 
 	// 构造 HTTP响应 对象
@@ -131,7 +130,7 @@ type UBody struct {
 	bodyDict   map[string]string
 }
 
-func buildHttpReq(
+func buildHttpRequest(
 	url string,
 	method string,
 	headers map[string]string,
