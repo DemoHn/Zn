@@ -39,8 +39,8 @@ func NewClassModel(name string) *ClassModel {
 	}
 
 	// set default constructor - NO ACTION AT ALL
-	model.constructor = func(r.Element, []r.Element) (r.Element, error) {
-		return nil, nil
+	model.constructor = func(instance r.Element, params []r.Element) (r.Element, error) {
+		return instance, nil
 	}
 	return model
 }
@@ -110,4 +110,8 @@ func (cr *ClassModel) SetProperty(name string, value r.Element) error {
 
 func (cr *ClassModel) ExecMethod(name string, values []r.Element) (r.Element, error) {
 	return nil, zerr.MethodNotFound(name)
+}
+
+func (cr *ClassModel) Exportable() bool {
+	return true
 }

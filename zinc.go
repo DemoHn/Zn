@@ -16,10 +16,15 @@ import (
 	"github.com/DemoHn/Zn/pkg/syntax"
 	"github.com/DemoHn/Zn/pkg/syntax/zh"
 	"github.com/DemoHn/Zn/pkg/value"
+
+	libFile "github.com/DemoHn/Zn/stdlib/file"
+	libHttp "github.com/DemoHn/Zn/stdlib/http"
+	libJson "github.com/DemoHn/Zn/stdlib/json"
 )
 
 type Element = runtime.Element
 type ElementMap = runtime.ElementMap
+type Library = runtime.Library
 
 type ZnNumber = value.Number
 type ZnString = value.String
@@ -39,6 +44,12 @@ var NewZnNull = value.NewNull
 
 const ZINC_VERSION = "rev08"
 
+var StandardLibs = []*runtime.Library{
+	libHttp.Export(),
+	libJson.Export(),
+	libFile.Export(),
+}
+
 // ZnInterpreter - MAIN CODE EXECUTION INSTANCE -
 // ONE INTERPRETER -> ONE VM
 type ZnInterpreter struct {
@@ -48,6 +59,8 @@ type ZnInterpreter struct {
 	// moduleCodeFinder - given a module name, the finder function aims to find it's corresponding source code for further execution - whatever from filesystem, DB, network, etc.
 	// by default, the value is nil, that means the finder could not found any module code at all!
 	moduleCodeFinder runtime.ModuleCodeFinder
+
+	extLibs []*Library
 }
 
 // NewInterpreter - new ZnInterpreter object
@@ -55,6 +68,7 @@ func NewInterpreter() *ZnInterpreter {
 	// vm = runtime.InitVM()
 	return &ZnInterpreter{
 		version: ZINC_VERSION,
+		extLibs: StandardLibs,
 	}
 }
 
@@ -217,7 +231,7 @@ func (s *ZnServer) SetHTTPHandler(entryFile string) *ZnServer {
 			return
 		}
 
-		varInput := map[string]runtime.Element{
+		varInput := runtime.ElementMap{
 			"当前请求": reqObj,
 		}
 		// execute code

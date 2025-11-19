@@ -44,3 +44,7 @@ func (fn *Function) SetProperty(name string, value r.Element) error {
 func (fn *Function) ExecMethod(name string, values []r.Element) (r.Element, error) {
 	return nil, zerr.MethodNotFound(name)
 }
+
+func (fn *Function) Exportable() bool {
+	return true
+}

@@ -1,4 +1,4 @@
-package stdlib
+package json
 
 import (
 	"encoding/json"
@@ -10,6 +10,10 @@ import (
 	r "github.com/DemoHn/Zn/pkg/runtime"
 	"github.com/DemoHn/Zn/pkg/value"
 )
+
+const STDLIB_JSON_NAME = "@JSON"
+
+var jsonLIB *r.Library
 
 /*
 
@@ -24,7 +28,7 @@ testing...
 */
 
 // parseJsonFunc - 解析JSON
-func parseJsonFunc(receiver r.Element, values []r.Element) (r.Element, error) {
+func FN_parseJson(receiver r.Element, values []r.Element) (r.Element, error) {
 	// validate string ONLY
 	if err := value.ValidateExactParams(values, "string"); err != nil {
 		return nil, err
@@ -44,7 +48,7 @@ func parseJsonFunc(receiver r.Element, values []r.Element) (r.Element, error) {
 }
 
 // generateJsonFunc - 生成JSON
-func generateJsonFunc(receiver r.Element, values []r.Element) (r.Element, error) {
+func FN_generateJson(receiver r.Element, values []r.Element) (r.Element, error) {
 	if err := value.ValidateExactParams(values, "hashmap"); err != nil {
 		return nil, err
 	}
@@ -124,13 +128,11 @@ func buildPlainStrItem(item r.Element) interface{} {
 	return nil
 }
 
+func Export() *r.Library {
+	return jsonLIB
+}
 func init() {
-	var STDLIB_JSON_NAME = "JSON"
-	var JSON_LIB = NewLibrary(STDLIB_JSON_NAME)
-
-	// register functions
-	RegisterFunctionForLibrary(JSON_LIB, "解析JSON", parseJsonFunc)
-	RegisterFunctionForLibrary(JSON_LIB, "生成JSON", generateJsonFunc)
-
-	RegisterLibrary(JSON_LIB)
+	jsonLIB = r.NewLibrary(STDLIB_JSON_NAME)
+	jsonLIB.RegisterFunction("解析JSON", value.NewFunction(FN_parseJson)).
+		RegisterFunction("生成JSON", value.NewFunction(FN_generateJson))
 }
