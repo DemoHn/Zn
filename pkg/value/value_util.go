@@ -10,6 +10,39 @@ import (
 	r "github.com/DemoHn/Zn/pkg/runtime"
 )
 
+// //// Either Type
+type Either[A, B any] struct {
+	value any
+}
+
+// before use GetA(), make sure IsA() is true!!!
+func (e *Either[A, B]) GetA() A {
+	return e.value.(A)
+}
+
+// before use GetB(), make sure IsB() is true!!!
+func (e *Either[A, B]) GetB() B {
+	return e.value.(B)
+}
+
+func (e *Either[A, B]) SetA(a A) {
+	e.value = a
+}
+
+func (e *Either[A, B]) SetB(b B) {
+	e.value = b
+}
+
+func (e *Either[A, B]) IsA() bool {
+	_, ok := e.value.(A)
+	return ok
+}
+
+func (e *Either[A, B]) IsB() bool {
+	_, ok := e.value.(B)
+	return ok
+}
+
 // Define compareVerbs, for details of each verb, check the following comments
 // on compareValues() function.
 const (
@@ -31,7 +64,6 @@ const (
 // Lt - for two decimals ONLY. If leftValue < rightValue.
 //
 // Gt - for two decimals ONLY. If leftValue > rightValue.
-//
 func CompareValues(left r.Element, right r.Element, verb uint8) (bool, error) {
 	switch vl := left.(type) {
 	case *Null:
@@ -226,6 +258,33 @@ func stringifyInnerValue(value r.Element) string {
 
 //// param validators
 
+func AssertElement[T r.Element](value r.Element) (T, error) {
+	if v, ok := value.(T); ok {
+		return v, nil
+	}
+	return value.(T), zerr.InvalidParamType(getElementTypeString(value))
+}
+
+func AssertPropertyElement[T r.Element](root r.Element, key string) (T, error) {
+	prop, err := root.GetProperty(key)
+	if err != nil {
+		return root.(T), err
+	}
+
+	if v, ok := prop.(T); ok {
+		return v, nil
+	}
+	return root.(T), zerr.InvalidParamType(getElementTypeString(prop))
+}
+
+func BuildEitherPropertyElement[A r.Element, B r.Element](root r.Element, key string) (Either[A, B], error) {
+	prop, err := root.GetProperty(key)
+	if err != nil {
+		return Either[A, B]{nil}, err
+	}
+	return Either[A, B]{prop}, nil
+}
+
 // ValidateExactParams is a helper function that asserts input params type where each parameter
 // should exactly match the list of typeStr.
 // valid typeStr are one of the followings:
@@ -359,4 +418,26 @@ func validateOneParam(v r.Element, typeStr string) error {
 		return zerr.InvalidParamType(typeStr)
 	}
 	return nil
+}
+
+func getElementTypeString(elem r.Element) string {
+	switch elem.(type) {
+	case *Number:
+		return "number"
+	case *String:
+		return "string"
+	case *Array:
+		return "array"
+	case *HashMap:
+		return "hashmap"
+	case *Bool:
+		return "bool"
+	case *Object:
+		return "object"
+	case *Function:
+		return "function"
+	case *GoValue:
+		return "govalue"
+	}
+	return "unknown"
 }

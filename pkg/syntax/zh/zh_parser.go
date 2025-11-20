@@ -50,18 +50,6 @@ func (p *ParserZH) ParseAST(l *syntax.Lexer) (pg *syntax.Program, err error) {
 	return
 }
 
-// ParseVarInputs - the parser is confined to parse
-func (p *ParserZH) ParseVarInputs(l *syntax.Lexer) (*syntax.VarDeclareStmt, error) {
-	// set lexer
-	p.Lexer = l
-	// advance tokens ONCE
-	p.next()
-
-	// when an error occured, it will directly panic! instead of return an error
-	stmt := ParseVarDeclareStmt(p)
-	return stmt, nil
-}
-
 func (p *ParserZH) next() *syntax.Token {
 	var tk syntax.Token // default tk.Type = 0 (TypeEOF)
 	var err error
@@ -110,22 +98,23 @@ func (p *ParserZH) peek() *syntax.Token {
 // "virtually" inserted semicolon, like the following code:
 //
 // 如果此IDE之 ';' <-- here is the statement line-break
-//     名为「VSCODE」
+//
+//	名为「VSCODE」
 //
 // There's stmt line-break at the end of first line, thus the process of parsing IF-statement
 // should terminate due to lacking matched tokens, similar to the behaviour that an semicolon is inserted.
 //
 // Theoretically, any type of token that located at the end of line
 //
-//   i.e.  this token is the last one of current line,
-//   or    $token.Range.EndLine < ($token+1).Range.StartLine,
+//	i.e.  this token is the last one of current line,
+//	or    $token.Range.EndLine < ($token+1).Range.StartLine,
 //
 // should meet StmtLineBreak, which means meetStmtLineBreak() = true. Still, there are some
 // exceptions listed below:
 //
-//   1.    the current token type is one of the following 6 punctuations:  ， 、  {  【  ：  ？
-//   or
-//   2.    the next token type if one of the following 3 marks:  】  }  EOF
+//  1. the current token type is one of the following 6 punctuations:  ， 、  {  【  ：  ？
+//     or
+//  2. the next token type if one of the following 3 marks:  】  }  EOF
 //
 // Example 1#, 2#, 3# illustrates those exceptions that even if there are two or more lines, it's still
 // *ONE* valid and complete statement:
@@ -133,23 +122,26 @@ func (p *ParserZH) peek() *syntax.Token {
 // Example 1#
 //
 // （显示并连缀：
-//     「结果为」、
-//      人口-中位数）
+//
+//	「结果为」、
+//	 人口-中位数）
 //
 // Example 2#
 //
 // 令天干地支表为【
-//     「子」 == 「甲」，
-//     「丑」 == 「乙」，
-//     「寅」 == 「丙」，
-//     「卯」 == 「丁」
+//
+//	「子」 == 「甲」，
+//	「丑」 == 「乙」，
+//	「寅」 == 「丙」，
+//	「卯」 == 「丁」
+//
 // 】
 //
 // Example 3#
 //
-// `时`等于12 且{
-//     `分`等于0 或 `分`等于30
-// }等于真
+//	`时`等于12 且{
+//	    `分`等于0 或 `分`等于30
+//	}等于真
 func (p *ParserZH) meetStmtLineBreak() bool {
 	current := p.current()
 	peek := p.peek()

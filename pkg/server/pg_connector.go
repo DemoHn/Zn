@@ -28,7 +28,7 @@ func ReadRequestForPlayground(r *http.Request) ([]rune, map[string]runtime.Eleme
 	}
 
 	if reqInfo.VarInput != "" {
-		varInputs, err := exec.ExecVarInputs(reqInfo.VarInput)
+		varInputs, err := exec.ExecVarInputText(reqInfo.VarInput)
 		if err != nil {
 			return nil, nil, err
 		}

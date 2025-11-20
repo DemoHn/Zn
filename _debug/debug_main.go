@@ -6,11 +6,18 @@ import (
 	zinc "github.com/DemoHn/Zn"
 )
 
-const TARGET_FILE = "./draft/proj1/计算税收.zn"
+const TARGET_FILE = "./draft/http_test.zn"
+const VAR_INPUT = `数组文本=“123,456，-2,3，DD”`
 
 func main() {
 	znt := zinc.NewInterpreter()
-	res, err := znt.LoadFile(TARGET_FILE).Execute(map[string]zinc.Element{})
+
+	varInput, err := znt.ExecuteVarInputText(VAR_INPUT)
+	if err != nil {
+		panic(err)
+	}
+
+	res, err := znt.LoadFile(TARGET_FILE).Execute(varInput)
 	if err != nil {
 		fmt.Println(err.Error())
 	} else {

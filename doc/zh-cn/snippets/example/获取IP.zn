@@ -1,0 +1,16 @@
+导入“@HTTP”
+导入“@JSON”
+
+如何获取IP？
+    令Q = (新建HTTP请求)
+    Q的路径 = “https://api.ipify.org?format=json”
+    Q的方法 = “GET”
+
+    令结果 = 以Q(发送请求)
+    令IP数据 = (解析JSON：结果的内容)
+    输出IP数据#“ip”
+
+    拦截异常：
+        输出“-获取失败-”
+
+输出(获取IP)

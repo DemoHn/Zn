@@ -50,9 +50,15 @@ func EnterREPL() {
 }
 
 // ExecProgram - exec program from file directly
-func ExecProgram(file string) {
+func ExecProgram(file string, varInputBlock string) {
 	znInterpreter := zinc.NewInterpreter()
-	rtnValue, err := znInterpreter.LoadFile(file).Execute(map[string]r.Element{})
+	inputMap, err := znInterpreter.ExecuteVarInputText(varInputBlock)
+	if err != nil {
+		prettyPrintError(os.Stdout, err)
+		return
+	}
+
+	rtnValue, err := znInterpreter.LoadFile(file).Execute(inputMap)
 
 	if err != nil {
 		prettyPrintError(os.Stdout, err)

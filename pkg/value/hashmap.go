@@ -38,6 +38,13 @@ func NewHashMap(kvPairs []KVPair) *HashMap {
 	return hm
 }
 
+func NewEmptyHashMap() *HashMap {
+	return &HashMap{
+		value:    map[string]r.Element{},
+		keyOrder: []string{},
+	}
+}
+
 // GetKeyOrder -
 func (hm *HashMap) GetKeyOrder() []string {
 	return hm.keyOrder

@@ -7,6 +7,9 @@ import (
 
 type VM struct {
 	globals map[string]Element
+
+	externalLibs map[string]*Library
+
 	// module-level & scope-level local value stacks
 	// including global & local variables
 	// KEY: moduleID
@@ -32,6 +35,7 @@ type ElementMap = map[string]Element
 func InitVM(globals map[string]Element) *VM {
 	return &VM{
 		globals:          globals,
+		externalLibs:     map[string]*Library{},
 		valueStack:       map[int]*Scope{},
 		callStack:        []*CallFrame{},
 		csCount:          0,
@@ -47,6 +51,19 @@ func (vm *VM) GetModuleCodeFinder() ModuleCodeFinder {
 
 func (vm *VM) SetModuleCodeFinder(moduleCodeFinder ModuleCodeFinder) {
 	vm.moduleCodeFinder = moduleCodeFinder
+}
+
+func (vm *VM) LoadExternalLibs(libs []*Library) {
+	for _, lib := range libs {
+		vm.externalLibs[lib.GetName()] = lib
+	}
+}
+
+func (vm *VM) FindLibrary(name string) (*Library, error) {
+	if library, ok := vm.externalLibs[name]; ok {
+		return library, nil
+	}
+	return nil, zerr.LibraryNotFound(name)
 }
 
 // AllocateModule - create empty module information
@@ -67,10 +84,6 @@ func (vm *VM) FindModuleByName(name string) *Module {
 	if !exists {
 		return nil
 	}
-	return vm.moduleGraph.GetModuleByID(moduleID)
-}
-
-func (vm *VM) GetModule(moduleID int) *Module {
 	return vm.moduleGraph.GetModuleByID(moduleID)
 }
 
@@ -182,7 +195,7 @@ func (vm *VM) FindElementWithModule(name *IDName) (Element, *Module, error) {
 	nameStr := name.GetLiteral()
 	// look for global values first
 	if elem, ok := vm.globals[nameStr]; ok {
-		return elem, vm.moduleGraph.GetModuleByID(vm.csModuleID), nil
+		return elem, NativeCodeModule, nil
 	}
 	// then look for local values
 	elem, moduleID := vm.getCurrentScope().GetValueWithModuleID(nameStr)

@@ -37,13 +37,16 @@ const (
 	LIB_TYPE_STD    = 1
 	LIB_TYPE_VENDOR = 2
 	LIB_TYPE_CUSTOM = 3
+
+	NATIVE_CODE_MODULE_ID = -1
+	MAIN_MODULE_ID        = 0
 )
 
 type ModuleCodeFinder func(isMain bool, info LibNameInfo) ([]rune, error)
 
-func (m *Module) GetName() string {
-	return m.fullName
-}
+// NativeCodeModule is a virtual 'module' for [[native code]] - no program AST, id = -1
+// the module is initialized automatically on init() function
+var NativeCodeModule *Module
 
 func (m *Module) AddExportValue(name string, value Element) error {
 	if _, ok := m.exportValues[name]; ok {
@@ -57,12 +60,20 @@ func (m *Module) GetID() int {
 	return m.id
 }
 
+func (m *Module) GetName() string {
+	return m.fullName
+}
+
 func (m *Module) GetExportValue(name string) (Element, error) {
 	if elem, ok := m.exportValues[name]; ok {
 		return elem, nil
 	} else {
 		return nil, zerr.NameNotDefined(name)
 	}
+}
+
+func (m *Module) GetProgram() *syntax.Program {
+	return m.program
 }
 
 func (m *Module) GetAllExportValues() ElementMap {
@@ -84,6 +95,9 @@ func NewModuleGraph() *ModuleGraph {
 func (g *ModuleGraph) AddModule(srcModuleID int, name string, program *syntax.Program) int {
 	// allocate new module ID
 	extModuleID := len(g.modules)
+	if len(g.modules) == 0 {
+		extModuleID = MAIN_MODULE_ID
+	}
 	g.modules = append(g.modules, &Module{
 		id:           extModuleID,
 		fullName:     name,
@@ -183,5 +197,14 @@ func ParseLibName(libName string) LibNameInfo {
 		OriginalName: libName,
 		LibType:      LIB_TYPE_CUSTOM,
 		LibPath:      strings.Split(libName, "-"),
+	}
+}
+
+func init() {
+	NativeCodeModule = &Module{
+		id:           NATIVE_CODE_MODULE_ID,
+		fullName:     "<内部模块>",
+		program:      nil,
+		exportValues: map[string]Element{},
 	}
 }

@@ -26,7 +26,7 @@ func (fn *Function) SetName(name string) *Function {
 // yields final result
 func (fn *Function) Exec(thisValue r.Element, params []r.Element) (r.Element, error) {
 	fnLogicHandler := fn.logicHandler
-	return fnLogicHandler(params)
+	return fnLogicHandler(thisValue, params)
 }
 
 // impl Value interface
@@ -43,4 +43,8 @@ func (fn *Function) SetProperty(name string, value r.Element) error {
 // ExecMethod -
 func (fn *Function) ExecMethod(name string, values []r.Element) (r.Element, error) {
 	return nil, zerr.MethodNotFound(name)
+}
+
+func (fn *Function) Exportable() bool {
+	return true
 }

@@ -3,7 +3,7 @@ package ext
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 
 	zerr "github.com/DemoHn/Zn/pkg/error"
@@ -102,7 +102,7 @@ func (h *HTTPRequest) ExecMethod(name string, values []r.Element) (r.Element, er
 
 func httpRequestExecReadBody(h *HTTPRequest, values []r.Element) (r.Element, error) {
 	// impl GetBody function here
-	body, err := ioutil.ReadAll(h.request.Body)
+	body, err := io.ReadAll(h.request.Body)
 	if err != nil {
 		return nil, value.ThrowException("读取请求内容出现异常")
 	}

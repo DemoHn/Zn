@@ -5,8 +5,6 @@ import (
 	"math"
 	"strings"
 
-	"github.com/DemoHn/Zn/stdlib"
-
 	zerr "github.com/DemoHn/Zn/pkg/error"
 	r "github.com/DemoHn/Zn/pkg/runtime"
 	"github.com/DemoHn/Zn/pkg/syntax"
@@ -94,6 +92,7 @@ func evalExecBlock(vm *r.VM, execBlock *syntax.ExecBlock, params []r.Element) (r
 	vm.BeginScope()
 	defer vm.EndScope()
 
+	blockModule := vm.GetCurrentModule()
 	// 1.0 inject 此 value from callFrame's context (for method functions ONLY)
 	if vm.GetCurrentCallFrame() != nil && vm.GetCurrentCallFrame().IsFunctionCallFrame() {
 		thisValue := vm.GetThisValue()
@@ -124,7 +123,7 @@ func evalExecBlock(vm *r.VM, execBlock *syntax.ExecBlock, params []r.Element) (r
 	rtnValue, stmtBlockErr := evalStmtBlock(vm, execBlock.StmtBlock)
 
 	if stmtBlockErr != nil {
-		return handleExceptionSignal(vm, execBlock.CatchBlock, stmtBlockErr)
+		return handleExceptionSignal(vm, blockModule, execBlock.CatchBlock, stmtBlockErr)
 	}
 
 	return rtnValue, stmtBlockErr
@@ -178,7 +177,7 @@ func evalPureStmtBlock(vm *r.VM, stmtBlock *syntax.StmtBlock) (r.Element, error)
 	return rtnValue, err
 }
 
-func handleExceptionSignal(vm *r.VM, catchBlock []*syntax.CatchBlockPair, blockErr error) (r.Element, error) {
+func handleExceptionSignal(vm *r.VM, blockModule *r.Module, catchBlock []*syntax.CatchBlockPair, blockErr error) (r.Element, error) {
 	// try to find if the blockErr is an exception signal
 	exception, realErr := extractSignalValue(blockErr, zerr.SigTypeException)
 
@@ -205,7 +204,7 @@ func handleExceptionSignal(vm *r.VM, catchBlock []*syntax.CatchBlockPair, blockE
 
 		// if exception block matches exception className
 		if objClassName != "" && classID.GetLiteral() == objClassName {
-			expCallFrame := r.NewExceptionCallFrame(vm.GetCurrentModule(), exception)
+			expCallFrame := r.NewExceptionCallFrame(blockModule, exception)
 			vm.PushCallFrame(expCallFrame)
 			// do execution (with "this" value = exception value)
 			_, err := evalPureStmtBlock(vm, catchBlockItem.StmtBlock)
@@ -385,17 +384,16 @@ func evalConstructorDeclareStmt(vm *r.VM, node *syntax.FunctionDeclareStmt) erro
 	//// there are some different Factors from normal method function:
 	// 1. no outerScope (clousure scope)
 	// 2. no 此 const variable inside the fn scope
-	constructorLogic := func(elems []r.Element) (r.Element, error) {
-		newObject := value.NewObject(cmodel, map[string]r.Element{})
+	constructorLogic := func(instance r.Element, elems []r.Element) (r.Element, error) {
 		// set "this" value
-		vm.PushCallFrame(r.NewFunctionCallFrame(module, newObject))
+		vm.PushCallFrame(r.NewFunctionCallFrame(module, instance))
 
 		if _, err := evalExecBlock(vm, node.ExecBlock, elems); err != nil {
 			return nil, err
 		}
 
 		vm.PopCallFrame()
-		return newObject, nil
+		return instance, nil
 	}
 	cmodel.SetConstructor(constructorLogic)
 
@@ -435,14 +433,18 @@ func evalImportStmt(vm *r.VM, node *syntax.ImportStmt) error {
 	switch nameInfo.LibType {
 	case r.LIB_TYPE_STD:
 		extModule = vm.AllocateModule(extLibName, nil)
-		library, err := stdlib.FindLibrary(extLibName)
+		library, err := vm.FindLibrary(extLibName)
 		if err != nil {
 			return err
 		}
+		// push a temp callframe to load library
+		vm.PushCallFrame(r.NewScriptCallFrame(extModule))
+
 		// duplicate export values into module
-		for k, v := range library.ExportValues {
+		for k, v := range library.GetAllExportValues() {
 			extModule.AddExportValue(k, v)
 		}
+		vm.PopCallFrame()
 		// Continue to import logic below instead of returning
 	case r.LIB_TYPE_VENDOR:
 	case r.LIB_TYPE_CUSTOM:
@@ -863,10 +865,10 @@ func evalLogicComparator(vm *r.VM, expr *syntax.LogicExpr) (*value.Bool, error) 
 	case syntax.LogicXNEQ:
 		cmpRes, cmpErr = compareLogicXEQ(left, right)
 		cmpRes = !cmpRes // reverse result
-	case syntax.LogicEQ: // logicEQ, only used in Number
-		cmpRes, cmpErr = compareLogicEQ(left, right)
+	case syntax.LogicEQ:
+		cmpRes, cmpErr = compareLogicXEQ(left, right)
 	case syntax.LogicNEQ:
-		cmpRes, cmpErr = compareLogicEQ(left, right)
+		cmpRes, cmpErr = compareLogicXEQ(left, right)
 		cmpRes = !cmpRes // reverse result
 	case syntax.LogicGT:
 		cmpRes, cmpErr = compareLogicGT(left, right)

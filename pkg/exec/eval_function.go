@@ -12,7 +12,7 @@ import (
 // compileFunction - create a Function object (with default param handler logic)
 // from Zn code (*syntax.BlockStmt). It's the constructor of 如何XX or (anoymous function in the future)
 func compileFunction(vm *r.VM, node *syntax.FunctionDeclareStmt) *value.Function {
-	var mainLogicHandler = func(params []r.Element) (r.Element, error) {
+	var mainLogicHandler = func(receiver r.Element, params []r.Element) (r.Element, error) {
 		// 2. do eval exec block
 		return evalExecBlock(vm, node.ExecBlock, params)
 	}
@@ -58,16 +58,20 @@ func evalFunctionCall(vm *r.VM, expr *syntax.FuncCallExpr) (r.Element, error) {
 }
 
 func execMethodFunction(vm *r.VM, root r.Element, funcName *r.IDName, params []r.Element) (r.Element, error) {
-	refModule := vm.GetCurrentModule()
-	if robj, ok := root.(*value.Object); ok {
-		_, refModuleX, err := vm.FindElementWithModule(r.NewIDName(robj.GetObjectName()))
+	switch robj := root.(type) {
+	case *value.Object:
+		_, refModule, err := vm.FindElementWithModule(r.NewIDName(robj.GetObjectName()))
 		if err != nil {
 			return nil, err
 		}
-		refModule = refModuleX
+		fnCallFrame := r.NewFunctionCallFrame(refModule, root)
+		vm.PushCallFrame(fnCallFrame)
+	default:
+		// for other types, we suppose it is from native code -
+		// usually for internal types like Number, String, Boolean, etc.
+		fnCallFrame := r.NewFunctionCallFrame(r.NativeCodeModule, root)
+		vm.PushCallFrame(fnCallFrame)
 	}
-	fnCallFrame := r.NewFunctionCallFrame(refModule, root)
-	vm.PushCallFrame(fnCallFrame)
 
 	elem, err := root.ExecMethod(funcName.GetLiteral(), params)
 	if err == nil {
