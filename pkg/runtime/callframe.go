@@ -64,6 +64,9 @@ func (cf *CallFrame) SetCurrentLine(line int) {
 }
 
 func (cf *CallFrame) GetSourceTextLine(line int) string {
+	if cf.programAST == nil {
+		return ""
+	}
 	if line < 0 || line >= len(cf.programAST.Lines) {
 		return ""
 	}

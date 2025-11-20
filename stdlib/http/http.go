@@ -1,7 +1,6 @@
 package http
 
 import (
-	"encoding/json"
 	"fmt"
 	"io"
 	nHTTP "net/http"
@@ -10,6 +9,7 @@ import (
 	"time"
 
 	r "github.com/DemoHn/Zn/pkg/runtime"
+	"github.com/DemoHn/Zn/pkg/util"
 	"github.com/DemoHn/Zn/pkg/value"
 )
 
@@ -49,19 +49,100 @@ var httpLIB *r.Library
 */
 var CLASS_HttpRequest = value.NewClassModel("HTTP请求").
 	DefineProperty("路径", value.NewString("")).
-	DefineProperty("方法", value.NewString("")).
+	DefineProperty("方法", value.NewString("GET")).
 	DefineProperty("头部", value.NewEmptyHashMap()).
 	DefineProperty("查询参数", value.NewEmptyHashMap()).
 	DefineProperty("内容", value.NewString("")).
 	DefineProperty("允许重定向", value.NewBool(true)).
 	DefineProperty("请求时限", value.NewNumber(30)).
 	DefineMethod("发送请求", value.NewFunction(func(receiver r.Element, values []r.Element) (r.Element, error) {
-		/*
-			receiver.GetProperty("XXXX")
-			or receiver.ExecMethod("YYYY")
-		*/
+		receiver.GetProperty("路径")
+		path, err1 := value.AssertPropertyElement[*value.String](receiver, "路径")
+		method, err2 := value.AssertPropertyElement[*value.String](receiver, "方法")
+		headers, err3 := value.AssertPropertyElement[*value.HashMap](receiver, "头部")
+		// assert String or HashMap
+		queryParam, err4 := value.BuildEitherPropertyElement[*value.String, *value.HashMap](receiver, "查询参数")
+		// assert String or HashMap
+		body, err5 := value.BuildEitherPropertyElement[*value.String, *value.HashMap](receiver, "内容")
+		allowRedicrect, err6 := value.AssertPropertyElement[*value.Bool](receiver, "允许重定向")
+		timeout, err7 := value.AssertPropertyElement[*value.Number](receiver, "请求时限")
 
-		return nil, nil
+		// assert errors
+		for _, e := range []error{err1, err2, err3, err4, err5, err6, err7} {
+			if e != nil {
+				return nil, e
+			}
+		}
+
+		// get params
+		pathValue := path.GetValue()
+		methodValue := method.GetValue()
+		headersValue := make(map[string]string)
+		// filter element to string
+		for k, v := range headers.GetValue() {
+			if str, ok := v.(*value.String); ok {
+				headersValue[k] = str.GetValue()
+			}
+		}
+
+		// get query param
+		queryParamU := UQueryParams{}
+		if queryParam.IsA() { // A:*String, B:*HashMap
+			queryParamU.isJSON = false
+			queryParamU.queryString = queryParam.GetA().GetValue()
+		} else {
+			queryParamU.isJSON = true
+
+			// from HashMap -> map[string][]string
+			queryParamU.queryDict = make(map[string][]string)
+			for k, v := range queryParam.GetB().GetValue() {
+				if vstr, ok := v.(*value.String); ok {
+					if _, ok := queryParamU.queryDict[k]; !ok {
+						queryParamU.queryDict[k] = []string{}
+					}
+					queryParamU.queryDict[k] = append(queryParamU.queryDict[k], vstr.GetValue())
+				}
+			}
+		}
+
+		var bodyValue string
+		if body.IsA() { // A:*String, B:*HashMap
+			bodyValue = body.GetA().GetValue()
+		} else {
+			bodyStr, err := util.HashMapToJSONString(body.GetB())
+			if err != nil {
+				return nil, err
+			}
+			bodyValue = bodyStr
+		}
+
+		allowRedirectValue := allowRedicrect.GetValue()
+		timeoutValue := timeout.GetValue()
+
+		// build request
+		req, err := buildHttpRequest(
+			pathValue,
+			methodValue,
+			headersValue,
+			queryParamU,
+			bodyValue,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		// sendRequest
+		resp, data, err := sendHttpRequest(req, allowRedirectValue, int(timeoutValue))
+		if err != nil {
+			return nil, err
+		}
+
+		// build HTTP响应 object
+		initProps := map[string]r.Element{
+			"状态码": value.NewNumber(float64(resp.StatusCode)),
+			"内容":  value.NewString(string(data)),
+		}
+		return value.NewObject(CLASS_HttpResposne, initProps), nil
 	}))
 
 // HTTP响应类型
@@ -93,7 +174,7 @@ func FN_sendHTTPRequest(receiver r.Element, values []r.Element) (r.Element, erro
 		method,
 		make(map[string]string),
 		UQueryParams{isJSON: false, queryString: ""},
-		UBody{isJSON: false, bodyString: ""},
+		"",
 	)
 	if err != nil {
 		return nil, value.ThrowException(err.Error())
@@ -124,18 +205,12 @@ type UQueryParams struct {
 	queryDict   map[string][]string
 }
 
-type UBody struct {
-	isJSON     bool
-	bodyString string
-	bodyDict   map[string]string
-}
-
 func buildHttpRequest(
 	url string,
 	method string,
 	headers map[string]string,
 	queryParams UQueryParams,
-	body UBody,
+	body string,
 ) (*nHTTP.Request, error) {
 	// #1. 解析url
 	urlObj, err := nURL.Parse(url)
@@ -160,43 +235,32 @@ func buildHttpRequest(
 
 	// #3. 匹配 queryParams
 	if queryParams.isJSON {
-		// construct query params value set
-		qValue := make(nURL.Values)
-		// flush old query params
-		for k, v := range queryParams.queryDict {
-			if len(v) > 0 {
-				qValue.Set(k, v[0])
-				// append reset value
-				for _, vi := range v[1:] {
-					qValue.Add(k, vi)
+		// for non-empty query params ONLY
+		if len(queryParams.queryDict) > 0 {
+			// construct query params value set
+			qValue := make(nURL.Values)
+			// flush old query params
+			for k, v := range queryParams.queryDict {
+				if len(v) > 0 {
+					qValue.Set(k, v[0])
+					// append reset value
+					for _, vi := range v[1:] {
+						qValue.Add(k, vi)
+					}
 				}
 			}
+			urlObj.RawQuery = qValue.Encode()
 		}
-		urlObj.RawQuery = qValue.Encode()
 	} else {
 		// queryParam is string
-		urlObj.RawQuery = nURL.QueryEscape(queryParams.queryString)
+		if queryParams.queryString != "" {
+			urlObj.RawQuery = nURL.QueryEscape(queryParams.queryString)
+		}
+
 	}
 
 	// #4. 设置body
 	finalHeaders := nHTTP.Header{}
-
-	bodyString := ""
-	if body.isJSON {
-		// set default header content-type for json
-		finalHeaders.Set("Content-Type", "application/json")
-
-		// construct body
-		bodyBytes, err := json.Marshal(body.bodyDict)
-		if err != nil {
-			return nil, fmt.Errorf("构造JSON请求体时出现异常 - %s", err.Error())
-		}
-
-		bodyString = string(bodyBytes)
-	} else {
-		finalHeaders.Set("Content-Type", "application/x-www-form-urlencoded")
-		bodyString = body.bodyString
-	}
 
 	// #5. 匹配 headers (may override content-type)
 	for k, v := range headers {
@@ -207,7 +271,7 @@ func buildHttpRequest(
 		Method:     method,
 		URL:        urlObj,
 		Header:     finalHeaders,
-		Body:       io.NopCloser(strings.NewReader(bodyString)),
+		Body:       io.NopCloser(strings.NewReader(body)),
 		Proto:      "HTTP/1.1",
 		ProtoMajor: 1,
 		ProtoMinor: 1,
