@@ -122,7 +122,7 @@ func (rw *RuntimeErrorWrapper) Error() string {
 		// append head lines
 		headTrace := callStack[0]
 		module := headTrace.GetModule()
-		isNativeModule := module.GetID() == r.NATIVE_CODE_MODULE_ID
+		isNativeModule := module.GetID() == r.NATIVE_CODE_MODULE_ID || module.GetProgram() == nil
 		errLines = append(errLines, fmtErrorLocationHeadLine(isNativeModule, module.GetName(), headTrace.GetCurrentLine()+1))
 
 		// get line text
@@ -135,7 +135,7 @@ func (rw *RuntimeErrorWrapper) Error() string {
 		// append body
 		for _, tr := range callStack[1:] {
 			trModule := tr.GetModule()
-			isNativeModule = trModule.GetID() == r.NATIVE_CODE_MODULE_ID
+			isNativeModule = trModule.GetID() == r.NATIVE_CODE_MODULE_ID || module.GetProgram() == nil
 			if trModule != nil {
 				errLines = append(errLines, fmtErrorLocationBodyLine(isNativeModule, trModule.GetName(), tr.GetCurrentLine()+1))
 				// get line text

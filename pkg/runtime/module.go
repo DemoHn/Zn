@@ -72,6 +72,10 @@ func (m *Module) GetExportValue(name string) (Element, error) {
 	}
 }
 
+func (m *Module) GetProgram() *syntax.Program {
+	return m.program
+}
+
 func (m *Module) GetAllExportValues() ElementMap {
 	return m.exportValues
 }
