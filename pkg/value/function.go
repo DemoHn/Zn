@@ -26,7 +26,16 @@ func (fn *Function) SetName(name string) *Function {
 // yields final result
 func (fn *Function) Exec(thisValue r.Element, params []r.Element) (r.Element, error) {
 	fnLogicHandler := fn.logicHandler
-	return fnLogicHandler(thisValue, params)
+	result, err := fnLogicHandler(thisValue, params)
+	// convert error to exception
+	if err != nil {
+		switch verr := err.(type) {
+		case *zerr.RuntimeError:
+			// TODO
+		}
+		return nil, NewException(err.Error())
+	}
+	return
 }
 
 // impl Value interface

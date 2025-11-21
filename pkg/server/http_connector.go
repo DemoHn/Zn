@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/DemoHn/Zn/pkg/runtime"
+	"github.com/DemoHn/Zn/pkg/util"
 	"github.com/DemoHn/Zn/pkg/value"
 	"github.com/DemoHn/Zn/pkg/value/ext"
 )
@@ -51,7 +52,8 @@ func SendHTTPResponse(result runtime.Element, err error, w http.ResponseWriter) 
 		case *value.Number:
 			respondOK(w, fmt.Sprintf("%v", v.GetValue()))
 		case *value.HashMap, *value.Array:
-			jsonBytes, _ := json.Marshal(buildPlainStrItem(v))
+			plainValue := util.ElementToPlainValue(v)
+			jsonBytes, _ := json.Marshal(plainValue)
 			// write resp body
 			respondJSON(w, jsonBytes)
 		default:

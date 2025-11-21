@@ -3,7 +3,7 @@ package server
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 
 	"github.com/DemoHn/Zn/pkg/exec"
@@ -17,7 +17,7 @@ type playgroundReq struct {
 }
 
 func ReadRequestForPlayground(r *http.Request) ([]rune, map[string]runtime.Element, error) {
-	body, err := ioutil.ReadAll(r.Body)
+	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		return nil, nil, fmt.Errorf("读取请求内容出现异常：%s", err.Error())
 	}

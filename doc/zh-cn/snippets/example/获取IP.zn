@@ -3,14 +3,14 @@
 
 如何获取IP？
     令Q = (新建HTTP请求)
-    Q的路径 = “https://api.ipify.org?format=json”
+    Q的路径 = “https://ip-api.com/json/”
     Q的方法 = “GET”
 
     令结果 = 以Q(发送请求)
     令IP数据 = (解析JSON：结果的内容)
-    输出IP数据#“ip”
+    输出IP数据#“query”
 
     拦截异常：
-        输出“-获取失败-”
+        输出“获取IP失败，原因是{}” % [其内容]
 
 输出(获取IP)

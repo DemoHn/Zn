@@ -22,6 +22,12 @@ func NewArray(value []r.Element) *Array {
 	return &Array{value}
 }
 
+func NewEmptyArray() *Array {
+	return &Array{
+		value: []r.Element{},
+	}
+}
+
 func (ar *Array) Length() int {
 	return len(ar.value)
 }

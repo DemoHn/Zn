@@ -1,13 +1,6 @@
 package http
 
 import (
-	"fmt"
-	"io"
-	nHTTP "net/http"
-	nURL "net/url"
-	"strings"
-	"time"
-
 	r "github.com/DemoHn/Zn/pkg/runtime"
 	"github.com/DemoHn/Zn/pkg/util"
 	"github.com/DemoHn/Zn/pkg/value"
@@ -55,95 +48,7 @@ var CLASS_HttpRequest = value.NewClassModel("HTTP请求").
 	DefineProperty("内容", value.NewString("")).
 	DefineProperty("允许重定向", value.NewBool(true)).
 	DefineProperty("请求时限", value.NewNumber(30)).
-	DefineMethod("发送请求", value.NewFunction(func(receiver r.Element, values []r.Element) (r.Element, error) {
-		receiver.GetProperty("路径")
-		path, err1 := value.AssertPropertyElement[*value.String](receiver, "路径")
-		method, err2 := value.AssertPropertyElement[*value.String](receiver, "方法")
-		headers, err3 := value.AssertPropertyElement[*value.HashMap](receiver, "头部")
-		// assert String or HashMap
-		queryParam, err4 := value.BuildEitherPropertyElement[*value.String, *value.HashMap](receiver, "查询参数")
-		// assert String or HashMap
-		body, err5 := value.BuildEitherPropertyElement[*value.String, *value.HashMap](receiver, "内容")
-		allowRedicrect, err6 := value.AssertPropertyElement[*value.Bool](receiver, "允许重定向")
-		timeout, err7 := value.AssertPropertyElement[*value.Number](receiver, "请求时限")
-
-		// assert errors
-		for _, e := range []error{err1, err2, err3, err4, err5, err6, err7} {
-			if e != nil {
-				return nil, e
-			}
-		}
-
-		// get params
-		pathValue := path.GetValue()
-		methodValue := method.GetValue()
-		headersValue := make(map[string]string)
-		// filter element to string
-		for k, v := range headers.GetValue() {
-			if str, ok := v.(*value.String); ok {
-				headersValue[k] = str.GetValue()
-			}
-		}
-
-		// get query param
-		queryParamU := UQueryParams{}
-		if queryParam.IsA() { // A:*String, B:*HashMap
-			queryParamU.isJSON = false
-			queryParamU.queryString = queryParam.GetA().GetValue()
-		} else {
-			queryParamU.isJSON = true
-
-			// from HashMap -> map[string][]string
-			queryParamU.queryDict = make(map[string][]string)
-			for k, v := range queryParam.GetB().GetValue() {
-				if vstr, ok := v.(*value.String); ok {
-					if _, ok := queryParamU.queryDict[k]; !ok {
-						queryParamU.queryDict[k] = []string{}
-					}
-					queryParamU.queryDict[k] = append(queryParamU.queryDict[k], vstr.GetValue())
-				}
-			}
-		}
-
-		var bodyValue string
-		if body.IsA() { // A:*String, B:*HashMap
-			bodyValue = body.GetA().GetValue()
-		} else {
-			bodyStr, err := util.HashMapToJSONString(body.GetB())
-			if err != nil {
-				return nil, err
-			}
-			bodyValue = bodyStr
-		}
-
-		allowRedirectValue := allowRedicrect.GetValue()
-		timeoutValue := timeout.GetValue()
-
-		// build request
-		req, err := buildHttpRequest(
-			pathValue,
-			methodValue,
-			headersValue,
-			queryParamU,
-			bodyValue,
-		)
-		if err != nil {
-			return nil, err
-		}
-
-		// sendRequest
-		resp, data, err := sendHttpRequest(req, allowRedirectValue, int(timeoutValue))
-		if err != nil {
-			return nil, err
-		}
-
-		// build HTTP响应 object
-		initProps := map[string]r.Element{
-			"状态码": value.NewNumber(float64(resp.StatusCode)),
-			"内容":  value.NewString(string(data)),
-		}
-		return value.NewObject(CLASS_HttpResposne, initProps), nil
-	}))
+	DefineMethod("发送请求", value.NewFunction(methodSendRequest))
 
 // HTTP响应类型
 /**
@@ -166,21 +71,26 @@ func FN_sendHTTPRequest(receiver r.Element, values []r.Element) (r.Element, erro
 	}
 
 	// #1. get exact type of params
+	const defaultTimeout = 30
+
 	method := values[0].(*value.String).GetValue()
 	url := values[1].(*value.String).GetValue()
+	emptyHeader := [][2]string{}
+	emptyQuery := [][2]string{}
+	emptyBody := util.ReqBody{}
 
-	req, err := buildHttpRequest(
+	req, err := util.BuildBaseHttpRequest(
 		url,
 		method,
-		make(map[string]string),
-		UQueryParams{isJSON: false, queryString: ""},
-		"",
+		emptyHeader,
+		emptyQuery,
+		emptyBody,
 	)
 	if err != nil {
 		return nil, value.ThrowException(err.Error())
 	}
 
-	resp, body, err := sendHttpRequest(req, true, 30)
+	resp, body, err := util.SendHttpRequest(req, true, defaultTimeout)
 	if err != nil {
 		return nil, value.ThrowException(err.Error())
 	}
@@ -195,112 +105,6 @@ func FN_sendHTTPRequest(receiver r.Element, values []r.Element) (r.Element, erro
 
 func Export() *r.Library {
 	return httpLIB
-}
-
-// /////// http internal logic
-// UQueryParams - union type for query params (if isJSON = true, then use queryDict; otherwise use queryString)
-type UQueryParams struct {
-	isJSON      bool
-	queryString string
-	queryDict   map[string][]string
-}
-
-func buildHttpRequest(
-	url string,
-	method string,
-	headers map[string]string,
-	queryParams UQueryParams,
-	body string,
-) (*nHTTP.Request, error) {
-	// #1. 解析url
-	urlObj, err := nURL.Parse(url)
-	if err != nil {
-		return nil, fmt.Errorf("解析URL时出现异常 - %s", err.Error())
-	}
-	// #2. 匹配 method
-	var methodMatch bool = false
-	if method == "" {
-		method = "GET"
-	}
-
-	for _, method := range []string{"get", "post", "put", "delete", "head", "options"} {
-		if method == strings.ToLower(method) {
-			methodMatch = true
-			break
-		}
-	}
-	if !methodMatch {
-		return nil, fmt.Errorf("不支持的HTTP请求方法 - %s", method)
-	}
-
-	// #3. 匹配 queryParams
-	if queryParams.isJSON {
-		// for non-empty query params ONLY
-		if len(queryParams.queryDict) > 0 {
-			// construct query params value set
-			qValue := make(nURL.Values)
-			// flush old query params
-			for k, v := range queryParams.queryDict {
-				if len(v) > 0 {
-					qValue.Set(k, v[0])
-					// append reset value
-					for _, vi := range v[1:] {
-						qValue.Add(k, vi)
-					}
-				}
-			}
-			urlObj.RawQuery = qValue.Encode()
-		}
-	} else {
-		// queryParam is string
-		if queryParams.queryString != "" {
-			urlObj.RawQuery = nURL.QueryEscape(queryParams.queryString)
-		}
-
-	}
-
-	// #4. 设置body
-	finalHeaders := nHTTP.Header{}
-
-	// #5. 匹配 headers (may override content-type)
-	for k, v := range headers {
-		finalHeaders.Set(k, v)
-	}
-
-	return &nHTTP.Request{
-		Method:     method,
-		URL:        urlObj,
-		Header:     finalHeaders,
-		Body:       io.NopCloser(strings.NewReader(body)),
-		Proto:      "HTTP/1.1",
-		ProtoMajor: 1,
-		ProtoMinor: 1,
-	}, nil
-}
-
-// sendHttpRequest - suppose timeout
-func sendHttpRequest(req *nHTTP.Request, allowRedicrect bool, timeout int) (*nHTTP.Response, []byte, error) {
-	client := &nHTTP.Client{
-		CheckRedirect: func(req *nHTTP.Request, via []*nHTTP.Request) error {
-			if !allowRedicrect {
-				return fmt.Errorf("此请求不允许自动重定向")
-			}
-			return nil
-		},
-		Timeout: time.Duration(timeout) * time.Second,
-	}
-	resp, err := client.Do(req)
-	if err != nil {
-		return nil, []byte{}, value.ThrowException("发送HTTP请求时出现异常 - " + err.Error())
-	}
-	defer resp.Body.Close()
-
-	content, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, []byte{}, value.ThrowException("读取HTTP响应内容时出现异常 - " + err.Error())
-	}
-
-	return resp, content, nil
 }
 
 func init() {
