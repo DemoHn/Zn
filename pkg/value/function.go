@@ -29,13 +29,23 @@ func (fn *Function) Exec(thisValue r.Element, params []r.Element) (r.Element, er
 	result, err := fnLogicHandler(thisValue, params)
 	// convert error to exception
 	if err != nil {
-		switch verr := err.(type) {
+		switch err.(type) {
+		case *zerr.SyntaxError:
+		case *zerr.SemanticError:
+		case *zerr.IOError:
+		case *zerr.Signal:
+			// return the original error AS IS
+			return nil, err
+		case *Exception:
+			return nil, err
 		case *zerr.RuntimeError:
-			// TODO
+			return nil, NewException(err.Error())
+		default:
+			// for other types of error (native errors), wrap the error as an Exception
+			return nil, NewException(err.Error())
 		}
-		return nil, NewException(err.Error())
 	}
-	return
+	return result, nil
 }
 
 // impl Value interface

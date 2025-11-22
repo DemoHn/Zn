@@ -43,6 +43,7 @@ var httpLIB *r.Library
 	其请求时限 = 30
 */
 var CLASS_HttpRequest = value.NewClassModel("HTTP请求").
+	DefineProperty("URL", value.NewString("")).
 	DefineProperty("路径", value.NewString("")).
 	DefineProperty("方法", value.NewString("GET")).
 	DefineProperty("头部", value.NewEmptyHashMap()).

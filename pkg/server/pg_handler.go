@@ -11,6 +11,20 @@ import (
 	"github.com/DemoHn/Zn/pkg/value"
 )
 
+type ZnPlaygroundHandler struct {
+	interpreter *exec.Interpreter
+}
+
+func (ph *ZnPlaygroundHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	source, varInput, err := ReadRequestForPlayground(r)
+	if err != nil {
+		WriteResponseForPlayground(w, nil, err)
+	} else {
+		rtnValue, err := ph.interpreter.LoadScript(source).Execute(varInput)
+		WriteResponseForPlayground(w, rtnValue, err)
+	}
+}
+
 type playgroundReq struct {
 	VarInput   string
 	SourceCode string

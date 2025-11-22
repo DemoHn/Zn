@@ -5,11 +5,33 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/DemoHn/Zn/pkg/exec"
 	"github.com/DemoHn/Zn/pkg/runtime"
 	"github.com/DemoHn/Zn/pkg/util"
 	"github.com/DemoHn/Zn/pkg/value"
 	"github.com/DemoHn/Zn/pkg/value/ext"
 )
+
+type ZnHttpHandler struct {
+	interpreter *exec.Interpreter
+	entryFile   string
+}
+
+func (h *ZnHttpHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	reqObj, err := ConstructHTTPRequestObject(r)
+	if err != nil {
+		SendHTTPResponse(nil, err, w)
+		return
+	}
+
+	varInput := runtime.ElementMap{
+		"当前请求": reqObj,
+	}
+	// execute code
+	rtnValue, err := h.interpreter.LoadFile(h.entryFile).Execute(varInput)
+	SendHTTPResponse(rtnValue, err, w)
+
+}
 
 /** construct 当前请求 object for HTTP handler input
 NOTE: Definition of class `HTTP请求`:

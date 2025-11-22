@@ -101,6 +101,7 @@ func SendHttpRequest(req *http.Request, allowRedicrect bool, timeout int) (*http
 		},
 		Timeout: time.Duration(timeout) * time.Second,
 	}
+
 	resp, err := client.Do(req)
 	if err != nil {
 		return nil, []byte{}, err
