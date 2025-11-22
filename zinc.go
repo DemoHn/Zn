@@ -33,11 +33,11 @@ var NewZnObject = value.NewObject
 var NewZnNull = value.NewNull
 
 // servers & handlers
-type ZnHttpHandler = server.ZnHttpHandler
-type ZnPlaygroundHandler = server.ZnPlaygroundHandler
+var NewPlaygroundHandler = server.NewZnPlaygroundHandler
+var NewHttpHandler = server.NewZnHttpHandler
 
-var NewZnPMServer = server.NewZnPMServer
-var NewZnThreadServer = server.NewZnThreadServer
+var NewPMServer = server.NewZnPMServer
+var NewThreadServer = server.NewZnThreadServer
 
 const ZINC_VERSION = "rev08"
 

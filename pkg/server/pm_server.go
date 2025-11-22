@@ -37,6 +37,7 @@ const (
 // To start a ZnPMServer, we must call StartMaster() first to create network connection, then spawn another process to call StartWorker() to run actual `reqHandler` logic.
 type ZnPMServer struct {
 	childProcManager
+	config     ZnPMServerConfig
 	reqHandler http.Handler
 }
 
@@ -63,7 +64,7 @@ type ZnPMServerConfig struct {
 	Timeout  int
 }
 
-func NewZnPMServer() *ZnPMServer {
+func NewZnPMServer(config ZnPMServerConfig) *ZnPMServer {
 	return &ZnPMServer{
 		childProcManager: childProcManager{
 			childs:     make(map[int]workerState),
@@ -72,6 +73,7 @@ func NewZnPMServer() *ZnPMServer {
 			delChan:    make(chan int),
 			refCount:   0,
 		},
+		config: config,
 	}
 }
 
@@ -79,7 +81,7 @@ func (zns *ZnPMServer) SetHandler(handler http.Handler) {
 	zns.reqHandler = handler
 }
 
-func (zns *ZnPMServer) Start(connUrl string, cfg ZnPMServerConfig) error {
+func (zns *ZnPMServer) Start(connUrl string) error {
 	childWorkerFlag := false
 
 	// check if --child-worker flag exists
@@ -98,7 +100,7 @@ func (zns *ZnPMServer) Start(connUrl string, cfg ZnPMServerConfig) error {
 		}
 	} else {
 		//// otherwise, just listen to the server
-		if err := zns.StartMaster(connUrl, cfg); err != nil {
+		if err := zns.StartMaster(connUrl, zns.config); err != nil {
 			return err
 		}
 	}

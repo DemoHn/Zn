@@ -15,13 +15,17 @@ type ZnPlaygroundHandler struct {
 	interpreter *exec.Interpreter
 }
 
+func NewZnPlaygroundHandler(interpreter *exec.Interpreter) *ZnPlaygroundHandler {
+	return &ZnPlaygroundHandler{interpreter: interpreter}
+}
+
 func (ph *ZnPlaygroundHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	source, varInput, err := ReadRequestForPlayground(r)
+	source, varInput, err := readRequestForPlayground(r)
 	if err != nil {
-		WriteResponseForPlayground(w, nil, err)
+		writeResponseForPlayground(w, nil, err)
 	} else {
 		rtnValue, err := ph.interpreter.LoadScript(source).Execute(varInput)
-		WriteResponseForPlayground(w, rtnValue, err)
+		writeResponseForPlayground(w, rtnValue, err)
 	}
 }
 
@@ -30,7 +34,7 @@ type playgroundReq struct {
 	SourceCode string
 }
 
-func ReadRequestForPlayground(r *http.Request) ([]rune, map[string]runtime.Element, error) {
+func readRequestForPlayground(r *http.Request) ([]rune, map[string]runtime.Element, error) {
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		return nil, nil, fmt.Errorf("读取请求内容出现异常：%s", err.Error())
@@ -51,7 +55,7 @@ func ReadRequestForPlayground(r *http.Request) ([]rune, map[string]runtime.Eleme
 	return []rune(reqInfo.SourceCode), map[string]runtime.Element{}, nil
 }
 
-func WriteResponseForPlayground(w http.ResponseWriter, rtnValue runtime.Element, err error) {
+func writeResponseForPlayground(w http.ResponseWriter, rtnValue runtime.Element, err error) {
 	if err != nil {
 		respondError(w, err)
 		return

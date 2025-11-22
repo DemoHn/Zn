@@ -22,15 +22,17 @@ var (
 		Short: "zinc playground",
 		Long:  "zinc playground - 在启动服务器之后，用户发送HTTP请求并提交代码后即可执行，并返回对应的结果；这样用户可以线上编写并运行代码",
 		Run: func(c *cobra.Command, args []string) {
-			err := zinc.NewServer().
-				SetPlaygroundHandler().
-				SetPMServerConfig(server.ZnPMServerConfig{
-					InitProcs: initProcs,
-					MaxProcs:  maxProcs,
-					Timeout:   timeout,
-				}).
-				Launch(connUrl)
+			interpreter := zinc.NewInterpreter()
+			// set Playground MODE
+			playgroundHandler := zinc.NewPlaygroundHandler(interpreter)
+			// set FPM server (instead of goroutine server)
+			pmServer := zinc.NewPMServer(server.ZnPMServerConfig{
+				InitProcs: initProcs,
+				MaxProcs:  maxProcs,
+				Timeout:   timeout,
+			})
 
+			err := interpreter.SetMainServer(pmServer, playgroundHandler).Listen(connUrl)
 			if err != nil {
 				fmt.Printf("启动服务器时发生异常：%s\n", err.Error())
 				return

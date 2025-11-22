@@ -17,10 +17,14 @@ type ZnHttpHandler struct {
 	entryFile   string
 }
 
+func NewZnHttpHandler(interpreter *exec.Interpreter, entryFile string) *ZnHttpHandler {
+	return &ZnHttpHandler{interpreter: interpreter, entryFile: entryFile}
+}
+
 func (h *ZnHttpHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	reqObj, err := ConstructHTTPRequestObject(r)
+	reqObj, err := constructHTTPRequestObject(r)
 	if err != nil {
-		SendHTTPResponse(nil, err, w)
+		sendHTTPResponse(nil, err, w)
 		return
 	}
 
@@ -29,7 +33,7 @@ func (h *ZnHttpHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	// execute code
 	rtnValue, err := h.interpreter.LoadFile(h.entryFile).Execute(varInput)
-	SendHTTPResponse(rtnValue, err, w)
+	sendHTTPResponse(rtnValue, err, w)
 
 }
 
@@ -60,11 +64,11 @@ NOTE2: Definition of class `HTTP响应`:
 	其内容 = “Hello World”
 */
 
-func ConstructHTTPRequestObject(r *http.Request) (runtime.Element, error) {
+func constructHTTPRequestObject(r *http.Request) (runtime.Element, error) {
 	return ext.NewHTTPRequest(r), nil
 }
 
-func SendHTTPResponse(result runtime.Element, err error, w http.ResponseWriter) {
+func sendHTTPResponse(result runtime.Element, err error, w http.ResponseWriter) {
 	if err != nil {
 		respondError(w, err)
 	} else {
