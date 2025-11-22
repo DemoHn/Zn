@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"net/http"
 
+	zerr "github.com/DemoHn/Zn/pkg/error"
 	"github.com/DemoHn/Zn/pkg/exec"
 	"github.com/DemoHn/Zn/pkg/runtime"
 	"github.com/DemoHn/Zn/pkg/util"
 	"github.com/DemoHn/Zn/pkg/value"
-	"github.com/DemoHn/Zn/pkg/value/ext"
 )
 
 type ZnHttpHandler struct {
@@ -22,7 +22,7 @@ func NewZnHttpHandler(interpreter *exec.Interpreter, entryFile string) *ZnHttpHa
 }
 
 func (h *ZnHttpHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	reqObj, err := constructHTTPRequestObject(r)
+	reqObj, err := buildIncomingRequest(r)
 	if err != nil {
 		sendHTTPResponse(nil, err, w)
 		return
@@ -37,35 +37,96 @@ func (h *ZnHttpHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 }
 
-/** construct 当前请求 object for HTTP handler input
-NOTE: Definition of class `HTTP请求`:
+/** construct 传入请求 (incoming request) object for HTTP handler input
+NOTE: the 传入请求 class is different from @HTTP-HTTP请求 class,
+  1. the properties of 传入请求 class is READONLY
+  2. no other method (like 发送请求) for the class
 
-定义HTTP请求：
+Actually, the 传入请求 class is just a dataclass to map incoming *http.Request data!
+
+定义传入请求：
+	其URL = “http://127.0.0.1:3862/create”
 	其路径 = “/create”
 	其方法 = “POST”
-	其头部 =【
+	其头部 = [
 		“Content-Length” = “20”
 		“Content-Type” = “application/json”
-	】
-	其查询参数 = 【
+	]
+	其查询参数 = [
 		“A” = “20”
-		“B” =【“30”、“40”】
-	】
-
-	// 根据 content-type 智能解析HTTP请求内容，得到对应的对象
-	如何解析内容，得到内容对象
-
-NOTE2: Definition of class `HTTP响应`:
-定义HTTP响应：
-	其状态码 = 200
-	其头部 = 【
-		“Content-Type” =「text/plain; charset="utf-8"」
-	】
-	其内容 = “Hello World”
+		“B” = [“30”、“40”]
+	]
 */
 
-func constructHTTPRequestObject(r *http.Request) (runtime.Element, error) {
-	return ext.NewHTTPRequest(r), nil
+type IncomingRequest struct {
+	URL     *value.String
+	Path    *value.String
+	Method  *value.String
+	Headers *value.HashMap
+	Query   *value.HashMap
+}
+
+func (iq *IncomingRequest) String() string {
+	return fmt.Sprintf("<类型·传入请求 (URL=%s)>", value.StringifyValue(iq.URL))
+}
+
+func (iq *IncomingRequest) GetProperty(name string) (runtime.Element, error) {
+	switch name {
+	case "URL":
+		return iq.URL, nil
+	case "路径":
+		return iq.Path, nil
+	case "方法":
+		return iq.Method, nil
+	case "头部":
+		return iq.Headers, nil
+	case "查询参数":
+		return iq.Query, nil
+	default:
+		return nil, zerr.PropertyNotFound(name)
+	}
+}
+
+func (iq *IncomingRequest) SetProperty(name string, value runtime.Element) error {
+	return zerr.PropertyNotFound(name)
+}
+
+func (iq *IncomingRequest) ExecMethod(name string, values []runtime.Element) (runtime.Element, error) {
+	return nil, zerr.MethodNotFound(name)
+}
+
+func buildIncomingRequest(r *http.Request) (runtime.Element, error) {
+	reqObj := &IncomingRequest{
+		URL:     value.NewString(r.URL.String()),
+		Path:    value.NewString(r.URL.Path),
+		Method:  value.NewString(r.Method),
+		Headers: value.NewEmptyHashMap(),
+		Query:   value.NewEmptyHashMap(),
+	}
+	for k, v := range r.Header {
+		reqObj.Headers.AppendKVPair(value.KVPair{
+			Key:   k,
+			Value: value.NewString(v[0]),
+		})
+	}
+	for k, v := range r.URL.Query() {
+		var pairValue runtime.Element
+		if len(v) == 0 {
+			continue
+		} else if len(v) == 1 {
+			pairValue = value.NewString(v[0])
+		} else {
+			pairValue = value.NewEmptyArray()
+			for _, vItem := range v {
+				pairValue.(*value.Array).AppendValue(value.NewString(vItem))
+			}
+		}
+		reqObj.Query.AppendKVPair(value.KVPair{
+			Key:   k,
+			Value: pairValue,
+		})
+	}
+	return reqObj, nil
 }
 
 func sendHTTPResponse(result runtime.Element, err error, w http.ResponseWriter) {
