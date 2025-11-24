@@ -26,8 +26,13 @@ func JSONStringToElement(jsonStr *value.String) (r.Element, error) {
 	return buildElementFromPlainValue(plainMap), nil
 }
 
-func ElementToPlainValue(elem r.Element) any {
-	return buildPlainValueFromElement(elem)
+func ElementToJSONString(elem r.Element) (*value.String, error) {
+	plainValue := buildPlainValueFromElement(elem)
+	jsonStr, err := json.Marshal(plainValue)
+	if err != nil {
+		return nil, value.ThrowException("生成JSON失败 - " + err.Error())
+	}
+	return value.NewString(string(jsonStr)), nil
 }
 
 func buildPlainValueFromElement(elem r.Element) any {

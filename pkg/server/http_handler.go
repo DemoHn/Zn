@@ -1,7 +1,6 @@
 package server
 
 import (
-	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -163,10 +162,13 @@ func sendHTTPResponse(result runtime.Element, err error, w http.ResponseWriter) 
 		case *value.Number:
 			respondOK(w, fmt.Sprintf("%v", v.GetValue()))
 		case *value.HashMap, *value.Array:
-			plainValue := util.ElementToPlainValue(v)
-			jsonBytes, _ := json.Marshal(plainValue)
+			jsonStr, err := util.ElementToJSONString(v)
 			// write resp body
-			respondJSON(w, jsonBytes)
+			if err != nil {
+				respondError(w, err)
+			} else {
+				respondJSON(w, []byte(jsonStr.GetValue()))
+			}
 		default:
 			respondOK(w, v.String())
 		}
