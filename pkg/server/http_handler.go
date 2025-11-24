@@ -3,6 +3,7 @@ package server
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 
 	zerr "github.com/DemoHn/Zn/pkg/error"
@@ -59,6 +60,7 @@ Actually, the 传入请求 class is just a dataclass to map incoming *http.Reque
 */
 
 type IncomingRequest struct {
+	Request *http.Request
 	URL     *value.String
 	Path    *value.String
 	Method  *value.String
@@ -67,7 +69,7 @@ type IncomingRequest struct {
 }
 
 func (iq *IncomingRequest) String() string {
-	return fmt.Sprintf("‹类型·传入请求 (URL=%s)›", iq.URL.String())
+	return fmt.Sprintf("‹对象·传入请求 (URL=%s)›", iq.URL.String())
 }
 
 func (iq *IncomingRequest) GetProperty(name string) (runtime.Element, error) {
@@ -92,11 +94,33 @@ func (iq *IncomingRequest) SetProperty(name string, value runtime.Element) error
 }
 
 func (iq *IncomingRequest) ExecMethod(name string, values []runtime.Element) (runtime.Element, error) {
+	if name == "读取内容" {
+		return buildIncomingRequestBody(iq.Request)
+	}
+
 	return nil, zerr.MethodNotFound(name)
+}
+
+func buildIncomingRequestBody(req *http.Request) (runtime.Element, error) {
+	if req.Body == nil {
+		return value.NewString(""), nil
+	}
+
+	body, err := io.ReadAll(req.Body)
+	if err != nil {
+		return nil, value.ThrowException("读取请求内容出现异常")
+	}
+
+	contentType := req.Header.Get("Content-Type")
+	if contentType == "application/json" {
+		return util.JSONStringToElement(value.NewString(string(body)))
+	}
+	return value.NewString(string(body)), nil
 }
 
 func buildIncomingRequest(r *http.Request) (runtime.Element, error) {
 	reqObj := &IncomingRequest{
+		Request: r,
 		URL:     value.NewString(r.URL.String()),
 		Path:    value.NewString(r.URL.Path),
 		Method:  value.NewString(r.Method),

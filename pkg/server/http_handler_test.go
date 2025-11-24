@@ -1,4 +1,4 @@
-package ext
+package server
 
 import (
 	"net/http"
@@ -15,7 +15,7 @@ func TestHTTPRequest_GetProperty(t *testing.T) {
 		t.Fatalf("Failed to create request: %v", err)
 	}
 
-	httpRequest := NewHTTPRequest(req)
+	httpRequest, _ := buildIncomingRequest(req)
 
 	tests := []struct {
 		propertyName string
@@ -48,7 +48,7 @@ func TestHTTPRequest_GetHeaders(t *testing.T) {
 	req.Header.Add("X-Custom-Header", "custom-value")
 	req.Header.Add("x-lowercase-header", "lowercase-value")
 
-	httpRequest := NewHTTPRequest(req)
+	httpRequest, _ := buildIncomingRequest(req)
 
 	prop, err := httpRequest.GetProperty("头部")
 	if err != nil {
@@ -76,7 +76,7 @@ func TestHTTPRequest_GetQueryParams(t *testing.T) {
 		t.Fatalf("Failed to create request: %v", err)
 	}
 
-	httpRequest := NewHTTPRequest(req)
+	httpRequest, _ := buildIncomingRequest(req)
 
 	prop, err := httpRequest.GetProperty("查询参数")
 	if err != nil {
@@ -99,7 +99,7 @@ func TestHTTPRequest_GetQueryParams_Array(t *testing.T) {
 		t.Fatalf("Failed to create request: %v", err)
 	}
 
-	httpRequest := NewHTTPRequest(req)
+	httpRequest, _ := buildIncomingRequest(req)
 
 	prop, err := httpRequest.GetProperty("查询参数")
 	if err != nil {
@@ -131,7 +131,7 @@ func TestHTTPRequest_ReadBody(t *testing.T) {
 		t.Fatalf("Failed to create request: %v", err)
 	}
 
-	httpRequest := NewHTTPRequest(req)
+	httpRequest, _ := buildIncomingRequest(req)
 
 	result, err := httpRequest.ExecMethod("读取内容", nil)
 	if err != nil {
@@ -151,7 +151,7 @@ func TestHTTPRequest_ReadBody_JSON(t *testing.T) {
 	}
 	req.Header.Set("Content-Type", "application/json")
 
-	httpRequest := NewHTTPRequest(req)
+	httpRequest, _ := buildIncomingRequest(req)
 
 	result, err := httpRequest.ExecMethod("读取内容", nil)
 	if err != nil {
