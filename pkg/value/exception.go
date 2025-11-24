@@ -1,6 +1,8 @@
 package value
 
 import (
+	"fmt"
+
 	zerr "github.com/DemoHn/Zn/pkg/error"
 	r "github.com/DemoHn/Zn/pkg/runtime"
 )
@@ -11,6 +13,10 @@ type Exception struct {
 
 func NewException(message string) *Exception {
 	return &Exception{Message: message}
+}
+
+func (e *Exception) String() string {
+	return fmt.Sprintf("‹异常·%s›", e.Error())
 }
 
 func (e *Exception) Error() string {

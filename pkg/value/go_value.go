@@ -11,6 +11,11 @@ type GoValue struct {
 	value interface{}
 }
 
+func (gv *GoValue) String() string {
+	// TBD
+	return ""
+}
+
 func NewGoValue(tag string, value interface{}) *GoValue {
 	return &GoValue{tag, value}
 }

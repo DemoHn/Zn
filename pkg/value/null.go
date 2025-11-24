@@ -13,6 +13,10 @@ func NewNull() *Null {
 	return &Null{}
 }
 
+func (s *Null) String() string {
+	return "空"
+}
+
 // GetProperty -
 func (s *Null) GetProperty(name string) (r.Element, error) {
 	return nil, zerr.PropertyNotFound(name)

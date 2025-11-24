@@ -1,6 +1,8 @@
 package value
 
 import (
+	"fmt"
+
 	zerr "github.com/DemoHn/Zn/pkg/error"
 	r "github.com/DemoHn/Zn/pkg/runtime"
 )
@@ -15,6 +17,13 @@ func NewFunction(executor r.FuncExecutor) *Function {
 		name:         "",
 		logicHandler: executor,
 	}
+}
+
+func (fn *Function) String() string {
+	if fn.name == "" {
+		return "‹某方法›"
+	}
+	return fmt.Sprintf("‹方法·%s›", fn.name)
 }
 
 func (fn *Function) SetName(name string) *Function {
