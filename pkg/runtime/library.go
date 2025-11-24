@@ -5,6 +5,7 @@ type ExportableElement interface {
 	GetProperty(name string) (Element, error)
 	SetProperty(name string, value Element) error
 	ExecMethod(name string, params []Element) (Element, error)
+	String() string
 	Exportable() bool
 }
 

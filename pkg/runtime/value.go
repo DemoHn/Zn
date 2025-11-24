@@ -9,6 +9,7 @@ package runtime
 // 2. SetProperty - set the value of some property
 // 3. ExecMethod - execute one method from method list
 type Element interface {
+	String() string
 	GetProperty(name string) (Element, error)
 	SetProperty(name string, value Element) error
 	ExecMethod(name string, params []Element) (Element, error)

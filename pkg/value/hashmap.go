@@ -51,7 +51,7 @@ func NewEmptyHashMap() *HashMap {
 func (hm *HashMap) String() string {
 	var strItem = []string{}
 	for _, v := range hm.keyOrder {
-		strItem = append(strItem, fmt.Sprintf("%s=%s", v, hm.value.String()))
+		strItem = append(strItem, fmt.Sprintf("%s=%s", v, hm.value[v].String()))
 	}
 
 	return fmt.Sprintf("[%s]", strings.Join(strItem, "，"))

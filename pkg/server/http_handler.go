@@ -67,7 +67,7 @@ type IncomingRequest struct {
 }
 
 func (iq *IncomingRequest) String() string {
-	return fmt.Sprintf("<类型·传入请求 (URL=%s)>", value.StringifyValue(iq.URL))
+	return fmt.Sprintf("‹类型·传入请求 (URL=%s)›", iq.URL.String())
 }
 
 func (iq *IncomingRequest) GetProperty(name string) (runtime.Element, error) {
@@ -144,7 +144,7 @@ func sendHTTPResponse(result runtime.Element, err error, w http.ResponseWriter) 
 			// write resp body
 			respondJSON(w, jsonBytes)
 		default:
-			respondOK(w, value.StringifyValue(v))
+			respondOK(w, v.String())
 		}
 	}
 }

@@ -61,7 +61,7 @@ func newDisplayFunc() *value.Function {
 		// display format string
 		var items = []string{}
 		for _, param := range params {
-			items = append(items, value.StringifyValue(param))
+			items = append(items, param.String())
 		}
 
 		os.Stdout.Write([]byte(fmt.Sprintf("%s\n", strings.Join(items, " "))))

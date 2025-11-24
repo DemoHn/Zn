@@ -66,6 +66,6 @@ func writeResponseForPlayground(w http.ResponseWriter, rtnValue runtime.Element,
 	case *value.Null:
 		respondOK(w, "")
 	default:
-		respondOK(w, value.StringifyValue(rtnValue))
+		respondOK(w, rtnValue.String())
 	}
 }

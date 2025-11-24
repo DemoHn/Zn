@@ -70,7 +70,7 @@ func ExecProgram(file string, varInputBlock string) {
 	case *value.Null:
 		return
 	default:
-		os.Stdout.Write([]byte(value.StringifyValue(rtnValue)))
+		os.Stdout.Write([]byte(rtnValue.String()))
 		os.Stdout.Write([]byte{'\n'})
 	}
 }
@@ -85,7 +85,7 @@ func ShowVersion() {
 // // display helpers
 func prettyDisplayValue(v r.Element, w eio.Writer) {
 	var displayData = ""
-	var valStr = value.StringifyValue(v)
+	var valStr = v.String()
 	switch v.(type) {
 	case *value.Number:
 		// FG color: Cyan (lightblue)
@@ -93,12 +93,12 @@ func prettyDisplayValue(v r.Element, w eio.Writer) {
 	case *value.String:
 		// FG color: Green
 		// NOTE: string value quoted with 「 & 」
-		displayData = fmt.Sprintf("\x1b[38;5;184m「%s」\x1b[0m\n", valStr)
+		displayData = fmt.Sprintf("\x1b[38;5;184m%s\x1b[0m\n", valStr)
 	case *value.Bool:
 		// FG color: White
 		displayData = fmt.Sprintf("\x1b[38;5;231m%s\x1b[0m\n", valStr)
 	case *value.Null, *value.Function:
-		displayData = fmt.Sprintf("‹\x1b[38;5;80m%s\x1b[0m›\n", valStr)
+		displayData = fmt.Sprintf("\x1b[38;5;80m%s\x1b[0m\n", valStr)
 	default:
 		displayData = fmt.Sprintf("%s\n", valStr)
 	}

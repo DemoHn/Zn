@@ -1,7 +1,6 @@
 package value
 
 import (
-	"fmt"
 	"regexp"
 	"strconv"
 	"strings"
@@ -205,55 +204,6 @@ func DuplicateValue(in r.Element) r.Element {
 func ThrowException(message string) *zerr.Signal {
 	expValue := NewException(message)
 	return zerr.NewExceptionSignal(expValue)
-}
-
-// StringifyValue - format string from r.Value
-// NOTE: for `String` element, the result does not contain「 & 」
-func StringifyValue(value r.Element) string {
-	if v, ok := value.(*String); ok {
-		return v.GetValue()
-	}
-	return stringifyInnerValue(value)
-}
-
-// stringifyInnerValue - stringify inner value, used for array and hashmap
-func stringifyInnerValue(value r.Element) string {
-	switch v := value.(type) {
-	case *String:
-		return fmt.Sprintf("「%s」", v.value)
-	case *Number:
-		return v.String()
-	case *Array:
-		strs := []string{}
-		for _, item := range v.value {
-			strs = append(strs, stringifyInnerValue(item))
-		}
-		return fmt.Sprintf("【%s】", strings.Join(strs, "，"))
-	case *Bool:
-		data := "真"
-		if !v.value {
-			data = "假"
-		}
-		return data
-	case *Function:
-		return "[某方法]"
-	case *Null:
-		return "空"
-	case *Object:
-		// show object as "[对象: <name>]"
-		return fmt.Sprintf("[对象: %s]", v.GetObjectName())
-	case *HashMap:
-		strs := []string{}
-		for _, key := range v.keyOrder {
-			value := v.value[key]
-			strs = append(strs, fmt.Sprintf("%s = %s", key, stringifyInnerValue(value)))
-		}
-		return fmt.Sprintf("【%s】", strings.Join(strs, "，"))
-	case *GoValue:
-		// show go value as string like "[GoValue type:<tag>]"
-		return fmt.Sprintf("[GoValue type=%s]", v.GetTag())
-	}
-	return ""
 }
 
 //// param validators

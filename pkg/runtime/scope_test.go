@@ -10,6 +10,8 @@ type MockValue struct {
 	value string
 }
 
+func (m MockValue) String() string { return m.value }
+
 // impl Element (in value.go) interface for MockValue
 func (m MockValue) GetProperty(name string) (Element, error) {
 	return nil, nil

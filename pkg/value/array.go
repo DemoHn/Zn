@@ -1,6 +1,7 @@
 package value
 
 import (
+	"fmt"
 	"math"
 	"strings"
 
@@ -26,6 +27,15 @@ func NewEmptyArray() *Array {
 	return &Array{
 		value: []r.Element{},
 	}
+}
+
+func (ar *Array) String() string {
+	var strItem = []string{}
+	for _, v := range ar.value {
+		strItem = append(strItem, v.String())
+	}
+
+	return fmt.Sprintf("[%s]", strings.Join(strItem, "，"))
 }
 
 func (ar *Array) Length() int {
@@ -98,7 +108,7 @@ func (ar *Array) ExecMethod(name string, values []r.Element) (r.Element, error) 
 
 // getters
 func arrayGetText(ar *Array) (r.Element, error) {
-	return NewString(StringifyValue(ar)), nil
+	return NewString(ar.String()), nil
 }
 
 func arrayGetFirstItem(ar *Array) (r.Element, error) {

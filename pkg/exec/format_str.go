@@ -101,25 +101,26 @@ func formatString(formatStr *value.String, params *value.Array) (*value.String, 
 	return value.NewString(strings.Join(fmtRuneList, "")), nil
 }
 
-/** Formatter Rules:
+/*
+* Formatter Rules:
 
-1. start with '#' - only Numbers are allowed to format
-   1a. '#' -> format numbers with 6 significant digits (SD). The precise rules are as follows (copied from Python's `%g` format):
+ 1. start with '#' - only Numbers are allowed to format
+    1a. '#' -> format numbers with 6 significant digits (SD). The precise rules are as follows (copied from Python's `%g` format):
 
-       suppose that the result formatted with presentation type 'e' 6 SD would have exponent exp. Then, if -4 <= exp < 6, the number is formatted with presentation type 'f' and precision 5-exp. Otherwise, the number is formatted with presentation type 'e' and 6 SD.
+    suppose that the result formatted with presentation type 'e' 6 SD would have exponent exp. Then, if -4 <= exp < 6, the number is formatted with presentation type 'f' and precision 5-exp. Otherwise, the number is formatted with presentation type 'e' and 6 SD.
 
-       Example:
-	   1234 --> "1234"
-	   12.3456789 --> "12.3457"
-   1b. '#.N' -> format numbers, where N is the number of digits after the decimal point.
+    Example:
+    1234 --> "1234"
+    12.3456789 --> "12.3457"
+    1b. '#.N' -> format numbers, where N is the number of digits after the decimal point.
 
-   1c. '#+' -> format numbers, add a '+' sign for positive numbers and 0
+    1c. '#+' -> format numbers, add a '+' sign for positive numbers and 0
 */
 func elementToString(formatter string, elem r.Element) (string, error) {
 	if formatter == "" {
 		switch elem.(type) {
 		case *value.String, *value.Number, *value.Bool, *value.Array, *value.HashMap, *value.Null:
-			return value.StringifyValue(elem), nil
+			return elem.String(), nil
 		default:
 			return "", zerr.InvalidParamType("")
 		}

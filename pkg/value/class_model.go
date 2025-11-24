@@ -1,6 +1,8 @@
 package value
 
 import (
+	"fmt"
+
 	zerr "github.com/DemoHn/Zn/pkg/error"
 	r "github.com/DemoHn/Zn/pkg/runtime"
 )
@@ -43,6 +45,10 @@ func NewClassModel(name string) *ClassModel {
 		return instance, nil
 	}
 	return model
+}
+
+func (cm *ClassModel) String() string {
+	return fmt.Sprintf("‹类型·%s›", cm.name)
 }
 
 // Construct - yield new instance of this class
