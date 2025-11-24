@@ -1,6 +1,8 @@
 package value
 
 import (
+	"fmt"
+
 	zerr "github.com/DemoHn/Zn/pkg/error"
 	r "github.com/DemoHn/Zn/pkg/runtime"
 )
@@ -28,6 +30,10 @@ func NewObject(model *ClassModel, initProps map[string]r.Element) *Object {
 		propList: objPropList,
 		model:    model,
 	}
+}
+
+func (zo *Object) String() string {
+	return fmt.Sprintf("‹对象·%s›", zo.model.name)
 }
 
 // get object name

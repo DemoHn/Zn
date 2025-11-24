@@ -1,6 +1,9 @@
 package value
 
 import (
+	"fmt"
+	"strings"
+
 	zerr "github.com/DemoHn/Zn/pkg/error"
 	r "github.com/DemoHn/Zn/pkg/runtime"
 )
@@ -43,6 +46,15 @@ func NewEmptyHashMap() *HashMap {
 		value:    map[string]r.Element{},
 		keyOrder: []string{},
 	}
+}
+
+func (hm *HashMap) String() string {
+	var strItem = []string{}
+	for _, v := range hm.keyOrder {
+		strItem = append(strItem, fmt.Sprintf("%s=%s", v, hm.value.String()))
+	}
+
+	return fmt.Sprintf("[%s]", strings.Join(strItem, "，"))
 }
 
 // GetKeyOrder -
