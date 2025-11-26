@@ -64,7 +64,7 @@ func newDisplayFunc() *value.Function {
 			items = append(items, param.String())
 		}
 
-		os.Stdout.Write([]byte(fmt.Sprintf("%s\n", strings.Join(items, " "))))
+		fmt.Fprintf(os.Stdout, "%s\n", strings.Join(items, " "))
 		return value.NewNull(), nil
 	}
 

@@ -15,4 +15,16 @@ type Element interface {
 	ExecMethod(name string, params []Element) (Element, error)
 }
 
+// subType of Element: only *ClassModel & *Function are exportable
+type ExportableElement interface {
+	Element
+	Exportable() bool
+}
+
+// subtype of Element: the element instance could be constructed from 新建 statement
+type ConstructableElement interface {
+	Element
+	Construct(params []Element) (Element, error)
+}
+
 type FuncExecutor = func(receiver Element, params []Element) (Element, error)

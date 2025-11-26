@@ -3,8 +3,8 @@ package http
 import (
 	libURL "net/url"
 
+	"github.com/DemoHn/Zn/pkg/common"
 	r "github.com/DemoHn/Zn/pkg/runtime"
-	"github.com/DemoHn/Zn/pkg/util"
 	"github.com/DemoHn/Zn/pkg/value"
 )
 
@@ -117,12 +117,12 @@ func methodSendRequest(receiver r.Element, values []r.Element) (r.Element, error
 	}
 
 	// convert reqBody
-	var reqBody util.ReqBody
+	var reqBody common.ReqBody
 	if body.IsA() { // A:*String, B:*HashMap
 		reqBody.ContentType = "application/x-www-form-urlencoded"
 		reqBody.Value = body.GetA().GetValue()
 	} else {
-		bodyStr, err := util.HashMapToJSONString(body.GetB())
+		bodyStr, err := common.HashMapToJSONString(body.GetB())
 		if err != nil {
 			return nil, err
 		}
@@ -134,7 +134,7 @@ func methodSendRequest(receiver r.Element, values []r.Element) (r.Element, error
 	timeoutValue := timeout.GetValue()
 
 	// build request
-	req, err := util.BuildBaseHttpRequest(
+	req, err := common.BuildBaseHttpRequest(
 		pathValue,
 		methodValue,
 		headersValue,
@@ -146,32 +146,13 @@ func methodSendRequest(receiver r.Element, values []r.Element) (r.Element, error
 	}
 
 	// sendRequest
-	resp, data, err := util.SendHttpRequest(req, allowRedirectValue, int(timeoutValue))
+	resp, data, err := common.SendHttpRequest(req, allowRedirectValue, int(timeoutValue))
 	if err != nil {
 		return nil, err
 	}
 
-	// build HTTP响应 object
-	initProps := map[string]r.Element{
-		"状态码": value.NewNumber(float64(resp.StatusCode)),
-		"内容":  value.NewString(string(data)),
-	}
-	return value.NewObject(CLASS_HttpResposne, initProps), nil
+	return common.BuildHttpResponse(resp, data), nil
 }
-
-// HTTP响应类型
-/**
-定义HTTP响应:
-	其状态码 = 200
-	其头部 = [
-		“Content-Type” = “application/json”
-	]
-	其内容 = “”
-*/
-var CLASS_HttpResposne = value.NewClassModel("HTTP响应").
-	DefineProperty("状态码", value.NewNumber(200)).
-	DefineProperty("头部", value.NewEmptyHashMap()).
-	DefineProperty("内容", value.NewString(""))
 
 // 发送HTTP请求方法
 func FN_sendHTTPRequest(receiver r.Element, values []r.Element) (r.Element, error) {
@@ -186,9 +167,9 @@ func FN_sendHTTPRequest(receiver r.Element, values []r.Element) (r.Element, erro
 	url := values[1].(*value.String).GetValue()
 	emptyHeader := [][2]string{}
 	emptyQuery := [][2]string{}
-	emptyBody := util.ReqBody{}
+	emptyBody := common.ReqBody{}
 
-	req, err := util.BuildBaseHttpRequest(
+	req, err := common.BuildBaseHttpRequest(
 		url,
 		method,
 		emptyHeader,
@@ -199,17 +180,12 @@ func FN_sendHTTPRequest(receiver r.Element, values []r.Element) (r.Element, erro
 		return nil, value.ThrowException(err.Error())
 	}
 
-	resp, body, err := util.SendHttpRequest(req, true, defaultTimeout)
+	resp, body, err := common.SendHttpRequest(req, true, defaultTimeout)
 	if err != nil {
 		return nil, value.ThrowException(err.Error())
 	}
 
-	// 构造 HTTP响应 对象
-	initProps := map[string]r.Element{
-		"状态码": value.NewNumber(float64(resp.StatusCode)),
-		"内容":  value.NewString(string(body)),
-	}
-	return value.NewObject(CLASS_HttpResposne, initProps), nil
+	return common.BuildHttpResponse(resp, body), nil
 }
 
 func Export() *r.Library {
@@ -221,6 +197,6 @@ func init() {
 	httpLIB = r.NewLibrary(STDLIB_HTTP_NAME)
 
 	httpLIB.RegisterClass("HTTP请求", CLASS_HttpRequest).
-		RegisterClass("HTTP响应", CLASS_HttpResposne).
+		RegisterClass("HTTP响应", common.CLASS_HttpResposne).
 		RegisterFunction("发送HTTP请求", value.NewFunction(FN_sendHTTPRequest))
 }

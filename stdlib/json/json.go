@@ -1,8 +1,8 @@
 package json
 
 import (
+	"github.com/DemoHn/Zn/pkg/common"
 	r "github.com/DemoHn/Zn/pkg/runtime"
-	"github.com/DemoHn/Zn/pkg/util"
 	"github.com/DemoHn/Zn/pkg/value"
 )
 
@@ -30,7 +30,7 @@ func FN_parseJson(receiver r.Element, values []r.Element) (r.Element, error) {
 	// get exact type of params
 	p1 := values[0].(*value.String)
 
-	return util.JSONStringToElement(p1)
+	return common.JSONStringToElement(p1)
 }
 
 // generateJsonFunc - 生成JSON
@@ -39,7 +39,7 @@ func FN_generateJson(receiver r.Element, values []r.Element) (r.Element, error) 
 		return nil, err
 	}
 	p1 := values[0].(*value.HashMap)
-	return util.HashMapToJSONString(p1)
+	return common.HashMapToJSONString(p1)
 }
 
 func Export() *r.Library {

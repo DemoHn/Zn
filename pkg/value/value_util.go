@@ -278,7 +278,7 @@ func ValidateLeastParams(values []r.Element, typeStr ...string) error {
 Loop:
 	for idx, t := range typeStr {
 		// find if there's wildcard
-		re := regexp.MustCompile(`(\w+)(\*|\+)?`)
+		re := regexp.MustCompile(`(\w+)(\*|\+|\?)?`)
 		matches := re.FindStringSubmatch(t)
 		// match: [_, name, wildcard]
 		switch matches[2] {
@@ -293,6 +293,17 @@ Loop:
 				}
 			}
 			break Loop
+		case "?":
+			// matches 0 or 1 param
+			if idx == len(values) {
+				return nil
+			} else if idx == len(values)-1 {
+				if err := validateOneParam(values[idx], matches[1]); err != nil {
+					return err
+				}
+			} else {
+				return zerr.UnexpectedParamWildcard()
+			}
 		default:
 			if err := validateOneParam(values[idx], t); err != nil {
 				return err

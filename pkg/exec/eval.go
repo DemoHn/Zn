@@ -412,7 +412,7 @@ func evalNewObject(vm *r.VM, node *syntax.ObjNewExpr) (r.Element, error) {
 	if err != nil {
 		return nil, err
 	}
-	classRef, ok := importVal.(*value.ClassModel)
+	constructRef, ok := importVal.(r.ConstructableElement)
 	if !ok {
 		return nil, zerr.InvalidParamType("classRef")
 	}
@@ -422,7 +422,7 @@ func evalNewObject(vm *r.VM, node *syntax.ObjNewExpr) (r.Element, error) {
 		return nil, err
 	}
 
-	return classRef.Construct(cParams)
+	return constructRef.Construct(cParams)
 }
 
 func evalImportStmt(vm *r.VM, node *syntax.ImportStmt) error {

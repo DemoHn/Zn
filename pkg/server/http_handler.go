@@ -5,10 +5,10 @@ import (
 	"io"
 	"net/http"
 
+	"github.com/DemoHn/Zn/pkg/common"
 	zerr "github.com/DemoHn/Zn/pkg/error"
 	"github.com/DemoHn/Zn/pkg/exec"
 	"github.com/DemoHn/Zn/pkg/runtime"
-	"github.com/DemoHn/Zn/pkg/util"
 	"github.com/DemoHn/Zn/pkg/value"
 )
 
@@ -112,7 +112,7 @@ func buildIncomingRequestBody(req *http.Request) (runtime.Element, error) {
 
 	contentType := req.Header.Get("Content-Type")
 	if contentType == "application/json" {
-		return util.JSONStringToElement(value.NewString(string(body)))
+		return common.JSONStringToElement(value.NewString(string(body)))
 	}
 	return value.NewString(string(body)), nil
 }
@@ -162,7 +162,7 @@ func sendHTTPResponse(result runtime.Element, err error, w http.ResponseWriter) 
 		case *value.Number:
 			respondOK(w, fmt.Sprintf("%v", v.GetValue()))
 		case *value.HashMap, *value.Array:
-			jsonStr, err := util.ElementToJSONString(v)
+			jsonStr, err := common.ElementToJSONString(v)
 			// write resp body
 			if err != nil {
 				respondError(w, err)
