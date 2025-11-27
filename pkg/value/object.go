@@ -41,6 +41,10 @@ func (zo *Object) GetObjectName() string {
 	return zo.model.GetName()
 }
 
+func (zo *Object) IsInstanceOf(classModel *ClassModel) bool {
+	return zo.model == classModel
+}
+
 // GetProperty -
 func (zo *Object) GetProperty(name string) (r.Element, error) {
 	// internal properties

@@ -1,12 +1,16 @@
-package common
+package http
 
 import (
 	"fmt"
 	"io"
-	"net/http"
+	libHTTP "net/http"
 	libURL "net/url"
 	"strings"
 	"time"
+
+	"github.com/DemoHn/Zn/pkg/common"
+	r "github.com/DemoHn/Zn/pkg/runtime"
+	"github.com/DemoHn/Zn/pkg/value"
 )
 
 type ReqBody struct {
@@ -15,13 +19,13 @@ type ReqBody struct {
 	Value       string
 }
 
-func BuildBaseHttpRequest(
+func buildBaseHttpRequest(
 	url string,
 	method string,
 	headers [][2]string, // [][key=xxx, value=xxx]
 	queryParams [][2]string,
 	body ReqBody,
-) (*http.Request, error) {
+) (*libHTTP.Request, error) {
 	// #1. parse url
 	urlObj, err := libURL.Parse(url)
 	if err != nil {
@@ -59,7 +63,7 @@ func BuildBaseHttpRequest(
 		urlObj.RawQuery = qValues.Encode()
 	}
 
-	finalHeaders := http.Header{}
+	finalHeaders := libHTTP.Header{}
 	// #4. set body
 	if body.ContentType == "" {
 		// set default content-type header
@@ -80,7 +84,7 @@ func BuildBaseHttpRequest(
 		}
 	}
 
-	return &http.Request{
+	return &libHTTP.Request{
 		Method:     method,
 		URL:        urlObj,
 		Header:     finalHeaders,
@@ -91,9 +95,9 @@ func BuildBaseHttpRequest(
 	}, nil
 }
 
-func SendHttpRequest(req *http.Request, allowRedicrect bool, timeout int) (*http.Response, []byte, error) {
-	client := &http.Client{
-		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+func sendHttpRequest(req *libHTTP.Request, allowRedicrect bool, timeout int) (*libHTTP.Response, []byte, error) {
+	client := &libHTTP.Client{
+		CheckRedirect: func(req *libHTTP.Request, via []*libHTTP.Request) error {
 			if !allowRedicrect {
 				return fmt.Errorf("此请求不允许自动重定向")
 			}
@@ -114,4 +118,22 @@ func SendHttpRequest(req *http.Request, allowRedicrect bool, timeout int) (*http
 	}
 
 	return resp, content, nil
+}
+
+func buildHttpResponse(resp *libHTTP.Response, body []byte) *value.Object {
+	headerHashMap := value.NewEmptyHashMap()
+	for k, v := range resp.Header {
+		if len(v) > 0 {
+			headerHashMap.AppendKVPair(value.KVPair{
+				Key:   k,
+				Value: value.NewString(v[0]),
+			})
+		}
+	}
+
+	return value.NewObject(common.CLASS_HttpResponse, map[string]r.Element{
+		"状态码": value.NewNumber(float64(resp.StatusCode)),
+		"内容":  value.NewString(string(body)),
+		"头部":  headerHashMap,
+	})
 }
