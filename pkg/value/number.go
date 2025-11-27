@@ -39,6 +39,16 @@ func (n *Number) String() string {
 	return fmt.Sprintf("%v", n.value)
 }
 
+// Construct - make Number construtable
+func (n *Number) Construct(params []r.Element) (r.Element, error) {
+	if err := ValidateExactParams(params, "number"); err != nil {
+		return nil, err
+	}
+
+	p0 := params[0].(*Number)
+	return p0, nil
+}
+
 // GetValue -
 func (n *Number) GetValue() float64 {
 	return n.value

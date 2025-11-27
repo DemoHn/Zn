@@ -38,6 +38,7 @@ func init() {
 		"异常":   ZnConstExceptionClass,
 		"显示":   ZnConstDisplayFunc,
 		"取随机数": ZnConstGetRandomFloat,
+		"数值":   &value.Number{},
 	}
 
 	GlobalValues = globalValues
