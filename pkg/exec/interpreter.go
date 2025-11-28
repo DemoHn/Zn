@@ -1,7 +1,6 @@
 package exec
 
 import (
-	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -113,10 +112,10 @@ func (z *Interpreter) LoadFile(file string) *Interpreter {
 				dirs[len(dirs)-1] = dirs[len(dirs)-1] + ".zn"
 
 				moduleFullPath = filepath.Join(rootDir, filepath.Join(dirs...))
-				if _, err := os.Stat(moduleFullPath); errors.Is(err, os.ErrNotExist) {
-					return nil, zerr.ModuleNotFound(info.OriginalName)
-				}
 			}
+		}
+		if _, err := os.Stat(moduleFullPath); os.IsNotExist(err) {
+			return nil, zerr.ModuleNotFound(info.OriginalName)
 		}
 
 		// read source code from the parsed modulePath

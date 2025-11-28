@@ -1,42 +1,37 @@
 package http
 
 import (
+	libHTTP "net/http"
 	libURL "net/url"
 
 	"github.com/DemoHn/Zn/pkg/common"
+	zerr "github.com/DemoHn/Zn/pkg/error"
 	r "github.com/DemoHn/Zn/pkg/runtime"
 	"github.com/DemoHn/Zn/pkg/value"
 )
 
 var httpLIB *r.Library
 
-// HTTPClient, HTTPRequest, HTTPResponse
+// build *http.Request from HTTP请求 Element
+func digestBaseRequest(reqElement r.Element) (*libHTTP.Request, error) {
+	reqObj, err0 := value.AssertElement[*value.Object](reqElement)
+	if err0 != nil {
+		return nil, err0
+	}
+	if !reqObj.IsInstanceOf(common.CLASS_HttpRequest) {
+		return nil, value.ThrowException("不匹配的参数类型：HTTP请求")
+	}
 
-var CLASS_HttpRequest = value.NewClassModel("HTTP请求").
-	DefineProperty("URL", value.NewString("")).
-	DefineProperty("路径", value.NewString("")).
-	DefineProperty("方法", value.NewString("GET")).
-	DefineProperty("头部", value.NewEmptyHashMap()).
-	DefineProperty("查询参数", value.NewEmptyHashMap()).
-	DefineProperty("内容", value.NewString("")).
-	DefineProperty("允许重定向", value.NewBool(true)).
-	DefineProperty("请求时限", value.NewNumber(30)).
-	DefineMethod("发送请求", value.NewFunction(methodSendRequest))
-
-func methodSendRequest(receiver r.Element, values []r.Element) (r.Element, error) {
-	receiver.GetProperty("路径")
-	path, err1 := value.AssertPropertyElement[*value.String](receiver, "路径")
-	method, err2 := value.AssertPropertyElement[*value.String](receiver, "方法")
-	headers, err3 := value.AssertPropertyElement[*value.HashMap](receiver, "头部")
+	path, err1 := value.AssertPropertyElement[*value.String](reqObj, "路径")
+	method, err2 := value.AssertPropertyElement[*value.String](reqObj, "方法")
+	headers, err3 := value.AssertPropertyElement[*value.HashMap](reqObj, "头部")
 	// assert String or HashMap
-	queryParam, err4 := value.BuildEitherPropertyElement[*value.String, *value.HashMap](receiver, "查询参数")
+	queryParam, err4 := value.BuildEitherPropertyElement[*value.String, *value.HashMap](reqObj, "查询参数")
 	// assert String or HashMap
-	body, err5 := value.BuildEitherPropertyElement[*value.String, *value.HashMap](receiver, "内容")
-	allowRedicrect, err6 := value.AssertPropertyElement[*value.Bool](receiver, "允许重定向")
-	timeout, err7 := value.AssertPropertyElement[*value.Number](receiver, "请求时限")
+	body, err5 := value.BuildEitherPropertyElement[*value.String, *value.HashMap](reqObj, "内容")
 
 	// assert errors
-	for _, e := range []error{err1, err2, err3, err4, err5, err6, err7} {
+	for _, e := range []error{err1, err2, err3, err4, err5} {
 		if e != nil {
 			return nil, e
 		}
@@ -100,40 +95,47 @@ func methodSendRequest(receiver r.Element, values []r.Element) (r.Element, error
 		reqBody.Value = bodyStr.GetValue()
 	}
 
-	allowRedirectValue := allowRedicrect.GetValue()
-	timeoutValue := timeout.GetValue()
-
 	// build request
-	req, err := buildBaseHttpRequest(
+	return buildBaseHttpRequest(
 		pathValue,
 		methodValue,
 		headersValue,
 		queryParamValue,
 		reqBody,
 	)
-	if err != nil {
-		return nil, err
+}
+
+// (发送HTTP请求：请求@HTTP请求)
+func FN_sendHTTPRequest(receiver r.Element, values []r.Element) (r.Element, error) {
+	const TOTAL_PARAMS = 1
+	if len(values) != TOTAL_PARAMS {
+		return nil, zerr.ExactParamsError(TOTAL_PARAMS)
+	}
+	req, err1 := digestBaseRequest(values[0])
+	if err1 != nil {
+		return nil, err1
 	}
 
-	// sendRequest
-	resp, data, err := sendHttpRequest(req, allowRedirectValue, int(timeoutValue))
+	const defaultTimeout = 30
+	// #1. go! sendRequest
+	resp, data, err := sendHttpRequest(req, true, defaultTimeout)
 	if err != nil {
-		return nil, err
+		return nil, value.ThrowException(err.Error())
 	}
 
 	return buildOBJ_HttpResponse(resp, data), nil
 }
 
-// 发送HTTP请求方法
-func FN_sendHTTPRequest(receiver r.Element, values []r.Element) (r.Element, error) {
-	if err := value.ValidateExactParams(values, "string", "string"); err != nil {
+// (发送GET请求：URL)
+func FN_sendHTTPRequest_GET(receiver r.Element, values []r.Element) (r.Element, error) {
+	if err := value.ValidateExactParams(values, "string"); err != nil {
 		return nil, err
 	}
 
 	// #1. get exact type of params
 	const defaultTimeout = 30
+	const method = "GET"
 
-	method := values[0].(*value.String).GetValue()
 	url := values[1].(*value.String).GetValue()
 	emptyHeader := [][2]string{}
 	emptyQuery := [][2]string{}
@@ -158,6 +160,59 @@ func FN_sendHTTPRequest(receiver r.Element, values []r.Element) (r.Element, erro
 	return buildOBJ_HttpResponse(resp, data), nil
 }
 
+// (发送POST请求：URL@文本、内容@字典/文本)
+func FN_sendHTTPRequest_POST(receiver r.Element, values []r.Element) (r.Element, error) {
+	const TOTAL_PARAMS = 2
+	if len(values) != TOTAL_PARAMS {
+		return nil, zerr.ExactParamsError(2)
+	}
+
+	url, err1 := value.AssertElement[*value.String](values[0])
+	body := value.BuildEitherElement[*value.String, *value.HashMap](values[1])
+
+	if err1 != nil {
+		return nil, err1
+	}
+	// #1. get exact type of params
+	const defaultTimeout = 30
+	const method = "GET"
+
+	emptyHeader := [][2]string{}
+	emptyQuery := [][2]string{}
+
+	// #2. handle body
+	var reqBody ReqBody
+	if body.IsA() { // A:*String, B:*HashMap
+		reqBody.ContentType = "application/x-www-form-urlencoded"
+		reqBody.Value = body.GetA().GetValue()
+	} else {
+		bodyStr, err := common.HashMapToJSONString(body.GetB())
+		if err != nil {
+			return nil, err
+		}
+		reqBody.ContentType = "application/json"
+		reqBody.Value = bodyStr.GetValue()
+	}
+
+	req, err := buildBaseHttpRequest(
+		url.String(),
+		method,
+		emptyHeader,
+		emptyQuery,
+		reqBody,
+	)
+	if err != nil {
+		return nil, value.ThrowException(err.Error())
+	}
+
+	resp, data, err := sendHttpRequest(req, true, defaultTimeout)
+	if err != nil {
+		return nil, value.ThrowException(err.Error())
+	}
+
+	return buildOBJ_HttpResponse(resp, data), nil
+}
+
 func Export() *r.Library {
 	return httpLIB
 }
@@ -168,5 +223,7 @@ func init() {
 
 	httpLIB.RegisterClass("HTTP请求", common.CLASS_HttpRequest).
 		RegisterClass("HTTP响应", common.CLASS_HttpResponse).
-		RegisterFunction("发送HTTP请求", value.NewFunction(FN_sendHTTPRequest))
+		RegisterFunction("发送HTTP请求", value.NewFunction(FN_sendHTTPRequest)).
+		RegisterFunction("发送GET请求", value.NewFunction(FN_sendHTTPRequest_GET)).
+		RegisterFunction("发送POST请求", value.NewFunction(FN_sendHTTPRequest_POST))
 }

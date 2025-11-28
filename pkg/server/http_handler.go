@@ -39,7 +39,6 @@ func buildIncomingRequestBody(req *http.Request) (runtime.Element, error) {
 	if req.Body == nil {
 		return value.NewString(""), nil
 	}
-
 	body, err := io.ReadAll(req.Body)
 	if err != nil {
 		return nil, value.ThrowException("读取请求内容出现异常")
@@ -113,11 +112,12 @@ func sendHTTPResponse(result runtime.Element, err error, w http.ResponseWriter) 
 				respHeader, _ := v.GetProperty("头部")
 				statusCode, _ := v.GetProperty("状态码")
 
-				// write resp body directly
+				// convert content to string
 				var contentStr string
-				if v, ok := content.(*value.String); ok {
+				switch v := content.(type) {
+				case *value.String:
 					contentStr = v.GetValue()
-				} else {
+				default:
 					jsonStr, err := common.ElementToJSONString(content)
 					if err != nil {
 						respondError(w, err)
@@ -125,6 +125,7 @@ func sendHTTPResponse(result runtime.Element, err error, w http.ResponseWriter) 
 					}
 					contentStr = jsonStr.String()
 				}
+
 				// write to response directly
 				for k, v := range respHeader.(*value.HashMap).GetValue() {
 					w.Header().Add(k, v.String())

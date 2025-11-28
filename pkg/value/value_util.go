@@ -227,6 +227,10 @@ func AssertPropertyElement[T r.Element](root r.Element, key string) (T, error) {
 	return root.(T), zerr.InvalidParamType(getElementTypeString(prop))
 }
 
+func BuildEitherElement[A r.Element, B r.Element](elem r.Element) Either[A, B] {
+	return Either[A, B]{elem}
+}
+
 func BuildEitherPropertyElement[A r.Element, B r.Element](root r.Element, key string) (Either[A, B], error) {
 	prop, err := root.GetProperty(key)
 	if err != nil {

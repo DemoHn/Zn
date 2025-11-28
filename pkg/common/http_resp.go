@@ -27,14 +27,16 @@ func httpResponseConstructor(self r.Element, values []r.Element) (r.Element, err
 	}
 
 	self.SetProperty("状态码", values[0])
+
+	// set content & default header (content-type)
 	switch v := values[1].(type) {
 	case *value.String:
 		self.SetProperty("头部", value.NewHashMap([]value.KVPair{
 			{Key: "Content-Type", Value: value.NewString("text/plain")},
 		}))
 		self.SetProperty("内容", values[1])
-	case *value.HashMap:
-		bodyStr, err := HashMapToJSONString(v)
+	case *value.HashMap, *value.Array:
+		bodyStr, err := ElementToJSONString(v)
 		if err != nil {
 			return nil, err
 		}
@@ -42,8 +44,18 @@ func httpResponseConstructor(self r.Element, values []r.Element) (r.Element, err
 			{Key: "Content-Type", Value: value.NewString("application/json")},
 		}))
 		self.SetProperty("内容", bodyStr)
+	default:
+		bodyStr, err := ElementToJSONString(v)
+		if err != nil {
+			return nil, err
+		}
+		self.SetProperty("头部", value.NewHashMap([]value.KVPair{
+			{Key: "Content-Type", Value: value.NewString("text/plain")},
+		}))
+		self.SetProperty("内容", bodyStr)
 	}
 
+	// override headers
 	if len(values) == 3 {
 		self.SetProperty("头部", values[2])
 	}

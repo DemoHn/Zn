@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"os"
 
 	zinc "github.com/DemoHn/Zn"
 	"github.com/spf13/cobra"
@@ -23,6 +24,16 @@ var (
 			httpHandler := zinc.NewHttpHandler(interpreter, entryFile)
 			threadServer := zinc.NewThreadServer()
 
+			// check if entryFile exists
+			if entryFile == "" {
+				fmt.Printf("启动服务器时发生错误：请指定执行入口文件\n")
+				return
+			}
+			_, err := os.Stat(entryFile)
+			if os.IsNotExist(err) {
+				fmt.Printf("启动服务器时发生错误：执行入口文件 %s 不存在\n", entryFile)
+				return
+			}
 			// listen and handle
 			if err := interpreter.SetMainServer(threadServer, httpHandler).Listen(connUrl); err != nil {
 				fmt.Printf("启动服务器时发生错误：%v\n", err)
