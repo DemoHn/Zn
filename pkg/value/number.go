@@ -40,6 +40,7 @@ func (n *Number) String() string {
 }
 
 // Construct - make Number construtable
+// TODO: introduce TypeElement
 func (n *Number) Construct(params []r.Element) (r.Element, error) {
 	if err := ValidateExactParams(params, "number"); err != nil {
 		return nil, err

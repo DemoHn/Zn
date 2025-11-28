@@ -121,7 +121,7 @@ func methodSendRequest(receiver r.Element, values []r.Element) (r.Element, error
 		return nil, err
 	}
 
-	return buildHttpResponse(resp, data), nil
+	return buildOBJ_HttpResponse(resp, data), nil
 }
 
 // 发送HTTP请求方法
@@ -155,7 +155,7 @@ func FN_sendHTTPRequest(receiver r.Element, values []r.Element) (r.Element, erro
 		return nil, value.ThrowException(err.Error())
 	}
 
-	return buildHttpResponse(resp, data), nil
+	return buildOBJ_HttpResponse(resp, data), nil
 }
 
 func Export() *r.Library {

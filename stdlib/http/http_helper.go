@@ -120,7 +120,7 @@ func sendHttpRequest(req *libHTTP.Request, allowRedicrect bool, timeout int) (*l
 	return resp, content, nil
 }
 
-func buildHttpResponse(resp *libHTTP.Response, body []byte) *value.Object {
+func buildOBJ_HttpResponse(resp *libHTTP.Response, body []byte) *value.Object {
 	headerHashMap := value.NewEmptyHashMap()
 	for k, v := range resp.Header {
 		if len(v) > 0 {

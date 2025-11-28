@@ -109,7 +109,28 @@ func sendHTTPResponse(result runtime.Element, err error, w http.ResponseWriter) 
 			}
 		case *value.Object:
 			if v.IsInstanceOf(common.CLASS_HttpResponse) {
-				// TODO
+				content, _ := v.GetProperty("内容")
+				respHeader, _ := v.GetProperty("头部")
+				statusCode, _ := v.GetProperty("状态码")
+
+				// write resp body directly
+				var contentStr string
+				if v, ok := content.(*value.String); ok {
+					contentStr = v.GetValue()
+				} else {
+					jsonStr, err := common.ElementToJSONString(content)
+					if err != nil {
+						respondError(w, err)
+						return
+					}
+					contentStr = jsonStr.String()
+				}
+				// write to response directly
+				for k, v := range respHeader.(*value.HashMap).GetValue() {
+					w.Header().Add(k, v.String())
+				}
+				w.WriteHeader(int(statusCode.(*value.Number).GetValue()))
+				w.Write([]byte(contentStr))
 			}
 		default:
 			respondOK(w, v.String())
