@@ -52,7 +52,7 @@ func EvalMainModule(vm *r.VM, program *syntax.Program, varInputs r.ElementMap) (
 // 3. CLASSDEF statement(s) - `定义货件`
 // 4. FUNCDEF statement(s) - `如何执行？`
 // 5. other statements
-// 6. CATCH statement(s) - `拦截异常`
+// 6. CATCH statement(s) - `接到异常`
 //
 // If the program doesn't follow the order (e.g. the func declare block at the end of program),
 // it doesn't matter - we will order the statements in the program automatically before execution.

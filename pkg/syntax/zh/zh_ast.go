@@ -6,7 +6,7 @@ import (
 
 type consumerFunc func()
 
-//////// Parse Methods
+// ////// Parse Methods
 func ParseProgram(p *ParserZH) *syntax.Program {
 	peekIndent := p.getPeekIndent()
 
@@ -48,16 +48,17 @@ func ParseProgram(p *ParserZH) *syntax.Program {
 //
 // CFG:
 // syntax.Statement -> VarDeclareStmt
-//           -> BranchStmt
-//           -> WhileLoopStmt
-//           -> IterateStmt
-//           -> FunctionDeclareStmt
-//           -> FunctionReturnStmt
-//           -> VOStmt
-//           -> ImportStmt
-//           -> ClassStmt
-//           -> Expr
-//           -> ；
+//
+//	-> BranchStmt
+//	-> WhileLoopStmt
+//	-> IterateStmt
+//	-> FunctionDeclareStmt
+//	-> FunctionReturnStmt
+//	-> VOStmt
+//	-> ImportStmt
+//	-> ClassStmt
+//	-> Expr
+//	-> ；
 func ParseStatement(p *ParserZH) syntax.Statement {
 	var validTypes = []uint8{
 		TypeStmtSep,
@@ -133,25 +134,29 @@ func ParseStatement(p *ParserZH) syntax.Statement {
 // CFG:
 // Expr  -> AndE Expr'
 // Expr' -> 或 AndE Expr'
-//       ->
+//
+//	->
 //
 // AndE  -> EqE AndE'
 // AndE' -> 且 EqE AndE'
-//       ->
+//
+//	->
 //
 // EqE   -> VaE  EqE'
 // EqE'  -> 等于  VaE
-//       -> [不等于  /=]  VaE
-//       -> [小于  <]  VaE
-//       -> [不小于  >=]  VaE
-//       -> [大于  >]  VaE
-//       -> [不大于  <=] VaE
-//       ->
+//
+//	-> [不等于  /=]  VaE
+//	-> [小于  <]  VaE
+//	-> [不小于  >=]  VaE
+//	-> [大于  >]  VaE
+//	-> [不大于  <=] VaE
+//	->
 //
 // VaE   -> ArE VaE'
 // VaE'  -> 为  IdxE
-//       -> 为  & IdxE
-//       ->
+//
+//	-> 为  & IdxE
+//	->
 //
 // precedences:
 //
@@ -295,14 +300,16 @@ func parseExpressionLv4(p *ParserZH, cfg syntax.EqMarkConfig) syntax.Expression 
 // ArE   -> MdE ArE'
 //
 // ArE'  -> + MdE ArE'
-//       -> - MdE ArE'
-//       ->
+//
+//	-> - MdE ArE'
+//	->
 //
 // MdE   -> MemE MdE'
 //
 // MdE'  -> * MemE MdE'
-//       -> / MemE MdE'
-//       ->
+//
+//	-> / MemE MdE'
+//	->
 func ParseArithExpr(p *ParserZH) syntax.Expression {
 	var parseTail func(syntax.Expression) syntax.Expression
 
@@ -368,13 +375,15 @@ func parseArithMulDivExpr(p *ParserZH) syntax.Expression {
 // CFG:
 //
 // MemE  -> 其 PropE' IdxE'
-//       -> BsE IdxE'
+//
+//	-> BsE IdxE'
 //
 // IdxE' -> #  ID   IdxE'
-//       -> #  String   IdxE'
-//       -> #  {  Expr  }  IdxE'
-//       -> 之  CallE' IdxE'
-//       ->
+//
+//	-> #  String   IdxE'
+//	-> #  {  Expr  }  IdxE'
+//	-> 之  CallE' IdxE'
+//	->
 //
 // CallE' -> FuncID
 //
@@ -463,11 +472,12 @@ func ParseMemberExpr(p *ParserZH) syntax.Expression {
 //
 // CFG:
 // BsE   -> { E }
-//       -> （ FuncID ： E、E、...）
-//       -> 以 E （ FuncID ： E、E、...）
-//       -> ID
-//       -> String
-//       -> ArrayList
+//
+//	-> （ FuncID ： E、E、...）
+//	-> 以 E （ FuncID ： E、E、...）
+//	-> ID
+//	-> String
+//	-> ArrayList
 //
 // FuncID -> ID
 func ParseBasicExpr(p *ParserZH) syntax.Expression {
@@ -512,19 +522,24 @@ func ParseBasicExpr(p *ParserZH) syntax.Expression {
 // ParseArrayExpr - yield ArrayExpr node (support both hashMap and arrayList)
 // CFG:
 // ArrayExpr -> 【 ItemList 】
-//           -> 【 HashMapList 】
-//           -> 【 = 】
+//
+//	-> 【 HashMapList 】
+//	-> 【 = 】
+//
 // ItemList  -> Expr ItemList
-//           ->
+//
+//	->
 //
 // HashMapList -> KeyID = Expr HashMapTail
 //
 // HashMapTail -> KeyID = Expr HashMapTail
-//             ->
+//
+//	->
 //
 // KeyID     -> ID
-//           -> String
-//           -> Number
+//
+//	-> String
+//	-> Number
 func ParseArrayExpr(p *ParserZH) syntax.UnionMapList {
 	// #0. try to match if empty
 	if match, emptyExpr := tryParseEmptyMapList(p); match {
@@ -622,18 +637,23 @@ func tryParseEmptyMapList(p *ParserZH) (bool, syntax.UnionMapList) {
 //
 // CFG:
 // FuncCallExpr  -> （ FuncID ： pcommaList ）YieldResultTail
-//               -> （ FuncID ） YieldResultTail
-//               -> （ 新建 ClassID ： pcommaList ）
-//               -> （ 新建 ClassID ：）
+//
+//	-> （ FuncID ） YieldResultTail
+//	-> （ 新建 ClassID ： pcommaList ）
+//	-> （ 新建 ClassID ：）
+//
 // pcommaList     -> E pcommaListTail
 // pcommaListTail -> 、 E pcommaListTail
-//               ->
+//
+//	->
 //
 // FuncID   -> ID
-//          -> Number
+//
+//	-> Number
 //
 // YieldResultTail  ->  得到 ID
-//                  ->
+//
+//	->
 func ParseFuncCallExpr(p *ParserZH, parseYieldResult bool) *syntax.FuncCallExpr {
 	var callExpr = &syntax.FuncCallExpr{
 		Params:      []syntax.Expression{},
@@ -671,7 +691,8 @@ func ParseFuncCallExpr(p *ParserZH, parseYieldResult bool) *syntax.FuncCallExpr 
 // FuncExpr -> 以 Expr （ FuncID ： commaList ）
 //
 // FuncID  -> ID
-//         -> Number
+//
+//	-> Number
 func ParseMemberFuncCallExpr(p *ParserZH) *syntax.MemberMethodExpr {
 	result := &syntax.MemberMethodExpr{}
 	result.Root = ParseExpression(p)
@@ -708,20 +729,23 @@ func ParseMemberFuncCallExpr(p *ParserZH) *syntax.MemberMethodExpr {
 // VDPair     -> VDItem VDPairTail
 //
 // VDPairTail -> VDItem VDPairTail
-//            ->
+//
+//	->
 //
 // VDItem     -> IdfList 设为 Expr
-//            -> IdfList 恒为 Expr
 //
-//    IdfList -> I I'
-//         I' -> 、I I'
-//            ->
+//	        -> IdfList 恒为 Expr
+//
+//	IdfList -> I I'
+//	     I' -> 、I I'
+//	        ->
 //
 // or block declaration:
 //
 // VarDeclare -> 令 ：
-//           ...
-//           ...     I3 、 I4、 I5 ...
+//
+//	...
+//	...     I3 、 I4、 I5 ...
 func ParseVarDeclareStmt(p *ParserZH) *syntax.VarDeclareStmt {
 	vNode := &syntax.VarDeclareStmt{
 		AssignPair: []syntax.VDAssignPair{},
@@ -800,7 +824,8 @@ func parseVDAssignPair(p *ParserZH) syntax.VDAssignPair {
 // ParseObjNewExpr - yield ObjNewExpr node
 // CFG:
 // ObjNewExpr -> （创建 ID ：Expr、 Expr、 ... ）
-//            -> （创建 ID ）
+//
+//	-> （创建 ID ）
 func ParseObjNewExpr(p *ParserZH) *syntax.ObjNewExpr {
 	objClass := parseID(p)
 	if match, _ := p.tryConsume(TypeFuncCall); match {
@@ -827,7 +852,8 @@ func ParseObjNewExpr(p *ParserZH) *syntax.ObjNewExpr {
 // ParseWhileLoopStmt - yield while loop node
 // CFG:
 // WhileLoopStmt -> 每当 Expr ：
-//               ..     Block
+//
+//	..     Block
 func ParseWhileLoopStmt(p *ParserZH) *syntax.WhileLoopStmt {
 	// #1. consume expr
 	// 为  as logicYES here
@@ -865,22 +891,23 @@ func ParseBlockStmt(p *ParserZH, blockIndent int) *syntax.StmtBlock {
 // ParseBranchStmt - yield BranchStmt node
 // CFG:
 // CondStmt -> 如果 IfTrueExpr ：
-//         ...     IfTrueBlock
 //
-//          -> 如果 IfTrueExpr ：
-//         ...     IfTrueBlock
-//         ... 否则 ：
-//         ...     IfFalseBlock
+//	...     IfTrueBlock
 //
-//          -> 如果 IfTrueExpr ：
-//         ...     IfTrueBlock
-//         ... 再如 OtherExpr1 ：
-//         ...     OtherBlock1
-//         ... 再如 OtherExpr2 ：
-//         ...     OtherBlock2
-//         ... ....
-//             否则 ：
-//         ...     IfFalseBlock
+//	 -> 如果 IfTrueExpr ：
+//	...     IfTrueBlock
+//	... 否则 ：
+//	...     IfFalseBlock
+//
+//	 -> 如果 IfTrueExpr ：
+//	...     IfTrueBlock
+//	... 再如 OtherExpr1 ：
+//	...     OtherBlock1
+//	... 再如 OtherExpr2 ：
+//	...     OtherBlock2
+//	... ....
+//	    否则 ：
+//	...     IfFalseBlock
 func ParseBranchStmt(p *ParserZH) *syntax.BranchStmt {
 	var condExpr syntax.Expression
 	var condBlock *syntax.StmtBlock
@@ -975,17 +1002,18 @@ func ParseBranchStmt(p *ParserZH) *syntax.BranchStmt {
 // ParseFunctionDeclareStmt - yield FunctionDeclareStmt node
 // CFG:
 // FunctionDeclareStmt -> 如何 FuncName ？
-//       ...     已知 ID1、 & ID2、 ...
-//       ...     ExecBlock
-//       ... 拦截 ID3：
-//       ...     CatchBlock
-// 		 ... 拦截 ID4：
-//       ...     CatchBlock
+//
+//	      ...     已知 ID1、 & ID2、 ...
+//	      ...     ExecBlock
+//	      ... 接到 ID3：
+//	      ...     CatchBlock
+//			 ... 接到 ID4：
+//	      ...     CatchBlock
 //
 // FunctionDeclareStmt -> 如何 FuncName ？
-//       ...     ExecBlock
-//       ...     ....
 //
+//	...     ExecBlock
+//	...     ....
 func ParseFunctionDeclareStmt(p *ParserZH) *syntax.FunctionDeclareStmt {
 	xID, xExecBlock := parseFunctionBlock(p)
 
@@ -1083,9 +1111,9 @@ func ParseExecBlock(p *ParserZH, mainIndent int) *syntax.ExecBlock {
 // ParseGetterDeclareStmt - yield GetterDeclareStmt node
 // CFG:
 // GetterDeclareStmt -> 何为 GetterName ？
-//       ...     ExecBlock
-//       ...     ....
 //
+//	...     ExecBlock
+//	...     ....
 func ParseGetterDeclareStmt(p *ParserZH) *syntax.FunctionDeclareStmt {
 	xID, xExecBlock := parseFunctionBlock(p)
 
@@ -1106,7 +1134,8 @@ func ParseGetterDeclareStmt(p *ParserZH) *syntax.FunctionDeclareStmt {
 //
 // VOStmt -> 以 ID  遍历 IStmtT'
 // VOStmt -> 以 ID 、 ID  遍历 IStmtT'
-//        -> 以 Expr  FuncExprT'
+//
+//	-> 以 Expr  FuncExprT'
 func ParseVarOneLeadStmt(p *ParserZH) syntax.Statement {
 	// parse IterateStmt or FuncCallStmt
 	exprI := ParseExpression(p)
@@ -1211,9 +1240,10 @@ func ParseFunctionReturnStmt(p *ParserZH) *syntax.FunctionReturnStmt {
 // ParseThrowExceptionStmt - parse "throw" exception statement
 //
 // CFG:
-//  TEStmt    ->  抛出  ID  ：  Expr   TExpr'  ！
-//  TExpr'    ->  、  Expr  TExpr'
-//            ->
+//
+//	TEStmt    ->  抛出  ID  ：  Expr   TExpr'  ！
+//	TExpr'    ->  、  Expr  TExpr'
+//	          ->
 func ParseThrowExceptionStmt(p *ParserZH) *syntax.ThrowExceptionStmt {
 	var exprs []syntax.Expression
 	// get id
@@ -1241,11 +1271,11 @@ func ParseThrowExceptionStmt(p *ParserZH) *syntax.ThrowExceptionStmt {
 	}
 }
 
-// ParseCatchErrorStmt - parse "拦截" statement (like Python's `catch`)
+// ParseCatchErrorStmt - parse "接到" statement (like Python's `catch`)
 //
 // CFG:
 //
-// CatchStmt   ->  拦截 ID ：  ^[stmtBlock]
+// CatchStmt   ->  接到 ID ：  ^[stmtBlock]
 func ParseCatchErrorStmt(p *ParserZH) *syntax.CatchBlockPair {
 	// 3. parse (one of) catchBlock
 	catchClass := parseFuncID(p)
@@ -1273,10 +1303,12 @@ func ParseCatchErrorStmt(p *ParserZH) *syntax.CatchBlockPair {
 // ImportStmt  ->  导入 String ImportTail
 //
 // ImportTail  -> 之 ID IDTail
-//             ->
+//
+//	->
 //
 // IDTail      -> 、 ID IDTail
-//             ->
+//
+//	->
 func ParseImportStmt(p *ParserZH) *syntax.ImportStmt {
 	stmt := &syntax.ImportStmt{}
 	match, tk := p.tryConsume(TypeLibString, TypeString)
@@ -1309,28 +1341,30 @@ func ParseImportStmt(p *ParserZH) *syntax.ImportStmt {
 // A typical class may look like this:
 //
 // 定义 <NAME>：
-//    其 <Prop1> 为 <Value1>     <-- PropertyDeclare (for listing all properties with initial value)
-//    其 <Prop2> 为 <Value2>
 //
-//    如何 <Method1> ？    <-- MethodDeclare
-//        <Blocks> ...
-//        <Blocks> ...
+//	其 <Prop1> 为 <Value1>     <-- PropertyDeclare (for listing all properties with initial value)
+//	其 <Prop2> 为 <Value2>
 //
-//    何为 <Method1> ？    <-- GetterDeclare
-//        <Blocks> ...
-//        <Blocks> ...
+//	如何 <Method1> ？    <-- MethodDeclare
+//	    <Blocks> ...
+//	    <Blocks> ...
+//
+//	何为 <Method1> ？    <-- GetterDeclare
+//	    <Blocks> ...
+//	    <Blocks> ...
 //
 // CFG:
 // ClassStmt  ->  定义 ClassID ：
-//                    ClassDeclareBlock
+//
+//	ClassDeclareBlock
 //
 // ClassDeclareBlock  -> ClassDeclareBlockItem1  ClassDeclareBlockItem2 ...
 //
 // ClassDeclareBlockItem -> Constructor
-//                       -> PropertyDeclareStmt
-//                       -> FunctionDeclareStmt
-//                       -> GetterDeclareStmt
 //
+//	-> PropertyDeclareStmt
+//	-> FunctionDeclareStmt
+//	-> GetterDeclareStmt
 func ParseClassDeclareStmt(p *ParserZH) *syntax.ClassDeclareStmt {
 	var cdStmt = new(syntax.ClassDeclareStmt)
 	// #1. consume ID
@@ -1406,7 +1440,7 @@ func ParseContinueStmt(p *ParserZH) *syntax.ContinueStmt {
 	return &syntax.ContinueStmt{}
 }
 
-//// parse helpers
+// // parse helpers
 func parseID(p *ParserZH) *syntax.ID {
 	match, tk := p.tryConsume(TypeIdentifier)
 	if !match {

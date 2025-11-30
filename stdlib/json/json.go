@@ -18,7 +18,7 @@ testing...
 
 	输出[[ parseJson $1 ]]
 
-	拦截异常：
+	接到异常：
 	    xxxx
 */
 // parseJsonFunc - 解析JSON

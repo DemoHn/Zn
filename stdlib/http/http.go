@@ -21,8 +21,9 @@ func FN_sendHTTPRequest(receiver r.Element, values []r.Element) (r.Element, erro
 	}
 
 	const defaultTimeout = 30
+	const allowRedicrect = true
 	// #1. go! sendRequest
-	resp, data, err := sendHttpRequest(req, true, defaultTimeout)
+	resp, data, err := sendHttpRequest(req, allowRedicrect, defaultTimeout)
 	if err != nil {
 		return nil, value.ThrowException(err.Error())
 	}

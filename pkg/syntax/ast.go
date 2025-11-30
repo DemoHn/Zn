@@ -177,7 +177,7 @@ type StmtBlock struct {
 //    令...      /* StmtBlock */
 //    ...
 //
-//    拦截异常：  /* CatchBlock */
+//    接到异常：  /* CatchBlock */
 //        令...   /* StmtBlock inside CatchBlock */
 type ExecBlock struct {
 	InputBlock []*ID
