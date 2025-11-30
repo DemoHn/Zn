@@ -21,21 +21,17 @@ type ReqBody struct {
 
 // build *http.Request from HTTP请求 Element
 func digestBaseRequest(reqElement r.Element) (*libHTTP.Request, error) {
-	reqObj, err0 := value.AssertElement[*value.Object](reqElement)
+	reqObj, err0 := common.AssertInstanceOf(reqElement, common.CLASS_HttpRequest)
 	if err0 != nil {
 		return nil, err0
 	}
-	if !reqObj.IsInstanceOf(common.CLASS_HttpRequest) {
-		return nil, value.ThrowException("不匹配的参数类型：HTTP请求")
-	}
-
-	path, err1 := value.AssertPropertyElement[*value.String](reqObj, "路径")
-	method, err2 := value.AssertPropertyElement[*value.String](reqObj, "方法")
-	headers, err3 := value.AssertPropertyElement[*value.HashMap](reqObj, "头部")
+	path, err1 := common.AssertPropertyElement[*value.String](reqObj, "路径")
+	method, err2 := common.AssertPropertyElement[*value.String](reqObj, "方法")
+	headers, err3 := common.AssertPropertyElement[*value.HashMap](reqObj, "头部")
 	// assert String or HashMap
-	queryParam, err4 := value.BuildEitherPropertyElement[*value.String, *value.HashMap](reqObj, "查询参数")
+	queryParam, err4 := common.AssertEitherPropertyElement[*value.String, *value.HashMap](reqObj, "查询参数")
 	// assert String or HashMap
-	body, err5 := value.BuildEitherPropertyElement[*value.String, *value.HashMap](reqObj, "内容")
+	body, err5 := reqObj.GetProperty("内容")
 
 	// assert errors
 	for _, e := range []error{err1, err2, err3, err4, err5} {
@@ -89,17 +85,9 @@ func digestBaseRequest(reqElement r.Element) (*libHTTP.Request, error) {
 	}
 
 	// convert reqBody
-	var reqBody ReqBody
-	if body.IsA() { // A:*String, B:*HashMap
-		reqBody.ContentType = "application/x-www-form-urlencoded"
-		reqBody.Value = body.GetA().GetValue()
-	} else {
-		bodyStr, err := common.HashMapToJSONString(body.GetB())
-		if err != nil {
-			return nil, err
-		}
-		reqBody.ContentType = "application/json"
-		reqBody.Value = bodyStr.GetValue()
+	reqBody, err := digestReqBody(body)
+	if err != nil {
+		return nil, err
 	}
 
 	// build request
@@ -114,7 +102,23 @@ func digestBaseRequest(reqElement r.Element) (*libHTTP.Request, error) {
 
 // accept HashMap or String
 func digestReqBody(reqBodyElement r.Element) (ReqBody, error) {
+	var reqBody ReqBody
 
+	switch v := reqBodyElement.(type) {
+	case *value.HashMap, *value.Array, *value.Object:
+		bodyStr, err := common.ElementToJSONString(v)
+		if err != nil {
+			return reqBody, err
+		}
+		reqBody.ContentType = "application/json"
+		reqBody.Value = bodyStr.GetValue()
+	default:
+		bodyStr := v.String()
+		reqBody.ContentType = "text/plain"
+		reqBody.Value = bodyStr
+	}
+
+	return reqBody, nil
 }
 
 func buildBaseHttpRequest(

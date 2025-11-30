@@ -45,6 +45,10 @@ func (zo *Object) IsInstanceOf(classModel *ClassModel) bool {
 	return zo.model == classModel
 }
 
+func (zo *Object) GetAllProperties() r.ElementMap {
+	return zo.propList
+}
+
 // GetProperty -
 func (zo *Object) GetProperty(name string) (r.Element, error) {
 	// internal properties

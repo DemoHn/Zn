@@ -57,6 +57,14 @@ func buildPlainValueFromElement(elem r.Element) any {
 			resultMap[k] = buildPlainValueFromElement(vi)
 		}
 		return resultMap
+	case *value.Object:
+		// marshal all properties into map[string]any{}
+		props := vv.GetAllProperties()
+		resultMap := map[string]any{}
+		for k, vi := range props {
+			resultMap[k] = buildPlainValueFromElement(vi)
+		}
+		return resultMap
 	}
 	return nil
 }

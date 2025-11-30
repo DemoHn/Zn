@@ -71,12 +71,16 @@ func FN_sendHTTPRequest_POST(receiver r.Element, values []r.Element) (r.Element,
 		return nil, zerr.ExactParamsError(2)
 	}
 
-	url, err1 := value.AssertElement[*value.String](values[0])
-	body := value.BuildEitherElement[*value.String, *value.HashMap](values[1])
-
+	url, err1 := common.AssertElement[*value.String](values[0])
 	if err1 != nil {
 		return nil, err1
 	}
+
+	reqBody, err2 := digestReqBody(values[1])
+	if err2 != nil {
+		return nil, err2
+	}
+
 	// #1. get exact type of params
 	const defaultTimeout = 30
 	const method = "GET"
@@ -85,18 +89,6 @@ func FN_sendHTTPRequest_POST(receiver r.Element, values []r.Element) (r.Element,
 	emptyQuery := [][2]string{}
 
 	// #2. handle body
-	var reqBody ReqBody
-	if body.IsA() { // A:*String, B:*HashMap
-		reqBody.ContentType = "application/x-www-form-urlencoded"
-		reqBody.Value = body.GetA().GetValue()
-	} else {
-		bodyStr, err := common.HashMapToJSONString(body.GetB())
-		if err != nil {
-			return nil, err
-		}
-		reqBody.ContentType = "application/json"
-		reqBody.Value = bodyStr.GetValue()
-	}
 
 	req, err := buildBaseHttpRequest(
 		url.String(),
