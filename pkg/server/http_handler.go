@@ -65,10 +65,21 @@ func buildIncomingRequest(r *http.Request) (runtime.Element, error) {
 	qsDict := value.NewEmptyHashMap()
 	for k, v := range r.URL.Query() {
 		if len(v) > 0 {
-			qsDict.AppendKVPair(value.KVPair{
-				Key:   k,
-				Value: value.NewString(v[0]),
-			})
+			if len(v) == 1 {
+				qsDict.AppendKVPair(value.KVPair{
+					Key:   k,
+					Value: value.NewString(v[0]),
+				})
+			} else {
+				vmap := []runtime.Element{}
+				for _, vi := range v {
+					vmap = append(vmap, value.NewString(vi))
+				}
+				qsDict.AppendKVPair(value.KVPair{
+					Key:   k,
+					Value: value.NewArray(vmap),
+				})
+			}
 		}
 	}
 

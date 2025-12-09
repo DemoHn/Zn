@@ -82,6 +82,7 @@ func AssertInstanceOf(elem r.Element, model *value.ClassModel) (*value.Object, e
 		return nil, zerr.InvalidParamType(model.String())
 	}
 	return obj, nil
+
 }
 
 func AssertPropertyElement[T r.Element](root r.Element, key string) (T, error) {

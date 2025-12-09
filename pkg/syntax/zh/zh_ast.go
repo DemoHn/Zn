@@ -1072,7 +1072,10 @@ func ParseExecBlock(p *ParserZH, mainIndent int) *syntax.ExecBlock {
 	}
 
 	var hState = stateInputBlock
-	parseItemListBlock(p, mainIndent, func() {
+
+	// SINCE we need to exit the block in the middle, we could not use the
+	// parseItemListBlock()!
+	for (p.peek().Type != TypeEOF) && p.getPeekIndent() == mainIndent {
 		switch hState {
 		case stateInputBlock:
 			if match, _ := p.tryConsume(TypeInputW); match {
@@ -1097,10 +1100,14 @@ func ParseExecBlock(p *ParserZH, mainIndent int) *syntax.ExecBlock {
 			p.unsetStmtCompleteFlag()
 			if match, _ := p.tryConsume(TypeCatchErrorW); match {
 				execBlock.CatchBlock = append(execBlock.CatchBlock, ParseCatchErrorStmt(p))
+			} else {
+				// end in the middle
+				goto end
 			}
 		}
-	})
+	}
 
+end:
 	if !syntax.ContainsInt(hState, validEndStates) {
 		panic(p.getInvalidSyntaxCurr())
 	}

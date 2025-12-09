@@ -6,7 +6,7 @@ import (
 	zinc "github.com/DemoHn/Zn"
 )
 
-const TARGET_FILE = "./draft/http_test.zn"
+const TARGET_FILE = "./draft/http.zn"
 const VAR_INPUT = `数组文本=“123,456，-2,3，DD”`
 
 func main() {
