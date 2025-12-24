@@ -120,36 +120,43 @@ func evalExecBlock(vm *r.VM, execBlock *syntax.ExecBlock, params []r.Element) (r
 	}
 
 	// different from evalPureStmtBlock, we still use the same scope, NO NEW SCOPE CREATED!
-	rtnValue, stmtBlockErr := evalStmtBlock(vm, execBlock.StmtBlock)
-
+	// NOTE: stmtBlockErr maybe SigReturn, SigException, or just error!
+	stmtBlockErr := evalStmtBlock(vm, execBlock.StmtBlock)
 	if stmtBlockErr != nil {
 		return handleExceptionSignal(vm, blockModule, execBlock.CatchBlock, stmtBlockErr)
 	}
 
-	return rtnValue, stmtBlockErr
+	return vm.GetReturnValue(), stmtBlockErr
 }
 
-func evalStmtBlock(vm *r.VM, stmtBlock *syntax.StmtBlock) (r.Element, error) {
+func evalStmtBlock(vm *r.VM, stmtBlock *syntax.StmtBlock) error {
 	for _, stmtX := range stmtBlock.Children {
 		switch v := stmtX.(type) {
 		case *syntax.ClassDeclareStmt:
 			// declare class
 			if err := evalClassDeclareStmt(vm, v); err != nil {
-				return nil, err
+				return err
 			}
 		case *syntax.FunctionDeclareStmt:
 			if v.DeclareType == syntax.DeclareTypeConstructor {
 				if err := evalConstructorDeclareStmt(vm, v); err != nil {
-					return nil, err
+					return err
 				}
 			} else {
 				if err := evalFunctionDeclareStmt(vm, v); err != nil {
-					return nil, err
+					return err
 				}
 			}
 		}
 	}
-	return evalPureStmtBlock(vm, stmtBlock)
+	lastValue, err := evalPureStmtBlock(vm, stmtBlock)
+	if err != nil {
+		return err
+	}
+
+	// set return value (at the final statement of execblock)
+	vm.SetReturnValue(lastValue)
+	return nil
 }
 
 // evalPureStmtBlock - evaluate statement block without classDef/funcDef/import statements
@@ -157,27 +164,30 @@ func evalPureStmtBlock(vm *r.VM, stmtBlock *syntax.StmtBlock) (r.Element, error)
 	vm.BeginScope()
 	defer vm.EndScope()
 
-	var rtnValue r.Element
-	var err error
-
+	var lastValue r.Element = value.NewNull()
 	for _, stmt := range stmtBlock.Children {
 		switch stmt.(type) {
 		case *syntax.ClassDeclareStmt:
+			// skip
 		case *syntax.FunctionDeclareStmt:
+			// skip
 		default:
-			if rtnValue, err = evalStatement(vm, stmt); err != nil {
+			var err error
+			lastValue, err = evalStatement(vm, stmt)
+			if err != nil {
 				return nil, err
 			}
 		}
-		// if return value is not nil, stop exeucting following statements
-		if rtnValue := vm.GetReturnValue(); rtnValue != nil {
-			return rtnValue, nil
-		}
 	}
-	return rtnValue, err
+
+	return lastValue, nil
 }
 
 func handleExceptionSignal(vm *r.VM, blockModule *r.Module, catchBlock []*syntax.CatchBlockPair, blockErr error) (r.Element, error) {
+	if rtnValue, realErr := extractSignalValue(blockErr, zerr.SigTypeReturn); realErr == nil {
+		return rtnValue, nil
+	}
+
 	// try to find if the blockErr is an exception signal
 	exception, realErr := extractSignalValue(blockErr, zerr.SigTypeException)
 
@@ -208,11 +218,9 @@ func handleExceptionSignal(vm *r.VM, blockModule *r.Module, catchBlock []*syntax
 			vm.PushCallFrame(expCallFrame)
 			// do execution (with "this" value = exception value)
 			_, err := evalPureStmtBlock(vm, catchBlockItem.StmtBlock)
-			if err == nil {
+			if rtnValue, realErr := extractSignalValue(err, zerr.SigTypeReturn); realErr == nil {
 				// get return value from exception block
-				rtnValue := vm.GetReturnValue()
 				vm.PopCallFrame()
-
 				return rtnValue, nil
 			}
 			return nil, err
@@ -254,9 +262,7 @@ func evalStatement(vm *r.VM, stmt syntax.Statement) (r.Element, error) {
 		if err != nil {
 			return nil, err
 		}
-		// set return value on current frame
-		vm.SetReturnValue(rtnValue)
-		return rtnValue, nil
+		return rtnValue, zerr.NewReturnSignal(rtnValue)
 	case *syntax.ThrowExceptionStmt:
 		return value.NewNull(), evalThrowExceptionStmt(vm, v)
 	case *syntax.ContinueStmt:

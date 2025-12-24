@@ -4,7 +4,7 @@ type runePair [2]rune
 
 // idRange - define exact ID_Continue range
 var idRange = []runePair{
-	{0x24, 0x25},  // $, %
+	{0x24},        // $, %
 	{0x2b, 0x2b},  // +
 	{0x2d, 0x2d},  // -
 	{0x30, 0x39},  // 0-9

@@ -27,6 +27,10 @@ func (s *Signal) Error() string {
 	return fmt.Sprintf("收到「%s」中断信号", sigTypeMap[s.SigType])
 }
 
+func NewReturnSignal(rtnValue interface{}) *Signal {
+	return &Signal{SigTypeReturn, rtnValue}
+}
+
 // continue in for loop
 func NewContinueSignal() *Signal {
 	return &Signal{SigTypeContinue, nil}
